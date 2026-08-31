@@ -20,6 +20,8 @@ class CustomerDashboardScreen extends StatefulWidget {
 
 class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with TickerProviderStateMixin {
   late AnimationController _fadeController;
+  final PageController _vehiclePageController = PageController(viewportFraction: 0.92);
+  
   bool isLoading = true;
   bool isSaving = false;
   
@@ -70,6 +72,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   @override
   void dispose() {
     _fadeController.dispose();
+    _vehiclePageController.dispose();
     _notifTimer?.cancel();
     _purchaseSubscription?.cancel();
     super.dispose();
@@ -777,8 +780,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     final Color textColor = Colors.white;
     final Color subtitleColor = const Color(0xFF94A3B8);
 
-    final currentVehicle = vehicles.isNotEmpty ? vehicles[selectedVehicleIndex] : null;
-
     return Scaffold(
       backgroundColor: bgColor,
       extendBodyBehindAppBar: true,
@@ -909,9 +910,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                           if (vehicles.isEmpty)
                             _buildEmptyVehiclesCard(cardColor, textColor, subtitleColor)
                           else ...[
-                            _buildVehicleSelector(cardColor, textColor, subtitleColor),
-                            const SizedBox(height: 20),
-                            _buildVehicleDetailsCard(currentVehicle!, cardColor, textColor, subtitleColor),
+                            _buildVehicleCarousel(cardColor, textColor, subtitleColor),
+                            const SizedBox(height: 16),
+                            _buildCarouselIndicators(),
                           ],
                           const SizedBox(height: 40),
                         ],
@@ -1017,125 +1018,123 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     );
   }
 
-  Widget _buildVehicleSelector(Color cardColor, Color textColor, Color subtitleColor) {
+  Widget _buildVehicleCarousel(Color cardColor, Color textColor, Color subtitleColor) {
     return SizedBox(
-      height: 60,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
+      height: 270, // Kartın kaplayacağı optimum yükseklik
+      child: PageView.builder(
+        controller: _vehiclePageController,
         physics: const BouncingScrollPhysics(),
+        onPageChanged: (index) => setState(() => selectedVehicleIndex = index),
         itemCount: vehicles.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 16),
         itemBuilder: (context, index) {
-          final v = vehicles[index];
+          final vehicle = vehicles[index];
           final isSelected = index == selectedVehicleIndex;
-          return GestureDetector(
-            onTap: () => setState(() => selectedVehicleIndex = index),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.fastLinearToSlowEaseIn,
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-              decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFF00E676) : cardColor,
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: isSelected ? Colors.transparent : Colors.white.withOpacity(0.08), width: 1.5),
-                boxShadow: isSelected ? [BoxShadow(color: const Color(0xFF00E676).withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 8))] : [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))],
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.directions_car_rounded, color: isSelected ? Colors.black : subtitleColor, size: 22),
-                  const SizedBox(width: 12),
-                  Text(v['plate'] ?? 'Plakasız', style: TextStyle(fontWeight: FontWeight.w900, color: isSelected ? Colors.black : textColor, fontSize: 16, letterSpacing: 0.5)),
-                ],
-              ),
+          
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+            margin: EdgeInsets.only(
+              right: 16, 
+              top: isSelected ? 0 : 12, 
+              bottom: isSelected ? 0 : 12
             ),
+            child: _buildModernVehicleCard(vehicle, cardColor, textColor, subtitleColor),
           );
         },
       ),
     );
   }
 
-  Widget _buildVehicleDetailsCard(Map<String, dynamic> vehicle, Color cardColor, Color textColor, Color subtitleColor) {
+  Widget _buildModernVehicleCard(Map<String, dynamic> vehicle, Color cardColor, Color textColor, Color subtitleColor) {
     final insDate = DateTime.tryParse(vehicle['insurance_date'] ?? '');
     final inspDate = DateTime.tryParse(vehicle['inspection_date'] ?? '');
     final int cKm = int.tryParse(vehicle['current_km']?.toString() ?? '0') ?? 0;
     final int mKm = int.tryParse(vehicle['maintenance_km']?.toString() ?? '10000') ?? 10000;
 
     return Container(
-      padding: const EdgeInsets.all(24), 
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: cardColor, 
-        borderRadius: BorderRadius.circular(32), 
-        border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5), 
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 30, offset: const Offset(0, 10))] 
+        color: cardColor,
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(color: Colors.white.withOpacity(0.06), width: 1.5),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10))
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Üst Kısım: Plaka, Model ve Düzenle Butonu
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(vehicle['plate'] ?? '', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: textColor, letterSpacing: 0.5)),
+                    Text(vehicle['plate'] ?? '', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: textColor, letterSpacing: 0.5)),
                     const SizedBox(height: 4),
-                    Text(vehicle['brand_model'] ?? '', style: TextStyle(fontSize: 15, color: subtitleColor, fontWeight: FontWeight.w700)),
+                    Text(vehicle['brand_model'] ?? '', style: TextStyle(fontSize: 14, color: subtitleColor, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00E676).withOpacity(0.1), 
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFF00E676).withOpacity(0.2), width: 1)
-                ),
-                child: IconButton(
-                  icon: const Icon(Icons.edit_rounded, color: Color(0xFF00E676), size: 22), 
-                  padding: const EdgeInsets.all(10), 
-                  constraints: const BoxConstraints(), 
-                  onPressed: () => _showVehicleDialog(vehicleToEdit: vehicle)
+              InkWell(
+                onTap: () => _showVehicleDialog(vehicleToEdit: vehicle),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00E676).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF00E676).withOpacity(0.2))
+                  ),
+                  child: const Icon(Icons.edit_rounded, color: Color(0xFF00E676), size: 20),
                 ),
               )
             ],
           ),
-          const SizedBox(height: 24),
           
+          const Spacer(),
+          
+          // Orta Kısım: Kompakt Durum Özetleri (3'lü Grid)
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFF050505), 
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withOpacity(0.05), width: 2)
+              color: const Color(0xFF050505),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white.withOpacity(0.03))
             ),
-            child: Column(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildInfoRow("Trafik Sigortası", insDate, Icons.shield_rounded, 365, textColor, subtitleColor),
-                Padding(padding: const EdgeInsets.symmetric(vertical: 20), child: Divider(height: 1, color: Colors.white.withOpacity(0.05))),
-                _buildInfoRow("Araç Muayenesi", inspDate, Icons.fact_check_rounded, 730, textColor, subtitleColor),
-                Padding(padding: const EdgeInsets.symmetric(vertical: 20), child: Divider(height: 1, color: Colors.white.withOpacity(0.05))),
-                _buildMaintenanceRow(cKm, mKm, textColor, subtitleColor),
+                _buildCompactStatItem("Sigorta", insDate, Icons.shield_rounded, isDate: true),
+                Container(width: 1, height: 30, color: Colors.white.withOpacity(0.1)),
+                _buildCompactStatItem("Muayene", inspDate, Icons.fact_check_rounded, isDate: true),
+                Container(width: 1, height: 30, color: Colors.white.withOpacity(0.1)),
+                _buildCompactStatItem("Bakım", null, Icons.build_circle_rounded, currentKm: cKm, targetKm: mKm),
               ],
             ),
           ),
           
-          const SizedBox(height: 24),
+          const Spacer(),
+
+          // Alt Kısım: Yönetim Paneli Butonu
           Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
               gradient: const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00C853)]),
-              boxShadow: [BoxShadow(color: const Color(0xFF00E676).withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 8))]
+              boxShadow: [BoxShadow(color: const Color(0xFF00E676).withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 4))]
             ),
-            child: ElevatedButton.icon(
+            child: ElevatedButton(
               onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => VehiclePanelScreen(vehicle: vehicle, customerId: widget.customerId))).then((_) => _fetchVehicles()),
-              icon: const Icon(Icons.dashboard_customize_rounded, color: Colors.black, size: 22),
-              label: const Text("Detaylı Yönetim Paneli", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.3)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.transparent, 
                 shadowColor: Colors.transparent, 
-                padding: const EdgeInsets.symmetric(vertical: 18), 
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))
+                padding: const EdgeInsets.symmetric(vertical: 14), 
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
               ),
+              child: const Text("Detaylı Yönetim Paneli", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 0.3)),
             ),
           )
         ],
@@ -1143,119 +1142,53 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     );
   }
 
-  Widget _buildInfoRow(String title, DateTime? date, IconData icon, int totalDays, Color textColor, Color subtitleColor) {
-    int daysLeft = date != null ? date.difference(DateTime.now()).inDays : 0;
-    double progress = date != null ? (daysLeft / totalDays).clamp(0.0, 1.0) : 0.0;
-    Color statusColor = date == null ? const Color(0xFF64748B) : (daysLeft <= 15 ? const Color(0xFFEF4444) : (daysLeft <= 30 ? const Color(0xFFF59E0B) : const Color(0xFF00E676)));
-    
+  Widget _buildCompactStatItem(String title, DateTime? date, IconData icon, {bool isDate = false, int currentKm = 0, int targetKm = 0}) {
+    Color statusColor;
+    String valueText;
+
+    if (isDate) {
+      if (date == null) {
+        statusColor = const Color(0xFF64748B);
+        valueText = "Yok";
+      } else {
+        int daysLeft = date.difference(DateTime.now()).inDays;
+        statusColor = daysLeft <= 15 ? const Color(0xFFEF4444) : (daysLeft <= 30 ? const Color(0xFFF59E0B) : const Color(0xFF00E676));
+        valueText = daysLeft < 0 ? "${daysLeft.abs()}G Gecikti" : "${daysLeft}G";
+      }
+    } else {
+      int remainingKm = targetKm - currentKm;
+      statusColor = remainingKm <= 1000 ? const Color(0xFFEF4444) : const Color(0xFF00E676);
+      valueText = remainingKm < 0 ? "${remainingKm.abs()}KM Geçti" : "${remainingKm}KM";
+    }
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12), 
-              decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.15), 
-                borderRadius: BorderRadius.circular(16),
-              ), 
-              child: Icon(icon, color: statusColor, size: 22)
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: textColor)),
-                  const SizedBox(height: 4),
-                  Text(date == null ? "Tarih Girilmedi" : DateFormat('dd.MM.yyyy').format(date), style: TextStyle(fontSize: 13, color: subtitleColor, fontWeight: FontWeight.w700)),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(color: statusColor.withOpacity(0.12), borderRadius: BorderRadius.circular(12)),
-              child: Text(date == null ? "Belirtilmedi" : (daysLeft < 0 ? "${daysLeft.abs()} Gün Gecikti" : "$daysLeft Gün"), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: statusColor))
-            ),
-          ],
-        ),
-        if (date != null) ...[
-          const SizedBox(height: 16),
-          Container(
-            height: 8,
-            width: double.infinity,
-            decoration: BoxDecoration(color: const Color(0xFF1E293B), borderRadius: BorderRadius.circular(10)),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: progress,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: statusColor,
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [BoxShadow(color: statusColor.withOpacity(0.4), blurRadius: 6, offset: const Offset(0, 2))],
-                ),
-              ),
-            ),
-          ),
-        ]
+        Icon(icon, color: statusColor, size: 22),
+        const SizedBox(height: 6),
+        Text(title, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 4),
+        Text(valueText, style: TextStyle(color: statusColor, fontSize: 13, fontWeight: FontWeight.w900)),
       ],
     );
   }
 
-  Widget _buildMaintenanceRow(int cKm, int mKm, Color textColor, Color subtitleColor) {
-    int remainingKm = mKm - cKm;
-    double progress = mKm > 0 ? (cKm / mKm).clamp(0.0, 1.0) : 0.0;
-    Color statusColor = remainingKm <= 1000 ? const Color(0xFFEF4444) : const Color(0xFF00E676);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12), 
-              decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.15), 
-                borderRadius: BorderRadius.circular(16),
-              ), 
-              child: Icon(Icons.build_circle_rounded, color: statusColor, size: 22)
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Periyodik Bakım", style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: textColor)),
-                  const SizedBox(height: 4),
-                  Text("Güncel: $cKm KM", style: TextStyle(fontSize: 13, color: subtitleColor, fontWeight: FontWeight.w700)),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(color: statusColor.withOpacity(0.12), borderRadius: BorderRadius.circular(12)),
-              child: Text(remainingKm < 0 ? "${remainingKm.abs()} KM Gecikti" : "$remainingKm KM", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: statusColor))
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Container(
+  Widget _buildCarouselIndicators() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(
+        vehicles.length,
+        (index) => AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          width: selectedVehicleIndex == index ? 24 : 8,
           height: 8,
-          width: double.infinity,
-          decoration: BoxDecoration(color: const Color(0xFF1E293B), borderRadius: BorderRadius.circular(10)),
-          child: FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: progress,
-            child: Container(
-              decoration: BoxDecoration(
-                color: statusColor,
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: [BoxShadow(color: statusColor.withOpacity(0.4), blurRadius: 6, offset: const Offset(0, 2))],
-              ),
-            ),
+          decoration: BoxDecoration(
+            color: selectedVehicleIndex == index ? const Color(0xFF00E676) : Colors.white.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(4),
           ),
         ),
-      ],
+      ),
     );
   }
 }

@@ -1,0 +1,62 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.otosistem"> <!--[cite: 2] -->
+    
+    <uses-permission android:name="android.permission.INTERNET"/> <!--[cite: 2] -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/> <!--[cite: 2] -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/> <!--[cite: 2] -->
+
+    <!-- Bildirim ve Zamanlama İzinleri -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <queries> <!--[cite: 2] -->
+      <intent> <!--[cite: 2] -->
+        <action android:name="android.intent.action.VIEW" /> <!--[cite: 2] -->
+        <data android:scheme="https" /> <!--[cite: 2] -->
+      </intent> <!--[cite: 2] -->
+      <intent> <!--[cite: 2] -->
+        <action android:name="android.intent.action.VIEW" /> <!--[cite: 2] -->
+        <data android:scheme="geo" /> <!--[cite: 2] -->
+      </intent> <!--[cite: 2] -->
+    </queries> <!--[cite: 2] -->
+
+    <application
+        android:label="Oto Sistem"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher"> <!--[cite: 2] -->
+        
+        <!-- Bildirimlerin cihaz yeniden başladığında silinmemesi için -->
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize"> <!--[cite: 2] -->
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              /> <!--[cite: 2] -->
+            <intent-filter> <!--[cite: 2] -->
+                <action android:name="android.intent.action.MAIN"/> <!--[cite: 2] -->
+                <category android:name="android.intent.category.LAUNCHER"/> <!--[cite: 2] -->
+            </intent-filter> <!--[cite: 2] -->
+        </activity> <!--[cite: 2] -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" /> <!--[cite: 2] -->
+    </application> <!--[cite: 2] -->
+</manifest>

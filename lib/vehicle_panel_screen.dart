@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:convert';
 import 'dart:ui';
+import 'dart:math' as math;
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -38,11 +39,16 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
 
   final List<String> filterOptions = [
     'Tümü',
-    'Muayene',
-    'Sigorta',
     'Periyodik Bakım',
-    'Tamir',
-    'MTV'
+    'Tamir & Onarım',
+    'Lastik & Balans',
+    'Fren & Balata',
+    'Akü & Elektrik',
+    'Kasko & Poliçe',
+    'Detay & Yıkama',
+    'MTV & Harç',
+    'Aksesuar & Parça',
+    'Diğer Masraf'
   ];
 
   @override
@@ -549,22 +555,38 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     
     IconData getIcon() {
       switch (type) {
+        case 'Periyodik Bakım': return Icons.build_circle_rounded;
+        case 'Tamir & Onarım':
+        case 'Tamir': return Icons.car_repair_rounded;
+        case 'Lastik & Balans': return Icons.tire_repair_rounded;
+        case 'Fren & Balata': return Icons.disc_full_rounded;
+        case 'Akü & Elektrik': return Icons.battery_charging_full_rounded;
+        case 'Kasko & Poliçe': return Icons.shield_rounded;
+        case 'Detay & Yıkama': return Icons.local_car_wash_rounded;
+        case 'MTV & Harç':
+        case 'MTV': return Icons.account_balance_rounded;
+        case 'Aksesuar & Parça': return Icons.extension_rounded;
         case 'Muayene': return Icons.fact_check_rounded;
         case 'Sigorta': return Icons.shield_rounded;
-        case 'MTV': return Icons.account_balance_rounded;
-        case 'Periyodik Bakım': return Icons.build_circle_rounded;
-        case 'Tamir': return Icons.car_repair_rounded;
-        default: return Icons.history_rounded;
+        default: return Icons.handyman_rounded;
       }
     }
     Color getColor() {
       switch (type) {
+        case 'Periyodik Bakım': return const Color(0xFF00E676);
+        case 'Tamir & Onarım':
+        case 'Tamir': return const Color(0xFFEF4444);
+        case 'Lastik & Balans': return const Color(0xFF00E5FF);
+        case 'Fren & Balata': return const Color(0xFFF59E0B);
+        case 'Akü & Elektrik': return const Color(0xFFFFD600);
+        case 'Kasko & Poliçe': return const Color(0xFFB388FF);
+        case 'Detay & Yıkama': return const Color(0xFF00B0FF);
+        case 'MTV & Harç':
+        case 'MTV': return const Color(0xFFE040FB);
+        case 'Aksesuar & Parça': return const Color(0xFF76FF03);
         case 'Muayene': return const Color(0xFF00E676);
         case 'Sigorta': return const Color(0xFF00E5FF);
-        case 'MTV': return const Color(0xFFB388FF);
-        case 'Periyodik Bakım': return const Color(0xFFF59E0B);
-        case 'Tamir': return const Color(0xFFEF4444);
-        default: return const Color(0xFF64748B);
+        default: return const Color(0xFF94A3B8);
       }
     }
 
@@ -750,20 +772,37 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                 physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                 slivers: [
                   SliverAppBar(
-                    expandedHeight: size.height * 0.15,
+                    expandedHeight: math.max(135.0, size.height * 0.16),
                     floating: false,
                     pinned: true,
                     backgroundColor: bgColor,
                     iconTheme: IconThemeData(color: textColor),
                     elevation: 0,
                     flexibleSpace: FlexibleSpaceBar(
-                      titlePadding: EdgeInsets.only(left: size.width * 0.05, bottom: size.height * 0.02),
+                      titlePadding: const EdgeInsets.only(left: 20, bottom: 14),
+                      centerTitle: false,
                       title: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          Text(currentVehicleData['plate'], style: TextStyle(fontWeight: FontWeight.w900, color: textColor, fontSize: size.width * 0.05, letterSpacing: 1.0)),
-                          Text(currentVehicleData['brand_model'] ?? '', style: TextStyle(fontSize: size.width * 0.03, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w600)),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              currentVehicleData['plate'] ?? '', 
+                              style: TextStyle(fontWeight: FontWeight.w900, color: textColor, fontSize: 18, letterSpacing: 0.8)
+                            ),
+                          ),
+                          if ((currentVehicleData['brand_model'] ?? '').toString().isNotEmpty)
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                currentVehicleData['brand_model'] ?? '', 
+                                style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600)
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -881,11 +920,16 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
   bool isEditing = false;
   
   final List<Map<String, dynamic>> operationTypes = [
-    {'id': 'Muayene', 'icon': Icons.fact_check_rounded, 'color': const Color(0xFF00E676)},
-    {'id': 'Sigorta', 'icon': Icons.shield_rounded, 'color': const Color(0xFF00E5FF)},
-    {'id': 'Periyodik Bakım', 'icon': Icons.build_circle_rounded, 'color': const Color(0xFFF59E0B)},
-    {'id': 'Tamir', 'icon': Icons.car_repair_rounded, 'color': const Color(0xFFEF4444)},
-    {'id': 'MTV', 'icon': Icons.account_balance_rounded, 'color': const Color(0xFFB388FF)},
+    {'id': 'Periyodik Bakım', 'icon': Icons.build_circle_rounded, 'color': const Color(0xFF00E676)},
+    {'id': 'Tamir & Onarım', 'icon': Icons.car_repair_rounded, 'color': const Color(0xFFEF4444)},
+    {'id': 'Lastik & Balans', 'icon': Icons.tire_repair_rounded, 'color': const Color(0xFF00E5FF)},
+    {'id': 'Fren & Balata', 'icon': Icons.disc_full_rounded, 'color': const Color(0xFFF59E0B)},
+    {'id': 'Akü & Elektrik', 'icon': Icons.battery_charging_full_rounded, 'color': const Color(0xFFFFD600)},
+    {'id': 'Kasko & Poliçe', 'icon': Icons.shield_rounded, 'color': const Color(0xFFB388FF)},
+    {'id': 'Detay & Yıkama', 'icon': Icons.local_car_wash_rounded, 'color': const Color(0xFF00B0FF)},
+    {'id': 'MTV & Harç', 'icon': Icons.account_balance_rounded, 'color': const Color(0xFFE040FB)},
+    {'id': 'Aksesuar & Parça', 'icon': Icons.extension_rounded, 'color': const Color(0xFF76FF03)},
+    {'id': 'Diğer Masraf', 'icon': Icons.more_horiz_rounded, 'color': const Color(0xFF94A3B8)},
   ];
 
   @override
@@ -894,7 +938,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
     isEditing = widget.recordToEdit != null;
     final r = widget.recordToEdit;
 
-    selectedType = r?['record_type'] ?? 'Muayene';
+    selectedType = r?['record_type'] ?? 'Periyodik Bakım';
     descController = TextEditingController(text: r?['description'] ?? '');
     costController = TextEditingController(text: r?['cost'] != null ? r!['cost'].toString() : '');
     currentKmController = TextEditingController(text: r?['current_km']?.toString() ?? widget.currentKm.toString());
@@ -936,6 +980,30 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
     }
   }
 
+  bool _supportsNextDate(String type) {
+    return type == 'Kasko & Poliçe' || 
+           type == 'Lastik & Balans' || 
+           type == 'Akü & Elektrik' || 
+           type == 'MTV & Harç' ||
+           type == 'Muayene' ||
+           type == 'Sigorta';
+  }
+
+  String _getNextDateLabel(String type) {
+    switch (type) {
+      case 'Kasko & Poliçe':
+        return "Poliçe Bitiş Tarihi (İsteğe Bağlı)";
+      case 'Lastik & Balans':
+        return "Sonraki Değişim Tarihi (İsteğe Bağlı)";
+      case 'Akü & Elektrik':
+        return "Garanti / Kontrol Tarihi (İsteğe Bağlı)";
+      case 'MTV & Harç':
+        return "Sonraki Taksit Tarihi (İsteğe Bağlı)";
+      default:
+        return "Gelecek Hatırlatma Tarihi (İsteğe Bağlı)";
+    }
+  }
+
   Future<void> _saveRecord() async {
     setState(() => isSaving = true);
     final action = isEditing ? "update_vehicle_record" : "add_vehicle_record";
@@ -957,7 +1025,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
         request.fields['maintenance_km'] = maintenanceKmController.text.trim();
       }
 
-      if (selectedNextDate != null && (selectedType == 'Muayene' || selectedType == 'Sigorta')) {
+      if (selectedNextDate != null) {
         request.fields['next_date'] = DateFormat('yyyy-MM-dd').format(selectedNextDate!);
       }
 
@@ -1100,11 +1168,17 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                       ),
                       SizedBox(height: size.height * 0.02),
 
-                      if (selectedType == 'Muayene' || selectedType == 'Sigorta') ...[
+                      if (_supportsNextDate(selectedType)) ...[
                         InkWell(
                           borderRadius: BorderRadius.circular(20),
                           onTap: () async {
-                            final date = await showDatePicker(context: context, initialDate: selectedNextDate ?? DateTime.now().add(const Duration(days: 365)), firstDate: DateTime.now(), lastDate: DateTime(2100), locale: const Locale('tr', 'TR'));
+                            final date = await showDatePicker(
+                              context: context, 
+                              initialDate: selectedNextDate ?? DateTime.now().add(const Duration(days: 365)), 
+                              firstDate: DateTime.now(), 
+                              lastDate: DateTime(2100), 
+                              locale: const Locale('tr', 'TR')
+                            );
                             if (date != null) setState(() => selectedNextDate = date);
                           },
                           child: Container(
@@ -1122,7 +1196,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      const Text("Yeni Bitiş Tarihi (İsteğe Bağlı)", style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13, fontWeight: FontWeight.w700)),
+                                      Text(_getNextDateLabel(selectedType), style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13, fontWeight: FontWeight.w700)),
                                       const SizedBox(height: 4),
                                       Text(selectedNextDate != null ? DateFormat('dd.MM.yyyy').format(selectedNextDate!) : "Tarih Seçilmedi", style: TextStyle(fontSize: size.width * 0.04, fontWeight: FontWeight.w900, color: textColor)),
                                     ],

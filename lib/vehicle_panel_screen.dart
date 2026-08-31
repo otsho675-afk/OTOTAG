@@ -30,7 +30,20 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
   bool _hasShownAlert = false;
   double totalExpense = 0.0;
 
+  String searchQuery = "";
+  String selectedFilter = "Tümü";
+  final TextEditingController _searchController = TextEditingController();
+
   late AnimationController _fadeController;
+
+  final List<String> filterOptions = [
+    'Tümü',
+    'Muayene',
+    'Sigorta',
+    'Periyodik Bakım',
+    'Tamir',
+    'MTV'
+  ];
 
   @override
   void initState() {
@@ -44,7 +57,33 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
   @override
   void dispose() {
     _fadeController.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  void _showTopSnackBar(String message, {bool isError = false}) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+              child: Icon(isError ? Icons.error_rounded : Icons.check_circle_rounded, color: Colors.white, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(child: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15, letterSpacing: 0.3))),
+          ],
+        ),
+        backgroundColor: isError ? const Color(0xFFEF4444) : const Color(0xFF00E676),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 12,
+        duration: const Duration(seconds: 4),
+      ));
+    }
   }
 
   Future<void> _fetchRecords() async {
@@ -55,7 +94,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
         final data = json.decode(response.body);
         if (data['status'] == 'success' && mounted) {
           setState(() {
-            records = data['records'];
+            records = data['records'] ?? [];
             totalExpense = records.fold(0.0, (sum, item) => sum + (double.tryParse(item['cost']?.toString() ?? '0') ?? 0.0));
             isLoading = false;
           });
@@ -70,13 +109,55 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     }
   }
 
+  Future<void> _deleteRecord(dynamic recordId) async {
+    bool confirm = await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF111111),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: BorderSide(color: Colors.white.withOpacity(0.08))),
+        title: const Text("İşlem Kaydını Sil", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
+        content: const Text("Bu işlem geçmişi kaydı kalıcı olarak silinecektir. Emin misiniz?", style: TextStyle(color: Color(0xFF94A3B8))),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Vazgeç", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white54))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444), elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          )
+        ],
+      ),
+    ) ?? false;
+
+    if (!confirm) return;
+
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl?action=delete_vehicle_record"),
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: {
+          "record_id": recordId.toString(),
+          "vehicle_id": currentVehicleData['id'].toString(),
+        },
+      );
+      final data = json.decode(response.body);
+      if (data['status'] == 'success') {
+        _showTopSnackBar("Kayıt başarıyla silindi.");
+        await _fetchRecords();
+      } else {
+        _showTopSnackBar(data['message'] ?? "Kayıt silinemedi.", isError: true);
+      }
+    } catch (e) {
+      _showTopSnackBar("Bağlantı hatası.", isError: true);
+    }
+  }
+
   Future<void> _refreshVehicleData() async {
     try {
       final response = await http.get(Uri.parse("$baseUrl?action=get_vehicles&customer_id=${widget.customerId}"));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success') {
-          List vehicles = data['vehicles'];
+          List vehicles = data['vehicles'] ?? [];
           var updatedVehicle = vehicles.firstWhere((v) => v['id'].toString() == currentVehicleData['id'].toString(), orElse: () => null);
           if (updatedVehicle != null && mounted) {
             setState(() {
@@ -110,20 +191,22 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
       showDialog(
         context: context,
         builder: (context) {
-          final isDark = Theme.of(context).brightness == Brightness.dark;
           final size = MediaQuery.of(context).size;
           return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-            backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+              side: BorderSide(color: Colors.white.withOpacity(0.08), width: 1.5)
+            ),
+            backgroundColor: const Color(0xFF111111),
             title: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(8), 
-                  decoration: BoxDecoration(color: const Color(0xFFF59E0B).withOpacity(0.15), shape: BoxShape.circle), 
-                  child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFF59E0B), size: 28)
+                  decoration: BoxDecoration(color: const Color(0xFFEF4444).withOpacity(0.15), shape: BoxShape.circle), 
+                  child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444), size: 28)
                 ),
                 const SizedBox(width: 12),
-                Expanded(child: Text("Hatırlatmalar", style: TextStyle(fontWeight: FontWeight.w900, fontSize: size.width * 0.05, color: isDark ? Colors.white : Colors.black))),
+                Expanded(child: Text("Hatırlatmalar", style: TextStyle(fontWeight: FontWeight.w900, fontSize: size.width * 0.05, color: Colors.white, letterSpacing: -0.5))),
               ],
             ),
             content: SizedBox(
@@ -137,7 +220,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                     children: [
                       const Icon(Icons.circle, size: 8, color: Color(0xFFEF4444)),
                       const SizedBox(width: 12),
-                      Expanded(child: Text(a, style: TextStyle(fontSize: size.width * 0.038, fontWeight: FontWeight.w600, color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155)))),
+                      Expanded(child: Text(a, style: TextStyle(fontSize: size.width * 0.038, fontWeight: FontWeight.w600, color: const Color(0xFF94A3B8)))),
                     ],
                   ),
                 )).toList(),
@@ -147,11 +230,11 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 style: TextButton.styleFrom(
-                  backgroundColor: const Color(0xFF3B82F6), 
+                  backgroundColor: const Color(0xFF00E676), 
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), 
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)
                 ),
-                child: const Text("Anladım", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                child: const Text("Anladım", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16)),
               )
             ],
           );
@@ -160,21 +243,26 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     }
   }
 
-  void _showAddRecordSheet() {
+  void _showRecordSheet({Map<String, dynamic>? recordToEdit}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _AddRecordSheet(
+      builder: (context) => _RecordFormSheet(
         vehicleId: currentVehicleData['id'].toString(),
         vehiclePlate: currentVehicleData['plate'].toString(),
         baseUrl: baseUrl,
         currentKm: int.tryParse(currentVehicleData['current_km']?.toString() ?? '0') ?? 0,
         maintenanceKm: int.tryParse(currentVehicleData['maintenance_km']?.toString() ?? '10000') ?? 10000,
+        recordToEdit: recordToEdit,
         onSaved: () {
           Navigator.pop(context);
           _fetchRecords();
-        }
+        },
+        onDeleted: () {
+          Navigator.pop(context);
+          _fetchRecords();
+        },
       ),
     );
   }
@@ -187,15 +275,35 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     }
   }
 
-  Widget _buildTotalExpenseCard(bool isDark, Size size) {
+  List<dynamic> get _filteredRecords {
+    return records.where((r) {
+      final type = (r['record_type'] ?? '').toString();
+      final desc = (r['description'] ?? '').toString().toLowerCase();
+      final cost = (r['cost'] ?? '').toString();
+      final date = (r['created_at'] ?? '').toString();
+
+      final matchesFilter = selectedFilter == "Tümü" || type.toLowerCase() == selectedFilter.toLowerCase();
+      
+      final q = searchQuery.toLowerCase().trim();
+      final matchesSearch = q.isEmpty || 
+          desc.contains(q) || 
+          type.toLowerCase().contains(q) || 
+          cost.contains(q) || 
+          date.contains(q);
+
+      return matchesFilter && matchesSearch;
+    }).toList();
+  }
+
+  Widget _buildTotalExpenseCard(Size size) {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: size.width * 0.04),
       padding: EdgeInsets.all(size.width * 0.05),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00C853)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        borderRadius: BorderRadius.circular(32),
         boxShadow: [
-          BoxShadow(color: const Color(0xFF059669).withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 10))
+          BoxShadow(color: const Color(0xFF00C853).withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 10))
         ],
       ),
       child: Row(
@@ -204,22 +312,22 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Toplam Araç Gideri", style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: size.width * 0.04, fontWeight: FontWeight.w600)),
+              Text("Toplam Araç Gideri", style: TextStyle(color: Colors.black.withOpacity(0.7), fontSize: size.width * 0.04, fontWeight: FontWeight.w800)),
               const SizedBox(height: 6),
-              Text("${totalExpense.toStringAsFixed(2)} ₺", style: TextStyle(color: Colors.white, fontSize: size.width * 0.07, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+              Text("${totalExpense.toStringAsFixed(2)} ₺", style: TextStyle(color: Colors.black, fontSize: size.width * 0.07, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
             ],
           ),
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-            child: Icon(Icons.account_balance_wallet_rounded, color: Colors.white, size: size.width * 0.08),
+            decoration: BoxDecoration(color: Colors.black.withOpacity(0.1), shape: BoxShape.circle),
+            child: Icon(Icons.account_balance_wallet_rounded, color: Colors.black, size: size.width * 0.08),
           )
         ],
       ),
     );
   }
 
-  Widget _buildVerticalSummary(bool isDark, Size size) {
+  Widget _buildVerticalSummary(Size size) {
     final insDate = DateTime.tryParse(currentVehicleData['insurance_date'] ?? '');
     final inspDate = DateTime.tryParse(currentVehicleData['inspection_date'] ?? '');
     final int cKm = int.tryParse(currentVehicleData['current_km']?.toString() ?? '0') ?? 0;
@@ -229,45 +337,42 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
       margin: EdgeInsets.symmetric(horizontal: size.width * 0.04, vertical: size.height * 0.015),
       padding: EdgeInsets.all(size.width * 0.05),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.transparent),
+        color: const Color(0xFF111111),
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withOpacity(0.2) : Colors.blueGrey.withOpacity(0.08), 
-            blurRadius: 24, 
-            offset: const Offset(0, 12)
+            color: Colors.black.withOpacity(0.3), 
+            blurRadius: 30, 
+            offset: const Offset(0, 10)
           )
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildInfoRow("Trafik Sigortası", insDate, Icons.shield_rounded, 365, isDark, size),
+          _buildInfoRow("Trafik Sigortası", insDate, Icons.shield_rounded, 365, size),
           Padding(
             padding: EdgeInsets.symmetric(vertical: size.height * 0.02), 
-            child: Divider(height: 1, color: isDark ? Colors.white12 : Colors.grey.shade200)
+            child: Divider(height: 1, color: Colors.white.withOpacity(0.05))
           ),
-          _buildInfoRow("Araç Muayenesi", inspDate, Icons.fact_check_rounded, 730, isDark, size),
+          _buildInfoRow("Araç Muayenesi", inspDate, Icons.fact_check_rounded, 730, size),
           Padding(
             padding: EdgeInsets.symmetric(vertical: size.height * 0.02), 
-            child: Divider(height: 1, color: isDark ? Colors.white12 : Colors.grey.shade200)
+            child: Divider(height: 1, color: Colors.white.withOpacity(0.05))
           ),
-          _buildMaintenanceRow(cKm, mKm, isDark, size),
+          _buildMaintenanceRow(cKm, mKm, size),
         ],
       ),
     );
   }
 
-  Widget _buildInfoRow(String title, DateTime? date, IconData icon, int totalDays, bool isDark, Size size) {
+  Widget _buildInfoRow(String title, DateTime? date, IconData icon, int totalDays, Size size) {
     int daysLeft = date != null ? date.difference(DateTime.now()).inDays : 0;
     double progress = date != null ? (daysLeft / totalDays).clamp(0.0, 1.0) : 0.0;
     Color statusColor = date == null 
-      ? (isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)) 
-      : (daysLeft <= 15 ? const Color(0xFFEF4444) : (daysLeft <= 30 ? const Color(0xFFF59E0B) : const Color(0xFF10B981)));
-    
-    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
-    final subtitleColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+      ? const Color(0xFF64748B)
+      : (daysLeft <= 15 ? const Color(0xFFEF4444) : (daysLeft <= 30 ? const Color(0xFFF59E0B) : const Color(0xFF00E676)));
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -284,9 +389,9 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: TextStyle(fontSize: size.width * 0.04, fontWeight: FontWeight.bold, color: textColor)),
+                  Text(title, style: TextStyle(fontSize: size.width * 0.04, fontWeight: FontWeight.w900, color: Colors.white)),
                   const SizedBox(height: 4),
-                  Text(date == null ? "Tarih Girilmedi" : DateFormat('dd.MM.yyyy').format(date), style: TextStyle(fontSize: size.width * 0.035, color: subtitleColor)),
+                  Text(date == null ? "Tarih Girilmedi" : DateFormat('dd.MM.yyyy').format(date), style: TextStyle(fontSize: size.width * 0.035, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
@@ -298,7 +403,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
               ),
               child: Text(
                 date == null ? "Belirsiz" : (daysLeft < 0 ? "${daysLeft.abs()} Gün Gecikti" : "$daysLeft Gün"), 
-                style: TextStyle(fontSize: size.width * 0.035, fontWeight: FontWeight.w800, color: statusColor)
+                style: TextStyle(fontSize: size.width * 0.035, fontWeight: FontWeight.w900, color: statusColor)
               ),
             ),
           ],
@@ -310,7 +415,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
             child: LinearProgressIndicator(
               value: progress, 
               minHeight: 8, 
-              backgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9), 
+              backgroundColor: const Color(0xFF1E293B), 
               valueColor: AlwaysStoppedAnimation<Color>(statusColor)
             ),
           ),
@@ -319,14 +424,11 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     );
   }
 
-  Widget _buildMaintenanceRow(int cKm, int mKm, bool isDark, Size size) {
+  Widget _buildMaintenanceRow(int cKm, int mKm, Size size) {
     int remainingKm = mKm - cKm;
     double progress = mKm > 0 ? (cKm / mKm).clamp(0.0, 1.0) : 0.0;
-    Color statusColor = remainingKm <= 1000 ? const Color(0xFFEF4444) : const Color(0xFF3B82F6);
+    Color statusColor = remainingKm <= 1000 ? const Color(0xFFEF4444) : const Color(0xFF00E676);
     
-    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
-    final subtitleColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -342,9 +444,9 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Periyodik Bakım", style: TextStyle(fontSize: size.width * 0.04, fontWeight: FontWeight.bold, color: textColor)),
+                  Text("Periyodik Bakım", style: TextStyle(fontSize: size.width * 0.04, fontWeight: FontWeight.w900, color: Colors.white)),
                   const SizedBox(height: 4),
-                  Text("Güncel: $cKm KM", style: TextStyle(fontSize: size.width * 0.035, color: subtitleColor)),
+                  Text("Güncel: $cKm KM", style: TextStyle(fontSize: size.width * 0.035, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
@@ -356,7 +458,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
               ),
               child: Text(
                 remainingKm < 0 ? "${remainingKm.abs()} KM Gecikti" : "$remainingKm KM", 
-                style: TextStyle(fontSize: size.width * 0.035, fontWeight: FontWeight.w800, color: statusColor)
+                style: TextStyle(fontSize: size.width * 0.035, fontWeight: FontWeight.w900, color: statusColor)
               ),
             ),
           ],
@@ -367,7 +469,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
           child: LinearProgressIndicator(
             value: progress, 
             minHeight: 8, 
-            backgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9), 
+            backgroundColor: const Color(0xFF1E293B), 
             valueColor: AlwaysStoppedAnimation<Color>(statusColor)
           ),
         ),
@@ -375,10 +477,75 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     );
   }
 
-  Widget _buildTimelineItem(dynamic record, bool isLast, bool isDark, Size size) {
-    DateTime date = DateTime.parse(record['created_at']);
+  Widget _buildFilterAndSearchBar(Size size) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: size.width * 0.04),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF111111),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
+            ),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (val) => setState(() => searchQuery = val),
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: "İşlem veya açıklama ara...",
+                hintStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 14, fontWeight: FontWeight.w600),
+                prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF00E676), size: 22),
+                suffixIcon: searchQuery.isNotEmpty 
+                  ? IconButton(
+                      icon: const Icon(Icons.clear_rounded, color: Colors.white54, size: 18),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => searchQuery = "");
+                      },
+                    )
+                  : null,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              children: filterOptions.map((f) {
+                final isSelected = selectedFilter == f;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: ChoiceChip(
+                    label: Text(f, style: TextStyle(color: isSelected ? Colors.black : Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
+                    selected: isSelected,
+                    selectedColor: const Color(0xFF00E676),
+                    backgroundColor: const Color(0xFF111111),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    side: BorderSide(color: isSelected ? Colors.transparent : Colors.white.withOpacity(0.08), width: 1.2),
+                    onSelected: (val) {
+                      if (val) setState(() => selectedFilter = f);
+                    },
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimelineItem(dynamic record, bool isLast, Size size) {
+    DateTime date = DateTime.tryParse(record['created_at']?.toString() ?? '') ?? DateTime.now();
     String type = record['record_type'].toString();
     double cost = double.tryParse(record['cost']?.toString() ?? '0') ?? 0.0;
+    final recordId = record['id'];
     
     IconData getIcon() {
       switch (type) {
@@ -392,9 +559,9 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     }
     Color getColor() {
       switch (type) {
-        case 'Muayene': return const Color(0xFF10B981);
-        case 'Sigorta': return const Color(0xFF3B82F6);
-        case 'MTV': return const Color(0xFF8B5CF6);
+        case 'Muayene': return const Color(0xFF00E676);
+        case 'Sigorta': return const Color(0xFF00E5FF);
+        case 'MTV': return const Color(0xFFB388FF);
         case 'Periyodik Bakım': return const Color(0xFFF59E0B);
         case 'Tamir': return const Color(0xFFEF4444);
         default: return const Color(0xFF64748B);
@@ -410,9 +577,9 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
               Container(
                 width: size.width * 0.12, height: size.width * 0.12,
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E293B) : Colors.white, 
+                  color: const Color(0xFF111111), 
                   shape: BoxShape.circle, 
-                  border: Border.all(color: getColor().withOpacity(0.5), width: 3),
+                  border: Border.all(color: getColor().withOpacity(0.5), width: 2),
                   boxShadow: [
                     BoxShadow(color: getColor().withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 4))
                   ]
@@ -422,10 +589,10 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
               if (!isLast)
                 Expanded(
                   child: Container(
-                    width: 3, 
+                    width: 2, 
                     margin: EdgeInsets.symmetric(vertical: size.height * 0.01), 
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.white12 : const Color(0xFFE2E8F0), 
+                      color: Colors.white.withOpacity(0.1), 
                       borderRadius: BorderRadius.circular(2)
                     )
                   )
@@ -439,11 +606,11 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
               child: Container(
                 padding: EdgeInsets.all(size.width * 0.05),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  color: const Color(0xFF111111),
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.transparent),
+                  border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 8))
+                    BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 8))
                   ],
                 ),
                 child: Column(
@@ -460,27 +627,66 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                           ),
                           child: Text(type.toUpperCase(), style: TextStyle(color: getColor(), fontWeight: FontWeight.w900, fontSize: size.width * 0.03, letterSpacing: 0.5)),
                         ),
-                        Text(DateFormat('dd.MM.yyyy').format(date), style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), fontWeight: FontWeight.bold, fontSize: size.width * 0.03)),
+                        Row(
+                          children: [
+                            Text(DateFormat('dd.MM.yyyy').format(date), style: TextStyle(color: const Color(0xFF94A3B8), fontWeight: FontWeight.bold, fontSize: size.width * 0.03)),
+                            const SizedBox(width: 8),
+                            PopupMenuButton<String>(
+                              icon: const Icon(Icons.more_vert_rounded, color: Color(0xFF94A3B8), size: 20),
+                              color: const Color(0xFF1E293B),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              onSelected: (val) {
+                                if (val == 'edit') {
+                                  _showRecordSheet(recordToEdit: record);
+                                } else if (val == 'delete') {
+                                  _deleteRecord(recordId);
+                                }
+                              },
+                              itemBuilder: (ctx) => [
+                                const PopupMenuItem(
+                                  value: 'edit',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.edit_rounded, color: Color(0xFF00E676), size: 18),
+                                      SizedBox(width: 10),
+                                      Text("Düzenle", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                                    ],
+                                  ),
+                                ),
+                                const PopupMenuItem(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 18),
+                                      SizedBox(width: 10),
+                                      Text("Sil", style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 14)),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                     if (record['description'] != null && record['description'].toString().isNotEmpty) ...[
                       SizedBox(height: size.height * 0.015),
-                      Text(record['description'], style: TextStyle(color: isDark ? Colors.white : const Color(0xFF334155), fontSize: size.width * 0.038, height: 1.5)),
+                      Text(record['description'], style: TextStyle(color: Colors.white, fontSize: size.width * 0.038, height: 1.5, fontWeight: FontWeight.w500)),
                     ],
                     if (cost > 0) ...[
                       SizedBox(height: size.height * 0.015),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withOpacity(0.1),
+                          color: const Color(0xFF00E676).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12)
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.payments_rounded, color: Color(0xFF10B981), size: 18),
+                            const Icon(Icons.payments_rounded, color: Color(0xFF00E676), size: 18),
                             const SizedBox(width: 8),
-                            Text("${cost.toStringAsFixed(2)} ₺", style: TextStyle(color: const Color(0xFF10B981), fontWeight: FontWeight.w900, fontSize: size.width * 0.035)),
+                            Text("${cost.toStringAsFixed(2)} ₺", style: TextStyle(color: const Color(0xFF00E676), fontWeight: FontWeight.w900, fontSize: size.width * 0.035)),
                           ],
                         ),
                       )
@@ -493,21 +699,21 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                           if (record['document_url'] != null)
                             ActionChip(
                               avatar: Icon(Icons.picture_as_pdf, color: const Color(0xFFEF4444), size: size.width * 0.045),
-                              label: Text("Belgeyi Gör", style: TextStyle(fontWeight: FontWeight.bold, fontSize: size.width * 0.03)),
-                              backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                              label: Text("Belgeyi Gör", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: size.width * 0.03)),
+                              backgroundColor: const Color(0xFF050505),
                               padding: EdgeInsets.all(size.width * 0.02),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              side: const BorderSide(color: Color(0xFFEF4444), width: 1.2),
+                              side: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
                               onPressed: () => _openFile(record['document_url']),
                             ),
                           if (record['image_url'] != null)
                             ActionChip(
-                              avatar: Icon(Icons.image, color: const Color(0xFF10B981), size: size.width * 0.045),
-                              label: Text("Resmi Gör", style: TextStyle(fontWeight: FontWeight.bold, fontSize: size.width * 0.03)),
-                              backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                              avatar: Icon(Icons.image, color: const Color(0xFF00E676), size: size.width * 0.045),
+                              label: Text("Resmi Gör", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: size.width * 0.03)),
+                              backgroundColor: const Color(0xFF050505),
                               padding: EdgeInsets.all(size.width * 0.02),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              side: const BorderSide(color: Color(0xFF10B981), width: 1.2),
+                              side: const BorderSide(color: Color(0xFF00E676), width: 1.5),
                               onPressed: () => _openFile(record['image_url']),
                             ),
                         ],
@@ -525,18 +731,19 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
-    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final bgColor = const Color(0xFF050505);
+    final textColor = Colors.white;
     final size = MediaQuery.of(context).size;
+    final displayRecords = _filteredRecords;
 
     return Scaffold(
       backgroundColor: bgColor,
       body: isLoading 
-        ? const Center(child: CircularProgressIndicator(color: Color(0xFF3B82F6)))
+        ? const Center(child: CircularProgressIndicator(color: Color(0xFF00E676)))
         : RefreshIndicator(
             onRefresh: _fetchRecords,
-            color: const Color(0xFF3B82F6),
+            color: const Color(0xFF00E676),
+            backgroundColor: const Color(0xFF111111),
             child: FadeTransition(
               opacity: _fadeController,
               child: CustomScrollView(
@@ -556,7 +763,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(currentVehicleData['plate'], style: TextStyle(fontWeight: FontWeight.w900, color: textColor, fontSize: size.width * 0.05, letterSpacing: 1.0)),
-                          Text(currentVehicleData['brand_model'] ?? '', style: TextStyle(fontSize: size.width * 0.03, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), fontWeight: FontWeight.normal)),
+                          Text(currentVehicleData['brand_model'] ?? '', style: TextStyle(fontSize: size.width * 0.03, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w600)),
                         ],
                       ),
                     ),
@@ -567,32 +774,40 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _buildTotalExpenseCard(isDark, size),
+                          _buildTotalExpenseCard(size),
                           SizedBox(height: size.height * 0.02),
-                          _buildVerticalSummary(isDark, size),
+                          _buildVerticalSummary(size),
                           Padding(
-                            padding: EdgeInsets.fromLTRB(size.width * 0.05, size.height * 0.04, size.width * 0.05, size.height * 0.025),
+                            padding: EdgeInsets.fromLTRB(size.width * 0.05, size.height * 0.04, size.width * 0.05, size.height * 0.015),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text("İşlem Geçmişi", style: TextStyle(fontSize: size.width * 0.055, fontWeight: FontWeight.w900, color: textColor)),
+                                Text("İşlem Geçmişi", style: TextStyle(fontSize: size.width * 0.055, fontWeight: FontWeight.w900, color: textColor, letterSpacing: -0.5)),
                                 Container(
                                   padding: EdgeInsets.symmetric(horizontal: size.width * 0.035, vertical: size.height * 0.01),
-                                  decoration: BoxDecoration(color: const Color(0xFF3B82F6).withOpacity(0.1), borderRadius: BorderRadius.circular(16)),
-                                  child: Text("${records.length} Kayıt", style: TextStyle(color: const Color(0xFF3B82F6), fontWeight: FontWeight.bold, fontSize: size.width * 0.035)),
+                                  decoration: BoxDecoration(color: const Color(0xFF00E676).withOpacity(0.1), borderRadius: BorderRadius.circular(16)),
+                                  child: Text("${records.length} Kayıt", style: TextStyle(color: const Color(0xFF00E676), fontWeight: FontWeight.w900, fontSize: size.width * 0.035)),
                                 )
                               ],
                             ),
                           ),
-                          if (records.isEmpty)
+                          _buildFilterAndSearchBar(size),
+                          SizedBox(height: size.height * 0.025),
+                          if (displayRecords.isEmpty)
                             Padding(
                               padding: EdgeInsets.all(size.width * 0.1),
                               child: Center(
                                 child: Column(
                                   children: [
-                                    Icon(Icons.history_toggle_off_rounded, size: size.width * 0.2, color: isDark ? Colors.white24 : Colors.black12),
+                                    Icon(Icons.history_toggle_off_rounded, size: size.width * 0.2, color: Colors.white24),
                                     SizedBox(height: size.height * 0.02),
-                                    Text("Henüz bu araca ait işlem bulunmuyor.", textAlign: TextAlign.center, style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), fontSize: size.width * 0.04, fontWeight: FontWeight.bold)),
+                                    Text(
+                                      records.isEmpty 
+                                        ? "Henüz bu araca ait işlem bulunmuyor." 
+                                        : "Arama veya filtreye uygun işlem bulunamadı.", 
+                                      textAlign: TextAlign.center, 
+                                      style: TextStyle(color: const Color(0xFF94A3B8), fontSize: size.width * 0.04, fontWeight: FontWeight.bold)
+                                    ),
                                   ],
                                 ),
                               ),
@@ -601,7 +816,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                             Padding(
                               padding: EdgeInsets.symmetric(horizontal: size.width * 0.05),
                               child: Column(
-                                children: List.generate(records.length, (index) => _buildTimelineItem(records[index], index == records.length - 1, isDark, size)),
+                                children: List.generate(displayRecords.length, (index) => _buildTimelineItem(displayRecords[index], index == displayRecords.length - 1, size)),
                               ),
                             ),
                           SizedBox(height: size.height * 0.15), 
@@ -614,64 +829,79 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
             ),
           ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddRecordSheet,
-        backgroundColor: const Color(0xFF3B82F6),
+        onPressed: () => _showRecordSheet(),
+        backgroundColor: const Color(0xFF00E676),
         elevation: 6,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        icon: const Icon(Icons.add_chart_rounded, color: Colors.white, size: 24),
-        label: const Text("İşlem Ekle", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 0.5)),
+        icon: const Icon(Icons.add_chart_rounded, color: Colors.black, size: 24),
+        label: const Text("İşlem Ekle", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
       ),
     );
   }
 }
 
-class _AddRecordSheet extends StatefulWidget {
+class _RecordFormSheet extends StatefulWidget {
   final String vehicleId;
   final String vehiclePlate; 
   final String baseUrl;
   final int currentKm;
   final int maintenanceKm;
+  final Map<String, dynamic>? recordToEdit;
   final VoidCallback onSaved;
+  final VoidCallback onDeleted;
 
-  const _AddRecordSheet({
+  const _RecordFormSheet({
     required this.vehicleId, 
     required this.vehiclePlate,
     required this.baseUrl, 
     required this.currentKm, 
     required this.maintenanceKm, 
-    required this.onSaved
+    this.recordToEdit,
+    required this.onSaved,
+    required this.onDeleted,
   });
 
   @override
-  __AddRecordSheetState createState() => __AddRecordSheetState();
+  __RecordFormSheetState createState() => __RecordFormSheetState();
 }
 
-class __AddRecordSheetState extends State<_AddRecordSheet> {
-  String selectedType = 'Muayene';
-  final TextEditingController descController = TextEditingController();
-  final TextEditingController costController = TextEditingController();
+class __RecordFormSheetState extends State<_RecordFormSheet> {
+  late String selectedType;
+  late TextEditingController descController;
+  late TextEditingController costController;
   late TextEditingController currentKmController;
   late TextEditingController maintenanceKmController;
   
+  late DateTime selectedRecordDate;
   DateTime? selectedNextDate; 
   XFile? selectedImage;
   PlatformFile? selectedDoc;
   bool isSaving = false;
   bool enableNotification = true; 
+  bool isEditing = false;
   
   final List<Map<String, dynamic>> operationTypes = [
-    {'id': 'Muayene', 'icon': Icons.fact_check_rounded, 'color': const Color(0xFF10B981)},
-    {'id': 'Sigorta', 'icon': Icons.shield_rounded, 'color': const Color(0xFF3B82F6)},
+    {'id': 'Muayene', 'icon': Icons.fact_check_rounded, 'color': const Color(0xFF00E676)},
+    {'id': 'Sigorta', 'icon': Icons.shield_rounded, 'color': const Color(0xFF00E5FF)},
     {'id': 'Periyodik Bakım', 'icon': Icons.build_circle_rounded, 'color': const Color(0xFFF59E0B)},
     {'id': 'Tamir', 'icon': Icons.car_repair_rounded, 'color': const Color(0xFFEF4444)},
-    {'id': 'MTV', 'icon': Icons.account_balance_rounded, 'color': const Color(0xFF8B5CF6)},
+    {'id': 'MTV', 'icon': Icons.account_balance_rounded, 'color': const Color(0xFFB388FF)},
   ];
 
   @override
   void initState() {
     super.initState();
-    currentKmController = TextEditingController(text: widget.currentKm.toString());
-    maintenanceKmController = TextEditingController(text: widget.maintenanceKm.toString());
+    isEditing = widget.recordToEdit != null;
+    final r = widget.recordToEdit;
+
+    selectedType = r?['record_type'] ?? 'Muayene';
+    descController = TextEditingController(text: r?['description'] ?? '');
+    costController = TextEditingController(text: r?['cost'] != null ? r!['cost'].toString() : '');
+    currentKmController = TextEditingController(text: r?['current_km']?.toString() ?? widget.currentKm.toString());
+    maintenanceKmController = TextEditingController(text: r?['maintenance_km']?.toString() ?? widget.maintenanceKm.toString());
+    
+    selectedRecordDate = r?['created_at'] != null ? (DateTime.tryParse(r!['created_at']) ?? DateTime.now()) : DateTime.now();
+    selectedNextDate = r?['next_date'] != null ? DateTime.tryParse(r!['next_date']) : null;
   }
 
   @override
@@ -683,32 +913,46 @@ class __AddRecordSheetState extends State<_AddRecordSheet> {
     super.dispose();
   }
 
-  void _showNotificationSuccess() {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: const Row(
-        children: [
-          Icon(Icons.notifications_active_rounded, color: Colors.white, size: 20),
-          SizedBox(width: 8),
-          Expanded(child: Text("Cihaz hatırlatıcısı başarıyla kuruldu.", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
-        ],
-      ),
-      backgroundColor: const Color(0xFF10B981),
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      margin: const EdgeInsets.all(20),
-    ));
+  void _showTopSnackBar(String message, {bool isError = false}) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+              child: Icon(isError ? Icons.error_rounded : Icons.check_circle_rounded, color: Colors.white, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(child: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15, letterSpacing: 0.3))),
+          ],
+        ),
+        backgroundColor: isError ? const Color(0xFFEF4444) : const Color(0xFF00E676),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(20),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ));
+    }
   }
 
   Future<void> _saveRecord() async {
     setState(() => isSaving = true);
+    final action = isEditing ? "update_vehicle_record" : "add_vehicle_record";
+
     try {
-      var request = http.MultipartRequest('POST', Uri.parse("${widget.baseUrl}?action=add_vehicle_record"));
+      var request = http.MultipartRequest('POST', Uri.parse("${widget.baseUrl}?action=$action"));
       request.fields['vehicle_id'] = widget.vehicleId;
       request.fields['record_type'] = selectedType;
       request.fields['description'] = descController.text.trim();
       request.fields['cost'] = costController.text.trim();
       request.fields['current_km'] = currentKmController.text.trim();
+      request.fields['created_at'] = DateFormat('yyyy-MM-dd HH:mm:ss').format(selectedRecordDate);
       
+      if (isEditing) {
+        request.fields['record_id'] = widget.recordToEdit!['id'].toString();
+      }
+
       if (selectedType == 'Periyodik Bakım') {
         request.fields['maintenance_km'] = maintenanceKmController.text.trim();
       }
@@ -726,7 +970,7 @@ class __AddRecordSheetState extends State<_AddRecordSheet> {
       }
 
       var response = await request.send();
-      if (response.statusCode == 201) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         if (enableNotification && selectedNextDate != null) {
           DateTime notificationDate = selectedNextDate!.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
           
@@ -738,14 +982,14 @@ class __AddRecordSheetState extends State<_AddRecordSheet> {
               scheduledDate: notificationDate
             );
           }
-          _showNotificationSuccess();
         }
+        _showTopSnackBar(isEditing ? "İşlem güncellendi!" : "İşlem başarıyla eklendi!");
         widget.onSaved();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Kayıt eklenirken bir hata oluştu.")));
+        _showTopSnackBar("İşlem kaydedilemedi.", isError: true);
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Bağlantı hatası lütfen tekrar deneyin.")));
+      _showTopSnackBar("Bağlantı hatası lütfen tekrar deneyin.", isError: true);
     } finally {
       if (mounted) setState(() => isSaving = false);
     }
@@ -753,19 +997,19 @@ class __AddRecordSheetState extends State<_AddRecordSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF0F172A).withOpacity(0.98) : Colors.white.withOpacity(0.98);
-    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final bgColor = const Color(0xFF111111).withOpacity(0.98);
+    final textColor = Colors.white;
     final size = MediaQuery.of(context).size;
 
     return BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+      filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
       child: Container(
         padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + size.height * 0.03, top: size.height * 0.02),
         decoration: BoxDecoration(
           color: bgColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 40, offset: const Offset(0, -10))]
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+          border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 40, offset: const Offset(0, -10))]
         ),
         child: SafeArea(
           child: Column(
@@ -773,13 +1017,13 @@ class __AddRecordSheetState extends State<_AddRecordSheet> {
             children: [
               Center(
                 child: Container(
-                  width: size.width * 0.15, height: 5, 
-                  decoration: BoxDecoration(color: isDark ? Colors.white24 : Colors.grey.shade300, borderRadius: BorderRadius.circular(10))
+                  width: size.width * 0.15, height: 6, 
+                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10))
                 )
               ),
-              SizedBox(height: size.height * 0.03),
-              Text("Yeni İşlem Kaydı", style: TextStyle(fontSize: size.width * 0.055, fontWeight: FontWeight.w900, color: textColor)),
-              SizedBox(height: size.height * 0.03),
+              SizedBox(height: size.height * 0.025),
+              Text(isEditing ? "İşlem Kaydını Düzenle" : "Yeni İşlem Kaydı", style: TextStyle(fontSize: size.width * 0.055, fontWeight: FontWeight.w900, color: textColor, letterSpacing: -0.5)),
+              SizedBox(height: size.height * 0.025),
               
               Flexible(
                 child: SingleChildScrollView(
@@ -798,47 +1042,87 @@ class __AddRecordSheetState extends State<_AddRecordSheet> {
                             return Padding(
                               padding: EdgeInsets.only(right: size.width * 0.03),
                               child: ChoiceChip(
-                                label: Text(type['id'], style: TextStyle(color: isSelected ? Colors.white : textColor, fontWeight: FontWeight.bold, fontSize: size.width * 0.035)),
+                                label: Text(type['id'], style: TextStyle(color: isSelected ? Colors.black : textColor, fontWeight: FontWeight.w900, fontSize: size.width * 0.035)),
                                 selected: isSelected,
                                 padding: EdgeInsets.symmetric(horizontal: size.width * 0.035, vertical: size.height * 0.015),
                                 onSelected: (val) {
                                   if (val) setState(() { selectedType = type['id']; selectedNextDate = null; });
                                 },
                                 selectedColor: color,
-                                backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                                avatar: Icon(type['icon'], color: isSelected ? Colors.white : color, size: size.width * 0.05),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                side: BorderSide(color: isSelected ? color : Colors.transparent, width: 1.5),
+                                backgroundColor: const Color(0xFF050505),
+                                avatar: Icon(type['icon'], color: isSelected ? Colors.black : color, size: size.width * 0.05),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                side: BorderSide(color: isSelected ? color : Colors.white.withOpacity(0.1), width: 1.5),
                               ),
                             );
                           }).toList(),
                         ),
                       ),
-                      SizedBox(height: size.height * 0.03),
+                      SizedBox(height: size.height * 0.025),
+
+                      InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: () async {
+                          final date = await showDatePicker(
+                            context: context, 
+                            initialDate: selectedRecordDate, 
+                            firstDate: DateTime(2000), 
+                            lastDate: DateTime.now().add(const Duration(days: 365)), 
+                            locale: const Locale('tr', 'TR')
+                          );
+                          if (date != null) setState(() => selectedRecordDate = date);
+                        },
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: size.width * 0.05, vertical: size.height * 0.02),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF050505), 
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFF00E676).withOpacity(0.3), width: 1.5)
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.event_available_rounded, color: const Color(0xFF00E676), size: size.width * 0.07),
+                              SizedBox(width: size.width * 0.04),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text("İşlem Tarihi", style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13, fontWeight: FontWeight.w700)),
+                                    const SizedBox(height: 4),
+                                    Text(DateFormat('dd.MM.yyyy').format(selectedRecordDate), style: TextStyle(fontSize: size.width * 0.04, fontWeight: FontWeight.w900, color: textColor)),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.edit_calendar_rounded, color: Color(0xFF00E676), size: 20),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: size.height * 0.02),
 
                       if (selectedType == 'Muayene' || selectedType == 'Sigorta') ...[
                         InkWell(
                           borderRadius: BorderRadius.circular(20),
                           onTap: () async {
-                            final date = await showDatePicker(context: context, initialDate: DateTime.now().add(const Duration(days: 365)), firstDate: DateTime.now(), lastDate: DateTime(2100), locale: const Locale('tr', 'TR'));
+                            final date = await showDatePicker(context: context, initialDate: selectedNextDate ?? DateTime.now().add(const Duration(days: 365)), firstDate: DateTime.now(), lastDate: DateTime(2100), locale: const Locale('tr', 'TR'));
                             if (date != null) setState(() => selectedNextDate = date);
                           },
                           child: Container(
                             padding: EdgeInsets.symmetric(horizontal: size.width * 0.05, vertical: size.height * 0.02),
                             decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9), 
+                              color: const Color(0xFF050505), 
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade200)
+                              border: Border.all(color: Colors.white.withOpacity(0.1))
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.calendar_month_rounded, color: const Color(0xFF3B82F6), size: size.width * 0.07),
+                                Icon(Icons.calendar_month_rounded, color: const Color(0xFF00E676), size: size.width * 0.07),
                                 SizedBox(width: size.width * 0.04),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text("Yeni Bitiş Tarihi (İsteğe Bağlı)", style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569), fontSize: size.width * 0.033, fontWeight: FontWeight.bold)),
+                                      const Text("Yeni Bitiş Tarihi (İsteğe Bağlı)", style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13, fontWeight: FontWeight.w700)),
                                       const SizedBox(height: 4),
                                       Text(selectedNextDate != null ? DateFormat('dd.MM.yyyy').format(selectedNextDate!) : "Tarih Seçilmedi", style: TextStyle(fontSize: size.width * 0.04, fontWeight: FontWeight.w900, color: textColor)),
                                     ],
@@ -851,18 +1135,19 @@ class __AddRecordSheetState extends State<_AddRecordSheet> {
                         if (selectedNextDate != null) ...[
                           SizedBox(height: size.height * 0.015),
                           Container(
-                            decoration: BoxDecoration(color: const Color(0xFF3B82F6).withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                            decoration: BoxDecoration(color: const Color(0xFF00E676).withOpacity(0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFF00E676).withOpacity(0.2))),
                             child: SwitchListTile(
                               value: enableNotification,
                               onChanged: (val) => setState(() => enableNotification = val),
-                              activeColor: const Color(0xFF3B82F6),
+                              activeColor: const Color(0xFF00E676),
+                              activeTrackColor: const Color(0xFF00E676).withOpacity(0.4),
                               contentPadding: EdgeInsets.symmetric(horizontal: size.width * 0.05, vertical: size.height * 0.005),
-                              title: Text("Cihazda Hatırlatıcı Kur", style: TextStyle(fontWeight: FontWeight.bold, fontSize: size.width * 0.038)),
-                              secondary: Icon(Icons.notifications_active_rounded, color: const Color(0xFF3B82F6), size: size.width * 0.06),
+                              title: const Text("Cihazda Hatırlatıcı Kur", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Colors.white)),
+                              secondary: const Icon(Icons.notifications_active_rounded, color: Color(0xFF00E676), size: 24),
                             ),
                           ),
                         ],
-                        SizedBox(height: size.height * 0.03),
+                        SizedBox(height: size.height * 0.02),
                       ],
                       
                       Row(
@@ -872,14 +1157,16 @@ class __AddRecordSheetState extends State<_AddRecordSheet> {
                               controller: currentKmController,
                               keyboardType: TextInputType.number,
                               textInputAction: TextInputAction.next,
-                              style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: size.width * 0.04),
+                              style: TextStyle(color: textColor, fontWeight: FontWeight.w900, fontSize: size.width * 0.04),
                               decoration: InputDecoration(
                                 labelText: "Güncel KM",
-                                prefixIcon: Icon(Icons.speed_rounded, color: const Color(0xFF3B82F6), size: size.width * 0.06),
+                                labelStyle: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
+                                prefixIcon: Icon(Icons.speed_rounded, color: const Color(0xFF00E676), size: size.width * 0.06),
                                 filled: true,
-                                fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                                fillColor: const Color(0xFF050505),
                                 contentPadding: EdgeInsets.symmetric(vertical: size.height * 0.025),
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                                focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(20)), borderSide: BorderSide(color: Color(0xFF00E676), width: 2)),
                               ),
                             ),
                           ),
@@ -890,14 +1177,16 @@ class __AddRecordSheetState extends State<_AddRecordSheet> {
                                 controller: maintenanceKmController,
                                 keyboardType: TextInputType.number,
                                 textInputAction: TextInputAction.next,
-                                style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: size.width * 0.04),
+                                style: TextStyle(color: textColor, fontWeight: FontWeight.w900, fontSize: size.width * 0.04),
                                 decoration: InputDecoration(
                                   labelText: "Sonraki Bakım",
+                                  labelStyle: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
                                   prefixIcon: Icon(Icons.build_circle_rounded, color: const Color(0xFFF59E0B), size: size.width * 0.06),
                                   filled: true,
-                                  fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                                  fillColor: const Color(0xFF050505),
                                   contentPadding: EdgeInsets.symmetric(vertical: size.height * 0.025),
                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                                  focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(20)), borderSide: BorderSide(color: Color(0xFFF59E0B), width: 2)),
                                 ),
                               ),
                             ),
@@ -910,14 +1199,16 @@ class __AddRecordSheetState extends State<_AddRecordSheet> {
                         controller: costController,
                         keyboardType: TextInputType.number,
                         textInputAction: TextInputAction.next,
-                        style: TextStyle(color: const Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: size.width * 0.04),
+                        style: TextStyle(color: const Color(0xFF00E676), fontWeight: FontWeight.w900, fontSize: size.width * 0.04),
                         decoration: InputDecoration(
                           labelText: "Maliyet / Tutar (TL)",
-                          prefixIcon: Icon(Icons.payments_rounded, color: const Color(0xFF10B981), size: size.width * 0.06),
+                          labelStyle: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
+                          prefixIcon: Icon(Icons.payments_rounded, color: const Color(0xFF00E676), size: size.width * 0.06),
                           filled: true,
-                          fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                          fillColor: const Color(0xFF050505),
                           contentPadding: EdgeInsets.symmetric(vertical: size.height * 0.025),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                          focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(20)), borderSide: BorderSide(color: Color(0xFF00E676), width: 2)),
                         ),
                       ),
                       SizedBox(height: size.height * 0.02),
@@ -926,16 +1217,18 @@ class __AddRecordSheetState extends State<_AddRecordSheet> {
                         controller: descController,
                         maxLines: 3,
                         textInputAction: TextInputAction.done,
-                        style: TextStyle(color: textColor, fontSize: size.width * 0.038),
+                        style: TextStyle(color: textColor, fontSize: size.width * 0.038, fontWeight: FontWeight.w600),
                         decoration: InputDecoration(
                           labelText: "Yapılan İşlemler / Notlar",
+                          labelStyle: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
                           alignLabelWithHint: true,
                           filled: true,
-                          fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                          fillColor: const Color(0xFF050505),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                          focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(20)), borderSide: BorderSide(color: Color(0xFF00E676), width: 2)),
                         ),
                       ),
-                      SizedBox(height: size.height * 0.03),
+                      SizedBox(height: size.height * 0.025),
                       
                       Row(
                         children: [
@@ -950,15 +1243,15 @@ class __AddRecordSheetState extends State<_AddRecordSheet> {
                               child: Container(
                                 padding: EdgeInsets.symmetric(vertical: size.height * 0.025),
                                 decoration: BoxDecoration(
-                                  color: selectedImage != null ? const Color(0xFF10B981).withOpacity(0.1) : Colors.transparent,
-                                  border: Border.all(color: selectedImage != null ? const Color(0xFF10B981) : (isDark ? Colors.white24 : Colors.grey.shade300), width: 1.5),
+                                  color: selectedImage != null ? const Color(0xFF00E676).withOpacity(0.1) : const Color(0xFF050505),
+                                  border: Border.all(color: selectedImage != null ? const Color(0xFF00E676) : Colors.white24, width: 1.5),
                                   borderRadius: BorderRadius.circular(20)
                                 ),
                                 child: Column(
                                   children: [
-                                    Icon(selectedImage == null ? Icons.add_photo_alternate_rounded : Icons.check_circle_rounded, color: selectedImage == null ? const Color(0xFF3B82F6) : const Color(0xFF10B981), size: size.width * 0.08),
+                                    Icon(selectedImage == null ? Icons.add_photo_alternate_rounded : Icons.check_circle_rounded, color: selectedImage == null ? Colors.white70 : const Color(0xFF00E676), size: size.width * 0.08),
                                     SizedBox(height: size.height * 0.01),
-                                    Text(selectedImage == null ? "Fotoğraf Ekle" : "Fotoğraf Seçildi", style: TextStyle(fontWeight: FontWeight.bold, fontSize: size.width * 0.035, color: selectedImage == null ? const Color(0xFF3B82F6) : const Color(0xFF10B981))),
+                                    Text(selectedImage == null ? "Fotoğraf Değiştir" : "Fotoğraf Seçildi", style: TextStyle(fontWeight: FontWeight.w900, fontSize: size.width * 0.032, color: selectedImage == null ? Colors.white70 : const Color(0xFF00E676))),
                                   ],
                                 ),
                               ),
@@ -976,15 +1269,15 @@ class __AddRecordSheetState extends State<_AddRecordSheet> {
                               child: Container(
                                 padding: EdgeInsets.symmetric(vertical: size.height * 0.025),
                                 decoration: BoxDecoration(
-                                  color: selectedDoc != null ? const Color(0xFF10B981).withOpacity(0.1) : Colors.transparent,
-                                  border: Border.all(color: selectedDoc != null ? const Color(0xFF10B981) : (isDark ? Colors.white24 : Colors.grey.shade300), width: 1.5),
+                                  color: selectedDoc != null ? const Color(0xFFB388FF).withOpacity(0.1) : const Color(0xFF050505),
+                                  border: Border.all(color: selectedDoc != null ? const Color(0xFFB388FF) : Colors.white24, width: 1.5),
                                   borderRadius: BorderRadius.circular(20)
                                 ),
                                 child: Column(
                                   children: [
-                                    Icon(selectedDoc == null ? Icons.upload_file_rounded : Icons.check_circle_rounded, color: selectedDoc == null ? const Color(0xFF8B5CF6) : const Color(0xFF10B981), size: size.width * 0.08),
+                                    Icon(selectedDoc == null ? Icons.upload_file_rounded : Icons.check_circle_rounded, color: selectedDoc == null ? Colors.white70 : const Color(0xFFB388FF), size: size.width * 0.08),
                                     SizedBox(height: size.height * 0.01),
-                                    Text(selectedDoc == null ? "Belge Ekle" : "Belge Seçildi", style: TextStyle(fontWeight: FontWeight.bold, fontSize: size.width * 0.035, color: selectedDoc == null ? const Color(0xFF8B5CF6) : const Color(0xFF10B981))),
+                                    Text(selectedDoc == null ? "Belge Değiştir" : "Belge Seçildi", style: TextStyle(fontWeight: FontWeight.w900, fontSize: size.width * 0.032, color: selectedDoc == null ? Colors.white70 : const Color(0xFFB388FF))),
                                   ],
                                 ),
                               ),
@@ -992,19 +1285,26 @@ class __AddRecordSheetState extends State<_AddRecordSheet> {
                           ),
                         ],
                       ),
-                      SizedBox(height: size.height * 0.04),
+                      SizedBox(height: size.height * 0.035),
                       
-                      ElevatedButton(
-                        onPressed: isSaving ? null : _saveRecord,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF3B82F6),
-                          elevation: 0,
-                          padding: EdgeInsets.symmetric(vertical: size.height * 0.025),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          gradient: const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00C853)]),
+                          boxShadow: [BoxShadow(color: const Color(0xFF00C853).withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 8))],
                         ),
-                        child: isSaving 
-                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3)) 
-                          : Text("İşlemi Kaydet", style: TextStyle(fontSize: size.width * 0.045, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5)),
+                        child: ElevatedButton(
+                          onPressed: isSaving ? null : _saveRecord,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            padding: EdgeInsets.symmetric(vertical: size.height * 0.025),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          ),
+                          child: isSaving 
+                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3)) 
+                            : Text(isEditing ? "Değişiklikleri Kaydet" : "İşlemi Kaydet", style: TextStyle(fontSize: size.width * 0.045, fontWeight: FontWeight.w900, color: Colors.black, letterSpacing: 0.5)),
+                        ),
                       )
                     ],
                   ),

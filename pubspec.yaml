@@ -1,3 +1,4 @@
+# pubspec.yaml
 name: ototag
 description: Oto Eslestirme Sistemi
 publish_to: 'none'
@@ -21,7 +22,7 @@ dependencies:
   image_picker: ^1.1.2
   file_picker: ^8.1.2
   flutter_local_notifications: ^22.3.0
-  in_app_purchase: ^3.3.0
+  in_app_purchase: ^3.1.5
 
 dev_dependencies:
   flutter_test:

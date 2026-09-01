@@ -33,6 +33,8 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
     
     _fetchBids();
+    
+    // Yalnızca tek bir timer üzerinden sıralı ve güvenli kontrol
     _timer = Timer.periodic(const Duration(seconds: 3), (_) => _fetchBids());
     
     _radiusTimer = Timer.periodic(const Duration(seconds: 30), (_) {
@@ -95,7 +97,34 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
   }
 
   Future<void> _fetchBids() async {
+    if (!mounted) return;
+
     try {
+      // 1. ADIM: Önce işin genel durumunu kontrol et (Eşleşme sağlandı mı?)
+      final statusRes = await http.get(Uri.parse("$baseUrl?action=get_job_status&job_id=${widget.jobId}"));
+      if (statusRes.statusCode == 200) {
+        final statusData = json.decode(statusRes.body);
+        final String currentStatus = statusData['status']?.toString().toLowerCase() ?? '';
+        
+        // Eğer usta arka planda onayladıysa ve durum eşleştiyse doğrudan takip ekranına at
+        if (currentStatus == 'matched' || currentStatus == 'in_progress' || currentStatus == 'completed' || currentStatus == 'customer_paid') {
+          _timer?.cancel();
+          _radiusTimer?.cancel();
+          
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (context, anim1, anim2) => JobTrackingScreen(jobId: widget.jobId, userType: 'customer'),
+                transitionsBuilder: (context, anim1, anim2, child) => FadeTransition(opacity: anim1, child: child),
+              ),
+            );
+          }
+          return; // Eşleşme varsa teklifleri çekmeyi iptal et (Ekranın radar moduna düşmesini engeller)
+        }
+      }
+
+      // 2. ADIM: İş hala 'searching' (aranıyor) durumundaysa güncel teklifleri çek
       final response = await http.get(Uri.parse("$baseUrl?action=get_bids&job_id=${widget.jobId}"));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -236,15 +265,17 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
         },
       );
       final data = json.decode(response.body);
+      
       if (data['status'] == 'success' && mounted) {
         _timer?.cancel();
-        Navigator.pushAndRemoveUntil(
+        _radiusTimer?.cancel();
+        
+        Navigator.pushReplacement(
           context,
           PageRouteBuilder(
             pageBuilder: (context, anim1, anim2) => JobTrackingScreen(jobId: widget.jobId, userType: 'customer'),
             transitionsBuilder: (context, anim1, anim2, child) => FadeTransition(opacity: anim1, child: child),
           ),
-          (Route<dynamic> route) => route.isFirst,
         );
       } else {
         _showTopSnackBar(data['message'] ?? "Teklif kabul edilemedi.", isError: true);

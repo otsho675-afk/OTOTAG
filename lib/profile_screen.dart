@@ -172,6 +172,51 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     }
   }
 
+  String _getServiceTypeName(String? type) {
+    switch (type) {
+      case 'mechanic': return "Tamirci";
+      case 'tow': return "Çekici";
+      case 'tire': return "Lastikçi";
+      case 'wash': return "Oto Yıkama";
+      default: return "Bilinmeyen Hizmet";
+    }
+  }
+
+  void _handleLogout() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF111111),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Row(
+          children: [
+            Icon(Icons.logout_rounded, color: Color(0xFFEF4444)),
+            SizedBox(width: 12),
+            Text("Çıkış Yap", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Text("Hesabınızdan çıkış yapmak istediğinize emin misiniz?", style: TextStyle(color: Color(0xFF94A3B8))),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("İptal", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444), 
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+            ),
+            onPressed: () {
+              // Yönlendirmeyi projenizin yapısına göre ayarlayın (Örn: / veya login_screen)
+              Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
+            },
+            child: const Text("Çıkış Yap", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      )
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isProvider = widget.userType == 'provider';
@@ -278,32 +323,32 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               if (isProvider) ...[
                 _buildTextField(_ibanController, "IBAN Numarası", Icons.account_balance_rounded, primaryColor, cardColor, subtitleColor),
                 const SizedBox(height: 24),
+                
+                // Meslek Görüntüleme (Değiştirilemez)
                 Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
                   decoration: BoxDecoration(
-                    color: cardColor, 
-                    borderRadius: BorderRadius.circular(28), 
-                    border: Border.all(color: primaryColor.withOpacity(0.3), width: 1.5), 
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(color: primaryColor.withOpacity(0.3), width: 1.5),
                     boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 20, offset: const Offset(0, 10))]
                   ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: selectedService,
-                      isExpanded: true,
-                      dropdownColor: cardColor,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      icon: Container(
+                  child: Row(
+                    children: [
+                      Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(color: primaryColor.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                        child: Icon(Icons.expand_more_rounded, color: primaryColor, size: 24)
+                        child: Icon(Icons.work_rounded, color: primaryColor, size: 24)
                       ),
-                      items: const [
-                        DropdownMenuItem(value: 'mechanic', child: Text("Tamirci", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 16))),
-                        DropdownMenuItem(value: 'tow', child: Text("Çekici", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 16))),
-                        DropdownMenuItem(value: 'tire', child: Text("Lastikçi", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 16))),
-                        DropdownMenuItem(value: 'wash', child: Text("Oto Yıkama", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 16))),
-                      ],
-                      onChanged: (val) => setState(() => selectedService = val!),
-                    ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          _getServiceTypeName(selectedService),
+                          style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 16)
+                        ),
+                      ),
+                      Icon(Icons.lock_rounded, color: subtitleColor.withOpacity(0.5), size: 20),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 48),
@@ -330,6 +375,34 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                       : const Text("Değişiklikleri Kaydet", style: TextStyle(fontSize: 18, color: Colors.black, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
                 ),
               ),
+
+              const SizedBox(height: 24),
+
+              // Çıkış Yap Butonu
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.5), width: 2),
+                ),
+                child: ElevatedButton(
+                  onPressed: _handleLogout,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFEF4444).withOpacity(0.1), 
+                    shadowColor: Colors.transparent, 
+                    padding: const EdgeInsets.symmetric(vertical: 20), 
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28))
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.logout_rounded, color: Color(0xFFEF4444)),
+                      SizedBox(width: 12),
+                      Text("Hesaptan Çıkış Yap", style: TextStyle(fontSize: 16, color: Color(0xFFEF4444), fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
             ],
           ),
         ),

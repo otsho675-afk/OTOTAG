@@ -28,8 +28,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   List recentJobs = [];
   List pendingProviders = [];
   List allUsers = [];
-  
-  // Düşük performanslı (3.5 altı) ustalar
   List lowPerformingProviders = []; 
 
   final String baseUrl = "https://eliteagency.sbs/api.php";
@@ -64,7 +62,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             totalRevenue = double.tryParse(data['jobs_data']['total_revenue']?.toString() ?? '0.0') ?? 0.0;
             recentJobs = data['recent_jobs'] ?? []; 
             pendingProviders = data['pending_providers'] ?? [];
-            lowPerformingProviders = data['low_performing_providers'] ?? []; // Yeni veri listesi
+            lowPerformingProviders = data['low_performing_providers'] ?? [];
             
             final usersList = data['users_data'] as List;
             totalCustomers = 0;
@@ -214,7 +212,57 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
-  Future<void> _suspendProvider(int providerId, String providerName) async {
+  void _showPunishmentDialog(int userId, String userName, bool isProvider) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E293B) : Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text("$userName İçin Ceza/Engel İşlemi", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                if (isProvider)
+                  ListTile(
+                    leading: const Icon(Icons.timer_off_rounded, color: Colors.orange),
+                    title: const Text("15 Gün Askıya Al"),
+                    subtitle: const Text("Düşük performans nedeniyle 15 gün iş alımını durdurur"),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _applyPunishment(userId, userName, 'suspend_provider', "15 gün askıya alınacak");
+                    },
+                  ),
+                ListTile(
+                  leading: const Icon(Icons.block_rounded, color: Colors.redAccent),
+                  title: const Text("Kalıcı Hesap Engeli (Ban)"),
+                  subtitle: const Text("Kullanıcının hesaba girişini tamamen kapatır"),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _applyPunishment(userId, userName, 'ban_user', "kalıcı olarak engellenecek");
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.phonelink_erase_rounded, color: Colors.red),
+                  title: const Text("IP Ban (Cihaz/Ağ Engeli)"),
+                  subtitle: const Text("Bu cihazdan/ağdan gelen tüm bağlantıları keser"),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _applyPunishment(userId, userName, 'ban_ip', "IP adresi kalıcı olarak engellenecek");
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    );
+  }
+
+  Future<void> _applyPunishment(int userId, String userName, String action, String warningText) async {
     bool confirm = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -223,16 +271,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           children: [
             Icon(Icons.warning_amber_rounded, color: Colors.red),
             SizedBox(width: 8),
-            Text("15 Gün Askıya Al", style: TextStyle(color: Colors.red)),
+            Text("İşlemi Onayla", style: TextStyle(color: Colors.red)),
           ],
         ),
-        content: Text("$providerName adlı ustanın hesabını düşük performans nedeniyle 15 gün süreyle askıya almak istiyor musunuz?"),
+        content: Text("$userName adlı kullanıcının hesabı $warningText. Emin misiniz?"),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("İptal", style: TextStyle(color: Colors.grey))),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
             onPressed: () => Navigator.pop(context, true), 
-            child: const Text("Askıya Al", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+            child: const Text("Onayla", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
           ),
         ],
       )
@@ -241,20 +289,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     if (!confirm) return;
 
     try {
+      final Map<String, String> body = {
+         if (action == 'suspend_provider') "provider_id": userId.toString()
+         else "user_id": userId.toString(),
+      };
+      if (action == 'suspend_provider') body["duration_days"] = "15";
+
       final response = await http.post(
-        Uri.parse("$baseUrl?action=suspend_provider"),
+        Uri.parse("$baseUrl?action=$action"),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
-        body: {"provider_id": providerId.toString(), "duration_days": "15"},
+        body: body,
       );
       if (response.statusCode == 200) {
         await _fetchAllData();
         if(mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Usta 15 gün süreyle askıya alındı."), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Cezai işlem başarıyla uygulandı."), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
         }
       }
     } catch (e) {
       if(mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("İşlem başarısız."), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("İşlem başarısız oldu."), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating));
       }
     }
   }
@@ -502,6 +556,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       case 'matched': return 'Eşleşti (Onay Bekliyor)';
       case 'in_progress': return 'İşlem Sürüyor';
       case 'customer_paid': return 'Ödeme Bekliyor';
+      case 'banned': return 'Engellendi';
       default: return (status ?? 'Bilinmiyor').toUpperCase();
     }
   }
@@ -519,7 +574,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Color _getStatusColor(String? status) {
     switch (status) {
       case 'completed': return Colors.green;
-      case 'cancelled': return Colors.red;
+      case 'cancelled': 
+      case 'banned': return Colors.red;
       case 'searching': return Colors.blue;
       case 'matched':
       case 'in_progress':
@@ -646,13 +702,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ],
                     ),
                   ),
-                  ElevatedButton(
-                    onPressed: () => _suspendProvider(pId, provider['name']),
+                  ElevatedButton.icon(
+                    onPressed: () => _showPunishmentDialog(pId, provider['name'], true),
+                    icon: const Icon(Icons.gavel_rounded, color: Colors.white, size: 16),
+                    label: const Text("İşlem Yap", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
                     ),
-                    child: const Text("15 Gün Askıya Al", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
                   )
                 ],
               ),
@@ -691,7 +748,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ],
           ),
           
-          _buildLowPerformanceAlerts(cardColor), // Düşük puan alan ustalar için eklenen uyarı alanı
+          _buildLowPerformanceAlerts(cardColor), 
 
           const SizedBox(height: 16),
           const Text("Hızlı İşlemler", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
@@ -905,12 +962,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 itemBuilder: (context, index) {
                   final user = filteredUsers[index];
                   final isCustomer = user['user_type'] == 'customer';
+                  final isBanned = user['status'] == 'banned';
                   final userId = int.tryParse(user['id'].toString()) ?? 0;
                   final String joinedDate = _formatDate(user['created_at']);
                   
                   return Container(
                     decoration: BoxDecoration(
-                      color: cardColor,
+                      color: isBanned ? Colors.red.withOpacity(0.05) : cardColor,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))]
                     ),
@@ -918,13 +976,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       leading: CircleAvatar(
                         radius: 24,
-                        backgroundColor: isCustomer ? Colors.blue.withOpacity(0.15) : Colors.purple.withOpacity(0.15),
-                        child: Icon(isCustomer ? Icons.person : Icons.engineering, color: isCustomer ? Colors.blue : Colors.purple),
+                        backgroundColor: isBanned ? Colors.red.withOpacity(0.15) : (isCustomer ? Colors.blue.withOpacity(0.15) : Colors.purple.withOpacity(0.15)),
+                        child: Icon(isBanned ? Icons.block : (isCustomer ? Icons.person : Icons.engineering), color: isBanned ? Colors.red : (isCustomer ? Colors.blue : Colors.purple)),
                       ),
                       title: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Expanded(child: Text(user['name'] ?? 'Bilinmeyen', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+                          Expanded(
+                            child: Text(
+                              user['name'] ?? 'Bilinmeyen', 
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, decoration: isBanned ? TextDecoration.lineThrough : null)
+                            )
+                          ),
                           Text(joinedDate, style: const TextStyle(color: Colors.grey, fontSize: 10)),
                         ],
                       ),
@@ -934,9 +997,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           const SizedBox(height: 4),
                           Text(user['phone'], style: const TextStyle(fontWeight: FontWeight.w500)),
                           const SizedBox(height: 2),
-                          Text(
-                            isCustomer ? 'Müşteri' : 'Usta (${_translateServiceType(user['service_category'])})',
-                            style: TextStyle(color: isCustomer ? Colors.blue : Colors.purple, fontSize: 12, fontWeight: FontWeight.bold)
+                          Row(
+                            children: [
+                              Text(
+                                isCustomer ? 'Müşteri' : 'Usta (${_translateServiceType(user['service_category'])})',
+                                style: TextStyle(color: isCustomer ? Colors.blue : Colors.purple, fontSize: 12, fontWeight: FontWeight.bold)
+                              ),
+                              if (isBanned) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(color: Colors.red.shade100, borderRadius: BorderRadius.circular(4)),
+                                  child: const Text("ENGELLENDİ", style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold)),
+                                )
+                              ]
+                            ],
                           ),
                         ],
                       ),
@@ -954,10 +1029,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               tooltip: "Belgeler",
                               onPressed: () => _showUserDocumentsDialog(user),
                             ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline, color: Colors.red),
-                            tooltip: "Kullanıcıyı Sil",
-                            onPressed: () => _deleteUser(userId, user['name']),
+                          PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert_rounded, color: Colors.grey),
+                            onSelected: (value) {
+                              if (value == 'delete') {
+                                _deleteUser(userId, user['name']);
+                              } else if (value == 'punish') {
+                                _showPunishmentDialog(userId, user['name'], !isCustomer);
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              const PopupMenuItem(
+                                value: 'punish',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.gavel_rounded, color: Colors.orange, size: 20),
+                                    SizedBox(width: 8),
+                                    Text("Cezai İşlem / Ban"),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuItem(
+                                value: 'delete',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.delete_forever_rounded, color: Colors.red, size: 20),
+                                    SizedBox(width: 8),
+                                    Text("Kullanıcıyı Sil"),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),

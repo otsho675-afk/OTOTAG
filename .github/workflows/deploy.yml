@@ -26,14 +26,14 @@ jobs:
       - name: 🛠️ Web Sürümünü Derle
         run: flutter build web --release
 
-      - name: 🚀 FTP'ye Yükle
+     - name: 🚀 FTP'ye Yükle
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./build/web/
-          server-dir: ./
+          server-dir: /public_html/
           exclude: |
             **/.git*
             **/.git*/**

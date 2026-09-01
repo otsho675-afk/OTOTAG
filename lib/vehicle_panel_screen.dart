@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
@@ -791,7 +792,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                             alignment: Alignment.centerLeft,
                             child: Text(
                               currentVehicleData['plate'] ?? '', 
-                              style: TextStyle(fontWeight: FontWeight.w900, color: textColor, fontSize: 18, letterSpacing: 0.8)
+                              style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 18, letterSpacing: 0.8)
                             ),
                           ),
                           if ((currentVehicleData['brand_model'] ?? '').toString().isNotEmpty)
@@ -1030,16 +1031,25 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
       }
 
       if (selectedImage != null) {
-        request.files.add(await http.MultipartFile.fromPath('image', selectedImage!.path));
+        if (kIsWeb) {
+          final bytes = await selectedImage!.readAsBytes();
+          request.files.add(http.MultipartFile.fromBytes('image', bytes, filename: selectedImage!.name));
+        } else {
+          request.files.add(await http.MultipartFile.fromPath('image', selectedImage!.path));
+        }
       }
       
-      if (selectedDoc != null && selectedDoc!.path != null) {
-        request.files.add(await http.MultipartFile.fromPath('document', selectedDoc!.path!));
+      if (selectedDoc != null) {
+        if (kIsWeb && selectedDoc!.bytes != null) {
+          request.files.add(http.MultipartFile.fromBytes('document', selectedDoc!.bytes!, filename: selectedDoc!.name));
+        } else if (selectedDoc!.path != null) {
+          request.files.add(await http.MultipartFile.fromPath('document', selectedDoc!.path!));
+        }
       }
 
       var response = await request.send();
       if (response.statusCode == 200 || response.statusCode == 201) {
-        if (enableNotification && selectedNextDate != null) {
+        if (!kIsWeb && enableNotification && selectedNextDate != null) {
           DateTime notificationDate = selectedNextDate!.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
           
           if (notificationDate.isAfter(DateTime.now())) {
@@ -1335,7 +1345,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                           Expanded(
                             child: InkWell(
                               onTap: () async {
-                                FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf', 'doc', 'docx']);
+                                FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf', 'doc', 'docx'], withData: true);
                                 if (result != null) selectedDoc = result.files.first;
                                 setState(() {});
                               },
@@ -1397,7 +1407,7 @@ class NotificationHelper {
   bool _isInitialized = false;
 
   Future<void> init() async {
-    if (_isInitialized) return;
+    if (_isInitialized || kIsWeb) return;
     
     tz.initializeTimeZones(); 
     
@@ -1410,9 +1420,8 @@ class NotificationHelper {
     
     const InitializationSettings initSettings = InitializationSettings(android: androidSettings, iOS: iosSettings);
     
-    await _notificationsPlugin.initialize(
-      settings: initSettings,
-    );
+    // DÜZELTİLDİ: Pozisyonel argüman
+    await _notificationsPlugin.initialize(initSettings);
     
     _notificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
     
@@ -1425,12 +1434,14 @@ class NotificationHelper {
     required String body,
     required DateTime scheduledDate,
   }) async {
+    if (kIsWeb) return;
+    // DÜZELTİLDİ: Pozisyonel argüman kullanımı ve eksik parametrenin eklenmesi
     await _notificationsPlugin.zonedSchedule(
-      id: id,
-      title: title,
-      body: body,
-      scheduledDate: tz.TZDateTime.from(scheduledDate, tz.local),
-      notificationDetails: const NotificationDetails(
+      id,
+      title,
+      body,
+      tz.TZDateTime.from(scheduledDate, tz.local),
+      const NotificationDetails(
         android: AndroidNotificationDetails(
           'vehicle_reminders',
           'Araç Hatırlatmaları',
@@ -1442,6 +1453,7 @@ class NotificationHelper {
         iOS: DarwinNotificationDetails(),
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 }

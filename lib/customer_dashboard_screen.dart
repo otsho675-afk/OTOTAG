@@ -461,6 +461,52 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       ));
     }
   }
+  
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF111111),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(color: Colors.white.withOpacity(0.08), width: 1.5)
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: const Color(0xFFEF4444).withOpacity(0.15), shape: BoxShape.circle),
+              child: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Text("Çıkış Yap", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 20, letterSpacing: -0.5)),
+          ],
+        ),
+        content: const Text(
+          "Hesabınızdan çıkış yapmak istediğinize emin misiniz?",
+          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 15, fontWeight: FontWeight.w500)
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("İptal", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () {
+              Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+            },
+            child: const Text("Çıkış Yap", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          )
+        ],
+      ),
+    );
+  }
 
   Future<void> _fetchVehicles() async {
     try {
@@ -789,6 +835,17 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
         elevation: 0,
         centerTitle: true,
         iconTheme: IconThemeData(color: textColor),
+        leading: IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEF4444).withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 20),
+          ),
+          onPressed: _showLogoutDialog,
+        ),
         actions: [
           Stack(
             alignment: Alignment.center,
@@ -1020,7 +1077,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   Widget _buildVehicleCarousel(Color cardColor, Color textColor, Color subtitleColor) {
     return SizedBox(
-      height: 270, // Kartın kaplayacağı optimum yükseklik
+      height: 270,
       child: PageView.builder(
         controller: _vehiclePageController,
         physics: const BouncingScrollPhysics(),
@@ -1064,7 +1121,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Üst Kısım: Plaka, Model ve Düzenle Butonu
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1097,7 +1153,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
           
           const Spacer(),
           
-          // Orta Kısım: Kompakt Durum Özetleri (3'lü Grid)
           Container(
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
             decoration: BoxDecoration(
@@ -1119,7 +1174,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
           
           const Spacer(),
 
-          // Alt Kısım: Yönetim Paneli Butonu
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),

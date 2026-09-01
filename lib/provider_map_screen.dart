@@ -53,9 +53,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   @override
   void initState() {
     super.initState();
-    _initNotifications();
-    
     if (!kIsWeb) {
+      _initNotifications();
       _inAppPurchase = InAppPurchase.instance;
       _initInAppPurchase();
     }
@@ -73,13 +72,14 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   }
 
   void _initNotifications() async {
+    if (kIsWeb) return;
     const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
     const InitializationSettings initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
-    await flutterLocalNotificationsPlugin.initialize(settings: initializationSettings);
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings); // DÜZELTİLDİ
   }
 
   void _initInAppPurchase() {
-    if (_inAppPurchase == null) return;
+    if (_inAppPurchase == null || kIsWeb) return;
     
     final Stream<List<PurchaseDetails>> purchaseUpdated = _inAppPurchase!.purchaseStream;
     _purchaseSubscription = purchaseUpdated.listen((purchaseDetailsList) {
@@ -154,11 +154,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     );
     const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
     
+    // DÜZELTİLDİ: Pozisyonel argüman kullanımı
     await flutterLocalNotificationsPlugin.show(
-      id: 0,
-      title: title,
-      body: body,
-      notificationDetails: platformChannelSpecifics,
+      0,
+      title,
+      body,
+      platformChannelSpecifics,
     );
   }
 
@@ -266,7 +267,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success' && mounted) {
-          
           final List<Map<String, dynamic>> fetchedJobs = List<Map<String, dynamic>>.from(data['jobs']);
           final Set<int> currentJobIds = fetchedJobs.map((j) => int.parse(j['id'].toString())).toSet();
 

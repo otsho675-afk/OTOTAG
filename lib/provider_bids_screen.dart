@@ -14,6 +14,8 @@ class ProviderBidsScreen extends StatefulWidget {
 
 class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTickerProviderStateMixin {
   List bids = [];
+  List filteredBids = [];
+  String selectedFilter = 'Tümü';
   Timer? _timer;
   bool isLoading = true;
   final String baseUrl = "https://eliteagency.sbs/api.php";
@@ -32,6 +34,16 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTick
     _timer?.cancel();
     _fadeController.dispose();
     super.dispose();
+  }
+
+  void _applyFilter() {
+    if (selectedFilter == 'Tümü') {
+      filteredBids = List.from(bids);
+    } else if (selectedFilter == 'Tamamlananlar') {
+      filteredBids = bids.where((job) => job['status'] == 'completed').toList();
+    } else if (selectedFilter == 'İptal Edilenler') {
+      filteredBids = bids.where((job) => job['status'] == 'cancelled').toList();
+    }
   }
 
   void _showTopSnackBar(String message, {bool isError = false}) {
@@ -67,6 +79,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTick
         if (data['status'] == 'success') {
           setState(() {
             bids = data['history'] ?? [];
+            _applyFilter();
             isLoading = false;
           });
         }
@@ -87,15 +100,43 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTick
       backgroundColor: bgColor,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Image.asset('assets/images/logo.png', height: 32),
+        title: const Text("İş ve Kazanç Raporu", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        iconTheme: IconThemeData(color: textColor),
+        iconTheme: IconThemeData(color: Colors.white),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(color: const Color(0xFF111111), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white12)),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: selectedFilter,
+                  isExpanded: true,
+                  dropdownColor: const Color(0xFF111111),
+                  icon: const Icon(Icons.filter_list_rounded, color: Color(0xFF00E676)),
+                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  items: ['Tümü', 'Tamamlananlar', 'İptal Edilenler'].map((String value) {
+                    return DropdownMenuItem<String>(value: value, child: Text(value));
+                  }).toList(),
+                  onChanged: (newValue) {
+                    setState(() {
+                      selectedFilter = newValue!;
+                      _applyFilter();
+                    });
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF00E676), strokeWidth: 4))
-          : bids.isEmpty
+          : filteredBids.isEmpty
               ? FadeTransition(
                   opacity: _fadeController,
                   child: Center(
@@ -122,13 +163,25 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTick
                       child: RefreshIndicator(
                         color: const Color(0xFF00E676),
                         onRefresh: _fetchBids,
-                        child: ListView.separated(
-                          padding: const EdgeInsets.all(24),
-                          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-                          itemCount: bids.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 20),
-                          itemBuilder: (context, index) {
-                            final job = bids[index];
+                        child: Column(
+                          children: [
+                            Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(color: const Color(0xFF00E676).withOpacity(0.1), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF00E676).withOpacity(0.3))),
+                              child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                                const Text("Filtrelenen İşlem:", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                                Text("${filteredBids.length} Adet", style: const TextStyle(color: Color(0xFF00E676), fontWeight: FontWeight.w900, fontSize: 18)),
+                              ]),
+                            ),
+                            Expanded(
+                              child: ListView.separated(
+                                padding: const EdgeInsets.all(24),
+                                physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                                itemCount: filteredBids.length,
+                                separatorBuilder: (_, __) => const SizedBox(height: 20),
+                                itemBuilder: (context, index) {
+                                  final job = filteredBids[index];
                             final bool isCompleted = job['status'] == 'completed';
                             final bool isCancelled = job['status'] == 'cancelled';
                             
@@ -213,6 +266,9 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTick
                               ),
                             );
                           },
+                        ),
+                            ),
+                          ],
                         ),
                       ),
                     ),

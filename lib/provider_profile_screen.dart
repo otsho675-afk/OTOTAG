@@ -62,6 +62,84 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
     }
   }
 
+  Future<void> _updateServiceCategory(String newCategory) async {
+    try {
+      final response = await http.post(
+        Uri.parse(baseUrl),
+        body: {
+          'action': 'update_category',
+          'user_id': widget.providerId.toString(),
+          'service_category': newCategory,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final result = json.decode(response.body);
+        if (result['status'] == 'success') {
+          setState(() {
+            profile['service_category'] = newCategory;
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Meslek başarıyla güncellendi!"),
+                backgroundColor: Color(0xFF00E676),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Kategori güncelleme hatası: $e");
+    }
+  }
+
+  void _showCategorySelectionDialog() {
+    final categories = [
+      {'id': 'mechanic', 'name': 'Tamirci', 'icon': Icons.build_rounded},
+      {'id': 'tow', 'name': 'Çekici', 'icon': Icons.car_repair_rounded},
+      {'id': 'tire', 'name': 'Lastikçi', 'icon': Icons.tire_repair_rounded},
+      {'id': 'wash', 'name': 'Oto Yıkama', 'icon': Icons.local_car_wash_rounded},
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF111111),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text("Yeni Hizmet Alanı Seçin", 
+                style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 24),
+              ...categories.map((cat) => ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00E676).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12)
+                  ),
+                  child: Icon(cat['icon'] as IconData, color: const Color(0xFF00E676)),
+                ),
+                title: Text(cat['name'] as String, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _updateServiceCategory(cat['id'] as String);
+                },
+              )).toList(),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   String _getServiceTypeName(String? type) {
     switch (type) {
       case 'mechanic': return "Tamirci";
@@ -142,16 +220,26 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
                       const SizedBox(height: 8),
                       
                       Center(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: primaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: primaryColor.withOpacity(0.3), width: 1.5),
-                          ),
-                          child: Text(
-                            _getServiceTypeName(profile['service_category']),
-                            style: TextStyle(color: primaryColor, fontWeight: FontWeight.w900, fontSize: 16),
+                        child: GestureDetector(
+                          onTap: _showCategorySelectionDialog,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: primaryColor.withOpacity(0.3), width: 1.5),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  _getServiceTypeName(profile['service_category']),
+                                  style: TextStyle(color: primaryColor, fontWeight: FontWeight.w900, fontSize: 16),
+                                ),
+                                const SizedBox(width: 8),
+                                Icon(Icons.edit_rounded, color: primaryColor, size: 18),
+                              ],
+                            ),
                           ),
                         ),
                       ),

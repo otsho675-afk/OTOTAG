@@ -34,7 +34,6 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
     
     _fetchBids();
     
-    // Yalnızca tek bir timer üzerinden sıralı ve güvenli kontrol
     _timer = Timer.periodic(const Duration(seconds: 3), (_) => _fetchBids());
     
     _radiusTimer = Timer.periodic(const Duration(seconds: 30), (_) {
@@ -100,13 +99,11 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
     if (!mounted) return;
 
     try {
-      // 1. ADIM: Önce işin genel durumunu kontrol et (Eşleşme sağlandı mı?)
       final statusRes = await http.get(Uri.parse("$baseUrl?action=get_job_status&job_id=${widget.jobId}"));
       if (statusRes.statusCode == 200) {
         final statusData = json.decode(statusRes.body);
         final String currentStatus = statusData['status']?.toString().toLowerCase() ?? '';
         
-        // Eğer usta arka planda onayladıysa ve durum eşleştiyse doğrudan takip ekranına at
         if (currentStatus == 'matched' || currentStatus == 'in_progress' || currentStatus == 'completed' || currentStatus == 'customer_paid') {
           _timer?.cancel();
           _radiusTimer?.cancel();
@@ -120,11 +117,10 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
               ),
             );
           }
-          return; // Eşleşme varsa teklifleri çekmeyi iptal et (Ekranın radar moduna düşmesini engeller)
+          return;
         }
       }
 
-      // 2. ADIM: İş hala 'searching' (aranıyor) durumundaysa güncel teklifleri çek
       final response = await http.get(Uri.parse("$baseUrl?action=get_bids&job_id=${widget.jobId}"));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -564,4 +560,4 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
       ),
     );
   }
-} 
+}

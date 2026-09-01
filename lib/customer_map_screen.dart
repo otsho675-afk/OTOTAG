@@ -95,7 +95,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
         }
       }
     } catch (e) {
-      
+      debugPrint("Hatırlatıcı çekilirken hata: $e");
     }
   }
 
@@ -268,12 +268,13 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
           "city": customerCity,
         },
       );
+      
       final data = json.decode(response.body);
       if (!mounted) return;
       
       setState(() => isCreatingJob = false);
       
-      // DEĞİŞİKLİK BURADA: 200 veya 201 dönme durumları kabul edildi
+      // Daha güvenli hata tespiti (API'nin HTTP status kodu göndermesi güvenceye alındı)
       if ((response.statusCode == 200 || response.statusCode == 201) && data['status'] == 'success') {
         int newJobId = int.parse(data['job_id'].toString());
         Navigator.pushReplacement(context, PageRouteBuilder(
@@ -283,10 +284,11 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
           },
         ));
       } else {
-        _showTopSnackBar(data['message'] ?? "Talep oluşturulamadı.", isError: true);
+        String errMsg = data['message'] ?? "Talep oluşturulamadı (Durum Kodu: ${response.statusCode})";
+        _showTopSnackBar(errMsg, isError: true);
       }
     } catch (e) {
-      _showTopSnackBar("Bağlantı hatası oluştu.", isError: true);
+      _showTopSnackBar("Sunucuyla iletişim kurulamadı, lütfen internet bağlantınızı kontrol edin.", isError: true);
       setState(() => isCreatingJob = false);
     }
   }

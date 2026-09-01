@@ -5,8 +5,10 @@ import 'dart:ui';
 import 'package:intl/intl.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'customer_map_screen.dart';
+import 'customer_bids_screen.dart';
 import 'profile_screen.dart';
-import 'vehicle_panel_screen.dart'; 
+import 'vehicle_panel_screen.dart';
+import 'job_tracking_screen.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 
@@ -24,6 +26,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   
   bool isLoading = true;
   bool isSaving = false;
+  int? activeJobId;
+  String? activeJobStatus;
   
   List<Map<String, dynamic>> vehicles = [];
   int selectedVehicleIndex = 0;
@@ -34,11 +38,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   final String baseUrl = "https://eliteagency.sbs/api.php";
   
-  // Ödeme işlemleri için gerekli tanımlamalar
   late final InAppPurchase _inAppPurchase;
   StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
   Map<String, dynamic>? _pendingVehicleData;
-  final String _vehicleProductId = 'vehicle_add_premium'; // Google Play/App Store konsolunda oluşturduğunuz ürün ID'si
+  final String _vehicleProductId = 'vehicle_add_premium'; 
 
   final List<Map<String, dynamic>> services = [
     {'id': 'mechanic', 'name': 'Tamirci', 'icon': Icons.build_rounded, 'color': const Color(0xFF00E676), 'gradient': [const Color(0xFF222222), const Color(0xFF111111)]},
@@ -51,11 +54,14 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   void initState() {
     super.initState();
     _fadeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800))..forward();
+    _checkActiveJob();
     _fetchVehicles();
     _fetchNotifications();
-    _notifTimer = Timer.periodic(const Duration(seconds: 10), (_) => _fetchNotifications());
+    _notifTimer = Timer.periodic(const Duration(seconds: 10), (_) { 
+      _fetchNotifications();
+      _checkActiveJob();
+    });
     
-    // Satın alma dinleyicisini başlat
     if (!kIsWeb) {
       _inAppPurchase = InAppPurchase.instance;
       final Stream<List<PurchaseDetails>> purchaseUpdated = _inAppPurchase.purchaseStream;
@@ -77,8 +83,22 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     _purchaseSubscription?.cancel();
     super.dispose();
   }
+
+  Future<void> _checkActiveJob() async {
+    try {
+      final res = await http.get(Uri.parse("$baseUrl?action=check_active_job&user_id=${widget.customerId}&user_type=customer"));
+      final data = json.decode(res.body);
+      if (data['status'] == 'success' && data['has_active'] == true && mounted) {
+        setState(() { 
+          activeJobId = int.parse(data['job_id'].toString()); 
+          activeJobStatus = data['job_status']?.toString();
+        });
+      } else if (mounted) {
+        setState(() { activeJobId = null; activeJobStatus = null; });
+      }
+    } catch (e) {}
+  }
   
-  // Ödeme durumu güncellemelerini dinleyen metod
   void _listenToPurchaseUpdated(List<PurchaseDetails> purchaseDetailsList) {
     for (var purchaseDetails in purchaseDetailsList) {
       if (purchaseDetails.status == PurchaseStatus.pending) {
@@ -89,8 +109,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
           _showTopSnackBar("Ödeme başarısız veya iptal edildi.", isError: true);
         } else if (purchaseDetails.status == PurchaseStatus.purchased ||
                    purchaseDetails.status == PurchaseStatus.restored) {
-          
-          // Ödeme başarılı, bekleyen aracı kaydet
           if (_pendingVehicleData != null) {
             _saveVehicle(
               vehicleId: _pendingVehicleData!['vehicleId'],
@@ -101,10 +119,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
               cKm: _pendingVehicleData!['cKm'],
               mKm: _pendingVehicleData!['mKm'],
             );
-            _pendingVehicleData = null; // İşlem bittikten sonra temizle
+            _pendingVehicleData = null; 
           }
         }
-        
         if (purchaseDetails.pendingCompletePurchase) {
           _inAppPurchase.completePurchase(purchaseDetails);
         }
@@ -124,9 +141,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
           });
         }
       }
-    } catch (e) {
-      debugPrint("Bildirimler çekilemedi: $e");
-    }
+    } catch (e) {}
   }
 
   Future<void> _markNotificationsRead() async {
@@ -137,9 +152,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
         body: {"user_id": widget.customerId.toString()}
       );
       if (mounted) setState(() => unreadCount = 0);
-    } catch (e) {
-      debugPrint("Okundu işaretlenemedi.");
-    }
+    } catch (e) {}
   }
 
   Future<void> _deleteNotification(int notificationId) async {
@@ -926,6 +939,31 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                           _buildHeaderCard(),
                           const SizedBox(height: 32),
                           
+                          if (activeJobId != null) ...[
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 24),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(24),
+                                gradient: const LinearGradient(colors: [Color(0xFFEF4444), Color(0xFFB91C1C)]),
+                                boxShadow: [BoxShadow(color: const Color(0xFFEF4444).withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 6))]
+                              ),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                leading: const Icon(Icons.warning_rounded, color: Colors.white, size: 36),
+                                title: const Text("Devam Eden İşleminiz Var", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18)),
+                                subtitle: const Text("Mevcut işlemi tamamlamadan yeni talep oluşturamazsınız.", style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+                                trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white),
+                                onTap: () {
+                                  if (activeJobStatus == 'searching') {
+                                    Navigator.push(context, MaterialPageRoute(builder: (_) => CustomerBidsScreen(jobId: activeJobId!))).then((_) => _checkActiveJob());
+                                  } else {
+                                    Navigator.push(context, MaterialPageRoute(builder: (_) => JobTrackingScreen(jobId: activeJobId!, userType: 'customer'))).then((_) => _checkActiveJob());
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
+                          
                           Row(
                             children: [
                               Container(width: 4, height: 24, decoration: BoxDecoration(color: const Color(0xFF00E676), borderRadius: BorderRadius.circular(4))),
@@ -1036,15 +1074,21 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
         return _AnimatedServiceCard(
           service: service,
           index: index,
-          onTap: () => Navigator.push(
-            context, 
-            PageRouteBuilder(
-              pageBuilder: (context, animation, secondaryAnimation) => CustomerMapScreen(customerId: widget.customerId, initialService: service['id']),
-              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                return FadeTransition(opacity: animation, child: child);
-              }
-            )
-          ),
+          onTap: () {
+            if (activeJobId != null) {
+              _showTopSnackBar("Devam eden bir işleminiz var. Lütfen önce onu tamamlayın.", isError: true);
+            } else {
+              Navigator.push(
+                context, 
+                PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) => CustomerMapScreen(customerId: widget.customerId, initialService: service['id']),
+                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                    return FadeTransition(opacity: animation, child: child);
+                  }
+                )
+              );
+            }
+          },
         );
       },
     );

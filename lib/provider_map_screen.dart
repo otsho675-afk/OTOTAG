@@ -53,6 +53,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   @override
   void initState() {
     super.initState();
+    _checkActiveJob();
     if (!kIsWeb) {
       _initNotifications();
       _inAppPurchase = InAppPurchase.instance;
@@ -65,17 +66,32 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     _fetchEarnings();
 
     _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (currentPosition != null && !isRefreshing && isOnline) {
-        _fetchNearbyJobs(isAuto: true);
+      if (currentPosition != null && isOnline) {
+        http.post(Uri.parse("$baseUrl?action=update_location"), body: {
+          "user_id": widget.providerId.toString(),
+          "lat": currentPosition!.latitude.toString(),
+          "lng": currentPosition!.longitude.toString()
+        });
+        if (!isRefreshing) _fetchNearbyJobs(isAuto: true);
       }
     });
+  }
+
+  Future<void> _checkActiveJob() async {
+    try {
+      final res = await http.get(Uri.parse("$baseUrl?action=check_active_job&user_id=${widget.providerId}&user_type=provider"));
+      final data = json.decode(res.body);
+      if (data['status'] == 'success' && data['has_active'] == true && mounted) {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => JobTrackingScreen(jobId: int.parse(data['job_id'].toString()), userType: 'provider', userId: widget.providerId)));
+      }
+    } catch (e) {}
   }
 
   void _initNotifications() async {
     if (kIsWeb) return;
     const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
     const InitializationSettings initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
-    await flutterLocalNotificationsPlugin.initialize(initializationSettings); // DÜZELTİLDİ
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings); 
   }
 
   void _initInAppPurchase() {
@@ -154,7 +170,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     );
     const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
     
-    // DÜZELTİLDİ: Pozisyonel argüman kullanımı
     await flutterLocalNotificationsPlugin.show(
       0,
       title,

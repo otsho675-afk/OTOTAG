@@ -5,6 +5,9 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 import 'provider_map_screen.dart'; 
 import 'customer_dashboard_screen.dart';
 
@@ -27,8 +30,13 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   String agreedPrice = "";
   String contactPhone = "";
   String contactName = "";
+  
   double customerLat = 0.0;
   double customerLng = 0.0;
+  double providerLat = 0.0;
+  double providerLng = 0.0;
+  double distanceInKm = 0.0;
+  
   int? providerId;
   int? customerId;
   bool isRated = false;
@@ -37,6 +45,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
   final TextEditingController _codeController = TextEditingController();
   final TextEditingController _commentController = TextEditingController();
+  final MapController _mapController = MapController();
   int _selectedRating = 5;
 
   Timer? _timer;
@@ -52,7 +61,12 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     _glowController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000))..repeat(reverse: true);
     
     _fetchJobStatus(); 
-    _timer = Timer.periodic(const Duration(seconds: 3), (_) => _fetchJobStatus()); 
+    _timer = Timer.periodic(const Duration(seconds: 3), (_) {
+      _fetchJobStatus();
+      if (widget.userType == 'provider') {
+        _updateProviderLiveLocation();
+      }
+    }); 
   }
 
   @override
@@ -63,6 +77,74 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     _codeController.dispose();
     _commentController.dispose();
     super.dispose();
+  }
+
+  Future<void> _updateProviderLiveLocation() async {
+    if (widget.userType != 'provider' || widget.userId == null) return;
+    
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
+      
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) return;
+      
+      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      
+      await http.post(
+        Uri.parse("$_baseUrl?action=update_location"),
+        body: {
+          "user_id": widget.userId.toString(),
+          "lat": position.latitude.toString(),
+          "lng": position.longitude.toString()
+        }
+      );
+    } catch (e) {
+      // Hata durumunda yoksay
+    }
+  }
+
+  Future<void> _cancelJob() async {
+    bool confirm = await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF111111),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text("İşlemi İptal Et", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
+        content: const Text("Bu işlemi iptal etmek istediğinize emin misiniz?", style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Vazgeç", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white54))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444), elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("İptal Et", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          )
+        ],
+      ),
+    ) ?? false;
+
+    if (!confirm) return;
+
+    setState(() => isProcessing = true);
+    try {
+      final response = await http.post(
+        Uri.parse("$_baseUrl?action=cancel_job"),
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: {"job_id": widget.jobId.toString()},
+      );
+      final data = json.decode(response.body);
+      if (data['status'] == 'success' && mounted) {
+        _timer?.cancel();
+        _showTopSnackBar("İşlem iptal edildi.");
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => widget.userType == 'customer' ? CustomerDashboardScreen(customerId: widget.userId ?? customerId ?? 0) : ProviderMapScreen(providerId: widget.userId ?? providerId ?? 0)));
+      } else {
+        _showTopSnackBar(data['message'] ?? "İptal işlemi başarısız.", isError: true);
+      }
+    } catch (e) {
+      _showTopSnackBar("Bağlantı hatası oluştu.", isError: true);
+    } finally {
+      if (mounted) setState(() => isProcessing = false);
+    }
   }
 
   void _showTopSnackBar(String message, {bool isError = false, bool isNewAlert = false}) {
@@ -100,7 +182,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       if (response.statusCode == 200 && data['status'] != 'error') {
         setState(() {
           String oldStatus = jobStatus;
-          // Eğer API'den null gelirse veya beklediğimiz durumlar dışında bir şey gelirse, en azından "matched" yap.
           jobStatus = data['status']?.toString().trim().toLowerCase() ?? 'matched';
           
           if (jobStatus == 'cancelled' && widget.userType == 'provider') {
@@ -123,11 +204,38 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
           customerLat = double.tryParse(data['latitude']?.toString() ?? "0") ?? 0.0;
           customerLng = double.tryParse(data['longitude']?.toString() ?? "0") ?? 0.0;
+          
+          providerLat = double.tryParse(data['provider_lat']?.toString() ?? "0") ?? 0.0;
+          providerLng = double.tryParse(data['provider_lng']?.toString() ?? "0") ?? 0.0;
+
           providerId = int.tryParse(data['provider_id']?.toString() ?? "0");
           customerId = int.tryParse(data['customer_id']?.toString() ?? "0");
           isRated = data['is_rated'] == true;
 
           if (widget.userType == 'customer') matchCode = data['match_code']?.toString() ?? '';
+
+          // Müşteri başka usta seçtiyse iptal et ve haritaya dön
+          if (jobStatus != 'searching' && jobStatus != 'cancelled' && widget.userType == 'provider') {
+             if (providerId != 0 && providerId != widget.userId) {
+                  _timer?.cancel();
+                  _showTopSnackBar("Müşteri başka bir usta ile anlaştı.", isError: true);
+                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ProviderMapScreen(providerId: widget.userId ?? 0)));
+                  return;
+             }
+          }
+
+          if (customerLat != 0.0 && providerLat != 0.0) {
+            double distMeters = Geolocator.distanceBetween(customerLat, customerLng, providerLat, providerLng);
+            distanceInKm = distMeters / 1000;
+            
+            try {
+              double centerLat = (customerLat + providerLat) / 2;
+              double centerLng = (customerLng + providerLng) / 2;
+              _mapController.move(LatLng(centerLat, centerLng), 14.0);
+            } catch(e){}
+          } else if (customerLat != 0.0) {
+            try { _mapController.move(LatLng(customerLat, customerLng), 15.0); } catch(e){}
+          }
 
           if (jobStatus == 'completed' && oldStatus != 'completed' && widget.userType == 'customer' && !isRated) {
              _timer?.cancel(); 
@@ -136,7 +244,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
              _timer?.cancel(); 
           }
         });
-
+        
         if (jobStatus == 'searching' && widget.userType == 'provider' && widget.userId != null) {
           final bidRes = await http.get(Uri.parse("$_baseUrl?action=get_bids&job_id=${widget.jobId}&user_type=provider&provider_id=${widget.userId}"));
           final bidData = json.decode(bidRes.body);
@@ -153,6 +261,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
               }
             } else {
               if (activeBid != null) {
+                 final verifyRes = await http.get(Uri.parse("$_baseUrl?action=get_job_status&job_id=${widget.jobId}"));
+                 final verifyData = json.decode(verifyRes.body);
+                 if (verifyData['status']?.toString().toLowerCase() != 'searching') return;
+                 
                  _timer?.cancel();
                  _showTopSnackBar("Teklifiniz müşteri tarafından reddedildi.", isError: true);
                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ProviderMapScreen(providerId: widget.userId!))); 
@@ -492,7 +604,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                               TextButton(
                                  onPressed: () {
                                    Navigator.pop(context);
-                                   Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => CustomerDashboardScreen(customerId: customerId ?? 0)));
+                                   Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => CustomerDashboardScreen(customerId: widget.userId ?? customerId ?? 0)));
                                  },
                                  child: const Text("Atla", style: TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w900, fontSize: 16))
                               )
@@ -545,22 +657,103 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     }[jobStatus] ?? Icons.sync_rounded;
   }
 
+  Widget _buildFullScreenMap() {
+    List<Marker> mapMarkers = [];
+    List<LatLng> linePoints = [];
+
+    if (customerLat != 0.0 && customerLng != 0.0) {
+      LatLng cPos = LatLng(customerLat, customerLng);
+      linePoints.add(cPos);
+      mapMarkers.add(Marker(
+        point: cPos,
+        width: 60, height: 60,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.blue,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 3),
+            boxShadow: [BoxShadow(color: Colors.blue.withOpacity(0.5), blurRadius: 10)]
+          ),
+          child: const Icon(Icons.person_rounded, color: Colors.white, size: 30),
+        ),
+      ));
+    }
+
+    if (providerLat != 0.0 && providerLng != 0.0 && (jobStatus == 'matched' || jobStatus == 'in_progress' || widget.userType == 'customer')) {
+      LatLng pPos = LatLng(providerLat, providerLng);
+      linePoints.add(pPos);
+      mapMarkers.add(Marker(
+        point: pPos,
+        width: 60, height: 60,
+        child: AnimatedBuilder(
+          animation: _pulseController,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: 1.0 + (_pulseController.value * 0.1),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00E676),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.black, width: 3),
+                  boxShadow: [BoxShadow(color: const Color(0xFF00E676).withOpacity(0.8), blurRadius: 15)]
+                ),
+                child: const Icon(Icons.handyman_rounded, color: Colors.black, size: 30),
+              ),
+            );
+          }
+        ),
+      ));
+    }
+
+    return FlutterMap(
+      mapController: _mapController,
+      options: MapOptions(
+        initialCenter: customerLat != 0.0 ? LatLng(customerLat, customerLng) : const LatLng(39.92, 32.85),
+        initialZoom: 14.0,
+      ),
+      children: [
+        ColorFiltered(
+          colorFilter: const ColorFilter.matrix([
+            -0.9,    0,    0, 0, 255,
+               0, -0.9,    0, 0, 255,
+               0,    0, -0.9, 0, 255,
+               0,    0,    0, 1,   0,
+          ]),
+          child: TileLayer(
+            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            userAgentPackageName: 'com.berdas.otoyardim',
+          ),
+        ),
+        if (linePoints.length == 2)
+          PolylineLayer(
+            polylines: [
+              Polyline(
+                points: linePoints,
+                color: const Color(0xFF00E676),
+                strokeWidth: 4.0,
+                // const kelimesini kaldırdık
+                pattern: StrokePattern.dashed(segments: [10, 15]), 
+              )
+            ],
+          ),
+        MarkerLayer(markers: mapMarkers),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isCustomer = widget.userType == 'customer';
     final int currentStep = _getStatusStep();
     
-    final mainBgColor = const Color(0xFF050505);
     final cardColor = const Color(0xFF111111);
     final textColor = Colors.white;
     final subtitleColor = const Color(0xFF94A3B8);
-
     final themeGradient = const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00C853)], begin: Alignment.topLeft, end: Alignment.bottomRight);
     final primaryColor = const Color(0xFF00E676);
     final shadowColor = const Color(0xFF00C853);
 
     return Scaffold(
-      backgroundColor: mainBgColor,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: Text("İş Takibi", style: TextStyle(fontWeight: FontWeight.w900, color: textColor, fontSize: 24, letterSpacing: -0.5)),
@@ -568,60 +761,126 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         elevation: 0,
         centerTitle: true,
         iconTheme: IconThemeData(color: textColor),
-        leading: jobStatus == 'completed' ? IconButton(icon: const Icon(Icons.home_rounded), onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => isCustomer ? CustomerDashboardScreen(customerId: customerId ?? 0) : ProviderMapScreen(providerId: providerId ?? 0)))) : null,
-        flexibleSpace: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20), 
-            child: Container(
-              decoration: BoxDecoration(
-                color: cardColor.withOpacity(0.85), 
-                border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.05)))
-              )
-            )
-          ),
+        leading: IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+            child: const Icon(Icons.home_rounded, color: Colors.white, size: 20)
+          ), 
+          onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => isCustomer ? CustomerDashboardScreen(customerId: widget.userId ?? customerId ?? 0) : ProviderMapScreen(providerId: widget.userId ?? providerId ?? 0)))
         ),
+        actions: [
+          if (jobStatus == 'searching' || jobStatus == 'matched')
+            IconButton(
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                child: const Icon(Icons.cancel_outlined, color: Color(0xFFEF4444), size: 20)
+              ),
+              onPressed: isProcessing ? null : _cancelJob,
+            )
+        ],
       ),
-      body: SafeArea(
-        child: GestureDetector(
-          onTap: () => FocusScope.of(context).unfocus(),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 800),
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: EdgeInsets.fromLTRB(
-                      constraints.maxWidth > 800 ? 0 : 32, 
-                      40, 
-                      constraints.maxWidth > 800 ? 0 : 32, 
-                      MediaQuery.viewInsetsOf(context).bottom + 40
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _buildStepper(currentStep, primaryColor),
-                        const SizedBox(height: 48),
-                        _buildStatusCard(themeGradient, shadowColor, cardColor, textColor),
-                        const SizedBox(height: 40),
-                        
-                        _buildContactCard(cardColor, textColor, subtitleColor),
-                        
-                        if (!isCustomer && (jobStatus == 'matched' || jobStatus == 'in_progress'))
-                          _buildMapButton(themeGradient, shadowColor),
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 600), 
-                          transitionBuilder: (Widget child, Animation<double> animation) => FadeTransition(opacity: animation, child: SlideTransition(position: Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(animation), child: child)),
-                          child: _buildActionArea(isCustomer, primaryColor, themeGradient, shadowColor, cardColor, textColor, subtitleColor)
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          bool isDesktop = constraints.maxWidth > 800;
+
+          return Stack(
+            children: [
+              _buildFullScreenMap(),
+
+              if (distanceInKm > 0 && jobStatus != 'completed')
+                Positioned(
+                  top: MediaQuery.paddingOf(context).top + 70,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.6),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: primaryColor.withOpacity(0.5), width: 1.5)
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.route_rounded, color: Color(0xFF00E676), size: 20),
+                              const SizedBox(width: 8),
+                              Text("Uzaklık: ${distanceInKm.toStringAsFixed(1)} KM", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                            ],
+                          ),
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
-              );
-            }
-          ),
-        ),
+
+              Align(
+                alignment: isDesktop ? Alignment.centerLeft : Alignment.bottomCenter,
+                child: Container(
+                  width: isDesktop ? 450 : double.infinity,
+                  height: isDesktop ? double.infinity : MediaQuery.of(context).size.height * 0.65,
+                  margin: isDesktop ? const EdgeInsets.only(top: 80, bottom: 20, left: 20) : EdgeInsets.zero,
+                  decoration: BoxDecoration(
+                    color: cardColor.withOpacity(0.95),
+                    borderRadius: isDesktop ? BorderRadius.circular(32) : const BorderRadius.vertical(top: Radius.circular(40)),
+                    border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.6), blurRadius: 40, offset: const Offset(0, -10))],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: isDesktop ? BorderRadius.circular(32) : const BorderRadius.vertical(top: Radius.circular(40)),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                      child: Column(
+                        children: [
+                          if (!isDesktop)
+                            Center(
+                              child: Container(
+                                margin: const EdgeInsets.only(top: 16, bottom: 8),
+                                width: 48, height: 6,
+                                decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10))
+                              )
+                            ),
+                          Expanded(
+                            child: SingleChildScrollView(
+                              physics: const BouncingScrollPhysics(),
+                              padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _buildStepper(currentStep, primaryColor),
+                                  const SizedBox(height: 32),
+                                  _buildStatusCard(themeGradient, shadowColor, cardColor, textColor),
+                                  const SizedBox(height: 32),
+                                  
+                                  _buildContactCard(cardColor, textColor, subtitleColor),
+                                  
+                                  if (!isCustomer && (jobStatus == 'matched' || jobStatus == 'in_progress'))
+                                    _buildMapButton(themeGradient, shadowColor),
+                                  
+                                  AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 600), 
+                                    transitionBuilder: (Widget child, Animation<double> animation) => FadeTransition(opacity: animation, child: SlideTransition(position: Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(animation), child: child)),
+                                    child: _buildActionArea(isCustomer, primaryColor, themeGradient, shadowColor, cardColor, textColor, subtitleColor)
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            ],
+          );
+        }
       ),
     );
   }
@@ -635,9 +894,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: cardColor,
-          borderRadius: BorderRadius.circular(32),
-          border: Border.all(color: const Color(0xFF00E676).withOpacity(0.4), width: 2.5),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 30, offset: const Offset(0, 12))],
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: const Color(0xFF00E676).withOpacity(0.4), width: 1.5),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 8))],
         ),
         child: Row(
           children: [
@@ -666,9 +925,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                     if (await canLaunchUrl(url)) await launchUrl(url);
                   },
                   child: Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(color: const Color(0xFF00E676).withOpacity(0.15), shape: BoxShape.circle),
-                    child: const Icon(Icons.call_rounded, color: Color(0xFF00E676), size: 28),
+                    child: const Icon(Icons.call_rounded, color: Color(0xFF00E676), size: 24),
                   ),
                 ),
                 GestureDetector(
@@ -677,9 +936,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                     if (await canLaunchUrl(url)) await launchUrl(url);
                   },
                   child: Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(color: const Color(0xFF00E676).withOpacity(0.15), shape: BoxShape.circle),
-                    child: const Icon(Icons.message_rounded, color: Color(0xFF00E676), size: 28),
+                    child: const Icon(Icons.message_rounded, color: Color(0xFF00E676), size: 24),
                   ),
                 ),
               ],
@@ -700,7 +959,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
             duration: const Duration(milliseconds: 500),
             curve: Curves.easeOutCubic,
             margin: const EdgeInsets.symmetric(horizontal: 6),
-            height: 14,
+            height: 10,
             decoration: BoxDecoration(
               color: isActive ? themeColor : const Color(0xFF334155), 
               borderRadius: BorderRadius.circular(14),
@@ -714,12 +973,11 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
   Widget _buildStatusCard(LinearGradient themeGradient, Color shadowColor, Color cardColor, Color textColor) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(40),
-        border: Border.all(color: Colors.white.withOpacity(0.05), width: 2),
-        boxShadow: [BoxShadow(color: shadowColor.withOpacity(0.08), blurRadius: 50, offset: const Offset(0, 20))],
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5),
       ),
       child: Column(
         children: [
@@ -731,27 +989,27 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                 children: [
                   if (jobStatus == 'searching' && widget.userType == 'customer')
                     Container(
-                      width: 140 * (1.0 + _pulseController.value * 0.2),
-                      height: 140 * (1.0 + _pulseController.value * 0.2),
+                      width: 100 * (1.0 + _pulseController.value * 0.2),
+                      height: 100 * (1.0 + _pulseController.value * 0.2),
                       decoration: BoxDecoration(shape: BoxShape.circle, color: shadowColor.withOpacity(0.15)),
                     ),
                   Container(
-                    padding: const EdgeInsets.all(32),
+                    padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       gradient: themeGradient, 
                       shape: BoxShape.circle,
                       boxShadow: [
-                        BoxShadow(color: shadowColor.withOpacity(0.5), blurRadius: 24, spreadRadius: 6),
+                        BoxShadow(color: shadowColor.withOpacity(0.5), blurRadius: 20, spreadRadius: 4),
                       ]
                     ),
-                    child: Icon(_getStatusIcon(), size: 64, color: Colors.black),
+                    child: Icon(_getStatusIcon(), size: 48, color: Colors.black),
                   ),
                 ],
               );
             }
           ),
-          const SizedBox(height: 40),
-          Text(_getFriendlyStatus(), style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: textColor, letterSpacing: -0.5), textAlign: TextAlign.center),
+          const SizedBox(height: 24),
+          Text(_getFriendlyStatus(), style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: textColor, letterSpacing: -0.5), textAlign: TextAlign.center),
         ],
       ),
     );
@@ -759,22 +1017,22 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
   Widget _buildMapButton(LinearGradient themeGradient, Color shadowColor) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 40),
+      padding: const EdgeInsets.only(bottom: 24),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(24),
           gradient: themeGradient,
-          boxShadow: [BoxShadow(color: shadowColor.withOpacity(0.4), blurRadius: 24, offset: const Offset(0, 12))],
+          boxShadow: [BoxShadow(color: shadowColor.withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 8))],
         ),
         child: ElevatedButton.icon(
-          icon: const Icon(Icons.directions_rounded, color: Colors.black, size: 28),
-          label: const Text("Yol Tarifi Al", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: 0.5)),
+          icon: const Icon(Icons.directions_rounded, color: Colors.black, size: 24),
+          label: const Text("Yol Tarifi Al", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
           onPressed: _openExternalMap,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.transparent, 
             shadowColor: Colors.transparent,
-            padding: const EdgeInsets.symmetric(vertical: 24), 
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)), 
+            padding: const EdgeInsets.symmetric(vertical: 20), 
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)), 
           ),
         ),
       ),
@@ -785,55 +1043,55 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     String safeBidId = (bid['bid_id'] ?? bid['id'] ?? '').toString();
 
     return Container(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: const Color(0xFF00E676).withOpacity(0.4), width: 2.5),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 30, offset: const Offset(0, 12))],
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFF00E676).withOpacity(0.4), width: 1.5),
       ),
       child: Column(
         children: [
-          const Text("Karşı Teklif Geldi!", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF00E676), letterSpacing: -0.5)),
-          const SizedBox(height: 20),
-          Text("${bid['amount']} ₺", style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w900, color: Colors.white)),
-          const SizedBox(height: 32),
+          const Text("Karşı Teklif Geldi!", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF00E676), letterSpacing: -0.5)),
+          const SizedBox(height: 16),
+          Text("${bid['amount']} ₺", style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w900, color: Colors.white)),
+          const SizedBox(height: 24),
           if (isProcessing) 
              const CircularProgressIndicator(color: Color(0xFF00E676), strokeWidth: 4)
           else
             Wrap(
               spacing: 12,
-              runSpacing: 16,
+              runSpacing: 12,
               alignment: WrapAlignment.center,
               children: [
                 SizedBox(
-                  width: 150,
+                  width: 130,
                   child: OutlinedButton(
                     onPressed: () => _rejectBid(safeBidId),
-                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 20), side: const BorderSide(color: Color(0xFFEF4444), width: 2), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
-                    child: const Text("Reddet", style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w900, fontSize: 16)),
+                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), side: const BorderSide(color: Color(0xFFEF4444), width: 2), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                    child: const Text("Reddet", style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w900, fontSize: 15)),
                   ),
                 ),
                 if (canNegotiate) 
                   SizedBox(
-                    width: 150,
+                    width: 130,
                     child: OutlinedButton(
                       onPressed: () => _showCounterBidDialog(safeBidId, bid['amount'].toString()),
-                      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 20), side: const BorderSide(color: Color(0xFF00E676), width: 2), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
-                      child: const Text("Pazarlık", style: TextStyle(color: Color(0xFF00E676), fontWeight: FontWeight.w900, fontSize: 16)),
+                      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), side: const BorderSide(color: Color(0xFF00E676), width: 2), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                      child: const Text("Pazarlık", style: TextStyle(color: Color(0xFF00E676), fontWeight: FontWeight.w900, fontSize: 15)),
                     ),
                   ),
                 SizedBox(
-                  width: 150,
+                  width: double.infinity,
                   child: Container(
+                    margin: const EdgeInsets.only(top: 8),
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(16),
                       gradient: const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00C853)]),
                       boxShadow: [BoxShadow(color: const Color(0xFF00C853).withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 8))],
                     ),
                     child: ElevatedButton(
                       onPressed: () => _acceptBid(safeBidId, bid['amount'].toString()),
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 20), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
                       child: const Text("Onayla", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16)),
                     ),
                   ),
@@ -859,8 +1117,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
               child: Column(
                 children: [
                   CircularProgressIndicator(strokeWidth: 4, color: primaryColor), 
-                  const SizedBox(height: 32), 
-                  Text("Teklifiniz iletildi. Müşteri yanıtı bekleniyor...\n(Teklifiniz: ${activeBid!['amount']} ₺)", textAlign: TextAlign.center, style: TextStyle(color: subtitleColor, fontWeight: FontWeight.w800, fontSize: 18, height: 1.5))
+                  const SizedBox(height: 24), 
+                  Text("Teklifiniz iletildi. Müşteri yanıtı bekleniyor...\n(Teklifiniz: ${activeBid!['amount']} ₺)", textAlign: TextAlign.center, style: TextStyle(color: subtitleColor, fontWeight: FontWeight.w800, fontSize: 16, height: 1.5))
                 ]
               )
             );
@@ -873,8 +1131,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           child: Column(
             children: [
               CircularProgressIndicator(strokeWidth: 4, color: primaryColor), 
-              const SizedBox(height: 32), 
-              Text(isCustomer ? "Bölgenizdeki ustalar taranıyor..." : "Müşteri yanıtı bekleniyor...", style: TextStyle(color: subtitleColor, fontWeight: FontWeight.w800, fontSize: 18))
+              const SizedBox(height: 24), 
+              Text(isCustomer ? "Bölgenizdeki ustalar taranıyor..." : "Müşteri yanıtı bekleniyor...", style: TextStyle(color: subtitleColor, fontWeight: FontWeight.w800, fontSize: 16))
             ]
           )
         );
@@ -889,38 +1147,38 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              padding: const EdgeInsets.all(32), 
-              decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(36), border: Border.all(color: const Color(0xFF00E676).withOpacity(0.4), width: 2.5), boxShadow: [BoxShadow(color: const Color(0xFF00E676).withOpacity(0.08), blurRadius: 30, offset: const Offset(0, 12))]), 
+              padding: const EdgeInsets.all(24), 
+              decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(24), border: Border.all(color: const Color(0xFF00E676).withOpacity(0.4), width: 1.5)), 
               child: Column(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(color: const Color(0xFF00E676).withOpacity(0.1), shape: BoxShape.circle),
-                    child: const Icon(Icons.celebration_rounded, color: Color(0xFF00E676), size: 72)
+                    child: const Icon(Icons.celebration_rounded, color: Color(0xFF00E676), size: 56)
                   ), 
-                  const SizedBox(height: 32), 
-                  const Text("Hizmet başarıyla tamamlandı.\nBizi tercih ettiğiniz için teşekkür ederiz!", textAlign: TextAlign.center, style: TextStyle(fontSize: 22, color: Color(0xFF00E676), fontWeight: FontWeight.w900, height: 1.5))
+                  const SizedBox(height: 24), 
+                  const Text("Hizmet başarıyla tamamlandı.\nBizi tercih ettiğiniz için teşekkür ederiz!", textAlign: TextAlign.center, style: TextStyle(fontSize: 18, color: Color(0xFF00E676), fontWeight: FontWeight.w900, height: 1.5))
                 ]
               )
             ),
             if (isCustomer && !isRated) ...[
-              const SizedBox(height: 40),
+              const SizedBox(height: 24),
               AnimatedBuilder(
                 animation: _glowController,
                 builder: (context, child) {
                   return Container(
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(28),
+                      borderRadius: BorderRadius.circular(24),
                       gradient: const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00C853)]),
                       boxShadow: [
-                        BoxShadow(color: const Color(0xFF00C853).withOpacity(0.4 + (_glowController.value * 0.2)), blurRadius: 24 + (_glowController.value * 12), offset: const Offset(0, 12)),
+                        BoxShadow(color: const Color(0xFF00C853).withOpacity(0.4 + (_glowController.value * 0.2)), blurRadius: 20 + (_glowController.value * 10), offset: const Offset(0, 10)),
                       ],
                     ),
                     child: ElevatedButton.icon(
-                      icon: const Icon(Icons.star_rounded, color: Colors.black, size: 32),
-                      label: const Text("Ustayı Değerlendir", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 20, letterSpacing: 0.5)),
+                      icon: const Icon(Icons.star_rounded, color: Colors.black, size: 28),
+                      label: const Text("Ustayı Değerlendir", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: 0.5)),
                       onPressed: _showRatingDialog,
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 24), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28))),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 20), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
                     ),
                   );
                 }
@@ -929,8 +1187,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           ],
         );
       default:
-        // BU KISIM EKLENDİ (Herhangi bir beklenmeyen durumda da eşleşme ekranını göstermek için)
-        if (jobStatus == 'matched' || jobStatus == 'matched') {
+        if (jobStatus == 'matched') {
            return isCustomer ? _buildCustomerCode(primaryColor, shadowColor, cardColor, subtitleColor) : _buildProviderCodeInput(primaryColor, themeGradient, shadowColor, cardColor, subtitleColor);
         }
         return const SizedBox.shrink();
@@ -940,55 +1197,54 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   Widget _buildCustomerCode(Color primaryColor, Color shadowColor, Color cardColor, Color subtitleColor) {
     return Container(
       key: const ValueKey("customer_code"),
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(40),
-        border: Border.all(color: primaryColor.withOpacity(0.3), width: 2),
-        boxShadow: [BoxShadow(color: shadowColor.withOpacity(0.08), blurRadius: 30, offset: const Offset(0, 15))],
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: primaryColor.withOpacity(0.3), width: 1.5),
       ),
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: primaryColor.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.pin_rounded, color: primaryColor, size: 32),
+            child: Icon(Icons.pin_rounded, color: primaryColor, size: 28),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           Text(
             "Ustaya Verilecek Onay Kodu", 
             textAlign: TextAlign.center, 
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: subtitleColor, letterSpacing: 0.5)
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: subtitleColor, letterSpacing: 0.5)
           ),
           const SizedBox(height: 16),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 24),
+            padding: const EdgeInsets.symmetric(vertical: 20),
             decoration: BoxDecoration(
               color: const Color(0xFF050505),
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(color: Colors.white.withOpacity(0.05)),
             ),
             child: Text(
               matchCode, 
               textAlign: TextAlign.center, 
               style: TextStyle(
-                fontSize: 64, 
+                fontSize: 56, 
                 fontWeight: FontWeight.w900, 
-                letterSpacing: 24, 
+                letterSpacing: 20, 
                 color: primaryColor,
                 shadows: [Shadow(color: primaryColor.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 8))]
               )
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Text(
             "Usta geldiğinde işleme başlaması için bu kodu paylaşın.", 
             textAlign: TextAlign.center, 
-            style: TextStyle(fontSize: 13, color: subtitleColor, fontWeight: FontWeight.w600, height: 1.5)
+            style: TextStyle(fontSize: 12, color: subtitleColor, fontWeight: FontWeight.w600, height: 1.5)
           ),
         ],
       ),
@@ -998,51 +1254,50 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   Widget _buildProviderCodeInput(Color primaryColor, LinearGradient themeGradient, Color shadowColor, Color cardColor, Color subtitleColor) {
     return Container(
       key: const ValueKey("provider_input"),
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(40),
-        border: Border.all(color: primaryColor.withOpacity(0.3), width: 2),
-        boxShadow: [BoxShadow(color: shadowColor.withOpacity(0.08), blurRadius: 30, offset: const Offset(0, 15))],
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: primaryColor.withOpacity(0.3), width: 1.5),
       ),
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: primaryColor.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.password_rounded, color: primaryColor, size: 32),
+            child: Icon(Icons.password_rounded, color: primaryColor, size: 28),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           Text(
             "Müşteri Onay Kodu", 
             textAlign: TextAlign.center, 
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: subtitleColor, letterSpacing: 0.5)
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: subtitleColor, letterSpacing: 0.5)
           ),
           const SizedBox(height: 16),
           TextField(
             controller: _codeController,
             keyboardType: TextInputType.number,
             maxLength: 4,
-            style: TextStyle(fontSize: 48, letterSpacing: 32, fontWeight: FontWeight.w900, color: primaryColor),
+            style: TextStyle(fontSize: 40, letterSpacing: 24, fontWeight: FontWeight.w900, color: primaryColor),
             textAlign: TextAlign.center,
             decoration: InputDecoration(
               counterText: "", 
               filled: true, 
               fillColor: const Color(0xFF050505), 
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide(color: Colors.white.withOpacity(0.05))),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide(color: primaryColor.withOpacity(0.5), width: 2)),
-              contentPadding: const EdgeInsets.symmetric(vertical: 24)
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: Colors.white.withOpacity(0.05))),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: primaryColor.withOpacity(0.5), width: 2)),
+              contentPadding: const EdgeInsets.symmetric(vertical: 20)
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(20),
               gradient: themeGradient,
               boxShadow: [BoxShadow(color: shadowColor.withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 10))],
             ),
@@ -1051,12 +1306,12 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.transparent, 
                 shadowColor: Colors.transparent, 
-                padding: const EdgeInsets.symmetric(vertical: 20), 
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))
+                padding: const EdgeInsets.symmetric(vertical: 18), 
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))
               ),
               child: isProcessing 
-                ? const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3)) 
-                : const Text("Doğrula ve İşe Başla", textAlign: TextAlign.center, style: TextStyle(fontSize: 18, color: Colors.black, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3)) 
+                : const Text("Doğrula ve İşe Başla", textAlign: TextAlign.center, style: TextStyle(fontSize: 16, color: Colors.black, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
             ),
           ),
         ],
@@ -1071,31 +1326,31 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       children: [
         if (isCustomer && jobStatus == 'in_progress')
           Container(
-            margin: const EdgeInsets.only(bottom: 40),
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(40), border: Border.all(color: const Color(0xFF00E676).withOpacity(0.4), width: 2.5), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 30, offset: const Offset(0, 12))]),
+            margin: const EdgeInsets.only(bottom: 32),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(28), border: Border.all(color: const Color(0xFF00E676).withOpacity(0.4), width: 1.5)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(children: [Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: const Color(0xFF00E676).withOpacity(0.1), borderRadius: BorderRadius.circular(20)), child: const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF00E676), size: 36)), const SizedBox(width: 20), Text("Ödeme Bilgileri", style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: textColor))]),
-                const Divider(height: 48, thickness: 2),
-                Text("Alıcı Usta", style: TextStyle(fontSize: 16, color: subtitleColor, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 8),
-                Text(providerName, style: TextStyle(fontSize: 24, color: textColor, fontWeight: FontWeight.w900)),
+                Row(children: [Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFF00E676).withOpacity(0.1), borderRadius: BorderRadius.circular(16)), child: const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF00E676), size: 28)), const SizedBox(width: 16), Text("Ödeme Bilgileri", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: textColor))]),
+                const Divider(height: 32, thickness: 1.5),
+                Text("Alıcı Usta", style: TextStyle(fontSize: 14, color: subtitleColor, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 6),
+                Text(providerName, style: TextStyle(fontSize: 20, color: textColor, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 24),
+                Text("Ödenecek Tutar", style: TextStyle(fontSize: 14, color: subtitleColor, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 6),
+                Text("$agreedPrice ₺", style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w900, color: Color(0xFF00E676))),
                 const SizedBox(height: 32),
-                Text("Ödenecek Tutar", style: TextStyle(fontSize: 16, color: subtitleColor, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 8),
-                Text("$agreedPrice ₺", style: const TextStyle(fontSize: 56, fontWeight: FontWeight.w900, color: Color(0xFF00E676))),
-                const SizedBox(height: 40),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-                  decoration: BoxDecoration(color: const Color(0xFF050505), borderRadius: BorderRadius.circular(24), border: Border.all(color: Colors.white.withOpacity(0.08), width: 2)),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                  decoration: BoxDecoration(color: const Color(0xFF050505), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5)),
                   child: Row(
                     children: [
-                      Expanded(child: Text(providerIban.isEmpty ? "IBAN Bulunamadı" : providerIban, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1.0, color: textColor), overflow: TextOverflow.ellipsis)),
+                      Expanded(child: Text(providerIban.isEmpty ? "IBAN Bulunamadı" : providerIban, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, letterSpacing: 1.0, color: textColor), overflow: TextOverflow.ellipsis)),
                       GestureDetector(
                         onTap: () { Clipboard.setData(ClipboardData(text: providerIban)); _showTopSnackBar("IBAN kopyalandı!"); }, 
-                        child: Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFF00E676).withOpacity(0.1), borderRadius: BorderRadius.circular(16)), child: const Icon(Icons.copy_rounded, color: Color(0xFF00E676), size: 28))
+                        child: Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: const Color(0xFF00E676).withOpacity(0.1), borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.copy_rounded, color: Color(0xFF00E676), size: 24))
                       ),
                     ],
                   ),
@@ -1107,35 +1362,35 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         if (isCustomer)
           Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(32),
+              borderRadius: BorderRadius.circular(24),
               gradient: jobStatus == 'in_progress' ? const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00C853)]) : null,
               color: jobStatus != 'in_progress' ? const Color(0xFF334155) : null,
-              boxShadow: jobStatus == 'in_progress' ? [BoxShadow(color: const Color(0xFF00C853).withOpacity(0.4), blurRadius: 30, offset: const Offset(0, 15))] : [],
+              boxShadow: jobStatus == 'in_progress' ? [BoxShadow(color: const Color(0xFF00C853).withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 10))] : [],
             ),
             child: ElevatedButton(
               onPressed: jobStatus == 'in_progress' && !isProcessing ? _customerPaid : null,
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 24), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32))),
-              child: isProcessing ? const SizedBox(width: 32, height: 32, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 4)) : Text(jobStatus == 'in_progress' ? "Ödemeyi Gönderdim" : "Ödeme Onayı Bekleniyor", textAlign: TextAlign.center, style: TextStyle(fontSize: 20, color: jobStatus == 'in_progress' ? Colors.black : subtitleColor, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 20), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
+              child: isProcessing ? const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3)) : Text(jobStatus == 'in_progress' ? "Ödemeyi Gönderdim" : "Ödeme Onayı Bekleniyor", textAlign: TextAlign.center, style: TextStyle(fontSize: 18, color: jobStatus == 'in_progress' ? Colors.black : subtitleColor, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
             ),
           ),
         
         if (!isCustomer)
           Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(32),
+              borderRadius: BorderRadius.circular(24),
               gradient: jobStatus == 'customer_paid' ? const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00C853)]) : null,
               color: jobStatus != 'customer_paid' ? const Color(0xFF334155) : null,
-              boxShadow: jobStatus == 'customer_paid' ? [BoxShadow(color: const Color(0xFF00C853).withOpacity(0.4), blurRadius: 30, offset: const Offset(0, 15))] : [],
+              boxShadow: jobStatus == 'customer_paid' ? [BoxShadow(color: const Color(0xFF00C853).withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 10))] : [],
             ),
             child: ElevatedButton(
               onPressed: jobStatus == 'customer_paid' && !isProcessing ? _providerReceived : null,
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 24), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32))),
-              child: isProcessing ? const SizedBox(width: 32, height: 32, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 4)) : Text("Ödemeyi Aldım (İşi Bitir)", textAlign: TextAlign.center, style: TextStyle(fontSize: 20, color: jobStatus == 'customer_paid' ? Colors.black : subtitleColor, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 20), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
+              child: isProcessing ? const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3)) : Text("Ödemeyi Aldım (İşi Bitir)", textAlign: TextAlign.center, style: TextStyle(fontSize: 18, color: jobStatus == 'customer_paid' ? Colors.black : subtitleColor, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
             ),
           ),
           
         if (!isCustomer && jobStatus == 'in_progress')
-          Padding(padding: const EdgeInsets.only(top: 48), child: Center(child: Text("Müşteri ödeme bildirimi bekleniyor...", textAlign: TextAlign.center, style: TextStyle(color: subtitleColor, fontWeight: FontWeight.w900, fontSize: 20)))),
+          Padding(padding: const EdgeInsets.only(top: 32), child: Center(child: Text("Müşteri ödeme bildirimi bekleniyor...", textAlign: TextAlign.center, style: TextStyle(color: subtitleColor, fontWeight: FontWeight.w900, fontSize: 16)))),
       ],
     );
   }

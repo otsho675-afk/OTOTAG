@@ -28,6 +28,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   List recentJobs = [];
   List pendingProviders = [];
   List allUsers = [];
+  
+  // Düşük performanslı (3.5 altı) ustalar
+  List lowPerformingProviders = []; 
 
   final String baseUrl = "https://eliteagency.sbs/api.php";
   final String baseMediaUrl = "https://eliteagency.sbs/";
@@ -61,6 +64,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             totalRevenue = double.tryParse(data['jobs_data']['total_revenue']?.toString() ?? '0.0') ?? 0.0;
             recentJobs = data['recent_jobs'] ?? []; 
             pendingProviders = data['pending_providers'] ?? [];
+            lowPerformingProviders = data['low_performing_providers'] ?? []; // Yeni veri listesi
             
             final usersList = data['users_data'] as List;
             totalCustomers = 0;
@@ -197,8 +201,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         await _fetchAllData();
         if(mounted){
            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(action == 'approve_provider' ? "Usta başarıyla onaylandı." : "Usta başvurusu reddedildi."),
-            backgroundColor: action == 'approve_provider' ? Colors.green : Colors.red,
+            content: Text(action == 'approve_provider' ? "Usta başarıyla onaylandı." : "İşlem başarılı."),
+            backgroundColor: action == 'approve_provider' ? Colors.green : Colors.blue,
             behavior: SnackBarBehavior.floating,
           ));
         }
@@ -206,6 +210,51 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     } catch (e) {
       if(mounted){
          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("İşlem sırasında bir hata oluştu.")));
+      }
+    }
+  }
+
+  Future<void> _suspendProvider(int providerId, String providerName) async {
+    bool confirm = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.red),
+            SizedBox(width: 8),
+            Text("15 Gün Askıya Al", style: TextStyle(color: Colors.red)),
+          ],
+        ),
+        content: Text("$providerName adlı ustanın hesabını düşük performans nedeniyle 15 gün süreyle askıya almak istiyor musunuz?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("İptal", style: TextStyle(color: Colors.grey))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+            onPressed: () => Navigator.pop(context, true), 
+            child: const Text("Askıya Al", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+          ),
+        ],
+      )
+    ) ?? false;
+
+    if (!confirm) return;
+
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl?action=suspend_provider"),
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: {"provider_id": providerId.toString(), "duration_days": "15"},
+      );
+      if (response.statusCode == 200) {
+        await _fetchAllData();
+        if(mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Usta 15 gün süreyle askıya alındı."), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
+        }
+      }
+    } catch (e) {
+      if(mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("İşlem başarısız."), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating));
       }
     }
   }
@@ -548,6 +597,73 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  Widget _buildLowPerformanceAlerts(Color cardColor) {
+    if (lowPerformingProviders.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          child: Text("Düşük Performanslı Ustalar (< 3.5)", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.red)),
+        ),
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: lowPerformingProviders.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            final provider = lowPerformingProviders[index];
+            final int pId = int.tryParse(provider['id'].toString()) ?? 0;
+            
+            return Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.red.withOpacity(0.3))
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: Colors.red.withOpacity(0.15), shape: BoxShape.circle),
+                    child: const Icon(Icons.star_half_rounded, color: Colors.red),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(provider['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text("Puan: ${provider['rating']} ", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                            Text("(${provider['reviews_count']} Değerlendirme)", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                          ],
+                        )
+                      ],
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => _suspendProvider(pId, provider['name']),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
+                    ),
+                    child: const Text("15 Gün Askıya Al", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                  )
+                ],
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
   Widget _buildOverviewTab(Color cardColor) {
     final screenWidth = MediaQuery.of(context).size.width;
     final crossAxisCount = screenWidth > 800 ? 4 : (screenWidth > 400 ? 2 : 1);
@@ -574,7 +690,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               _buildGradientCard("Kayıtlı Ustalar", totalProviders.toString(), Icons.engineering_rounded, const [Color(0xFF8E2DE2), Color(0xFF4A00E0)]),
             ],
           ),
-          const SizedBox(height: 32),
+          
+          _buildLowPerformanceAlerts(cardColor), // Düşük puan alan ustalar için eklenen uyarı alanı
+
+          const SizedBox(height: 16),
           const Text("Hızlı İşlemler", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
           const SizedBox(height: 16),
           Row(

@@ -10,6 +10,7 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import 'dart:convert';
 import 'dart:ui';
 import 'dart:async';
+import 'package:intl/intl.dart';
 import 'job_tracking_screen.dart';
 import 'profile_screen.dart';
 import 'provider_bids_screen.dart'; 
@@ -42,6 +43,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   Map<String, dynamic> earningsData = {};
   bool isEarningsLoading = true;
 
+  // Performans verileri
+  double providerRating = 0.0;
+  int reviewsCount = 0;
+  bool isSuspended = false;
+  String suspensionEndDate = "";
+
   late AnimationController _pulseController;
   Timer? _refreshTimer;
   final String baseUrl = "https://eliteagency.sbs/api.php";
@@ -63,10 +70,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     _pageController = PageController(viewportFraction: 0.88);
     _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))..repeat(reverse: true);
     _determinePosition();
-    _fetchEarnings();
+    _fetchEarningsAndPerformance();
 
     _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (currentPosition != null && isOnline) {
+      if (currentPosition != null && isOnline && !isSuspended) {
         http.post(Uri.parse("$baseUrl?action=update_location"), body: {
           "user_id": widget.providerId.toString(),
           "lat": currentPosition!.latitude.toString(),
@@ -187,7 +194,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     super.dispose();
   }
 
-  Future<void> _fetchEarnings() async {
+  Future<void> _fetchEarningsAndPerformance() async {
     try {
       final response = await http.get(Uri.parse("$baseUrl?action=get_earnings&provider_id=${widget.providerId}"));
       if (response.statusCode == 200) {
@@ -195,6 +202,11 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         if (data['status'] == 'success' && mounted) {
           setState(() {
             earningsData = data['earnings'];
+            // API'den performans verilerini parse ediyoruz
+            providerRating = data['performance']?['rating'] != null ? double.parse(data['performance']['rating'].toString()) : 0.0;
+            reviewsCount = data['performance']?['reviews_count'] != null ? int.parse(data['performance']['reviews_count'].toString()) : 0;
+            isSuspended = data['performance']?['is_suspended'] ?? false;
+            suspensionEndDate = data['performance']?['suspension_end_date'] ?? "";
             isEarningsLoading = false;
           });
         }
@@ -222,7 +234,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
           currentPosition = position;
           isLoading = false;
         });
-        if (isOnline) _fetchNearbyJobs();
+        if (isOnline && !isSuspended) _fetchNearbyJobs();
       }
     } catch (e) {
       _setFallbackPosition('Konum alınamadı.');
@@ -236,7 +248,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         currentPosition = Position(longitude: 32.4846, latitude: 37.8666, timestamp: DateTime.now(), accuracy: 0, altitude: 0, heading: 0, speed: 0, speedAccuracy: 0, altitudeAccuracy: 0, headingAccuracy: 0); 
         isLoading = false;
       });
-      if (isOnline) _fetchNearbyJobs();
+      if (isOnline && !isSuspended) _fetchNearbyJobs();
     }
   }
 
@@ -274,7 +286,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   }
 
   Future<void> _fetchNearbyJobs({bool isAuto = false}) async {
-    if (currentPosition == null || !isOnline) return;
+    if (currentPosition == null || !isOnline || isSuspended) return;
     if (!isAuto) setState(() { isRefreshing = true; });
     
     try {
@@ -323,6 +335,11 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   }
 
   Future<void> _handleGoOnline() async {
+    if (isSuspended) {
+      _showSuspensionSheet();
+      return;
+    }
+
     setState(() => isCheckingSubscription = true);
     try {
       final response = await http.get(Uri.parse("$baseUrl?action=check_provider_subscription&provider_id=${widget.providerId}"));
@@ -348,6 +365,98 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       setState(() => isCheckingSubscription = false);
       _showTopSnackBar("Bağlantı hatası oluştu.", isError: true);
     }
+  }
+
+  void _showSuspensionSheet() {
+    String formattedDate = suspensionEndDate;
+    try {
+      final DateTime date = DateTime.parse(suspensionEndDate);
+      formattedDate = DateFormat('dd MMM yyyy, HH:mm', 'tr_TR').format(date);
+    } catch (_) {}
+
+    showModalBottomSheet(
+      context: context,
+      isDismissible: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+            color: const Color(0xFF111111).withOpacity(0.98),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
+            border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.3), width: 1.5),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 40, offset: const Offset(0, -10))],
+          ),
+          child: SafeArea(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(child: Container(width: 48, height: 5, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
+                  const SizedBox(height: 24),
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(colors: [Color(0xFFEF4444), Color(0xFFB91C1C)]),
+                        shape: BoxShape.circle,
+                        boxShadow: [BoxShadow(color: const Color(0xFFEF4444).withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 8))]
+                      ),
+                      child: const Icon(Icons.gavel_rounded, color: Colors.white, size: 40),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text("Hesabınız Askıya Alındı", textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Müşterilerden aldığınız düşük puanlar (3.5 altı) sebebiyle sistem standartlarımızı korumak adına hesabınız 15 gün süreyle iş alımına kapatılmıştır.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade400, height: 1.5, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF050505),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.3), width: 1.5),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Açılış Tarihi", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Colors.white)),
+                            SizedBox(height: 4),
+                            Text("Otomatik aktif edilecek", style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 13)),
+                          ],
+                        ),
+                        Text(formattedDate, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFFEF4444))),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1F2937),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      elevation: 0,
+                    ),
+                    child: const Text("Anladım", textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _showSubscriptionRequiredSheet() {
@@ -493,7 +602,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       isScrollControlled: true, 
       backgroundColor: Colors.transparent,
       builder: (context) {
-
         return StatefulBuilder(
           builder: (context, setModalState) {
             return BackdropFilter(
@@ -791,6 +899,35 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     );
   }
 
+  Widget _buildPerformanceBadge() {
+    Color badgeColor = providerRating >= 4.0 ? const Color(0xFF00E676) : (providerRating >= 3.5 ? Colors.orange : const Color(0xFFEF4444));
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: badgeColor.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: badgeColor.withOpacity(0.5), width: 1.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.star_rounded, color: badgeColor, size: 20),
+          const SizedBox(width: 6),
+          Text(
+            providerRating.toStringAsFixed(1),
+            style: TextStyle(color: badgeColor, fontWeight: FontWeight.w900, fontSize: 16),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            "($reviewsCount)",
+            style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildModernEarningsCard() {
     final String monthly = earningsData['monthly']?.toString() ?? "0";
     final String totalJobs = earningsData['total_jobs']?.toString() ?? "0";
@@ -897,6 +1034,25 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                 ),
                 Row(
                   children: [
+                    _buildPerformanceBadge(),
+                  ],
+                )
+              ],
+            ),
+            const SizedBox(height: 32),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Usta Paneli", style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -1)),
+                    SizedBox(height: 8),
+                    Text("İş almak için çevrimiçi olun.", style: TextStyle(color: Color(0xFF94A3B8), fontSize: 15, fontWeight: FontWeight.w500, height: 1.5)),
+                  ],
+                ),
+                Row(
+                  children: [
                     _buildTopButton(Icons.history_rounded, const Color(0xFF00E676), () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProviderBidsScreen(providerId: widget.providerId)))),
                     const SizedBox(width: 12),
                     _buildTopButton(Icons.person_outline_rounded, const Color(0xFF00E676), () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen(userId: widget.providerId, userType: 'provider')))),
@@ -904,11 +1060,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                 )
               ],
             ),
-            const SizedBox(height: 40),
-            
-            const Text("Usta Paneli", style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -1)),
-            const SizedBox(height: 8),
-            const Text("İş almak için çevrimiçi olun ve haritadaki talepleri görüntüleyin.", style: TextStyle(color: Color(0xFF94A3B8), fontSize: 15, fontWeight: FontWeight.w500, height: 1.5)),
             const SizedBox(height: 32),
 
             if (isEarningsLoading)
@@ -929,19 +1080,21 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                       padding: const EdgeInsets.symmetric(vertical: 24),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(28),
-                        gradient: const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00C853)]),
+                        gradient: isSuspended 
+                            ? const LinearGradient(colors: [Color(0xFFEF4444), Color(0xFF991B1B)])
+                            : const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00C853)]),
                         boxShadow: [
-                          BoxShadow(color: const Color(0xFF00C853).withOpacity(0.4), blurRadius: 25, offset: const Offset(0, 12))
+                          BoxShadow(color: isSuspended ? const Color(0xFF991B1B).withOpacity(0.4) : const Color(0xFF00C853).withOpacity(0.4), blurRadius: 25, offset: const Offset(0, 12))
                         ],
                       ),
                       child: isCheckingSubscription
                           ? const Center(child: SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 4)))
-                          : const Row(
+                          : Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.power_settings_new_rounded, size: 28, color: Colors.black),
-                                SizedBox(width: 12),
-                                Text("ÇEVRİMİÇİ OL", style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 1.0)),
+                                Icon(isSuspended ? Icons.block_rounded : Icons.power_settings_new_rounded, size: 28, color: Colors.black),
+                                const SizedBox(width: 12),
+                                Text(isSuspended ? "HESAP ASKIYA ALINDI" : "ÇEVRİMİÇİ OL", style: const TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 1.0)),
                               ],
                             ),
                     ),
@@ -1050,9 +1203,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                               ),
                               Row(
                                 children: [
-                                  _buildTopIconBtn(Icons.history_rounded, const Color(0xFF00E676), () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProviderBidsScreen(providerId: widget.providerId)))),
-                                  const SizedBox(width: 12),
-                                  _buildTopIconBtn(Icons.person_outline_rounded, const Color(0xFF00E676), () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen(userId: widget.providerId, userType: 'provider')))),
+                                  _buildPerformanceBadge(),
                                   const SizedBox(width: 12),
                                   _buildTopIconBtn(Icons.power_settings_new_rounded, const Color(0xFFE11D48), () {
                                     setState(() {
@@ -1061,7 +1212,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                       jobList.clear();
                                       knownJobIds.clear();
                                       _flitchingJobId = null;
-                                      _fetchEarnings(); 
+                                      _fetchEarningsAndPerformance(); 
                                     });
                                   }),
                                 ],

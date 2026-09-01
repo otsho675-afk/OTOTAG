@@ -100,7 +100,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       if (response.statusCode == 200 && data['status'] != 'error') {
         setState(() {
           String oldStatus = jobStatus;
-          jobStatus = data['status']?.toString().trim().toLowerCase() ?? 'searching';
+          // Eğer API'den null gelirse veya beklediğimiz durumlar dışında bir şey gelirse, en azından "matched" yap.
+          jobStatus = data['status']?.toString().trim().toLowerCase() ?? 'matched';
           
           if (jobStatus == 'cancelled' && widget.userType == 'provider') {
               _timer?.cancel();
@@ -394,7 +395,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           "comment": _commentController.text.trim(),
         }
       );
-      if (response.statusCode == 201) {
+      if (response.statusCode == 201 || response.statusCode == 200) {
          Navigator.pop(context); 
          _showTopSnackBar("Değerlendirme için teşekkürler!");
          setState(() => isRated = true);
@@ -928,6 +929,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           ],
         );
       default:
+        // BU KISIM EKLENDİ (Herhangi bir beklenmeyen durumda da eşleşme ekranını göstermek için)
+        if (jobStatus == 'matched' || jobStatus == 'matched') {
+           return isCustomer ? _buildCustomerCode(primaryColor, shadowColor, cardColor, subtitleColor) : _buildProviderCodeInput(primaryColor, themeGradient, shadowColor, cardColor, subtitleColor);
+        }
         return const SizedBox.shrink();
     }
   }

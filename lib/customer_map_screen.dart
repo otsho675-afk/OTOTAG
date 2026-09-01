@@ -272,7 +272,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
       if (!mounted) return;
       
       setState(() => isCreatingJob = false);
-      if (response.statusCode == 201 && data['status'] == 'success') {
+      
+      // DEĞİŞİKLİK BURADA: 200 veya 201 dönme durumları kabul edildi
+      if ((response.statusCode == 200 || response.statusCode == 201) && data['status'] == 'success') {
         int newJobId = int.parse(data['job_id'].toString());
         Navigator.pushReplacement(context, PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) => CustomerBidsScreen(jobId: newJobId),
@@ -427,7 +429,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
 
                   Positioned(
                     right: 16,
-                    bottom: size.height * 0.45, 
+                    bottom: size.height * 0.42, 
                     child: FloatingActionButton(
                       heroTag: "cust_loc_btn",
                       backgroundColor: glassColor,

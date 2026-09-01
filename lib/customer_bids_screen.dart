@@ -322,6 +322,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
                       final String price = bid['amount'].toString();
                       final String providerName = bid['provider_name'] ?? 'Bilinmeyen Usta';
                       final String rating = bid['average_rating']?.toString() ?? '5.0';
+                      final String note = bid['provider_note']?.toString() ?? '';
         
                       final int negCount = int.tryParse(bid['negotiation_count']?.toString() ?? '0') ?? 0;
                       final String lastBidder = bid['last_bidder']?.toString() ?? 'provider';
@@ -383,6 +384,22 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
                                 ),
                               ],
                             ),
+                            if (note.isNotEmpty) ...[
+                              const SizedBox(height: 16),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(Icons.format_quote_rounded, size: 16, color: subtitleColor),
+                                    const SizedBox(width: 8),
+                                    Expanded(child: Text(note, style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w500, fontStyle: FontStyle.italic))),
+                                  ],
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: 24),
                             if (isWaitingProvider)
                               Container(

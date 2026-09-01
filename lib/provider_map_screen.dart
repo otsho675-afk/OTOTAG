@@ -468,18 +468,16 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     return map[type] ?? Icons.handyman_rounded;
   }
 
-  void _showBidDialog(int jobId, String serviceName, String customerPrice, String distance, String serviceType) {
+  void _showBidDialog(int jobId, String serviceName, String problemDesc, String distance, String serviceType) {
     setState(() => _flitchingJobId = null);
-    final double pVal = double.tryParse(customerPrice) ?? 0.0;
-    final bool hasCustomerPrice = pVal > 0;
-    TextEditingController priceController = TextEditingController(text: hasCustomerPrice ? customerPrice : ""); 
+    TextEditingController priceController = TextEditingController();
+    TextEditingController noteController = TextEditingController();
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true, 
       backgroundColor: Colors.transparent,
       builder: (context) {
-        bool showCustomBid = !hasCustomerPrice;
 
         return StatefulBuilder(
           builder: (context, setModalState) {
@@ -553,113 +551,87 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                         ),
                         const SizedBox(height: 24),
                         
-                        AnimatedSize(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 300),
-                            child: (hasCustomerPrice && !showCustomBid) 
-                            ? Column(
-                                key: const ValueKey('CustomerPrice'),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEF4444).withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.3))
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Row(
                                 children: [
-                                  Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF00E676).withOpacity(0.08), 
-                                      borderRadius: BorderRadius.circular(24), 
-                                      border: Border.all(color: const Color(0xFF00E676).withOpacity(0.3), width: 1.5)
-                                    ),
-                                    child: Column(
-                                      children: [
-                                        const Text("Müşterinin Teklifi", style: TextStyle(fontSize: 14, color: Color(0xFF00E676), fontWeight: FontWeight.w700, letterSpacing: 0.5)),
-                                        const SizedBox(height: 8),
-                                        FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          child: Text(
-                                            "$customerPrice ₺", 
-                                            style: const TextStyle(fontSize: 48, color: Color(0xFF00E676), fontWeight: FontWeight.w900, letterSpacing: -1)
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  ElevatedButton(
-                                    onPressed: () async { Navigator.pop(context); await _sendBid(jobId, customerPrice); },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF00E676),
-                                      padding: const EdgeInsets.symmetric(vertical: 18),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                      elevation: 0,
-                                      minimumSize: const Size(double.infinity, 56)
-                                    ),
-                                    child: const Text("Bu Fiyata İşi Kabul Et", style: TextStyle(fontSize: 16, color: Colors.black, fontWeight: FontWeight.bold)),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  TextButton(
-                                    onPressed: () => setModalState(() => showCustomBid = true), 
-                                    child: const Text("Farklı Bir Fiyat Teklif Et", style: TextStyle(color: Color(0xFF00E676), fontWeight: FontWeight.w700, fontSize: 15))
-                                  ),
-                                ],
-                              )
-                            : Column(
-                                key: const ValueKey('CustomPrice'),
-                                children: [
-                                  TextField(
-                                    controller: priceController,
-                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*'))],
-                                    style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Color(0xFF00E676)),
-                                    textAlign: TextAlign.center,
-                                    decoration: InputDecoration(
-                                      labelText: "Sizin Teklifiniz (TL)",
-                                      labelStyle: const TextStyle(fontSize: 14, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
-                                      prefixIcon: const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF00E676), size: 24),
-                                      filled: true,
-                                      fillColor: const Color(0xFF050505),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-                                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: Colors.white.withOpacity(0.08), width: 1.5)),
-                                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: Color(0xFF00E676), width: 2)),
-                                      contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  ElevatedButton(
-                                    onPressed: () async {
-                                      String price = priceController.text.trim();
-                                      if ((double.tryParse(price) ?? 0) > 0) {
-                                        Navigator.pop(context);
-                                        await _sendBid(jobId, price);
-                                      } else {
-                                        _showTopSnackBar("Geçerli bir tutar girin.", isError: true);
-                                      }
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF00E676),
-                                      padding: const EdgeInsets.symmetric(vertical: 18),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                      elevation: 0,
-                                      minimumSize: const Size(double.infinity, 56)
-                                    ),
-                                    child: const Text("Teklifi Gönder", style: TextStyle(fontSize: 16, color: Colors.black, fontWeight: FontWeight.bold)),
-                                  ),
-                                  if (hasCustomerPrice) ...[
-                                    const SizedBox(height: 8),
-                                    TextButton(
-                                      onPressed: () => setModalState(() => showCustomBid = false), 
-                                      child: const Text("Vazgeç", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w700, fontSize: 15))
-                                    ),
-                                  ],
-                                  if (!hasCustomerPrice || showCustomBid) ...[
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context), 
-                                      child: const Text("İlgilenmiyorum", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w800, fontSize: 15))
-                                    ),
-                                  ]
+                                  Icon(Icons.report_problem_rounded, color: Color(0xFFEF4444), size: 20),
+                                  SizedBox(width: 8),
+                                  Text("Müşterinin Sorunu", style: TextStyle(fontSize: 14, color: Color(0xFFEF4444), fontWeight: FontWeight.w800)),
                                 ],
                               ),
+                              const SizedBox(height: 8),
+                              Text(problemDesc.isEmpty ? "Sorun belirtilmemiş." : problemDesc, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500, height: 1.4)),
+                            ],
                           ),
+                        ),
+                        const SizedBox(height: 24),
+                        TextField(
+                          controller: priceController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*'))],
+                          style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Color(0xFF00E676)),
+                          textAlign: TextAlign.center,
+                          decoration: InputDecoration(
+                            labelText: "Sizin Teklifiniz (TL)",
+                            labelStyle: const TextStyle(fontSize: 14, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
+                            prefixIcon: const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF00E676), size: 24),
+                            filled: true,
+                            fillColor: const Color(0xFF050505),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: Colors.white.withOpacity(0.08), width: 1.5)),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: Color(0xFF00E676), width: 2)),
+                            contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: noteController,
+                          maxLines: 2,
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
+                          decoration: InputDecoration(
+                            labelText: "Müşteriye Notunuz (İsteğe Bağlı)",
+                            labelStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
+                            prefixIcon: const Padding(padding: EdgeInsets.only(bottom: 16, top: 12), child: Icon(Icons.chat_bubble_rounded, color: Color(0xFF00E676), size: 20)),
+                            filled: true,
+                            fillColor: const Color(0xFF050505),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: Colors.white.withOpacity(0.08), width: 1.5)),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: Color(0xFF00E676), width: 2)),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: () async {
+                            String price = priceController.text.trim();
+                            if ((double.tryParse(price) ?? 0) > 0) {
+                              Navigator.pop(context);
+                              await _sendBid(jobId, price, noteController.text.trim());
+                            } else {
+                              _showTopSnackBar("Geçerli bir tutar girin.", isError: true);
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF00E676),
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            elevation: 0,
+                            minimumSize: const Size(double.infinity, 56)
+                          ),
+                          child: const Text("Teklifi Gönder", style: TextStyle(fontSize: 16, color: Colors.black, fontWeight: FontWeight.bold)),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context), 
+                          child: const Text("İlgilenmiyorum", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w800, fontSize: 15))
                         ),
                       ],
                     ),
@@ -673,12 +645,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     );
   }
 
-  Future<void> _sendBid(int jobId, String amount) async {
+  Future<void> _sendBid(int jobId, String amount, String providerNote) async {
     try {
       final response = await http.post(
         Uri.parse("$baseUrl?action=place_bid"),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
-        body: {"job_id": jobId.toString(), "provider_id": widget.providerId.toString(), "amount": amount},
+        body: {"job_id": jobId.toString(), "provider_id": widget.providerId.toString(), "amount": amount, "provider_note": providerNote},
       );
       
       final data = json.decode(response.body);
@@ -1088,9 +1060,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                               final String serviceName = _getServiceName(serviceType);
                               final String distance = job['distance'] != null ? double.parse(job['distance'].toString()).toStringAsFixed(1) : "0.0";
                               
-                              final String priceStr = job['customer_price']?.toString() ?? job['price']?.toString() ?? job['amount']?.toString() ?? '0';
-                              final double priceVal = double.tryParse(priceStr) ?? 0.0;
-                              final bool hasPrice = priceVal > 0;
+                              final String probDesc = job['problem_description']?.toString() ?? '';
                               final bool isFlashing = int.parse(job['id'].toString()) == _flitchingJobId;
                               
                               return AnimatedBuilder(
@@ -1104,7 +1074,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                   return Transform.scale(
                                     scale: value,
                                     child: GestureDetector(
-                                      onTap: () => _showBidDialog(int.parse(job['id'].toString()), serviceName, priceStr, distance, serviceType),
+                                      onTap: () => _showBidDialog(int.parse(job['id'].toString()), serviceName, probDesc, distance, serviceType),
                                       child: Container(
                                         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                         decoration: BoxDecoration(
@@ -1141,14 +1111,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                                       ],
                                                     ),
                                                   ),
-                                                  if (hasPrice)
-                                                    Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                                      children: [
-                                                        const Text("Bütçe", style: TextStyle(fontSize: 11, color: Color(0xFF00E676), fontWeight: FontWeight.bold)),
-                                                        Text("₺$priceStr", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF00E676))),
-                                                      ],
-                                                    )
+                                                  const SizedBox.shrink()
                                                 ],
                                               ),
                                               Container(

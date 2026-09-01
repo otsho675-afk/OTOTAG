@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:ui';
@@ -243,12 +242,16 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
 
     String customerCity = "Bilinmiyor";
     try {
-      List<Placemark> placemarks = await placemarkFromCoordinates(
-  currentPosition!.latitude, 
-  currentPosition!.longitude
-);
-      if (placemarks.isNotEmpty) {
-        customerCity = placemarks.first.administrativeArea ?? "Bilinmiyor";
+      final url = Uri.parse(
+          'https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentPosition!.latitude}&lon=${currentPosition!.longitude}');
+      final response = await http.get(url, headers: {'User-Agent': 'oto_tamir_app'});
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['address'] != null) {
+          final address = data['address'];
+          customerCity = address['province'] ?? address['city'] ?? address['town'] ?? address['county'] ?? "Bilinmiyor";
+        }
       }
     } catch (e) {
       debugPrint("Şehir tespit edilemedi: $e");
@@ -262,10 +265,10 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
           "customer_id": widget.customerId.toString(),
           "service_type": selectedService,
           "latitude": currentPosition!.latitude.toString(),
-        "longitude": currentPosition!.longitude.toString(),
-        "customer_price": priceController.text.trim(),
-        "city": customerCity,
-      },
+          "longitude": currentPosition!.longitude.toString(),
+          "customer_price": priceController.text.trim(),
+          "city": customerCity,
+        },
       );
       final data = json.decode(response.body);
       if (!mounted) return;
@@ -385,7 +388,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                               child: Row(
                                 children: [
                                   Container(
-                                    decoration: BoxDecoration(color: Colors.white12, shape: BoxShape.circle),
+                                    decoration: const BoxDecoration(color: Colors.white12, shape: BoxShape.circle),
                                     child: IconButton(
                                       icon: Icon(Icons.arrow_back_rounded, color: textColor, size: 24),
                                       onPressed: () => Navigator.pop(context),

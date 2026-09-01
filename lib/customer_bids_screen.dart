@@ -35,7 +35,6 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
     _fetchBids();
     _timer = Timer.periodic(const Duration(seconds: 3), (_) => _fetchBids());
     
-    // Yarıçap genişletme zamanlayıcısı (Her 30 saniyede bir çalışır)
     _radiusTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       if (bids.isEmpty && currentRadius < 35) {
         _expandSearchRadius();
@@ -160,7 +159,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text("Ustanın Teklifi: $currentAmount ₺", style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFF59E0B), fontSize: 16)),
+            Text("Ustanın Teklifi: $currentAmount", style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFF59E0B), fontSize: 16)),
             const SizedBox(height: 24),
             TextField(
               controller: counterController,
@@ -348,7 +347,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
                       final int bidId = int.parse(bid['bid_id'].toString());
                       final int providerId = int.parse(bid['provider_id'].toString());
                       
-                      final String price = bid['amount'].toString();
+                      final double priceVal = double.tryParse(bid['amount'].toString()) ?? 0;
+                      final String displayPrice = priceVal > 0 ? "${priceVal.toStringAsFixed(0)} ₺" : "Belirtilmedi";
+
                       final String providerName = bid['provider_name'] ?? 'Bilinmeyen Usta';
                       final String rating = bid['average_rating']?.toString() ?? '5.0';
                       final String note = bid['provider_note']?.toString() ?? '';
@@ -408,7 +409,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text("Teklif", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: subtitleColor)),
-                                    Text("$price ₺", style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Color(0xFF00E676), letterSpacing: -0.5)),
+                                    Text(displayPrice, style: TextStyle(fontSize: priceVal > 0 ? 28 : 18, fontWeight: FontWeight.w900, color: const Color(0xFF00E676), letterSpacing: -0.5)),
                                   ],
                                 ),
                               ],
@@ -440,7 +441,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
                                   children: [
                                     const Icon(Icons.hourglass_top_rounded, color: Color(0xFFD97706), size: 20),
                                     const SizedBox(width: 10),
-                                    const Expanded(child: Text("Teklifiniz iletildi, ustanın yanıtı bekleniyor.", style: TextStyle(color: Color(0xFFD97706), fontWeight: FontWeight.w800, fontSize: 14))),
+                                    const Expanded(child: Text("Yanıtınız iletildi, ustanın dönüşü bekleniyor.", style: TextStyle(color: Color(0xFFD97706), fontWeight: FontWeight.w800, fontSize: 14))),
                                   ],
                                 ),
                               )
@@ -451,7 +452,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
                                     child: OutlinedButton.icon(
                                       icon: Icon(canNegotiate ? Icons.handshake_rounded : Icons.person_search_rounded, size: 20),
                                       onPressed: canNegotiate 
-                                          ? () => _showCounterBidDialog(bidId, price)
+                                          ? () => _showCounterBidDialog(bidId, displayPrice)
                                           : () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProviderProfileScreen(providerId: providerId))),
                                       style: OutlinedButton.styleFrom(
                                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -459,32 +460,34 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
                                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                         foregroundColor: canNegotiate ? const Color(0xFF00E676) : subtitleColor,
                                       ),
-                                      label: FittedBox(child: Text(canNegotiate ? "Pazarlık" : "Profili Gör", style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16))),
+                                      label: FittedBox(child: Text(canNegotiate ? "Pazarlık / Yanıt" : "Profili Gör", style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16))),
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(16),
-                                        gradient: const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00C853)]),
-                                        boxShadow: [BoxShadow(color: const Color(0xFF00C853).withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 4))],
-                                      ),
-                                      child: ElevatedButton.icon(
-                                        icon: isProcessing ? const SizedBox.shrink() : const Icon(Icons.check_circle_outline_rounded, color: Colors.black, size: 22),
-                                        onPressed: isProcessing ? null : () => _acceptBid(bidId, providerId, price),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.transparent,
-                                          shadowColor: Colors.transparent,
-                                          padding: const EdgeInsets.symmetric(vertical: 16),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  if (priceVal > 0) ...[
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(16),
+                                          gradient: const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00C853)]),
+                                          boxShadow: [BoxShadow(color: const Color(0xFF00C853).withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 4))],
                                         ),
-                                        label: isProcessing
-                                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3))
-                                            : const FittedBox(child: Text("Kabul Et", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16))),
+                                        child: ElevatedButton.icon(
+                                          icon: isProcessing ? const SizedBox.shrink() : const Icon(Icons.check_circle_outline_rounded, color: Colors.black, size: 22),
+                                          onPressed: isProcessing ? null : () => _acceptBid(bidId, providerId, bid['amount'].toString()),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.transparent,
+                                            shadowColor: Colors.transparent,
+                                            padding: const EdgeInsets.symmetric(vertical: 16),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                          ),
+                                          label: isProcessing
+                                              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3))
+                                              : const FittedBox(child: Text("Kabul Et", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16))),
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ],
                               ),
                           ],
@@ -525,7 +528,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
           const SizedBox(height: 36),
           Text("$currentRadius KM İçinde Aranıyor...", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: textColor, letterSpacing: -0.5)),
           const SizedBox(height: 16),
-          Text("Konumunuza en yakın ustalar bildirimi aldı.\nTeklifler canlı olarak buraya düşecektir.", textAlign: TextAlign.center, style: TextStyle(fontSize: 16, color: subtitleColor, height: 1.6, fontWeight: FontWeight.w500)),
+          Text("Konumunuza en yakın ustalar bildirimi aldı.\nYanıtlar canlı olarak buraya düşecektir.", textAlign: TextAlign.center, style: TextStyle(fontSize: 16, color: subtitleColor, height: 1.6, fontWeight: FontWeight.w500)),
         ],
       ),
     );

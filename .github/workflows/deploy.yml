@@ -3,7 +3,7 @@ name: Flutter Web Otomatik Deploy
 on:
   push:
     branches:
-      - main # Çalıştığınız dal adı farklıysa (örn: master) burayı değiştirin
+      - main
 
 jobs:
   build-and-deploy:
@@ -13,19 +13,15 @@ jobs:
       - name: 📥 Kodu Çek
         uses: actions/checkout@v4
 
-      - name: ⚙️ Java Kurulumu
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
       - name: 🦋 Flutter Kurulumu
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
 
       - name: 📦 Paketleri İndir
-        run: flutter pub get
+        run: |
+          flutter pub upgrade
+          flutter pub get
 
       - name: 🛠️ Web Sürümünü Derle
         run: flutter build web --release
@@ -37,7 +33,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./build/web/
-          server-dir: /public_html/ # Sunucunuzdaki klasör (httpdocs veya www ise değiştirin)
+          server-dir: ./
           exclude: |
             **/.git*
             **/.git*/**

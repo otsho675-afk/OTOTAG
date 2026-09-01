@@ -19,7 +19,7 @@ class CustomerMapScreen extends StatefulWidget {
 
 class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProviderStateMixin {
   final MapController mapController = MapController();
-  final TextEditingController priceController = TextEditingController();
+  final TextEditingController problemController = TextEditingController();
   
   Position? currentPosition;
   bool isLoading = true;
@@ -40,8 +40,6 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     {'id': 'wash', 'name': 'Yıkama', 'icon': Icons.local_car_wash_rounded, 'color': const Color(0xFF00E676), 'gradient': [const Color(0xFF222222), const Color(0xFF111111)]},
   ];
 
-  final List<int> quickPrices = [500, 1000, 1500, 2500];
-
   @override
   void initState() {
     super.initState();
@@ -55,7 +53,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
 
   @override
   void dispose() {
-    priceController.dispose();
+    problemController.dispose();
     _radarController.dispose();
     _buttonPulseController.dispose();
     super.dispose();
@@ -97,7 +95,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
         }
       }
     } catch (e) {
-      // Sessiz hata
+      
     }
   }
 
@@ -232,8 +230,8 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
 
   Future<void> _createJobRequest() async {
     if (currentPosition == null) return;
-    if (priceController.text.trim().isEmpty) {
-      _showTopSnackBar("Lütfen ustalar için bir teklif (fiyat) belirleyin.", isError: true);
+    if (problemController.text.trim().isEmpty) {
+      _showTopSnackBar("Lütfen ustalar için sorununuzu detaylıca belirtin.", isError: true);
       return;
     }
 
@@ -266,7 +264,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
           "service_type": selectedService,
           "latitude": currentPosition!.latitude.toString(),
           "longitude": currentPosition!.longitude.toString(),
-          "customer_price": priceController.text.trim(),
+          "problem_description": problemController.text.trim(),
           "city": customerCity,
         },
       );
@@ -429,7 +427,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
 
                   Positioned(
                     right: 16,
-                    bottom: size.height * 0.42, 
+                    bottom: size.height * 0.45, 
                     child: FloatingActionButton(
                       heroTag: "cust_loc_btn",
                       backgroundColor: glassColor,
@@ -517,43 +515,20 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                       Container(
                                         decoration: BoxDecoration(boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))]),
                                         child: TextField(
-                                          controller: priceController,
-                                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: textColor),
+                                          controller: problemController,
+                                          keyboardType: TextInputType.multiline,
+                                          maxLines: 3,
+                                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: textColor),
                                           decoration: InputDecoration(
-                                            labelText: "Teklifiniz (TL)",
+                                            labelText: "Aracınızdaki Sorunu Anlatın",
                                             labelStyle: TextStyle(fontSize: 14, color: subtitleColor, fontWeight: FontWeight.w700),
-                                            suffixText: "₺",
-                                            suffixStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: subtitleColor),
-                                            prefixIcon: const Padding(padding: EdgeInsets.only(left: 16, right: 12), child: Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF00E676), size: 22)),
+                                            prefixIcon: const Padding(padding: EdgeInsets.only(bottom: 40, left: 16, right: 12), child: Icon(Icons.build_circle_rounded, color: Color(0xFF00E676), size: 22)),
                                             filled: true,
                                             fillColor: const Color(0xFF050505),
                                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
                                             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: Color(0xFF00E676), width: 2)),
                                             contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                                           ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      
-                                      SingleChildScrollView(
-                                        scrollDirection: Axis.horizontal,
-                                        physics: const BouncingScrollPhysics(),
-                                        child: Row(
-                                          children: quickPrices.map((amount) {
-                                            return Padding(
-                                              padding: const EdgeInsets.only(right: 6.0),
-                                              child: ActionChip(
-                                                label: Text("$amount ₺", style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Colors.white)),
-                                                labelPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                padding: EdgeInsets.zero,
-                                                backgroundColor: const Color(0xFF111111),
-                                                side: BorderSide(color: Colors.white.withOpacity(0.1), width: 1.5),
-                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                                onPressed: () => setState(() => priceController.text = amount.toString()),
-                                              ),
-                                            );
-                                          }).toList(),
                                         ),
                                       ),
                                       const SizedBox(height: 16),

@@ -775,9 +775,26 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     return markers;
   }
 
-  Widget _buildEarningsCard() {
+  Widget _buildMiniStat(String label, String val, IconData icon) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: const Color(0xFF94A3B8), size: 16),
+            const SizedBox(width: 6),
+            Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w600, fontSize: 14)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(val, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20)),
+      ],
+    );
+  }
+
+  Widget _buildModernEarningsCard() {
     final String monthly = earningsData['monthly']?.toString() ?? "0";
     final String totalJobs = earningsData['total_jobs']?.toString() ?? "0";
+    final String yearly = earningsData['yearly']?.toString() ?? "0";
 
     return Container(
       padding: const EdgeInsets.all(28),
@@ -791,37 +808,35 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: const Color(0xFF00E676).withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                    child: const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF00E676), size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  const Text("Bu Ayki Kazanç", style: TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w600, fontSize: 14)),
-                ],
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: const Color(0xFF00E676).withOpacity(0.15), borderRadius: BorderRadius.circular(16)),
+                child: const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF00E676), size: 24),
               ),
-              const Icon(Icons.trending_up_rounded, color: Color(0xFF00E676), size: 24),
+              const SizedBox(width: 16),
+              const Expanded(child: Text("Bu Ayki Kazanç", style: TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w700, fontSize: 16))),
+              const Icon(Icons.trending_up_rounded, color: Color(0xFF00E676), size: 28),
             ],
           ),
           const SizedBox(height: 24),
           FittedBox(
-             fit: BoxFit.scaleDown,
-             alignment: Alignment.centerLeft,
-             child: Text("₺$monthly", style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -1.5))
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text("₺$monthly", style: const TextStyle(fontSize: 56, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -2.0))
           ),
-          const SizedBox(height: 24),
-          Divider(color: Colors.white.withOpacity(0.05), height: 1),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Container(padding: const EdgeInsets.all(6), decoration: const BoxDecoration(color: Color(0xFF00E676), shape: BoxShape.circle), child: const Icon(Icons.check_rounded, color: Colors.black, size: 14)),
-              const SizedBox(width: 12),
-              Expanded(child: Text("Toplam $totalJobs iş başarıyla tamamlandı.", style: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w600, fontSize: 13), maxLines: 2, overflow: TextOverflow.ellipsis)),
-            ],
+          const SizedBox(height: 28),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(color: Colors.white.withOpacity(0.03), borderRadius: BorderRadius.circular(24)),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildMiniStat("Yıllık", "₺$yearly", Icons.calendar_today_rounded),
+                Container(width: 2, height: 40, color: Colors.white12),
+                _buildMiniStat("İşlem", totalJobs, Icons.handyman_rounded),
+              ],
+            ),
           )
         ],
       ),
@@ -851,6 +866,91 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
           border: Border.all(color: Colors.white12),
         ),
         child: Icon(icon, color: color, size: 24),
+      ),
+    );
+  }
+
+  Widget _buildOfflineDashboard() {
+    return SafeArea(
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Image.asset('assets/images/logo.png', height: 40),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEF4444).withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12)
+                      ),
+                      child: const Text("ÇEVRİMDİŞI", style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w900, fontSize: 12)),
+                    )
+                  ],
+                ),
+                Row(
+                  children: [
+                    _buildTopButton(Icons.history_rounded, const Color(0xFF00E676), () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProviderBidsScreen(providerId: widget.providerId)))),
+                    const SizedBox(width: 12),
+                    _buildTopButton(Icons.person_outline_rounded, const Color(0xFF00E676), () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen(userId: widget.providerId, userType: 'provider')))),
+                  ],
+                )
+              ],
+            ),
+            const SizedBox(height: 40),
+            
+            const Text("Usta Paneli", style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -1)),
+            const SizedBox(height: 8),
+            const Text("İş almak için çevrimiçi olun ve haritadaki talepleri görüntüleyin.", style: TextStyle(color: Color(0xFF94A3B8), fontSize: 15, fontWeight: FontWeight.w500, height: 1.5)),
+            const SizedBox(height: 32),
+
+            if (isEarningsLoading)
+              const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator(color: Color(0xFF00E676), strokeWidth: 3)))
+            else
+              _buildModernEarningsCard(),
+
+            const SizedBox(height: 32),
+
+            GestureDetector(
+              onTap: isCheckingSubscription ? null : _handleGoOnline,
+              child: AnimatedBuilder(
+                animation: _pulseController,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: 1.0 + (_pulseController.value * 0.03),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(28),
+                        gradient: const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00C853)]),
+                        boxShadow: [
+                          BoxShadow(color: const Color(0xFF00C853).withOpacity(0.4), blurRadius: 25, offset: const Offset(0, 12))
+                        ],
+                      ),
+                      child: isCheckingSubscription
+                          ? const Center(child: SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 4)))
+                          : const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.power_settings_new_rounded, size: 28, color: Colors.black),
+                                SizedBox(width: 12),
+                                Text("ÇEVRİMİÇİ OL", style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 1.0)),
+                              ],
+                            ),
+                    ),
+                  );
+                }
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -898,84 +998,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
                 if (!isOnline)
                   Positioned.fill(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                      child: Container(
-                        color: const Color(0xFF050505).withOpacity(0.8),
-                        child: SafeArea(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Image.asset('assets/images/logo.png', height: 40),
-                                        const SizedBox(height: 4),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                          decoration: BoxDecoration(color: const Color(0xFFE11D48).withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                                          child: const Text("Çevrimdışı", style: TextStyle(color: Color(0xFFE11D48), fontSize: 13, fontWeight: FontWeight.bold)),
-                                        ),
-                                      ],
-                                    ),
-                                    Row(
-                                      children: [
-                                        _buildTopButton(Icons.history_rounded, const Color(0xFF00E676), () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProviderBidsScreen(providerId: widget.providerId)))),
-                                        const SizedBox(width: 12),
-                                        _buildTopButton(Icons.person_outline_rounded, const Color(0xFF00E676), () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen(userId: widget.providerId, userType: 'provider')))),
-                                      ],
-                                    )
-                                  ],
-                                ),
-                                const SizedBox(height: 40),
-                                
-                                if (isEarningsLoading)
-                                  const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator(color: Color(0xFF00E676), strokeWidth: 2)))
-                                else
-                                  _buildEarningsCard(),
-
-                                const Spacer(),
-                                
-                                GestureDetector(
-                                  onTap: isCheckingSubscription ? null : _handleGoOnline,
-                                  child: AnimatedBuilder(
-                                    animation: _pulseController,
-                                    builder: (context, child) {
-                                      return Transform.scale(
-                                        scale: 1.0 + (_pulseController.value * 0.03),
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(vertical: 20),
-                                          decoration: BoxDecoration(
-                                            borderRadius: BorderRadius.circular(24),
-                                            gradient: const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00C853)]),
-                                            boxShadow: [BoxShadow(color: const Color(0xFF00C853).withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 10))],
-                                          ),
-                                          child: isCheckingSubscription
-                                              ? const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3)))
-                                              : const Row(
-                                                  mainAxisAlignment: MainAxisAlignment.center,
-                                                  children: [
-                                                    Icon(Icons.power_settings_new_rounded, size: 24, color: Colors.black),
-                                                    SizedBox(width: 12),
-                                                    Text("ÇEVRİMİÇİ OL", style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
-                                                  ],
-                                                ),
-                                        ),
-                                      );
-                                    }
-                                  ),
-                                ),
-                                const SizedBox(height: 32),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
+                    child: Container(
+                      color: bgColor,
+                      child: _buildOfflineDashboard(),
                     ),
                   ),
 
@@ -1000,7 +1025,25 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                             children: [
                               Row(
                                 children: [
-                                  Container(width: 10, height: 10, decoration: BoxDecoration(color: const Color(0xFF00E676), shape: BoxShape.circle, boxShadow: [BoxShadow(color: const Color(0xFF00E676).withOpacity(0.6), blurRadius: 6)])),
+                                  AnimatedBuilder(
+                                    animation: _pulseController,
+                                    builder: (context, child) {
+                                      return Container(
+                                        width: 12, height: 12, 
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF00E676), 
+                                          shape: BoxShape.circle, 
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(0xFF00E676).withOpacity(0.6 * _pulseController.value), 
+                                              blurRadius: 10 * _pulseController.value, 
+                                              spreadRadius: 4 * _pulseController.value
+                                            )
+                                          ]
+                                        )
+                                      );
+                                    }
+                                  ),
                                   const SizedBox(width: 12),
                                   Text("Çevrimiçi", style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
                                 ],

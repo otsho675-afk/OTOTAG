@@ -39,5 +39,5 @@ jobs:
             **/.git*
             **/.git*/**
             **/node_modules/**
-            api.php
+            canvaskit/**
             uploads/**

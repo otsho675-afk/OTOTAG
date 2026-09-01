@@ -20,7 +20,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _ibanController = TextEditingController();
   String _selectedService = 'mechanic';
+  String? _selectedCity;
   bool isRegistering = false;
+  final List<String> _cities = ["Adana", "Adıyaman", "Afyonkarahisar", "Ağrı", "Amasya", "Ankara", "Antalya", "Artvin", "Aydın", "Balıkesir", "Bilecik", "Bingöl", "Bitlis", "Bolu", "Burdur", "Bursa", "Çanakkale", "Çankırı", "Çorum", "Denizli", "Diyarbakır", "Edirne", "Elazığ", "Erzincan", "Erzurum", "Eskişehir", "Gaziantep", "Giresun", "Gümüşhane", "Hakkari", "Hatay", "Isparta", "Mersin", "İstanbul", "İzmir", "Kars", "Kastamonu", "Kayseri", "Kırklareli", "Kırşehir", "Kocaeli", "Konya", "Kütahya", "Malatya", "Manisa", "Kahramanmaraş", "Mardin", "Muğla", "Muş", "Nevşehir", "Niğde", "Ordu", "Rize", "Sakarya", "Samsun", "Siirt", "Sinop", "Sivas", "Tekirdağ", "Tokat", "Trabzon", "Tunceli", "Şanlıurfa", "Uşak", "Van", "Yozgat", "Zonguldak", "Aksaray", "Bayburt", "Karaman", "Kırıkkale", "Batman", "Şırnak", "Bartın", "Ardahan", "Iğdır", "Yalova", "Karabük", "Kilis", "Osmaniye", "Düzce"];
   final String baseUrl = "https://eliteagency.sbs/api.php";
 
   XFile? _taxPlate;
@@ -68,6 +70,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       _showTopSnackBar('Lütfen temel bilgileri doldurun.', isError: true);
       return;
     }
+    if (_selectedCity == null) {
+      _showTopSnackBar('Lütfen bulunduğunuz şehri seçin.', isError: true);
+      return;
+    }
     
     if (widget.userType == 'provider') {
       if (_selectedService == 'wash' && (_driverLicense == null || _vehiclePhoto == null || _equipmentPhoto == null)) {
@@ -91,6 +97,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         request.fields['user_type'] = widget.userType;
         request.fields['service_category'] = _selectedService;
         request.fields['iban'] = _ibanController.text.trim();
+        request.fields['city'] = _selectedCity!;
 
         if (_selectedService == 'wash') {
           request.files.add(http.MultipartFile.fromBytes('driver_license', await _driverLicense!.readAsBytes(), filename: _driverLicense!.name));
@@ -112,9 +119,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             "phone": _phoneController.text.trim(),
             "password": _passwordController.text.trim(),
             "user_type": widget.userType,
-            "service_category": 'none',
-            "iban": '',
-          },
+        "service_category": 'none',
+        "iban": '',
+        "city": _selectedCity!,
+      },
         );
         _handleResponse(response.body, response.statusCode);
       }
@@ -302,10 +310,35 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               _buildTextField(_phoneController, "Telefon Numarası", Icons.phone_android_rounded, activeColor, type: TextInputType.phone),
               const SizedBox(height: 16),
               _buildTextField(_passwordController, "Şifre", Icons.lock_rounded, activeColor, isPassword: true),
-              
-              if (!isCustomer) ...[
-                const SizedBox(height: 16),
-                _buildTextField(_ibanController, "IBAN Numarası", Icons.account_balance_rounded, activeColor),
+          const SizedBox(height: 16),
+
+          Container(
+            decoration: BoxDecoration(boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 10, offset: const Offset(0, 4))]),
+            child: DropdownButtonFormField<String>(
+              value: _selectedCity,
+              icon: Icon(Icons.keyboard_arrow_down_rounded, color: activeColor),
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15),
+              dropdownColor: const Color(0xFF1E293B),
+              decoration: InputDecoration(
+                labelText: "Bulunduğunuz Şehir",
+                labelStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14, fontWeight: FontWeight.w600),
+                prefixIcon: Padding(padding: const EdgeInsets.only(left: 16, right: 12), child: Icon(Icons.location_city_rounded, color: activeColor, size: 24)),
+                filled: true,
+                fillColor: const Color(0xFF111111),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: activeColor, width: 2)),
+              ),
+              items: _cities.map((String city) {
+                return DropdownMenuItem(value: city, child: Text(city));
+              }).toList(),
+              onChanged: (val) => setState(() => _selectedCity = val),
+            ),
+          ),
+
+          if (!isCustomer) ...[
+            const SizedBox(height: 16),
+            _buildTextField(_ibanController, "IBAN Numarası", Icons.account_balance_rounded, activeColor),
                 const SizedBox(height: 16),
                 
                 Container(

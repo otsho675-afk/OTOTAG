@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:ui';
@@ -240,6 +241,19 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     setState(() => isCreatingJob = true);
     FocusScope.of(context).unfocus(); 
 
+    String customerCity = "Bilinmiyor";
+    try {
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+  currentPosition!.latitude, 
+  currentPosition!.longitude
+);
+      if (placemarks.isNotEmpty) {
+        customerCity = placemarks.first.administrativeArea ?? "Bilinmiyor";
+      }
+    } catch (e) {
+      debugPrint("Şehir tespit edilemedi: $e");
+    }
+
     try {
       final response = await http.post(
         Uri.parse("$baseUrl?action=create_job"),
@@ -248,9 +262,10 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
           "customer_id": widget.customerId.toString(),
           "service_type": selectedService,
           "latitude": currentPosition!.latitude.toString(),
-          "longitude": currentPosition!.longitude.toString(),
-          "customer_price": priceController.text.trim(),
-        },
+        "longitude": currentPosition!.longitude.toString(),
+        "customer_price": priceController.text.trim(),
+        "city": customerCity,
+      },
       );
       final data = json.decode(response.body);
       if (!mounted) return;

@@ -17,6 +17,8 @@ class CustomerBidsScreen extends StatefulWidget {
 class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTickerProviderStateMixin {
   List bids = [];
   Timer? _timer;
+  Timer? _radiusTimer;
+  int currentRadius = 10;
   bool isProcessing = false;
   bool isCancelling = false;
   final String baseUrl = "https://eliteagency.sbs/api.php";
@@ -32,11 +34,38 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
     
     _fetchBids();
     _timer = Timer.periodic(const Duration(seconds: 3), (_) => _fetchBids());
+    
+    // Yarıçap genişletme zamanlayıcısı (Her 30 saniyede bir çalışır)
+    _radiusTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (bids.isEmpty && currentRadius < 35) {
+        _expandSearchRadius();
+      }
+    });
+  }
+
+  Future<void> _expandSearchRadius() async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl?action=expand_search_radius"),
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: {"job_id": widget.jobId.toString()},
+      );
+      final data = json.decode(response.body);
+      if (data['status'] == 'success') {
+        setState(() {
+          currentRadius = data['new_radius'];
+        });
+        _showTopSnackBar("Arama yarıçapı $currentRadius km'ye genişletildi.");
+      }
+    } catch (e) {
+      debugPrint("Yarıçap genişletilemedi: $e");
+    }
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _radiusTimer?.cancel();
     _pulseController.dispose();
     super.dispose();
   }
@@ -494,7 +523,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
             ),
           ),
           const SizedBox(height: 36),
-          Text("Ustalar Arasında Aranıyor...", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: textColor, letterSpacing: -0.5)),
+          Text("$currentRadius KM İçinde Aranıyor...", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: textColor, letterSpacing: -0.5)),
           const SizedBox(height: 16),
           Text("Konumunuza en yakın ustalar bildirimi aldı.\nTeklifler canlı olarak buraya düşecektir.", textAlign: TextAlign.center, style: TextStyle(fontSize: 16, color: subtitleColor, height: 1.6, fontWeight: FontWeight.w500)),
         ],

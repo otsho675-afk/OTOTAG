@@ -1139,4 +1139,4 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       ],
     );
   }
-} 
+}

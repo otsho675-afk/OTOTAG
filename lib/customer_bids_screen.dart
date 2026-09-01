@@ -564,4 +564,4 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
       ),
     );
   }
-}
+} 

@@ -300,15 +300,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: body,
       );
+      
+      final data = json.decode(response.body);
+      
       if (response.statusCode == 200) {
         await _fetchAllData();
         if(mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Cezai işlem başarıyla uygulandı."), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['message'] ?? "Cezai işlem uygulandı."), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
+        }
+      } else {
+        if(mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['message'] ?? "İşlem başarısız oldu."), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating));
         }
       }
     } catch (e) {
       if(mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("İşlem başarısız oldu."), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Bağlantı hatası."), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating));
       }
     }
   }
@@ -703,9 +710,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                   ),
                   ElevatedButton.icon(
-                    onPressed: () => _showPunishmentDialog(pId, provider['name'], true),
+                    onPressed: () => _applyPunishment(pId, provider['name'], 'suspend_provider', "15 gün askıya alınacak"),
                     icon: const Icon(Icons.gavel_rounded, color: Colors.white, size: 16),
-                    label: const Text("İşlem Yap", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                    label: const Text("Askıya Al", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
@@ -966,6 +973,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   final userId = int.tryParse(user['id'].toString()) ?? 0;
                   final String joinedDate = _formatDate(user['created_at']);
                   
+                  final DateTime createdAtDate = DateTime.tryParse(user['created_at'].toString()) ?? DateTime.now();
+                  final bool isUnderProbation = !isCustomer && DateTime.now().difference(createdAtDate).inDays < 90;
+
                   return Container(
                     decoration: BoxDecoration(
                       color: isBanned ? Colors.red.withOpacity(0.05) : cardColor,
@@ -996,7 +1006,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         children: [
                           const SizedBox(height: 4),
                           Text(user['phone'], style: const TextStyle(fontWeight: FontWeight.w500)),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 4),
                           Row(
                             children: [
                               Text(
@@ -1009,6 +1019,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(color: Colors.red.shade100, borderRadius: BorderRadius.circular(4)),
                                   child: const Text("ENGELLENDİ", style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold)),
+                                )
+                              ] else if (isUnderProbation) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(color: Colors.amber.shade100, borderRadius: BorderRadius.circular(4)),
+                                  child: const Text("GÖZETİMDE (Yeni)", style: TextStyle(color: Colors.orange, fontSize: 10, fontWeight: FontWeight.bold)),
                                 )
                               ]
                             ],

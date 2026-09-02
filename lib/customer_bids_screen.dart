@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:ui';
 import 'job_tracking_screen.dart';
 import 'provider_profile_screen.dart';
+import 'chat_screen.dart'; // Chat entegrasyonu[cite: 3]
 
 class CustomerBidsScreen extends StatefulWidget {
   final int jobId;
@@ -22,6 +23,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
   bool isProcessing = false;
   bool isCancelling = false;
   final String baseUrl = "https://eliteagency.sbs/api.php";
+  int _currentCustomerId = 0; // Backendden dönen ID'yi işin sahibine göre eşliyoruz
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -34,7 +36,6 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
     
     _fetchBids();
     
-    // Yalnızca tek bir timer üzerinden sıralı ve güvenli kontrol
     _timer = Timer.periodic(const Duration(seconds: 3), (_) => _fetchBids());
     
     _radiusTimer = Timer.periodic(const Duration(seconds: 30), (_) {
@@ -100,13 +101,15 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
     if (!mounted) return;
 
     try {
-      // 1. ADIM: Önce işin genel durumunu kontrol et (Eşleşme sağlandı mı?)
       final statusRes = await http.get(Uri.parse("$baseUrl?action=get_job_status&job_id=${widget.jobId}"));
       if (statusRes.statusCode == 200) {
         final statusData = json.decode(statusRes.body);
         final String currentStatus = statusData['status']?.toString().toLowerCase() ?? '';
         
-        // Eğer usta arka planda onayladıysa ve durum eşleştiyse doğrudan takip ekranına at
+        if (statusData['customer_id'] != null) {
+            _currentCustomerId = int.parse(statusData['customer_id'].toString());
+        }
+
         if (currentStatus == 'matched' || currentStatus == 'in_progress' || currentStatus == 'completed' || currentStatus == 'customer_paid') {
           _timer?.cancel();
           _radiusTimer?.cancel();
@@ -120,11 +123,10 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
               ),
             );
           }
-          return; // Eşleşme varsa teklifleri çekmeyi iptal et (Ekranın radar moduna düşmesini engeller)
+          return; 
         }
       }
 
-      // 2. ADIM: İş hala 'searching' (aranıyor) durumundaysa güncel teklifleri çek
       final response = await http.get(Uri.parse("$baseUrl?action=get_bids&job_id=${widget.jobId}"));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -462,6 +464,32 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
                               ),
                             ],
                             const SizedBox(height: 24),
+
+                            // Sohbet ve Medya Gönderme Butonu[cite: 3]
+                            Container(
+                                width: double.infinity,
+                                margin: const EdgeInsets.only(bottom: 12),
+                                child: OutlinedButton.icon(
+                                  icon: const Icon(Icons.chat_rounded, size: 20),
+                                  onPressed: () {
+                                    Navigator.push(context, MaterialPageRoute(builder: (context) => ChatScreen(
+                                      jobId: widget.jobId,
+                                      currentUserId: _currentCustomerId,
+                                      currentUserType: 'customer',
+                                      receiverId: providerId,
+                                      receiverName: providerName,
+                                    )));
+                                  },
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    side: BorderSide(color: const Color(0xFF00E676).withOpacity(0.5), width: 1.5),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                    foregroundColor: const Color(0xFF00E676),
+                                  ),
+                                  label: const Text("Ustayla Mesajlaş / Medya Gönder", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                                ),
+                            ),
+
                             if (isWaitingProvider)
                               Container(
                                 width: double.infinity,
@@ -564,4 +592,4 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
       ),
     );
   }
-} 
+}

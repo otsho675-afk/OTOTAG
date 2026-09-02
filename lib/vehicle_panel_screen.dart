@@ -30,7 +30,9 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
   bool isLoading = true;
   late Map<String, dynamic> currentVehicleData;
   bool _hasShownAlert = false;
+  
   double totalExpense = 0.0;
+  double totalFuelExpense = 0.0;
 
   String searchQuery = "";
   String selectedFilter = "Tümü";
@@ -40,6 +42,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
 
   final List<String> filterOptions = [
     'Tümü',
+    'Yakıt Alımı',
     'Periyodik Bakım',
     'Tamir & Onarım',
     'Lastik & Balans',
@@ -103,6 +106,8 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
           setState(() {
             records = data['records'] ?? [];
             totalExpense = records.fold(0.0, (sum, item) => sum + (double.tryParse(item['cost']?.toString() ?? '0') ?? 0.0));
+            totalFuelExpense = records.where((r) => r['record_type'] == 'Yakıt Alımı')
+                                      .fold(0.0, (sum, item) => sum + (double.tryParse(item['cost']?.toString() ?? '0') ?? 0.0));
             isLoading = false;
           });
           await _refreshVehicleData(); 
@@ -302,33 +307,45 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     }).toList();
   }
 
-  Widget _buildTotalExpenseCard(Size size) {
+  Widget _buildExpenseCards(Size size) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: size.width * 0.04),
+      child: Row(
+        children: [
+          Expanded(child: _buildMiniExpenseCard("Servis & Parça", totalExpense - totalFuelExpense, Icons.build_circle_rounded, const [Color(0xFF00E676), Color(0xFF00C853)], size)),
+          SizedBox(width: size.width * 0.04),
+          Expanded(child: _buildMiniExpenseCard("Yakıt Gideri", totalFuelExpense, Icons.local_gas_station_rounded, const [Color(0xFFFF9100), Color(0xFFFF6D00)], size)),
+        ]
+      )
+    );
+  }
+
+  Widget _buildMiniExpenseCard(String title, double amount, IconData icon, List<Color> gradient, Size size) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: size.width * 0.04),
-      padding: EdgeInsets.all(size.width * 0.05),
+      padding: EdgeInsets.all(size.width * 0.04),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00C853)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-        borderRadius: BorderRadius.circular(32),
+        gradient: LinearGradient(colors: gradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          BoxShadow(color: const Color(0xFF00C853).withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 10))
+          BoxShadow(color: gradient.last.withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 8))
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text("Toplam Araç Gideri", style: TextStyle(color: Colors.black.withOpacity(0.7), fontSize: size.width * 0.04, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 6),
-              Text("${totalExpense.toStringAsFixed(2)} ₺", style: TextStyle(color: Colors.black, fontSize: size.width * 0.07, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+              Icon(icon, color: Colors.black.withOpacity(0.6), size: size.width * 0.07),
             ],
           ),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: Colors.black.withOpacity(0.1), shape: BoxShape.circle),
-            child: Icon(Icons.account_balance_wallet_rounded, color: Colors.black, size: size.width * 0.08),
-          )
+          const SizedBox(height: 12),
+          Text(title, style: TextStyle(color: Colors.black.withOpacity(0.7), fontSize: size.width * 0.035, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text("${amount.toStringAsFixed(2)} ₺", style: TextStyle(color: Colors.black, fontSize: size.width * 0.055, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+          ),
         ],
       ),
     );
@@ -557,6 +574,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     IconData getIcon() {
       switch (type) {
         case 'Periyodik Bakım': return Icons.build_circle_rounded;
+        case 'Yakıt Alımı': return Icons.local_gas_station_rounded;
         case 'Tamir & Onarım':
         case 'Tamir': return Icons.car_repair_rounded;
         case 'Lastik & Balans': return Icons.tire_repair_rounded;
@@ -575,6 +593,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     Color getColor() {
       switch (type) {
         case 'Periyodik Bakım': return const Color(0xFF00E676);
+        case 'Yakıt Alımı': return const Color(0xFFFF9100);
         case 'Tamir & Onarım':
         case 'Tamir': return const Color(0xFFEF4444);
         case 'Lastik & Balans': return const Color(0xFF00E5FF);
@@ -814,7 +833,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _buildTotalExpenseCard(size),
+                          _buildExpenseCards(size),
                           SizedBox(height: size.height * 0.02),
                           _buildVerticalSummary(size),
                           Padding(
@@ -921,6 +940,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
   bool isEditing = false;
   
   final List<Map<String, dynamic>> operationTypes = [
+    {'id': 'Yakıt Alımı', 'icon': Icons.local_gas_station_rounded, 'color': const Color(0xFFFF9100)},
     {'id': 'Periyodik Bakım', 'icon': Icons.build_circle_rounded, 'color': const Color(0xFF00E676)},
     {'id': 'Tamir & Onarım', 'icon': Icons.car_repair_rounded, 'color': const Color(0xFFEF4444)},
     {'id': 'Lastik & Balans', 'icon': Icons.tire_repair_rounded, 'color': const Color(0xFF00E5FF)},
@@ -939,7 +959,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
     isEditing = widget.recordToEdit != null;
     final r = widget.recordToEdit;
 
-    selectedType = r?['record_type'] ?? 'Periyodik Bakım';
+    selectedType = r?['record_type'] ?? 'Yakıt Alımı';
     descController = TextEditingController(text: r?['description'] ?? '');
     costController = TextEditingController(text: r?['cost'] != null ? r!['cost'].toString() : '');
     currentKmController = TextEditingController(text: r?['current_km']?.toString() ?? widget.currentKm.toString());
@@ -1303,7 +1323,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                         textInputAction: TextInputAction.done,
                         style: TextStyle(color: textColor, fontSize: size.width * 0.038, fontWeight: FontWeight.w600),
                         decoration: InputDecoration(
-                          labelText: "Yapılan İşlemler / Notlar",
+                          labelText: selectedType == 'Yakıt Alımı' ? "Alınan Litre, İstasyon vb." : "Yapılan İşlemler / Notlar",
                           labelStyle: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
                           alignLabelWithHint: true,
                           filled: true,
@@ -1420,7 +1440,6 @@ class NotificationHelper {
     
     const InitializationSettings initSettings = InitializationSettings(android: androidSettings, iOS: iosSettings);
     
-    // DÜZELTİLDİ: Pozisyonel argüman
     await _notificationsPlugin.initialize(initSettings);
     
     _notificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
@@ -1435,7 +1454,6 @@ class NotificationHelper {
     required DateTime scheduledDate,
   }) async {
     if (kIsWeb) return;
-    // DÜZELTİLDİ: Pozisyonel argüman kullanımı ve eksik parametrenin eklenmesi
     await _notificationsPlugin.zonedSchedule(
       id,
       title,

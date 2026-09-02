@@ -9,7 +9,6 @@ import 'customer_bids_screen.dart';
 import 'profile_screen.dart';
 import 'vehicle_panel_screen.dart';
 import 'job_tracking_screen.dart';
-import 'chat_screen.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 
@@ -23,7 +22,7 @@ class CustomerDashboardScreen extends StatefulWidget {
 
 class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with TickerProviderStateMixin {
   late AnimationController _fadeController;
-  late AnimationController _pulseController; // Mesaj ikonu yanıp sönmesi için
+  late AnimationController _pulseController;
   final PageController _vehiclePageController = PageController(viewportFraction: 0.92);
   
   bool isLoading = true;
@@ -36,12 +35,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   
   List<dynamic> notifications = [];
   int unreadCount = 0;
-
-  // Yeni Mesaj Bildirimi İçin
-  int unreadMessagesCount = 0;
-  int? lastMessageJobId;
-  int? lastMessageSenderId;
-  String? lastMessageSenderName;
 
   Timer? _notifTimer;
 
@@ -68,11 +61,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     _checkActiveJob();
     _fetchVehicles();
     _fetchNotifications();
-    _checkUnreadMessages();
 
     _notifTimer = Timer.periodic(const Duration(seconds: 10), (_) { 
       _fetchNotifications();
-      _checkUnreadMessages();
       _checkActiveJob();
     });
     
@@ -110,23 +101,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
         });
       } else if (mounted) {
         setState(() { activeJobId = null; activeJobStatus = null; });
-      }
-    } catch (e) {}
-  }
-
-  Future<void> _checkUnreadMessages() async {
-    try {
-      final res = await http.get(Uri.parse("$baseUrl?action=check_unread_messages&user_id=${widget.customerId}"));
-      final data = json.decode(res.body);
-      if (data['status'] == 'success' && mounted) {
-        setState(() {
-          unreadMessagesCount = data['unread_messages'] ?? 0;
-          if (unreadMessagesCount > 0) {
-            lastMessageJobId = data['last_job_id'];
-            lastMessageSenderId = data['last_sender_id'];
-            lastMessageSenderName = data['last_sender_name'] ?? 'Usta';
-          }
-        });
       }
     } catch (e) {}
   }
@@ -892,65 +866,30 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
           onPressed: _showLogoutDialog,
         ),
         actions: [
-          // YENİ EKLENEN MESAJ İKONU VE MEVCUT BİLDİRİM İKONU BURADA
-          Row(
+          Stack(
+            alignment: Alignment.center,
             children: [
-              if (unreadMessagesCount > 0)
-                GestureDetector(
-                  onTap: () {
-                    if (lastMessageJobId != null && lastMessageSenderId != null) {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => ChatScreen(
-                        jobId: lastMessageJobId!,
-                        currentUserId: widget.customerId,
-                        currentUserType: 'customer',
-                        receiverId: lastMessageSenderId!,
-                        receiverName: lastMessageSenderName!,
-                      ))).then((_) => _checkUnreadMessages());
-                    }
-                  },
-                  child: AnimatedBuilder(
-                    animation: _pulseController,
-                    builder: (context, child) {
-                      return Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEF4444).withOpacity(0.2 + (_pulseController.value * 0.4)),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFFEF4444), width: 1.5)
-                        ),
-                        child: const Icon(Icons.chat_bubble_rounded, color: Color(0xFFEF4444), size: 20),
-                      );
-                    },
-                  ),
-                ),
-
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.notifications_rounded, color: unreadCount > 0 ? const Color(0xFF00E676) : textColor, size: 28),
-                    onPressed: _showNotificationsDialog,
-                  ),
-                  if (unreadCount > 0)
-                    Positioned(
-                      right: 8,
-                      top: 8,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEF4444), 
-                          shape: BoxShape.circle,
-                          border: Border.all(color: cardColor, width: 1.5)
-                        ),
-                        child: Text(
-                          unreadCount > 9 ? "+9" : unreadCount.toString(), 
-                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)
-                        ),
-                      ),
-                    )
-                ],
+              IconButton(
+                icon: Icon(Icons.notifications_rounded, color: unreadCount > 0 ? const Color(0xFF00E676) : textColor, size: 28),
+                onPressed: _showNotificationsDialog,
               ),
+              if (unreadCount > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444), 
+                      shape: BoxShape.circle,
+                      border: Border.all(color: cardColor, width: 1.5)
+                    ),
+                    child: Text(
+                      unreadCount > 9 ? "+9" : unreadCount.toString(), 
+                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)
+                    ),
+                  ),
+                )
             ],
           ),
           Padding(

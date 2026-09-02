@@ -367,6 +367,108 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     }
   }
 
+  void _showPerformancePanel() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => LayoutBuilder(
+        builder: (context, constraints) {
+          return BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            child: Container(
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: const Color(0xFF111111).withOpacity(0.98),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
+                border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 40, offset: const Offset(0, -10))],
+              ),
+              child: SafeArea(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(child: Container(width: 48, height: 5, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
+                      const SizedBox(height: 24),
+                      Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFD97706)]),
+                            shape: BoxShape.circle,
+                            boxShadow: [BoxShadow(color: const Color(0xFFF59E0B).withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 8))]
+                          ),
+                          child: const Icon(Icons.analytics_rounded, color: Colors.black, size: 40),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text("Performans Paneli", textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
+                      const SizedBox(height: 8),
+                      const Text(
+                        "Düşük performans ve yüksek iptal oranı, yeni iş fırsatlarını görmenizi engeller ve hesabınızın askıya alınmasına sebep olabilir.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8), height: 1.5, fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 32),
+                      
+                      Wrap(
+                        spacing: 16,
+                        runSpacing: 16,
+                        alignment: WrapAlignment.center,
+                        children: [
+                          _buildPerformanceStatItem("Ortalama Puan", providerRating.toStringAsFixed(1), Icons.star_rounded, providerRating >= 4.0 ? const Color(0xFF00E676) : (providerRating >= 3.5 ? Colors.orange : const Color(0xFFEF4444))),
+                          _buildPerformanceStatItem("Değerlendirme", "$reviewsCount", Icons.rate_review_rounded, Colors.white),
+                          _buildPerformanceStatItem("Çağrı Kabul", "%85", Icons.phone_callback_rounded, const Color(0xFF00E676)), 
+                          _buildPerformanceStatItem("Eşleşme İptal", "%5", Icons.cancel_presentation_rounded, const Color(0xFF00E676)), 
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 32),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1F2937),
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          elevation: 0,
+                        ),
+                        child: const Text("Kapat", textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+      ),
+    );
+  }
+
+  Widget _buildPerformanceStatItem(String title, String value, IconData icon, Color color) {
+    return Container(
+      width: 140,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF050505),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 28),
+          const SizedBox(height: 12),
+          Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: color)),
+          const SizedBox(height: 4),
+          Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF94A3B8))),
+        ],
+      ),
+    );
+  }
+
   void _showSuspensionSheet() {
     String formattedDate = suspensionEndDate;
     try {
@@ -902,28 +1004,31 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   Widget _buildPerformanceBadge() {
     Color badgeColor = providerRating >= 4.0 ? const Color(0xFF00E676) : (providerRating >= 3.5 ? Colors.orange : const Color(0xFFEF4444));
     
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: badgeColor.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: badgeColor.withOpacity(0.5), width: 1.5),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.star_rounded, color: badgeColor, size: 20),
-          const SizedBox(width: 6),
-          Text(
-            providerRating.toStringAsFixed(1),
-            style: TextStyle(color: badgeColor, fontWeight: FontWeight.w900, fontSize: 16),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            "($reviewsCount)",
-            style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600, fontSize: 12),
-          ),
-        ],
+    return GestureDetector(
+      onTap: _showPerformancePanel,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: badgeColor.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: badgeColor.withOpacity(0.5), width: 1.5),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.star_rounded, color: badgeColor, size: 20),
+            const SizedBox(width: 6),
+            Text(
+              providerRating.toStringAsFixed(1),
+              style: TextStyle(color: badgeColor, fontWeight: FontWeight.w900, fontSize: 16),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              "($reviewsCount)",
+              style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w600, fontSize: 12),
+            ),
+          ],
+        ),
       ),
     );
   }

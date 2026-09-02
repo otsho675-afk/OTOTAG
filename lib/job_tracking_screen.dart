@@ -10,7 +10,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'provider_map_screen.dart'; 
 import 'customer_dashboard_screen.dart';
-import 'chat_screen.dart'; // Chat entegrasyonu
+import 'chat_screen.dart';
 
 class JobTrackingScreen extends StatefulWidget {
   final int jobId;
@@ -884,6 +884,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     );
   }
 
+  // Sadece Uygulama İçi Mesajlaşma (Sms İptal Edildi)
   Widget _buildContactCard(Color cardColor, Color textColor, Color subtitleColor) {
     if (jobStatus == 'searching' || jobStatus == 'completed' || contactPhone.isEmpty) return const SizedBox.shrink();
 
@@ -927,17 +928,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(color: const Color(0xFF00E676).withOpacity(0.15), shape: BoxShape.circle),
                     child: const Icon(Icons.call_rounded, color: Color(0xFF00E676), size: 24),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () async {
-                    final Uri url = Uri.parse('sms:$contactPhone');
-                    if (await canLaunchUrl(url)) await launchUrl(url);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: const Color(0xFF00E676).withOpacity(0.15), shape: BoxShape.circle),
-                    child: const Icon(Icons.message_rounded, color: Color(0xFF00E676), size: 24),
                   ),
                 ),
                 GestureDetector(
@@ -1070,7 +1060,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           const SizedBox(height: 16),
           Text("${bid['amount']} ₺", style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w900, color: Colors.white)),
           const SizedBox(height: 24),
-          
           if (isProcessing) 
              const CircularProgressIndicator(color: Color(0xFF00E676), strokeWidth: 4)
           else
@@ -1134,7 +1123,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                 children: [
                   CircularProgressIndicator(strokeWidth: 4, color: primaryColor), 
                   const SizedBox(height: 24), 
-                  Text("Teklifiniz iletildi. Müşteri yanıtı bekleniyor...\n(Teklifiniz: ${activeBid!['amount']} ₺)", textAlign: TextAlign.center, style: TextStyle(color: subtitleColor, fontWeight: FontWeight.w800, fontSize: 16, height: 1.5)),
+                  Text("Teklifiniz iletildi. Müşteri yanıtı bekleniyor...\n(Teklifiniz: ${activeBid!['amount']} ₺)", textAlign: TextAlign.center, style: TextStyle(color: subtitleColor, fontWeight: FontWeight.w800, fontSize: 16, height: 1.5))
                 ]
               )
             );

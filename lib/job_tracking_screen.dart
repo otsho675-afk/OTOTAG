@@ -185,10 +185,16 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           String oldStatus = jobStatus;
           jobStatus = data['status']?.toString().trim().toLowerCase() ?? 'matched';
           
-          if (jobStatus == 'cancelled' && widget.userType == 'provider') {
+          if (jobStatus == 'cancelled') {
               _timer?.cancel();
-              _showTopSnackBar("Müşteri talebi iptal etti.", isError: true);
-              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ProviderMapScreen(providerId: widget.userId ?? 0))); 
+              if (widget.userType == 'provider') {
+                _showTopSnackBar("Müşteri talebi iptal etti.", isError: true);
+                Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ProviderMapScreen(providerId: widget.userId ?? providerId ?? 0))); 
+              } else {
+                _showTopSnackBar("İşlem iptal edildi veya usta ile anlaşılamadı.", isError: true);
+                Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => CustomerDashboardScreen(customerId: widget.userId ?? customerId ?? 0)));
+              }
+              return;
           }
 
           agreedPrice = data['agreed_price']?.toString() ?? "";
@@ -884,7 +890,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     );
   }
 
-  // Sadece Uygulama İçi Mesajlaşma (Sms İptal Edildi)
   Widget _buildContactCard(Color cardColor, Color textColor, Color subtitleColor) {
     if (jobStatus == 'searching' || jobStatus == 'completed' || contactPhone.isEmpty) return const SizedBox.shrink();
 

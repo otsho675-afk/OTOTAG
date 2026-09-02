@@ -314,8 +314,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
       final data = json.decode(response.body);
       if (data['status'] == 'success' && mounted) {
         _timer?.cancel();
-        Navigator.pop(context);
+        _radiusTimer?.cancel();
         _showTopSnackBar("Talebiniz iptal edildi.");
+        Navigator.pop(context);
       } else {
         _showTopSnackBar("İptal işlemi başarısız.", isError: true);
       }
@@ -334,195 +335,202 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
     final Color textColor = isDark ? Colors.white : const Color(0xFF0F172A);
     final Color subtitleColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569);
 
-    return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        title: Image.asset('assets/images/logo.png', height: 32),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded, color: textColor),
-          onPressed: _cancelJob,
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        _cancelJob();
+      },
+      child: Scaffold(
+        backgroundColor: bgColor,
+        appBar: AppBar(
+          title: Image.asset('assets/images/logo.png', height: 32),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          centerTitle: true,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_rounded, color: textColor),
+            onPressed: _cancelJob,
+          ),
+          actions: [
+            if (isCancelling)
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFEF4444))),
+              )
+            else
+              IconButton(
+                icon: const Icon(Icons.close_rounded, color: Color(0xFFEF4444)),
+                onPressed: _cancelJob,
+              )
+          ],
         ),
-        actions: [
-          if (isCancelling)
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFEF4444))),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.close_rounded, color: Color(0xFFEF4444)),
-              onPressed: _cancelJob,
-            )
-        ],
-      ),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 800),
-            child: bids.isEmpty
-                ? _buildSearchingState(textColor, subtitleColor)
-                : ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: bids.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 20),
-                    itemBuilder: (context, index) {
-                      final bid = bids[index];
-                      final int bidId = int.parse(bid['bid_id'].toString());
-                      final int providerId = int.parse(bid['provider_id'].toString());
-                      
-                      final double priceVal = double.tryParse(bid['amount'].toString()) ?? 0;
-                      final String displayPrice = priceVal > 0 ? "${priceVal.toStringAsFixed(0)} ₺" : "Belirtilmedi";
-
-                      final String providerName = bid['provider_name'] ?? 'Bilinmeyen Usta';
-                      final String rating = bid['average_rating']?.toString() ?? '5.0';
-                      final String note = bid['provider_note']?.toString() ?? '';
-        
-                      final int negCount = int.tryParse(bid['negotiation_count']?.toString() ?? '0') ?? 0;
-                      final String lastBidder = bid['last_bidder']?.toString() ?? 'provider';
-                      final bool canNegotiate = negCount < 2 && lastBidder == 'provider';
-                      final bool isWaitingProvider = lastBidder == 'customer';
-        
-                      return Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: cardColor,
-                          borderRadius: BorderRadius.circular(28),
-                          border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFE2E8F0), width: 1.5),
-                          boxShadow: [BoxShadow(color: isDark ? Colors.black.withOpacity(0.3) : const Color(0xFF94A3B8).withOpacity(0.15), blurRadius: 24, offset: const Offset(0, 8))],
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                GestureDetector(
-                                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProviderProfileScreen(providerId: providerId))),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF00E676), Color(0xFF00C853)]),
-                                      shape: BoxShape.circle,
-                                      boxShadow: [BoxShadow(color: const Color(0xFF00C853).withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 4))],
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 800),
+              child: bids.isEmpty
+                  ? _buildSearchingState(textColor, subtitleColor)
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: bids.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 20),
+                      itemBuilder: (context, index) {
+                        final bid = bids[index];
+                        final int bidId = int.parse(bid['bid_id'].toString());
+                        final int providerId = int.parse(bid['provider_id'].toString());
+                        
+                        final double priceVal = double.tryParse(bid['amount'].toString()) ?? 0;
+                        final String displayPrice = priceVal > 0 ? "${priceVal.toStringAsFixed(0)} ₺" : "Belirtilmedi";
+  
+                        final String providerName = bid['provider_name'] ?? 'Bilinmeyen Usta';
+                        final String rating = bid['average_rating']?.toString() ?? '5.0';
+                        final String note = bid['provider_note']?.toString() ?? '';
+          
+                        final int negCount = int.tryParse(bid['negotiation_count']?.toString() ?? '0') ?? 0;
+                        final String lastBidder = bid['last_bidder']?.toString() ?? 'provider';
+                        final bool canNegotiate = negCount < 2 && lastBidder == 'provider';
+                        final bool isWaitingProvider = lastBidder == 'customer';
+          
+                        return Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: cardColor,
+                            borderRadius: BorderRadius.circular(28),
+                            border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFE2E8F0), width: 1.5),
+                            boxShadow: [BoxShadow(color: isDark ? Colors.black.withOpacity(0.3) : const Color(0xFF94A3B8).withOpacity(0.15), blurRadius: 24, offset: const Offset(0, 8))],
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  GestureDetector(
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProviderProfileScreen(providerId: providerId))),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF00E676), Color(0xFF00C853)]),
+                                        shape: BoxShape.circle,
+                                        boxShadow: [BoxShadow(color: const Color(0xFF00C853).withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 4))],
+                                      ),
+                                      child: const Icon(Icons.person_rounded, color: Colors.black, size: 30),
                                     ),
-                                    child: const Icon(Icons.person_rounded, color: Colors.black, size: 30),
                                   ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(providerName, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: textColor, letterSpacing: -0.3)),
+                                        const SizedBox(height: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                          decoration: BoxDecoration(color: const Color(0xFFF59E0B).withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 16),
+                                              const SizedBox(width: 6),
+                                              Text(rating, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Color(0xFFD97706))),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text("Teklif", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: subtitleColor)),
+                                      Text(displayPrice, style: TextStyle(fontSize: priceVal > 0 ? 28 : 18, fontWeight: FontWeight.w900, color: const Color(0xFF00E676), letterSpacing: -0.5)),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              if (note.isNotEmpty) ...[
+                                const SizedBox(height: 16),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                                  child: Row(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(providerName, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: textColor, letterSpacing: -0.3)),
-                                      const SizedBox(height: 6),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                        decoration: BoxDecoration(color: const Color(0xFFF59E0B).withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 16),
-                                            const SizedBox(width: 6),
-                                            Text(rating, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Color(0xFFD97706))),
-                                          ],
-                                        ),
-                                      ),
+                                      Icon(Icons.format_quote_rounded, size: 16, color: subtitleColor),
+                                      const SizedBox(width: 8),
+                                      Expanded(child: Text(note, style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w500, fontStyle: FontStyle.italic))),
                                     ],
                                   ),
                                 ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text("Teklif", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: subtitleColor)),
-                                    Text(displayPrice, style: TextStyle(fontSize: priceVal > 0 ? 28 : 18, fontWeight: FontWeight.w900, color: const Color(0xFF00E676), letterSpacing: -0.5)),
-                                  ],
-                                ),
                               ],
-                            ),
-                            if (note.isNotEmpty) ...[
-                              const SizedBox(height: 16),
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Icon(Icons.format_quote_rounded, size: 16, color: subtitleColor),
-                                    const SizedBox(width: 8),
-                                    Expanded(child: Text(note, style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w500, fontStyle: FontStyle.italic))),
-                                  ],
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 24),
-
-                            if (isWaitingProvider)
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                                decoration: BoxDecoration(color: const Color(0xFFF59E0B).withOpacity(0.12), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.3))),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(Icons.hourglass_top_rounded, color: Color(0xFFD97706), size: 20),
-                                    const SizedBox(width: 10),
-                                    const Expanded(child: Text("Yanıtınız iletildi, ustanın dönüşü bekleniyor.", style: TextStyle(color: Color(0xFFD97706), fontWeight: FontWeight.w800, fontSize: 14))),
-                                  ],
-                                ),
-                              )
-                            else
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      icon: Icon(canNegotiate ? Icons.handshake_rounded : Icons.person_search_rounded, size: 20),
-                                      onPressed: canNegotiate 
-                                          ? () => _showCounterBidDialog(bidId, displayPrice)
-                                          : () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProviderProfileScreen(providerId: providerId))),
-                                      style: OutlinedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(vertical: 16),
-                                        side: BorderSide(color: canNegotiate ? const Color(0xFF00E676) : (isDark ? Colors.white24 : const Color(0xFFCBD5E1)), width: 1.5),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                        foregroundColor: canNegotiate ? const Color(0xFF00E676) : subtitleColor,
-                                      ),
-                                      label: FittedBox(child: Text(canNegotiate ? "Pazarlık / Yanıt" : "Profili Gör", style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16))),
-                                    ),
+                              const SizedBox(height: 24),
+  
+                              if (isWaitingProvider)
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                  decoration: BoxDecoration(color: const Color(0xFFF59E0B).withOpacity(0.12), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.3))),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.hourglass_top_rounded, color: Color(0xFFD97706), size: 20),
+                                      const SizedBox(width: 10),
+                                      const Expanded(child: Text("Yanıtınız iletildi, ustanın dönüşü bekleniyor.", style: TextStyle(color: Color(0xFFD97706), fontWeight: FontWeight.w800, fontSize: 14))),
+                                    ],
                                   ),
-                                  if (priceVal > 0) ...[
-                                    const SizedBox(width: 12),
+                                )
+                              else
+                                Row(
+                                  children: [
                                     Expanded(
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(16),
-                                          gradient: const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00C853)]),
-                                          boxShadow: [BoxShadow(color: const Color(0xFF00C853).withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 4))],
+                                      child: OutlinedButton.icon(
+                                        icon: Icon(canNegotiate ? Icons.handshake_rounded : Icons.person_search_rounded, size: 20),
+                                        onPressed: canNegotiate 
+                                            ? () => _showCounterBidDialog(bidId, displayPrice)
+                                            : () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProviderProfileScreen(providerId: providerId))),
+                                        style: OutlinedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(vertical: 16),
+                                          side: BorderSide(color: canNegotiate ? const Color(0xFF00E676) : (isDark ? Colors.white24 : const Color(0xFFCBD5E1)), width: 1.5),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                          foregroundColor: canNegotiate ? const Color(0xFF00E676) : subtitleColor,
                                         ),
-                                        child: ElevatedButton.icon(
-                                          icon: isProcessing ? const SizedBox.shrink() : const Icon(Icons.check_circle_outline_rounded, color: Colors.black, size: 22),
-                                          onPressed: isProcessing ? null : () => _acceptBid(bidId, providerId, bid['amount'].toString()),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.transparent,
-                                            shadowColor: Colors.transparent,
-                                            padding: const EdgeInsets.symmetric(vertical: 16),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                          ),
-                                          label: isProcessing
-                                              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3))
-                                              : const FittedBox(child: Text("Kabul Et", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16))),
-                                        ),
+                                        label: FittedBox(child: Text(canNegotiate ? "Pazarlık / Yanıt" : "Profili Gör", style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16))),
                                       ),
                                     ),
+                                    if (priceVal > 0) ...[
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(16),
+                                            gradient: const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00C853)]),
+                                            boxShadow: [BoxShadow(color: const Color(0xFF00C853).withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 4))],
+                                          ),
+                                          child: ElevatedButton.icon(
+                                            icon: isProcessing ? const SizedBox.shrink() : const Icon(Icons.check_circle_outline_rounded, color: Colors.black, size: 22),
+                                            onPressed: isProcessing ? null : () => _acceptBid(bidId, providerId, bid['amount'].toString()),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.transparent,
+                                              shadowColor: Colors.transparent,
+                                              padding: const EdgeInsets.symmetric(vertical: 16),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                            ),
+                                            label: isProcessing
+                                                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3))
+                                                : const FittedBox(child: Text("Kabul Et", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16))),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ],
-                                ],
-                              ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+            ),
           ),
         ),
       ),

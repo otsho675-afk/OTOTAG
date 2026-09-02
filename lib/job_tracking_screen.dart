@@ -10,7 +10,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'provider_map_screen.dart'; 
 import 'customer_dashboard_screen.dart';
-import 'chat_screen.dart';
+import 'chat_screen.dart'; // Chat entegrasyonu
 
 class JobTrackingScreen extends StatefulWidget {
   final int jobId;
@@ -1071,30 +1071,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           Text("${bid['amount']} ₺", style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w900, color: Colors.white)),
           const SizedBox(height: 24),
           
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.only(bottom: 16),
-            child: OutlinedButton.icon(
-              icon: const Icon(Icons.chat_rounded, size: 20),
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => ChatScreen(
-                  jobId: widget.jobId,
-                  currentUserId: widget.userId ?? providerId ?? 0,
-                  currentUserType: widget.userType,
-                  receiverId: customerId ?? 0,
-                  receiverName: contactName,
-                )));
-              },
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                side: BorderSide(color: const Color(0xFF00E676).withOpacity(0.5), width: 1.5),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                foregroundColor: const Color(0xFF00E676),
-              ),
-              label: const Text("Müşteriyle Mesajlaş / Medya İste", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-            ),
-          ),
-
           if (isProcessing) 
              const CircularProgressIndicator(color: Color(0xFF00E676), strokeWidth: 4)
           else
@@ -1159,30 +1135,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                   CircularProgressIndicator(strokeWidth: 4, color: primaryColor), 
                   const SizedBox(height: 24), 
                   Text("Teklifiniz iletildi. Müşteri yanıtı bekleniyor...\n(Teklifiniz: ${activeBid!['amount']} ₺)", textAlign: TextAlign.center, style: TextStyle(color: subtitleColor, fontWeight: FontWeight.w800, fontSize: 16, height: 1.5)),
-                  const SizedBox(height: 24),
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.chat_rounded, size: 20),
-                      onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (context) => ChatScreen(
-                          jobId: widget.jobId,
-                          currentUserId: widget.userId ?? providerId ?? 0,
-                          currentUserType: widget.userType,
-                          receiverId: customerId ?? 0,
-                          receiverName: contactName,
-                        )));
-                      },
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: BorderSide(color: const Color(0xFF00E676).withOpacity(0.5), width: 1.5),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        foregroundColor: const Color(0xFF00E676),
-                      ),
-                      label: const Text("Müşteriyle Mesajlaş / Medya İste", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                    ),
-                  ),
                 ]
               )
             );

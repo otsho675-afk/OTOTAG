@@ -28,6 +28,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
 
   bool hasReminders = false;
   List<String> reminderAlerts = [];
+  bool _isNotifModalOpen = false;
 
   late AnimationController _radarController;
   late AnimationController _buttonPulseController;
@@ -100,9 +101,13 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
   }
 
   void _showNotificationsDialog() {
+    if (_isNotifModalOpen) return;
+    _isNotifModalOpen = true;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      useSafeArea: true,
       builder: (context) {
         return BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
@@ -163,7 +168,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
           ),
         );
       }
-    );
+    ).whenComplete(() {
+      _isNotifModalOpen = false;
+    });
   }
 
   Future<void> _determinePosition() async {
@@ -274,7 +281,6 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
       
       setState(() => isCreatingJob = false);
       
-      // Daha güvenli hata tespiti (API'nin HTTP status kodu göndermesi güvenceye alındı)
       if ((response.statusCode == 200 || response.statusCode == 201) && data['status'] == 'success') {
         int newJobId = int.parse(data['job_id'].toString());
         Navigator.pushReplacement(context, PageRouteBuilder(

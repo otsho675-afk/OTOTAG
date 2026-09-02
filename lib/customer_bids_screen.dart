@@ -21,6 +21,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
   int currentRadius = 10;
   bool isProcessing = false;
   bool isCancelling = false;
+  bool _isDialogActive = false;
   final String baseUrl = "https://eliteagency.sbs/api.php";
 
   late AnimationController _pulseController;
@@ -158,6 +159,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
   }
 
   void _showCounterBidDialog(int bidId, String currentAmount) {
+    if (_isDialogActive) return;
+    _isDialogActive = true;
+    
     TextEditingController counterController = TextEditingController();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -244,7 +248,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
           ),
         ],
       ),
-    );
+    ).whenComplete(() {
+      _isDialogActive = false;
+    });
   }
 
   Future<void> _acceptBid(int bidId, int providerId, String amount) async {
@@ -284,6 +290,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
   }
 
   Future<void> _cancelJob() async {
+    if (_isDialogActive) return;
+    _isDialogActive = true;
+
     bool confirm = await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -300,7 +309,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with SingleTick
           )
         ],
       ),
-    ) ?? false;
+    ).whenComplete(() => _isDialogActive = false) ?? false;
 
     if (!confirm) return;
 

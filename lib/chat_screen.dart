@@ -58,16 +58,45 @@ class _ChatScreenState extends State<ChatScreen> {
         final data = json.decode(response.body);
         if (data['status'] == 'success' && mounted) {
           final newMessages = data['messages'] ?? [];
-          if (newMessages.length > messages.length) {
+          if (newMessages.length > messages.length || _hasReadStatusChanged(newMessages)) {
             setState(() {
               messages = newMessages;
             });
             _scrollToBottom();
           }
+          // Ekrandaki mesajları okundu olarak işaretle
+          _markAsRead();
         }
       }
     } catch (e) {
       // Background poll fail
+    }
+  }
+
+  // Yeni mesaj dizisinde okundu durumu değişen var mı kontrolü (Arayüzün güncellenmesi için)
+  bool _hasReadStatusChanged(List newMessages) {
+    if (messages.length != newMessages.length) return true;
+    for (int i = 0; i < messages.length; i++) {
+      if (messages[i]['is_read'] != newMessages[i]['is_read']) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Mesajları okundu olarak API'ye bildir
+  Future<void> _markAsRead() async {
+    try {
+      await http.post(
+        Uri.parse("$baseUrl?action=mark_read"),
+        body: {
+          'job_id': widget.jobId.toString(),
+          'user_id': widget.currentUserId.toString(),
+          'receiver_id': widget.receiverId.toString(),
+        },
+      );
+    } catch (e) {
+      // Sessizce başarısız olabilir, periyodik olarak tekrar deneyecektir
     }
   }
 
@@ -190,6 +219,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildMessageBubble(Map msg, bool isMe, Color primaryColor, Color cardColor) {
     final hasMedia = msg['media_url'] != null && msg['media_url'].toString().isNotEmpty;
+    // Backend'den is_read anahtarının 1, '1' veya true dönmesi beklenmektedir.
+    final isRead = msg['is_read'] == 1 || msg['is_read'] == '1' || msg['is_read'] == true;
     
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -209,6 +240,7 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             if (hasMedia && msg['media_type'] == 'image')
               ClipRRect(
@@ -237,6 +269,18 @@ class _ChatScreenState extends State<ChatScreen> {
                 child: Text(
                   msg['message_text'],
                   style: TextStyle(color: isMe ? Colors.black : Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+              ),
+            if (isMe)
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Align(
+                  alignment: Alignment.bottomRight,
+                  child: Icon(
+                    isRead ? Icons.done_all : Icons.check, // Okunduysa çift tik, okunmadıysa tek tik
+                    size: 16,
+                    color: isRead ? Colors.blue.shade800 : Colors.black54, // Okundu mavi, iletildi siyahımsı
+                  ),
                 ),
               ),
           ],

@@ -37,6 +37,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   int unreadCount = 0;
 
   Timer? _notifTimer;
+  bool _isNotifModalOpen = false;
+  bool _isVehicleModalOpen = false;
 
   final String baseUrl = "https://eliteagency.sbs/api.php";
   
@@ -204,11 +206,14 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   }
 
   void _showNotificationsDialog() {
+    if (_isNotifModalOpen) return;
+    _isNotifModalOpen = true;
     _markNotificationsRead();
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
@@ -449,7 +454,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
           );
         }
       ),
-    );
+    ).whenComplete(() {
+      _isNotifModalOpen = false;
+    });
   }
 
   void _showTopSnackBar(String message, {bool isError = false}) {
@@ -596,6 +603,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   }
 
   void _showVehicleDialog({Map<String, dynamic>? vehicleToEdit}) {
+    if (_isVehicleModalOpen) return;
+    _isVehicleModalOpen = true;
     final isEditing = vehicleToEdit != null;
 
     TextEditingController plateCtrl = TextEditingController(text: vehicleToEdit?['plate'] ?? '');
@@ -609,6 +618,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
@@ -774,7 +784,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
           );
         }
       ),
-    );
+    ).whenComplete(() {
+      _isVehicleModalOpen = false;
+    });
   }
 
   Widget _buildInputField(TextEditingController controller, String label, IconData icon, {bool isNumber = false, bool isCapital = false}) {

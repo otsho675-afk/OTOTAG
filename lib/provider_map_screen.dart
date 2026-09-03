@@ -32,6 +32,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   
   Position? currentPosition;
   StreamSubscription<Position>? _positionStream; 
+  DateTime? _lastApiCallTime; // OPTİMİZASYON: Throttle (Spam engelleme) değişkeni
 
   List<Map<String, dynamic>> jobList = [];
   Set<int> knownJobIds = {}; 
@@ -265,7 +266,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
       const LocationSettings locationSettings = LocationSettings(
         accuracy: LocationAccuracy.high,
-        distanceFilter: 3, 
+        distanceFilter: 20, // OPTİMİZASYON: 3 metreden 20 metreye çıkarıldı.
       );
 
       _positionStream = Geolocator.getPositionStream(locationSettings: locationSettings).listen((Position position) {
@@ -296,16 +297,20 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             }
           });
 
-          // OPTİMİZASYON: Konum sadece değiştiğinde sunucuya istek gider.
+          // OPTİMİZASYON: Konum sadece değiştiğinde sunucuya istek gider ve Throttle uygular
           if (isOnline && !isSuspended) {
-            http.post(Uri.parse("$baseUrl?action=update_location"), body: {
-              "user_id": widget.providerId.toString(),
-              "lat": position.latitude.toString(),
-              "lng": position.longitude.toString()
-            });
-            
-            if (!_isMapPannedAway() && !isRefreshing) {
-              _fetchNearbyJobs(isAuto: true);
+            final now = DateTime.now();
+            if (_lastApiCallTime == null || now.difference(_lastApiCallTime!).inSeconds > 10) {
+              _lastApiCallTime = now;
+              http.post(Uri.parse("$baseUrl?action=update_location"), body: {
+                "user_id": widget.providerId.toString(),
+                "lat": position.latitude.toString(),
+                "lng": position.longitude.toString()
+              });
+              
+              if (!_isMapPannedAway() && !isRefreshing) {
+                _fetchNearbyJobs(isAuto: true);
+              }
             }
           }
         }

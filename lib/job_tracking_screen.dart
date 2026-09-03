@@ -97,7 +97,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
   void _startTimer() {
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 3), (_) {
+    // OPTİMİZASYON: Sunucuyu yormamak için 3 saniye yerine 8 saniye yapıldı.
+    _timer = Timer.periodic(const Duration(seconds: 8), (_) {
       _fetchJobStatus();
       if (widget.userType == 'provider') {
         _updateProviderLiveLocation();

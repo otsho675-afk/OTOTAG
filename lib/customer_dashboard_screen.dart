@@ -57,11 +57,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this); // Hız/Güvenlik: Observer Eklendi
+    WidgetsBinding.instance.addObserver(this); 
     _fadeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800))..forward();
     _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))..repeat(reverse: true);
     
-    _fetchAllDataConcurrently(); // Hız: Veriler paralel çekiliyor
+    _fetchAllDataConcurrently(); 
     _startTimers();
     
     if (!kIsWeb) {
@@ -77,7 +77,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     }
   }
 
-  // Hız Optimizasyonu: Tüm ilk yükleme isteklerini aynı anda (paralel) başlat
   Future<void> _fetchAllDataConcurrently() async {
     try {
       await Future.wait([
@@ -99,7 +98,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     });
   }
 
-  // Hız Optimizasyonu: Arka planda sunucu tüketimini engeller
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
@@ -1013,7 +1011,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.sizeOf(context);
     final Color bgColor = const Color(0xFF0F172A);
     final Color cardColor = const Color(0xFF1E293B);
     final Color textColor = Colors.white;

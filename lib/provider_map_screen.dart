@@ -67,7 +67,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     }
     
     _pageController = PageController(viewportFraction: 0.90);
-    _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))..repeat(reverse: true);
+    _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 400))..repeat(reverse: true);
     _determinePosition();
     _fetchEarningsAndPerformance();
 
@@ -301,28 +301,29 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
           final List<Map<String, dynamic>> fetchedJobs = List<Map<String, dynamic>>.from(data['jobs']);
           final Set<int> currentJobIds = fetchedJobs.map((j) => int.parse(j['id'].toString())).toSet();
 
-          if (isAuto && knownJobIds.isNotEmpty) {
-            final newJobs = currentJobIds.difference(knownJobIds);
-            if (newJobs.isNotEmpty) {
-              final newJobId = newJobs.first;
-              final newJobData = fetchedJobs.firstWhere((j) => int.parse(j['id'].toString()) == newJobId);
-              
+          final newJobs = currentJobIds.difference(knownJobIds);
+          if (newJobs.isNotEmpty) {
+            final newJobId = newJobs.first;
+            final newJobData = fetchedJobs.firstWhere((j) => int.parse(j['id'].toString()) == newJobId);
+            
+            if (isAuto && knownJobIds.isNotEmpty) {
               _playAlertSound();
               _showTopSnackBar("YENİ İŞ TALEBİ! Haritada kırmızı yanan işe tıkla.", isNewJob: true);
               _showLocalNotification("📍 Yeni İş Talebi Geldi!", "${_getServiceName(newJobData['service_type']?.toString() ?? '')} için bölgenizde yeni bir iş talebi var!");
-              
-              setState(() {
-                _showJobCard = true; 
-                _currentJobIndex = fetchedJobs.indexWhere((j) => int.parse(j['id'].toString()) == newJobId);
-                _flitchingJobId = newJobId;
-              });
+            }
+            
+            setState(() {
+              _showJobCard = true; 
+              _currentJobIndex = fetchedJobs.indexWhere((j) => int.parse(j['id'].toString()) == newJobId);
+              _flitchingJobId = newJobId;
+            });
 
-              mapController.move(LatLng(double.parse(newJobData['latitude'].toString()), double.parse(newJobData['longitude'].toString())), 15.0);
-              
+            Future.delayed(const Duration(milliseconds: 300), () {
+              mapController.move(LatLng(double.parse(newJobData['latitude'].toString()), double.parse(newJobData['longitude'].toString())), 16.5);
               if (_pageController.hasClients) {
                 _pageController.animateToPage(_currentJobIndex, duration: const Duration(milliseconds: 600), curve: Curves.fastOutSlowIn);
               }
-            }
+            });
           }
 
           setState(() {
@@ -981,7 +982,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
           child: AnimatedBuilder(
             animation: _pulseController,
             builder: (context, child) {
-              double scale = isSelected ? 1.15 : (isFlashing ? 1.0 + (_pulseController.value * 0.25) : 1.0);
+              double scale = isSelected ? 1.15 : (isFlashing ? 1.2 + (_pulseController.value * 0.4) : 1.0);
               List<Color> gradientColors = isFlashing 
                   ? [const Color(0xFFEF4444), const Color(0xFF991B1B)] 
                   : [const Color(0xFF10B981), const Color(0xFF059669)];
@@ -996,7 +997,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                     gradient: LinearGradient(colors: gradientColors),
                     shape: BoxShape.circle, 
                     border: Border.all(color: Colors.white, width: isSelected || isFlashing ? 3 : 2),
-                    boxShadow: [BoxShadow(color: shadowColor.withOpacity(shadowOpacity), blurRadius: isFlashing ? 20 : 12, spreadRadius: isFlashing ? 4 : 0, offset: const Offset(0, 4))]
+                    boxShadow: [BoxShadow(color: shadowColor.withOpacity(shadowOpacity), blurRadius: isFlashing ? 25 : 12, spreadRadius: isFlashing ? 10 * _pulseController.value : 0, offset: const Offset(0, 4))]
                   ), 
                   child: Icon(
                     isFlashing ? Icons.notifications_active_rounded : _getServiceIcon(serviceType), 

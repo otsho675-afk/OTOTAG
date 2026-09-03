@@ -70,7 +70,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this); // Hız/Güvenlik: Observer Eklendi
+    WidgetsBinding.instance.addObserver(this); 
     _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat(reverse: true);
     _glowController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000))..repeat(reverse: true);
     
@@ -105,7 +105,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     }); 
   }
 
-  // Hız Optimizasyonu: Arka planda sunucu tüketimini engeller
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
@@ -729,11 +728,21 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
   Future<void> _openExternalMap() async {
     if (customerLat == 0.0 || customerLng == 0.0) return;
-    final Uri url = Uri.parse("https://www.google.com/maps/dir/?api=1&destination=$customerLat,$customerLng");
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
-      _showTopSnackBar("Harita uygulaması açılamadı.", isError: true);
+    
+    final bool isIOS = Theme.of(context).platform == TargetPlatform.iOS;
+    final Uri googleMapsUrl = Uri.parse("https://www.google.com/maps/dir/?api=1&destination=$customerLat,$customerLng");
+    final Uri appleMapsUrl = Uri.parse("https://maps.apple.com/?daddr=$customerLat,$customerLng");
+    
+    try {
+      if (isIOS && await canLaunchUrl(appleMapsUrl)) {
+        await launchUrl(appleMapsUrl, mode: LaunchMode.externalApplication);
+      } else if (await canLaunchUrl(googleMapsUrl)) {
+        await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
+      } else {
+        _showTopSnackBar("Harita uygulaması açılamadı.", isError: true);
+      }
+    } catch (e) {
+      _showTopSnackBar("Harita başlatılırken hata oluştu.", isError: true);
     }
   }
 
@@ -785,31 +794,33 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       mapMarkers.add(Marker(
         point: _animatedProviderPos!, 
         width: 80, height: 80,
-        child: AnimatedBuilder(
-          animation: _pulseController,
-          builder: (context, child) {
-            return Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF00E676).withOpacity(0.2 - (_pulseController.value * 0.1)),
-              ),
-              child: Center(
-                child: Transform.rotate(
-                  angle: _animatedHeading * (math.pi / 180), 
-                  child: Container(
-                    width: 32, height: 32,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF059669),
-                      shape: BoxShape.circle, 
-                      border: Border.all(color: Colors.white, width: 2),
-                      boxShadow: [BoxShadow(color: const Color(0xFF059669).withOpacity(0.6), blurRadius: 10)]
+        child: RepaintBoundary(
+          child: AnimatedBuilder(
+            animation: _pulseController,
+            builder: (context, child) {
+              return Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF00E676).withOpacity(0.2 - (_pulseController.value * 0.1)),
+                ),
+                child: Center(
+                  child: Transform.rotate(
+                    angle: _animatedHeading * (math.pi / 180), 
+                    child: Container(
+                      width: 32, height: 32,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF059669),
+                        shape: BoxShape.circle, 
+                        border: Border.all(color: Colors.white, width: 2),
+                        boxShadow: [BoxShadow(color: const Color(0xFF059669).withOpacity(0.6), blurRadius: 10)]
+                      ),
+                      child: const Icon(Icons.navigation_rounded, color: Colors.white, size: 20),
                     ),
-                    child: const Icon(Icons.navigation_rounded, color: Colors.white, size: 20),
                   ),
                 ),
-              ),
-            );
-          }
+              );
+            }
+          ),
         ),
       ));
     }

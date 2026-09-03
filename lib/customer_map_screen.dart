@@ -18,7 +18,6 @@ class CustomerMapScreen extends StatefulWidget {
   _CustomerMapScreenState createState() => _CustomerMapScreenState();
 }
 
-// Performans Optimizasyonu: WidgetsBindingObserver eklendi
 class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProviderStateMixin, WidgetsBindingObserver {
   final MapController mapController = MapController();
   final TextEditingController problemController = TextEditingController();
@@ -48,7 +47,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this); // Observer kaydedildi
+    WidgetsBinding.instance.addObserver(this); 
     selectedService = widget.initialService;
     _radarController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2500))..repeat();
     _buttonPulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat(reverse: true);
@@ -57,7 +56,6 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     _checkVehicleReminders(); 
   }
 
-  // BATARYA OPTİMİZASYONU: Uygulama arka plana atıldığında GPS ve animasyonları durdur
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
@@ -73,7 +71,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this); // Observer kaldırıldı
+    WidgetsBinding.instance.removeObserver(this); 
     _positionStream?.cancel(); 
     problemController.dispose();
     _radarController.dispose();
@@ -334,33 +332,36 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
   }
 
   Widget _buildRadarMarker() {
-    return AnimatedBuilder(
-      animation: _radarController,
-      builder: (context, child) {
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            Container(
-              width: 180 * _radarController.value,
-              height: 180 * _radarController.value,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFF10B981).withOpacity((1.0 - _radarController.value).clamp(0.0, 1.0)), width: 2.5),
-                color: const Color(0xFF10B981).withOpacity((0.15 - (_radarController.value * 0.15)).clamp(0.0, 1.0)),
+    // OPTİMİZASYON: Animasyonun haritayı sürekli yeniden çizmesini engeller
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _radarController,
+        builder: (context, child) {
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 180 * _radarController.value,
+                height: 180 * _radarController.value,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFF10B981).withOpacity((1.0 - _radarController.value).clamp(0.0, 1.0)), width: 2.5),
+                  color: const Color(0xFF10B981).withOpacity((0.15 - (_radarController.value * 0.15)).clamp(0.0, 1.0)),
+                ),
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                shape: BoxShape.circle, 
-                boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.5), blurRadius: 15)]
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                  shape: BoxShape.circle, 
+                  boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.5), blurRadius: 15)]
+                ),
+                child: const Icon(Icons.navigation_rounded, color: Colors.white, size: 28),
               ),
-              child: const Icon(Icons.navigation_rounded, color: Colors.white, size: 28),
-            ),
-          ],
-        );
-      },
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -395,6 +396,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                         TileLayer(
                           urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
                           userAgentPackageName: 'com.example.ototag',
+                          // OPTİMİZASYON: Harita kaydırmalarında performansı artırır
+                          keepBuffer: 3,
+                          panBuffer: 2,
                         ),
                         MarkerLayer(
                           markers: [Marker(point: LatLng(currentPosition!.latitude, currentPosition!.longitude), width: 180, height: 180, child: _buildRadarMarker())],
@@ -572,32 +576,35 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                       ),
                                       const SizedBox(height: 20),
 
-                                      AnimatedBuilder(
-                                        animation: _buttonPulseController,
-                                        builder: (context, child) {
-                                          return Transform.scale(
-                                            scale: isCreatingJob ? 0.98 : 1.0 + (_buttonPulseController.value * 0.01),
-                                            child: Container(
-                                              decoration: BoxDecoration(
-                                                borderRadius: BorderRadius.circular(16),
-                                                gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)]),
-                                                boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 5))],
-                                              ),
-                                              child: ElevatedButton(
-                                                onPressed: isCreatingJob || currentPosition == null ? null : _createJobRequest,
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
+                                      // OPTİMİZASYON: Buton animasyonu sürekli çalıştığı için RepaintBoundary eklendi
+                                      RepaintBoundary(
+                                        child: AnimatedBuilder(
+                                          animation: _buttonPulseController,
+                                          builder: (context, child) {
+                                            return Transform.scale(
+                                              scale: isCreatingJob ? 0.98 : 1.0 + (_buttonPulseController.value * 0.01),
+                                              child: Container(
+                                                decoration: BoxDecoration(
+                                                  borderRadius: BorderRadius.circular(16),
+                                                  gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)]),
+                                                  boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 5))],
                                                 ),
-                                                child: isCreatingJob
-                                                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
-                                                    : const Row(
-                                                        mainAxisAlignment: MainAxisAlignment.center,
-                                                        children: [Text("Usta Bul", style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5)), SizedBox(width: 10), Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20)],
-                                                      ),
+                                                child: ElevatedButton(
+                                                  onPressed: isCreatingJob || currentPosition == null ? null : _createJobRequest,
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
+                                                  ),
+                                                  child: isCreatingJob
+                                                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+                                                      : const Row(
+                                                          mainAxisAlignment: MainAxisAlignment.center,
+                                                          children: [Text("Usta Bul", style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5)), SizedBox(width: 10), Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20)],
+                                                        ),
+                                                ),
                                               ),
-                                            ),
-                                          );
-                                        }
+                                            );
+                                          }
+                                        ),
                                       ),
                                     ],
                                   ),

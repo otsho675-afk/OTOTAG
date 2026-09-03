@@ -25,7 +25,6 @@ class ProviderMapScreen extends StatefulWidget {
   _ProviderMapScreenState createState() => _ProviderMapScreenState();
 }
 
-// Performans optimizasyonu için WidgetsBindingObserver eklendi
 class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProviderStateMixin, WidgetsBindingObserver {
   final MapController mapController = MapController();
   late PageController _pageController;
@@ -66,7 +65,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   String suspensionEndDate = "";
 
   late AnimationController _pulseController;
-  Timer? _refreshTimer;
   final String baseUrl = "https://eliteagency.sbs/api.php";
 
   InAppPurchase? _inAppPurchase;
@@ -76,7 +74,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this); // Observer kaydedildi
+    WidgetsBinding.instance.addObserver(this); 
     _checkActiveJob();
     if (!kIsWeb) {
       flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -107,35 +105,14 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     
     _initLocationStream(); 
     _fetchEarningsAndPerformance();
-    
-    _startRefreshTimer();
   }
 
-  // Timer'ı başlatan fonksiyon
-  void _startRefreshTimer() {
-    _refreshTimer?.cancel();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (currentPosition != null && isOnline && !isSuspended) {
-        http.post(Uri.parse("$baseUrl?action=update_location"), body: {
-          "user_id": widget.providerId.toString(),
-          "lat": currentPosition!.latitude.toString(),
-          "lng": currentPosition!.longitude.toString()
-        });
-        
-        if (!_isMapPannedAway() && !isRefreshing) {
-          _fetchNearbyJobs(isAuto: true);
-        }
-      }
-    });
-  }
-
-  // Uygulama arka plana atıldığında Timer durdurulur, sunucu ve pil tasarrufu sağlanır
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
-      _refreshTimer?.cancel(); 
+      _positionStream?.pause();
     } else if (state == AppLifecycleState.resumed) {
-      _startRefreshTimer(); 
+      _positionStream?.resume();
     }
   }
 
@@ -243,10 +220,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this); // Observer kaldırıldı
+    WidgetsBinding.instance.removeObserver(this); 
     _slideController.dispose();
     _positionStream?.cancel(); 
-    _refreshTimer?.cancel();
     _pulseController.dispose();
     _pageController.dispose();
     _purchaseSubscription?.cancel();
@@ -319,6 +295,19 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
               if (isOnline && !isSuspended) _fetchNearbyJobs();
             }
           });
+
+          // OPTİMİZASYON: Konum sadece değiştiğinde sunucuya istek gider.
+          if (isOnline && !isSuspended) {
+            http.post(Uri.parse("$baseUrl?action=update_location"), body: {
+              "user_id": widget.providerId.toString(),
+              "lat": position.latitude.toString(),
+              "lng": position.longitude.toString()
+            });
+            
+            if (!_isMapPannedAway() && !isRefreshing) {
+              _fetchNearbyJobs(isAuto: true);
+            }
+          }
         }
       });
     } catch (e) {

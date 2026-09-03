@@ -36,16 +36,19 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
 
   Future<void> _fetchProviderData() async {
     try {
-      final profileRes = await http.get(Uri.parse("$baseUrl?action=get_profile&user_id=${widget.providerId}"));
-      final historyRes = await http.get(Uri.parse("$baseUrl?action=get_history&user_id=${widget.providerId}&user_type=provider"));
-      final earningsRes = await http.get(Uri.parse("$baseUrl?action=get_earnings&provider_id=${widget.providerId}"));
+      // Eşzamanlı (Paralel) İstekler ile Hız Optimizasyonu
+      final responses = await Future.wait([
+        http.get(Uri.parse("$baseUrl?action=get_profile&user_id=${widget.providerId}")),
+        http.get(Uri.parse("$baseUrl?action=get_history&user_id=${widget.providerId}&user_type=provider")),
+        http.get(Uri.parse("$baseUrl?action=get_earnings&provider_id=${widget.providerId}"))
+      ]);
 
-      if (mounted && profileRes.statusCode == 200) {
-        final pData = json.decode(profileRes.body);
-        final hData = json.decode(historyRes.body);
+      if (mounted && responses[0].statusCode == 200 && responses[1].statusCode == 200) {
+        final pData = json.decode(responses[0].body);
+        final hData = json.decode(responses[1].body);
         
-        if (earningsRes.statusCode == 200) {
-          final eData = json.decode(earningsRes.body);
+        if (responses[2].statusCode == 200) {
+          final eData = json.decode(responses[2].body);
           if (eData['status'] == 'success') {
             earnings = eData['earnings'];
           }
@@ -56,6 +59,8 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
           historyJobs = hData['history'] ?? [];
           isLoading = false;
         });
+      } else {
+        if (mounted) setState(() => isLoading = false);
       }
     } catch (e) {
       if (mounted) setState(() => isLoading = false);

@@ -24,7 +24,7 @@ class JobTrackingScreen extends StatefulWidget {
   _JobTrackingScreenState createState() => _JobTrackingScreenState();
 }
 
-class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProviderStateMixin {
+class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProviderStateMixin, WidgetsBindingObserver {
   String jobStatus = "searching";
   String matchCode = "";
   String providerIban = "";
@@ -70,6 +70,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this); // Hız/Güvenlik: Observer Eklendi
     _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat(reverse: true);
     _glowController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000))..repeat(reverse: true);
     
@@ -91,6 +92,11 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       });
 
     _fetchJobStatus(); 
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 3), (_) {
       _fetchJobStatus();
       if (widget.userType == 'provider') {
@@ -99,8 +105,19 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     }); 
   }
 
+  // Hız Optimizasyonu: Arka planda sunucu tüketimini engeller
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _timer?.cancel();
+    } else if (state == AppLifecycleState.resumed) {
+      _startTimer();
+    }
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _slideController.dispose();
     _pulseController.dispose();
@@ -138,7 +155,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     if (customerLat == 0.0 || providerLat == 0.0) return;
     
     try {
-      // MIXED CONTENT (HTTP/HTTPS) HATASI ÇÖZÜMÜ: https:// kullanıldı
       final url = 'https://routing.openstreetmap.de/routed-car/route/v1/driving/$customerLng,$customerLat;$providerLng,$providerLat?geometries=geojson';
       final response = await http.get(Uri.parse(url));
       

@@ -96,13 +96,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
-  Future<void> _sendNotification(int? userId, String title, String message) async {
+  Future<void> _sendNotification(String target, String title, String message) async {
     try {
       final response = await http.post(
         Uri.parse("$baseUrl?action=send_notification"),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {
-          "user_id": userId != null ? userId.toString() : "all",
+          "target": target,
           "title": title,
           "message": message,
         },
@@ -127,65 +127,234 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void _showNotificationDialog({int? userId, String? userName}) {
     final titleController = TextEditingController();
     final messageController = TextEditingController();
+    String selectedTarget = userId != null ? userId.toString() : 'all';
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Row(
-            children: [
-              const Icon(Icons.notifications_active, color: Colors.orange),
-              const SizedBox(width: 8),
-              Expanded(child: Text(userId == null ? "Toplu Bildirim Gönder" : "$userName'e Bildirim Gönder", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18))),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: InputDecoration(
-                  labelText: "Bildirim Başlığı",
-                  filled: true,
-                  fillColor: isDark ? Colors.black12 : Colors.grey.shade100,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: Row(
+                children: [
+                  const Icon(Icons.notifications_active, color: Colors.orange),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(userId == null ? "Toplu Bildirim Gönder" : "$userName'e Bildirim Gönder", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18))),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (userId == null) ...[
+                      DropdownButtonFormField<String>(
+                        value: selectedTarget,
+                        decoration: InputDecoration(
+                          labelText: "Hedef Kitle",
+                          filled: true,
+                          fillColor: isDark ? Colors.black12 : Colors.grey.shade100,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'all', child: Text("Tüm Kullanıcılar")),
+                          DropdownMenuItem(value: 'customer', child: Text("Sadece Müşteriler")),
+                          DropdownMenuItem(value: 'provider', child: Text("Sadece Ustalar")),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) {
+                            setStateDialog(() => selectedTarget = val);
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    TextField(
+                      controller: titleController,
+                      decoration: InputDecoration(
+                        labelText: "Bildirim Başlığı",
+                        filled: true,
+                        fillColor: isDark ? Colors.black12 : Colors.grey.shade100,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: messageController,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        labelText: "Mesajınız",
+                        filled: true,
+                        fillColor: isDark ? Colors.black12 : Colors.grey.shade100,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: messageController,
-                maxLines: 4,
-                decoration: InputDecoration(
-                  labelText: "Mesajınız",
-                  filled: true,
-                  fillColor: isDark ? Colors.black12 : Colors.grey.shade100,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text("İptal")),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () {
+                    if (titleController.text.isNotEmpty && messageController.text.isNotEmpty) {
+                      Navigator.pop(context);
+                      _sendNotification(selectedTarget, titleController.text, messageController.text);
+                    }
+                  },
+                  child: const Text("Gönder", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text("İptal")),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              onPressed: () {
-                if (titleController.text.isNotEmpty && messageController.text.isNotEmpty) {
-                  Navigator.pop(context);
-                  _sendNotification(userId, titleController.text, messageController.text);
-                }
-              },
-              child: const Text("Gönder", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ],
+              ],
+            );
+          }
         );
       }
     );
+  }
+
+  Future<void> _fetchAndShowProviderReviews(int providerId, String providerName) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final response = await http.get(Uri.parse("$baseUrl?action=get_provider_profile&provider_id=$providerId"));
+      Navigator.pop(context); // Yükleniyor'u kapat
+      
+      final data = json.decode(response.body);
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        final reviews = data['reviews'] as List;
+        final stats = data['stats'];
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Column(
+              children: [
+                Text("$providerName Profili", style: const TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.star, color: Colors.orange, size: 20),
+                    const SizedBox(width: 4),
+                    Text("${stats['average']} / 5.0", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const SizedBox(width: 8),
+                    Text("(${stats['total']} Yorum)", style: const TextStyle(color: Colors.grey, fontSize: 14)),
+                  ],
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              height: 400,
+              child: reviews.isEmpty 
+                ? const Center(child: Text("Henüz yorum yapılmamış."))
+                : ListView.separated(
+                    itemCount: reviews.length,
+                    separatorBuilder: (context, index) => const Divider(),
+                    itemBuilder: (context, index) {
+                      final review = reviews[index];
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          backgroundColor: Colors.blue.withOpacity(0.1),
+                          child: Text(review['rating'].toString(), style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+                        ),
+                        title: Text(review['customer_name'] ?? 'Müşteri', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 4),
+                            Text(review['comment']?.toString().isNotEmpty == true ? review['comment'] : 'Yorum bırakılmadı.', style: const TextStyle(fontStyle: FontStyle.italic)),
+                            const SizedBox(height: 4),
+                            Text(_formatDate(review['created_at']), style: const TextStyle(color: Colors.grey, fontSize: 10)),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text("Kapat", style: TextStyle(fontWeight: FontWeight.bold))),
+            ],
+          )
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Yorumlar yüklenemedi.")));
+      }
+    } catch (e) {
+      Navigator.pop(context); // Yükleniyor'u kapat
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Bağlantı hatası.")));
+    }
+  }
+
+  Future<void> _changeAdminPassword() async {
+    final passwordController = TextEditingController();
+    bool confirm = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text("Admin Şifresini Değiştir", style: TextStyle(fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: passwordController,
+          obscureText: true,
+          decoration: InputDecoration(
+            labelText: "Yeni Şifre",
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("İptal")),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            child: const Text("Güncelle", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      )
+    ) ?? false;
+
+    if (confirm && passwordController.text.isNotEmpty) {
+      try {
+        final response = await http.post(
+          Uri.parse("$baseUrl?action=admin_change_password"),
+          headers: {"Content-Type": "application/x-www-form-urlencoded"},
+          body: {"admin_id": "1", "new_password": passwordController.text},
+        );
+        final data = json.decode(response.body);
+        if (data['status'] == 'success' && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Şifre başarıyla güncellendi."), backgroundColor: Colors.green));
+        }
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Şifre güncellenemedi."), backgroundColor: Colors.red));
+      }
+    }
+  }
+
+  Future<void> _backupDatabase() async {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Yedekleme başlatıldı, lütfen bekleyin...")));
+    try {
+      final response = await http.get(Uri.parse("$baseUrl?action=admin_backup_db"));
+      final data = json.decode(response.body);
+      if (data['status'] == 'success' && mounted) {
+        // Bu örnekte sadece yedeğin başarıyla oluşturulduğunu bildiriyoruz
+        // Gerçek kullanımda indirilebilir bir json dosyası oluşturulabilir.
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Veritabanı yedeği başarıyla alındı!"), backgroundColor: Colors.green));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Yedekleme hatası."), backgroundColor: Colors.red));
+    }
   }
 
   Future<void> _handleProviderAction(int providerId, String action) async {
@@ -464,10 +633,29 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         backgroundColor: cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Icon(Icons.assignment_rounded, color: Colors.blue.shade600),
-            const SizedBox(width: 8),
-            const Text("İşlem Detayları", style: TextStyle(fontWeight: FontWeight.w900)),
+            Row(
+              children: [
+                Icon(Icons.assignment_rounded, color: Colors.blue.shade600),
+                const SizedBox(width: 8),
+                const Text("İşlem Detayları", style: TextStyle(fontWeight: FontWeight.w900)),
+              ],
+            ),
+            IconButton(
+              icon: const Icon(Icons.map_rounded, color: Colors.green),
+              tooltip: "Haritada Gör",
+              onPressed: () async {
+                final lat = job['latitude'];
+                final lng = job['longitude'];
+                if (lat != null && lng != null && lat.toString() != "0.00000000") {
+                  final Uri url = Uri.parse("https://www.google.com/maps/search/?api=1&query=$lat,$lng");
+                  if (await canLaunchUrl(url)) await launchUrl(url, mode: LaunchMode.externalApplication);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Bu işlem için konum bilgisi mevcut değil.")));
+                }
+              },
+            ),
           ],
         ),
         content: Column(
@@ -532,16 +720,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => const LoginScreen(userType: 'admin')),
       (Route<dynamic> route) => false,
-    );
-  }
-
-  void _showDummyFeatureMessage() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Bu özellik bir sonraki güncellemede aktif edilecektir."),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: Colors.blueGrey,
-      )
     );
   }
 
@@ -970,6 +1148,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   final user = filteredUsers[index];
                   final isCustomer = user['user_type'] == 'customer';
                   final isBanned = user['status'] == 'banned';
+                  final isPremium = user['is_premium'] == 1 || user['is_premium'] == '1';
                   final userId = int.tryParse(user['id'].toString()) ?? 0;
                   final String joinedDate = _formatDate(user['created_at']);
                   
@@ -1013,6 +1192,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 isCustomer ? 'Müşteri' : 'Usta (${_translateServiceType(user['service_category'])})',
                                 style: TextStyle(color: isCustomer ? Colors.blue : Colors.purple, fontSize: 12, fontWeight: FontWeight.bold)
                               ),
+                              if (isCustomer && isPremium) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(color: Colors.amber.shade100, borderRadius: BorderRadius.circular(4)),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.workspace_premium, color: Colors.orange, size: 12),
+                                      SizedBox(width: 4),
+                                      Text("PREMIUM", style: TextStyle(color: Colors.orange, fontSize: 10, fontWeight: FontWeight.bold)),
+                                    ],
+                                  ),
+                                )
+                              ],
                               if (isBanned) ...[
                                 const SizedBox(width: 8),
                                 Container(
@@ -1053,9 +1247,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 _deleteUser(userId, user['name']);
                               } else if (value == 'punish') {
                                 _showPunishmentDialog(userId, user['name'], !isCustomer);
+                              } else if (value == 'reviews' && !isCustomer) {
+                                _fetchAndShowProviderReviews(userId, user['name']);
                               }
                             },
                             itemBuilder: (context) => [
+                              if (!isCustomer)
+                                const PopupMenuItem(
+                                  value: 'reviews',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.star_rate_rounded, color: Colors.amber, size: 20),
+                                      SizedBox(width: 8),
+                                      Text("Profili/Yorumları Gör"),
+                                    ],
+                                  ),
+                                ),
                               const PopupMenuItem(
                                 value: 'punish',
                                 child: Row(
@@ -1281,14 +1488,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             child: Column(
               children: [
                 ListTile(
-                  onTap: _showDummyFeatureMessage,
+                  onTap: _changeAdminPassword,
                   leading: const Icon(Icons.lock_reset_rounded),
                   title: const Text("Admin Şifresini Değiştir", style: TextStyle(fontWeight: FontWeight.bold)),
                   trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
                 ),
                 const Divider(height: 1),
                 ListTile(
-                  onTap: _showDummyFeatureMessage,
+                  onTap: _backupDatabase,
                   leading: const Icon(Icons.backup_rounded),
                   title: const Text("Veritabanı Yedeği Al", style: TextStyle(fontWeight: FontWeight.bold)),
                   trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),

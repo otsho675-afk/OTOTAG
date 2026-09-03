@@ -20,7 +20,7 @@ class CustomerDashboardScreen extends StatefulWidget {
   _CustomerDashboardScreenState createState() => _CustomerDashboardScreenState();
 }
 
-class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with TickerProviderStateMixin {
+class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with TickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _fadeController;
   late AnimationController _pulseController;
   final PageController _vehiclePageController = PageController(viewportFraction: 0.90);
@@ -57,18 +57,12 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this); // Hız/Güvenlik: Observer Eklendi
     _fadeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800))..forward();
     _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))..repeat(reverse: true);
     
-    _fetchProfile();
-    _checkActiveJob();
-    _fetchVehicles();
-    _fetchNotifications();
-
-    _notifTimer = Timer.periodic(const Duration(seconds: 10), (_) { 
-      _fetchNotifications();
-      _checkActiveJob();
-    });
+    _fetchAllDataConcurrently(); // Hız: Veriler paralel çekiliyor
+    _startTimers();
     
     if (!kIsWeb) {
       _inAppPurchase = InAppPurchase.instance;
@@ -83,8 +77,41 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     }
   }
 
+  // Hız Optimizasyonu: Tüm ilk yükleme isteklerini aynı anda (paralel) başlat
+  Future<void> _fetchAllDataConcurrently() async {
+    try {
+      await Future.wait([
+        _fetchProfile(),
+        _checkActiveJob(),
+        _fetchVehicles(),
+        _fetchNotifications()
+      ]);
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  void _startTimers() {
+    _notifTimer?.cancel();
+    _notifTimer = Timer.periodic(const Duration(seconds: 10), (_) { 
+      _fetchNotifications();
+      _checkActiveJob();
+    });
+  }
+
+  // Hız Optimizasyonu: Arka planda sunucu tüketimini engeller
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _notifTimer?.cancel();
+    } else if (state == AppLifecycleState.resumed) {
+      _startTimers();
+    }
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _fadeController.dispose();
     _pulseController.dispose();
     _vehiclePageController.dispose();
@@ -599,13 +626,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
           setState(() {
             vehicles = List<Map<String, dynamic>>.from(data['vehicles'] ?? []);
             if (selectedVehicleIndex >= vehicles.length) selectedVehicleIndex = 0;
-            isLoading = false;
           });
         }
       }
     } catch (e) {
       if (mounted) {
-        setState(() => isLoading = false);
         _showTopSnackBar("Araçlar yüklenemedi.", isError: true);
       }
     }
@@ -902,7 +927,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                                         style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 20), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
                                         child: isSaving 
                                             ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
-                                            : Text("Kaydet", style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                                            : const Text("Kaydet", style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                                       ),
                                     ),
                                   ),
@@ -988,6 +1013,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
     final Color bgColor = const Color(0xFF0F172A);
     final Color cardColor = const Color(0xFF1E293B);
     final Color textColor = Colors.white;

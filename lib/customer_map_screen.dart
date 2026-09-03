@@ -18,7 +18,8 @@ class CustomerMapScreen extends StatefulWidget {
   _CustomerMapScreenState createState() => _CustomerMapScreenState();
 }
 
-class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProviderStateMixin {
+// Performans Optimizasyonu: WidgetsBindingObserver eklendi
+class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProviderStateMixin, WidgetsBindingObserver {
   final MapController mapController = MapController();
   final TextEditingController problemController = TextEditingController();
   
@@ -47,6 +48,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this); // Observer kaydedildi
     selectedService = widget.initialService;
     _radarController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2500))..repeat();
     _buttonPulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat(reverse: true);
@@ -55,8 +57,23 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     _checkVehicleReminders(); 
   }
 
+  // BATARYA OPTİMİZASYONU: Uygulama arka plana atıldığında GPS ve animasyonları durdur
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _positionStream?.pause();
+      _radarController.stop();
+      _buttonPulseController.stop();
+    } else if (state == AppLifecycleState.resumed) {
+      _positionStream?.resume();
+      _radarController.repeat();
+      _buttonPulseController.repeat(reverse: true);
+    }
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this); // Observer kaldırıldı
     _positionStream?.cancel(); 
     problemController.dispose();
     _radarController.dispose();

@@ -13,7 +13,8 @@ class ProviderBidsScreen extends StatefulWidget {
   _ProviderBidsScreenState createState() => _ProviderBidsScreenState();
 }
 
-class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTickerProviderStateMixin {
+// Güvenlik ve performans için WidgetsBindingObserver eklendi
+class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   List bids = [];
   List filteredBids = [];
   String selectedFilter = 'Tümü';
@@ -25,13 +26,30 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTick
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this); // Observer kaydedildi
     _fadeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600))..forward();
     _fetchBids();
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 5), (_) => _fetchBids());
+  }
+
+  // Uygulama arka plana atıldığında Timer durdurulur, sunucu ve pil tasarrufu sağlanır
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _timer?.cancel(); 
+    } else if (state == AppLifecycleState.resumed) {
+      _startTimer(); 
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this); // Observer kaldırıldı
     _timer?.cancel();
     _fadeController.dispose();
     super.dispose();

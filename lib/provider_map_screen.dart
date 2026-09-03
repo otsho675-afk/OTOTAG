@@ -25,7 +25,8 @@ class ProviderMapScreen extends StatefulWidget {
   _ProviderMapScreenState createState() => _ProviderMapScreenState();
 }
 
-class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProviderStateMixin {
+// Performans optimizasyonu için WidgetsBindingObserver eklendi
+class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProviderStateMixin, WidgetsBindingObserver {
   final MapController mapController = MapController();
   late PageController _pageController;
   FlutterLocalNotificationsPlugin? flutterLocalNotificationsPlugin;
@@ -75,6 +76,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this); // Observer kaydedildi
     _checkActiveJob();
     if (!kIsWeb) {
       flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -105,7 +107,13 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     
     _initLocationStream(); 
     _fetchEarningsAndPerformance();
+    
+    _startRefreshTimer();
+  }
 
+  // Timer'ı başlatan fonksiyon
+  void _startRefreshTimer() {
+    _refreshTimer?.cancel();
     _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (currentPosition != null && isOnline && !isSuspended) {
         http.post(Uri.parse("$baseUrl?action=update_location"), body: {
@@ -119,6 +127,16 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         }
       }
     });
+  }
+
+  // Uygulama arka plana atıldığında Timer durdurulur, sunucu ve pil tasarrufu sağlanır
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _refreshTimer?.cancel(); 
+    } else if (state == AppLifecycleState.resumed) {
+      _startRefreshTimer(); 
+    }
   }
 
   bool _isMapPannedAway() {
@@ -225,6 +243,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this); // Observer kaldırıldı
     _slideController.dispose();
     _positionStream?.cancel(); 
     _refreshTimer?.cancel();

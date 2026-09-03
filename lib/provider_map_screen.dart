@@ -43,7 +43,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   Map<String, dynamic> earningsData = {};
   bool isEarningsLoading = true;
 
-  // Performans verileri
   double providerRating = 0.0;
   int reviewsCount = 0;
   bool isSuspended = false;
@@ -67,7 +66,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       _initInAppPurchase();
     }
     
-    _pageController = PageController(viewportFraction: 0.88);
+    _pageController = PageController(viewportFraction: 0.90);
     _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))..repeat(reverse: true);
     _determinePosition();
     _fetchEarningsAndPerformance();
@@ -172,7 +171,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       priority: Priority.high,
       playSound: true,
       enableVibration: true,
-      color: Color(0xFFE11D48),
+      color: Color(0xFFEF4444),
       sound: RawResourceAndroidNotificationSound('notification_sound'), 
     );
     const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
@@ -251,34 +250,32 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     }
   }
 
-  // BİLDİRİM ÇAKIŞMA ÇÖZÜMÜ: Bildirimler artık alttan değil, üstten çıkacak şekilde ayarlandı.
   void _showTopSnackBar(String message, {bool isError = false, bool isNewJob = false}) {
     if (mounted) {
       ScaffoldMessenger.of(context).clearSnackBars();
       
-      // Bildirimi ekranın üst kısmına konumlandırmak için hesaplama
       final double screenHeight = MediaQuery.of(context).size.height;
-      double bottomMargin = screenHeight - 140; // Yukarıdan 140px aşağıda duracak
+      double bottomMargin = screenHeight - 140;
       if (bottomMargin < 20) bottomMargin = 20; 
 
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.25), borderRadius: BorderRadius.circular(12)),
-              child: Icon(isNewJob ? Icons.notifications_active_rounded : (isError ? Icons.error_rounded : Icons.check_circle_rounded), color: Colors.white, size: 22),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(10)),
+              child: Icon(isNewJob ? Icons.notifications_active_rounded : (isError ? Icons.error_rounded : Icons.check_circle_rounded), color: Colors.white, size: 20),
             ),
-            const SizedBox(width: 16),
-            Expanded(child: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15, letterSpacing: 0.3))),
+            const SizedBox(width: 14),
+            Expanded(child: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 0.2))),
           ],
         ),
-        backgroundColor: isNewJob ? const Color(0xFFE11D48) : (isError ? const Color(0xFFE11D48) : const Color(0xFF00E676)),
+        backgroundColor: isNewJob ? const Color(0xFFEF4444) : (isError ? const Color(0xFFEF4444) : const Color(0xFF10B981)),
         behavior: SnackBarBehavior.floating,
-        dismissDirection: DismissDirection.up, // Yukarı kaydırarak kapatma
-        margin: EdgeInsets.only(bottom: bottomMargin, left: 20, right: 20), // Bildirimi yukarı taşıyan asıl kod
+        dismissDirection: DismissDirection.up,
+        margin: EdgeInsets.only(bottom: bottomMargin, left: 20, right: 20),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 12,
+        elevation: 10,
         duration: Duration(seconds: isNewJob ? 6 : 3),
       ));
       setState(() { isLoading = false; isRefreshing = false; });
@@ -378,74 +375,79 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      useSafeArea: true, // Modal üstüne binmesin diye eklendi
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => LayoutBuilder(
         builder: (context, constraints) {
           return BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
             child: Container(
-              padding: const EdgeInsets.all(28),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: const Color(0xFF111111).withOpacity(0.98),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
-                border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
+                color: const Color(0xFF0F172A).withOpacity(0.98),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.2),
                 boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 40, offset: const Offset(0, -10))],
               ),
               child: SafeArea(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Center(child: Container(width: 48, height: 5, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
-                      const SizedBox(height: 24),
-                      Center(
-                        child: Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFD97706)]),
-                            shape: BoxShape.circle,
-                            boxShadow: [BoxShadow(color: const Color(0xFFF59E0B).withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 8))]
-                          ),
-                          child: const Icon(Icons.analytics_rounded, color: Colors.black, size: 40),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      const Text("Performans Paneli", textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
-                      const SizedBox(height: 8),
-                      const Text(
-                        "Düşük performans ve yüksek iptal oranı, yeni iş fırsatlarını görmenizi engeller ve hesabınızın askıya alınmasına sebep olabilir.",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8), height: 1.5, fontWeight: FontWeight.w500),
-                      ),
-                      const SizedBox(height: 32),
-                      
-                      Wrap(
-                        spacing: 16,
-                        runSpacing: 16,
-                        alignment: WrapAlignment.center,
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 600),
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _buildPerformanceStatItem("Ortalama Puan", providerRating.toStringAsFixed(1), Icons.star_rounded, providerRating >= 4.0 ? const Color(0xFF00E676) : (providerRating >= 3.5 ? Colors.orange : const Color(0xFFEF4444))),
-                          _buildPerformanceStatItem("Değerlendirme", "$reviewsCount", Icons.rate_review_rounded, Colors.white),
-                          _buildPerformanceStatItem("Çağrı Kabul", "%85", Icons.phone_callback_rounded, const Color(0xFF00E676)), 
-                          _buildPerformanceStatItem("Eşleşme İptal", "%5", Icons.cancel_presentation_rounded, const Color(0xFF00E676)), 
+                          Center(child: Container(width: 48, height: 5, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
+                          const SizedBox(height: 20),
+                          Center(
+                            child: Container(
+                              padding: const EdgeInsets.all(18),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFD97706)]),
+                                shape: BoxShape.circle,
+                                boxShadow: [BoxShadow(color: const Color(0xFFF59E0B).withOpacity(0.35), blurRadius: 18, offset: const Offset(0, 6))]
+                              ),
+                              child: const Icon(Icons.analytics_rounded, color: Colors.white, size: 36),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          const Text("Performans Paneli", textAlign: TextAlign.center, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: -0.5)),
+                          const SizedBox(height: 8),
+                          const Text(
+                            "Düşük performans ve yüksek iptal oranı, yeni iş fırsatlarını görmenizi engeller ve hesabınızın askıya alınmasına sebep olabilir.",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8), height: 1.5, fontWeight: FontWeight.normal),
+                          ),
+                          const SizedBox(height: 28),
+                          
+                          Wrap(
+                            spacing: 14,
+                            runSpacing: 14,
+                            alignment: WrapAlignment.center,
+                            children: [
+                              _buildPerformanceStatItem("Ortalama Puan", providerRating.toStringAsFixed(1), Icons.star_rounded, providerRating >= 4.0 ? const Color(0xFF10B981) : (providerRating >= 3.5 ? Colors.orange : const Color(0xFFEF4444))),
+                              _buildPerformanceStatItem("Değerlendirme", "$reviewsCount", Icons.rate_review_rounded, Colors.white),
+                              _buildPerformanceStatItem("Çağrı Kabul", "%85", Icons.phone_callback_rounded, const Color(0xFF10B981)), 
+                              _buildPerformanceStatItem("Eşleşme İptal", "%5", Icons.cancel_presentation_rounded, const Color(0xFF10B981)), 
+                            ],
+                          ),
+                          
+                          const SizedBox(height: 28),
+                          ElevatedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1E293B),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              elevation: 0,
+                            ),
+                            child: const Text("Kapat", textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                          ),
                         ],
                       ),
-                      
-                      const SizedBox(height: 32),
-                      ElevatedButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1F2937),
-                          padding: const EdgeInsets.symmetric(vertical: 18),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                          elevation: 0,
-                        ),
-                        child: const Text("Kapat", textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -458,20 +460,20 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
   Widget _buildPerformanceStatItem(String title, String value, IconData icon, Color color) {
     return Container(
-      width: 140,
-      padding: const EdgeInsets.all(16),
+      width: 135,
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF050505),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withOpacity(0.06), width: 1.2),
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(height: 12),
-          Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: color)),
+          Icon(icon, color: color, size: 26),
+          const SizedBox(height: 10),
+          Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
           const SizedBox(height: 4),
-          Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF94A3B8))),
+          Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF94A3B8))),
         ],
       ),
     );
@@ -487,81 +489,86 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     showModalBottomSheet(
       context: context,
       isDismissible: true,
-      useSafeArea: true, // Responsive safe area koruması eklendi
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
         child: Container(
-          padding: const EdgeInsets.all(28),
+          padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: const Color(0xFF111111).withOpacity(0.98),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
-            border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.3), width: 1.5),
+            color: const Color(0xFF0F172A).withOpacity(0.98),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.3), width: 1.2),
             boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 40, offset: const Offset(0, -10))],
           ),
           child: SafeArea(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(child: Container(width: 48, height: 5, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
-                  const SizedBox(height: 24),
-                  Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [Color(0xFFEF4444), Color(0xFFB91C1C)]),
-                        shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: const Color(0xFFEF4444).withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 8))]
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(child: Container(width: 48, height: 5, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
+                      const SizedBox(height: 20),
+                      Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(colors: [Color(0xFFEF4444), Color(0xFFB91C1C)]),
+                            shape: BoxShape.circle,
+                            boxShadow: [BoxShadow(color: const Color(0xFFEF4444).withOpacity(0.35), blurRadius: 18, offset: const Offset(0, 6))]
+                          ),
+                          child: const Icon(Icons.gavel_rounded, color: Colors.white, size: 36),
+                        ),
                       ),
-                      child: const Icon(Icons.gavel_rounded, color: Colors.white, size: 40),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text("Hesabınız Askıya Alındı", textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Müşterilerden aldığınız düşük puanlar (3.5 altı) sebebiyle sistem standartlarımızı korumak adına hesabınız 15 gün süreyle iş alımına kapatılmıştır.",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: Colors.grey.shade400, height: 1.5, fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 24),
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF050505),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.3), width: 1.5),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      const SizedBox(height: 18),
+                      const Text("Hesabınız Askıya Alındı", textAlign: TextAlign.center, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: -0.5)),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Müşterilerden aldığınız düşük puanlar (3.5 altı) sebebiyle sistem standartlarımızı korumak adına hesabınız 15 gün süreyle iş alımına kapatılmıştır.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 14, color: Colors.grey.shade400, height: 1.5, fontWeight: FontWeight.normal),
+                      ),
+                      const SizedBox(height: 22),
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E293B),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.3), width: 1.2),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text("Açılış Tarihi", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Colors.white)),
-                            SizedBox(height: 4),
-                            Text("Otomatik aktif edilecek", style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 13)),
+                            const Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("Açılış Tarihi", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
+                                SizedBox(height: 3),
+                                Text("Otomatik aktif edilecek", style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 12)),
+                              ],
+                            ),
+                            Text(formattedDate, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFFEF4444))),
                           ],
                         ),
-                        Text(formattedDate, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFFEF4444))),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1E293B),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          elevation: 0,
+                        ),
+                        child: const Text("Anladım", textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 28),
-                  ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1F2937),
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      elevation: 0,
-                    ),
-                    child: const Text("Anladım", textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -579,84 +586,89 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       builder: (context) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
         child: Container(
-          padding: const EdgeInsets.all(28),
+          padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: const Color(0xFF111111).withOpacity(0.98),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
-            border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
+            color: const Color(0xFF0F172A).withOpacity(0.98),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.2),
             boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 40, offset: const Offset(0, -10))],
           ),
           child: SafeArea(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(child: Container(width: 48, height: 5, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
-                  const SizedBox(height: 24),
-                  Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00C853)]),
-                        shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: const Color(0xFF00C853).withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 8))]
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(child: Container(width: 48, height: 5, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
+                      const SizedBox(height: 20),
+                      Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)]),
+                            shape: BoxShape.circle,
+                            boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.35), blurRadius: 18, offset: const Offset(0, 6))]
+                          ),
+                          child: const Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 36),
+                        ),
                       ),
-                      child: const Icon(Icons.workspace_premium_rounded, color: Colors.black, size: 40),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text("Usta Aboneliği", textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
-                  const SizedBox(height: 8),
-                  const Text(
-                    "30 günlük ücretsiz deneme süreniz sona ermiştir. Çevrenizdeki müşterilerden sınırsız iş talebi almaya devam etmek için aylık aboneliğinizi başlatın.",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8), height: 1.5, fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 24),
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF050505),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFF00E676).withOpacity(0.3), width: 1.5),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      const SizedBox(height: 18),
+                      const Text("Usta Aboneliği", textAlign: TextAlign.center, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: -0.5)),
+                      const SizedBox(height: 8),
+                      const Text(
+                        "30 günlük ücretsiz deneme süreniz sona ermiştir. Çevrenizdeki müşterilerden sınırsız iş talebi almaya devam etmek için aylık aboneliğinizi başlatın.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8), height: 1.5, fontWeight: FontWeight.normal),
+                      ),
+                      const SizedBox(height: 22),
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E293B),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3), width: 1.2),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text("Aylık Usta Paketi", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Colors.white)),
-                            SizedBox(height: 4),
-                            Text("Sınırsız İş ve Teklif Hakkı", style: TextStyle(color: Color(0xFF00E676), fontWeight: FontWeight.bold, fontSize: 13)),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("Aylık Usta Paketi", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
+                                SizedBox(height: 3),
+                                Text("Sınırsız İş ve Teklif Hakkı", style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 12)),
+                              ],
+                            ),
+                            Text("₺500 / Ay", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
                           ],
                         ),
-                        Text("₺500 / Ay", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF00E676))),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: () async {
+                          Navigator.pop(context);
+                          await _startInAppPurchaseFlow();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          elevation: 0,
+                        ),
+                        child: const Text("Aboneliği Başlat", textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                      ),
+                      const SizedBox(height: 10),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text("Daha Sonra", style: TextStyle(color: Colors.white60, fontWeight: FontWeight.bold, fontSize: 14)),
+                      )
+                    ],
                   ),
-                  const SizedBox(height: 28),
-                  ElevatedButton(
-                    onPressed: () async {
-                      Navigator.pop(context);
-                      await _startInAppPurchaseFlow();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF00E676),
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      elevation: 0,
-                    ),
-                    child: const Text("Aboneliği Başlat", textAlign: TextAlign.center, style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16)),
-                  ),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text("Daha Sonra", style: TextStyle(color: Colors.white60, fontWeight: FontWeight.w800, fontSize: 14)),
-                  )
-                ],
+                ),
               ),
             ),
           ),
@@ -712,7 +724,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     showModalBottomSheet(
       context: context,
       isScrollControlled: true, 
-      useSafeArea: true, // Bildirimlerin/durum çubuğunun üstüne binmesini engeller
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
         return StatefulBuilder(
@@ -722,20 +734,20 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
               child: SafeArea(
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 600), // Responsive Max Genişlik (Tablet uyumu için)
+                    constraints: const BoxConstraints(maxWidth: 600),
                     child: Container(
                       constraints: BoxConstraints(
                         maxHeight: MediaQuery.of(context).size.height * 0.88,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF111111).withOpacity(0.95), 
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                        color: const Color(0xFF0F172A).withOpacity(0.98), 
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
                         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 40, offset: const Offset(0, -10))]
                       ),
                       padding: EdgeInsets.only(
                         bottom: MediaQuery.of(context).viewInsets.bottom + 16, 
-                        left: 24, 
-                        right: 24, 
+                        left: 20, 
+                        right: 20, 
                         top: 12
                       ),
                       child: SingleChildScrollView(
@@ -745,38 +757,38 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 20),
                             Row(
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.all(18),
+                                  padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
-                                    gradient: const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00C853)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                                    borderRadius: BorderRadius.circular(20),
-                                    boxShadow: [BoxShadow(color: const Color(0xFF00C853).withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))]
+                                    gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                                    borderRadius: BorderRadius.circular(18),
+                                    boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 6))]
                                   ),
-                                  child: Icon(_getServiceIcon(serviceType), color: Colors.black, size: 30),
+                                  child: Icon(_getServiceIcon(serviceType), color: Colors.white, size: 28),
                                 ),
-                                const SizedBox(width: 16),
+                                const SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         serviceName, 
-                                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5),
+                                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: -0.5),
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                       ),
-                                      const SizedBox(height: 4),
+                                      const SizedBox(height: 3),
                                       Row(
                                         children: [
-                                          const Icon(Icons.location_on_rounded, color: Color(0xFF94A3B8), size: 16),
+                                          const Icon(Icons.location_on_rounded, color: Color(0xFF94A3B8), size: 15),
                                           const SizedBox(width: 4),
                                           Expanded(
                                             child: Text(
                                               "$distance KM Uzaklıkta", 
-                                              style: const TextStyle(fontSize: 14, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
+                                              style: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                             ),
@@ -788,67 +800,67 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 20),
                             
                             Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.all(16),
+                              padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFEF4444).withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.3))
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.25))
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Row(
                                     children: [
-                                      Icon(Icons.report_problem_rounded, color: Color(0xFFEF4444), size: 20),
+                                      Icon(Icons.report_problem_rounded, color: Color(0xFFEF4444), size: 18),
                                       SizedBox(width: 8),
-                                      Text("Müşterinin Sorunu", style: TextStyle(fontSize: 14, color: Color(0xFFEF4444), fontWeight: FontWeight.w800)),
+                                      Text("Müşterinin Sorunu", style: TextStyle(fontSize: 13, color: Color(0xFFEF4444), fontWeight: FontWeight.bold)),
                                     ],
                                   ),
-                                  const SizedBox(height: 8),
-                                  Text(problemDesc.isEmpty ? "Sorun belirtilmemiş." : problemDesc, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500, height: 1.4)),
+                                  const SizedBox(height: 6),
+                                  Text(problemDesc.isEmpty ? "Sorun belirtilmemiş." : problemDesc, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.normal, height: 1.4)),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 20),
                             TextField(
                               controller: priceController,
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
                               inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*'))],
-                              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Color(0xFF00E676)),
+                              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
                               textAlign: TextAlign.center,
                               decoration: InputDecoration(
                                 labelText: "Sizin Teklifiniz (TL)",
                                 labelStyle: const TextStyle(fontSize: 14, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
-                                prefixIcon: const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF00E676), size: 24),
+                                prefixIcon: const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF10B981), size: 22),
                                 filled: true,
-                                fillColor: const Color(0xFF050505),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: Colors.white.withOpacity(0.08), width: 1.5)),
-                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: Color(0xFF00E676), width: 2)),
-                                contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                                fillColor: const Color(0xFF1E293B),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.white.withOpacity(0.06), width: 1.2)),
+                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF10B981), width: 1.8)),
+                                contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 14),
                             TextField(
                               controller: noteController,
                               maxLines: 2,
-                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.normal, color: Colors.white),
                               decoration: InputDecoration(
                                 labelText: "Müşteriye Notunuz (İsteğe Bağlı)",
                                 labelStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
-                                prefixIcon: const Padding(padding: EdgeInsets.only(bottom: 16, top: 12), child: Icon(Icons.chat_bubble_rounded, color: Color(0xFF00E676), size: 20)),
+                                prefixIcon: const Padding(padding: EdgeInsets.only(bottom: 16, top: 12), child: Icon(Icons.chat_bubble_rounded, color: Color(0xFF10B981), size: 18)),
                                 filled: true,
-                                fillColor: const Color(0xFF050505),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: Colors.white.withOpacity(0.08), width: 1.5)),
-                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: Color(0xFF00E676), width: 2)),
+                                fillColor: const Color(0xFF1E293B),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.white.withOpacity(0.06), width: 1.2)),
+                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF10B981), width: 1.8)),
                               ),
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 20),
                             ElevatedButton(
                               onPressed: () async {
                                 String price = priceController.text.trim();
@@ -860,17 +872,17 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                 }
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF00E676),
-                                padding: const EdgeInsets.symmetric(vertical: 18),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                backgroundColor: const Color(0xFF10B981),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                 elevation: 0,
-                                minimumSize: const Size(double.infinity, 56)
+                                minimumSize: const Size(double.infinity, 52)
                               ),
-                              child: const Text("Teklifi Gönder", style: TextStyle(fontSize: 16, color: Colors.black, fontWeight: FontWeight.bold)),
+                              child: const Text("Teklifi Gönder", style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(context), 
-                              child: const Text("İlgilenmiyorum", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w800, fontSize: 15))
+                              child: const Text("İlgilenmiyorum", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 14))
                             ),
                           ],
                         ),
@@ -923,16 +935,16 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             return Container(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF00E676).withOpacity(0.2 - (_pulseController.value * 0.1)),
+                color: const Color(0xFF10B981).withOpacity(0.2 - (_pulseController.value * 0.1)),
               ),
               child: Center(
                 child: Container(
                   width: 24, height: 24,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF00C853),
+                    color: const Color(0xFF059669),
                     shape: BoxShape.circle, 
                     border: Border.all(color: Colors.white, width: 3),
-                    boxShadow: [BoxShadow(color: const Color(0xFF00C853).withOpacity(0.6), blurRadius: 10)]
+                    boxShadow: [BoxShadow(color: const Color(0xFF059669).withOpacity(0.6), blurRadius: 10)]
                   ),
                 ),
               ),
@@ -953,8 +965,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
       markers.add(Marker(
         point: LatLng(lat, lng),
-        width: isSelected || isFlashing ? 90 : 60, 
-        height: isSelected || isFlashing ? 90 : 60,
+        width: isSelected || isFlashing ? 84 : 56, 
+        height: isSelected || isFlashing ? 84 : 56,
         child: GestureDetector(
           onTap: () {
             setState(() {
@@ -969,13 +981,13 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
           child: AnimatedBuilder(
             animation: _pulseController,
             builder: (context, child) {
-              double scale = isSelected ? 1.2 : (isFlashing ? 1.0 + (_pulseController.value * 0.3) : 1.0);
+              double scale = isSelected ? 1.15 : (isFlashing ? 1.0 + (_pulseController.value * 0.25) : 1.0);
               List<Color> gradientColors = isFlashing 
                   ? [const Color(0xFFEF4444), const Color(0xFF991B1B)] 
-                  : [const Color(0xFF00E676), const Color(0xFF00C853)];
+                  : [const Color(0xFF10B981), const Color(0xFF059669)];
               
-              double shadowOpacity = isFlashing ? _pulseController.value * 0.8 : (isSelected ? 0.6 : 0.2);
-              Color shadowColor = isFlashing ? Colors.red : const Color(0xFF00E676);
+              double shadowOpacity = isFlashing ? _pulseController.value * 0.8 : (isSelected ? 0.5 : 0.2);
+              Color shadowColor = isFlashing ? Colors.red : const Color(0xFF10B981);
 
               return Transform.scale(
                 scale: scale,
@@ -983,13 +995,13 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                   decoration: BoxDecoration(
                     gradient: LinearGradient(colors: gradientColors),
                     shape: BoxShape.circle, 
-                    border: Border.all(color: Colors.white, width: isSelected || isFlashing ? 4 : 2),
-                    boxShadow: [BoxShadow(color: shadowColor.withOpacity(shadowOpacity), blurRadius: isFlashing ? 25 : 15, spreadRadius: isFlashing ? 5 : 0, offset: const Offset(0, 4))]
+                    border: Border.all(color: Colors.white, width: isSelected || isFlashing ? 3 : 2),
+                    boxShadow: [BoxShadow(color: shadowColor.withOpacity(shadowOpacity), blurRadius: isFlashing ? 20 : 12, spreadRadius: isFlashing ? 4 : 0, offset: const Offset(0, 4))]
                   ), 
                   child: Icon(
                     isFlashing ? Icons.notifications_active_rounded : _getServiceIcon(serviceType), 
-                    color: Colors.black, 
-                    size: isSelected || isFlashing ? 34 : 26
+                    color: Colors.white, 
+                    size: isSelected || isFlashing ? 30 : 22
                   )
                 ),
               );
@@ -1006,42 +1018,42 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       children: [
         Row(
           children: [
-            Icon(icon, color: const Color(0xFF94A3B8), size: 16),
-            const SizedBox(width: 6),
-            Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w600, fontSize: 14)),
+            Icon(icon, color: const Color(0xFF94A3B8), size: 15),
+            const SizedBox(width: 5),
+            Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w600, fontSize: 13)),
           ],
         ),
-        const SizedBox(height: 8),
-        Text(val, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20)),
+        const SizedBox(height: 6),
+        Text(val, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
       ],
     );
   }
 
   Widget _buildPerformanceBadge() {
-    Color badgeColor = providerRating >= 4.0 ? const Color(0xFF00E676) : (providerRating >= 3.5 ? Colors.orange : const Color(0xFFEF4444));
+    Color badgeColor = providerRating >= 4.0 ? const Color(0xFF10B981) : (providerRating >= 3.5 ? Colors.orange : const Color(0xFFEF4444));
     
     return GestureDetector(
       onTap: _showPerformancePanel,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: badgeColor.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: badgeColor.withOpacity(0.5), width: 1.5),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: badgeColor.withOpacity(0.4), width: 1.2),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.star_rounded, color: badgeColor, size: 20),
-            const SizedBox(width: 6),
+            Icon(Icons.star_rounded, color: badgeColor, size: 18),
+            const SizedBox(width: 5),
             Text(
               providerRating.toStringAsFixed(1),
-              style: TextStyle(color: badgeColor, fontWeight: FontWeight.w900, fontSize: 16),
+              style: TextStyle(color: badgeColor, fontWeight: FontWeight.bold, fontSize: 15),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 5),
             Text(
               "($reviewsCount)",
-              style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w600, fontSize: 12),
+              style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w500, fontSize: 11),
             ),
           ],
         ),
@@ -1055,12 +1067,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     final String yearly = earningsData['yearly']?.toString() ?? "0";
 
     return Container(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
-        borderRadius: BorderRadius.circular(32),
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white.withOpacity(0.05)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 30, offset: const Offset(0, 15))],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 24, offset: const Offset(0, 10))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1068,30 +1080,30 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: const Color(0xFF00E676).withOpacity(0.15), borderRadius: BorderRadius.circular(16)),
-                child: const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF00E676), size: 24),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: const Color(0xFF10B981).withOpacity(0.15), borderRadius: BorderRadius.circular(14)),
+                child: const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF10B981), size: 22),
               ),
-              const SizedBox(width: 16),
-              const Expanded(child: Text("Bu Ayki Kazanç", style: TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w700, fontSize: 16))),
-              const Icon(Icons.trending_up_rounded, color: Color(0xFF00E676), size: 28),
+              const SizedBox(width: 14),
+              const Expanded(child: Text("Bu Ayki Kazanç", style: TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w600, fontSize: 15))),
+              const Icon(Icons.trending_up_rounded, color: Color(0xFF10B981), size: 24),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
-              child: Text("₺$monthly", style: const TextStyle(fontSize: 56, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -2.0))
+              child: Text("₺$monthly", style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: -1.5))
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 22),
           Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.03), borderRadius: BorderRadius.circular(24)),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: Colors.white.withOpacity(0.03), borderRadius: BorderRadius.circular(18)),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildMiniStat("Yıllık", "₺$yearly", Icons.calendar_today_rounded),
-                Container(width: 2, height: 40, color: Colors.white12),
+                Container(width: 1.5, height: 36, color: Colors.white12),
                 _buildMiniStat("İşlem", totalJobs, Icons.handyman_rounded),
               ],
             ),
@@ -1106,8 +1118,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
-        child: Icon(icon, color: color, size: 22)
+        decoration: BoxDecoration(color: color.withOpacity(0.12), shape: BoxShape.circle),
+        child: Icon(icon, color: color, size: 20)
       ),
     );
   }
@@ -1115,15 +1127,15 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   Widget _buildTopButton(IconData icon, Color color, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(14),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: const Color(0xFF111111),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white12),
+          color: const Color(0xFF1E293B),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white.withOpacity(0.08)),
         ),
-        child: Icon(icon, color: color, size: 24),
+        child: Icon(icon, color: color, size: 22),
       ),
     );
   }
@@ -1132,10 +1144,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     return SafeArea(
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 700), // Responsive Max Genişlik (Tablet uyumu)
+          constraints: const BoxConstraints(maxWidth: 700),
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -1144,15 +1156,15 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                   children: [
                     Row(
                       children: [
-                        Image.asset('assets/images/logo.png', height: 40),
-                        const SizedBox(width: 12),
+                        Image.asset('assets/images/logo.png', height: 36),
+                        const SizedBox(width: 10),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                           decoration: BoxDecoration(
                             color: const Color(0xFFEF4444).withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(12)
+                            borderRadius: BorderRadius.circular(10)
                           ),
-                          child: const Text("ÇEVRİMDİŞI", style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w900, fontSize: 12)),
+                          child: const Text("ÇEVRİMDİŞI", style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 11)),
                         )
                       ],
                     ),
@@ -1163,35 +1175,35 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                     )
                   ],
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 28),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("Usta Paneli", style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -1)),
-                        SizedBox(height: 8),
-                        Text("İş almak için çevrimiçi olun.", style: TextStyle(color: Color(0xFF94A3B8), fontSize: 15, fontWeight: FontWeight.w500, height: 1.5)),
+                        Text("Usta Paneli", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: -0.5)),
+                        SizedBox(height: 6),
+                        Text("İş almak için çevrimiçi olun.", style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14, fontWeight: FontWeight.normal)),
                       ],
                     ),
                     Row(
                       children: [
-                        _buildTopButton(Icons.history_rounded, const Color(0xFF00E676), () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProviderBidsScreen(providerId: widget.providerId)))),
-                        const SizedBox(width: 12),
-                        _buildTopButton(Icons.person_outline_rounded, const Color(0xFF00E676), () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen(userId: widget.providerId, userType: 'provider')))),
+                        _buildTopButton(Icons.history_rounded, const Color(0xFF10B981), () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProviderBidsScreen(providerId: widget.providerId)))),
+                        const SizedBox(width: 10),
+                        _buildTopButton(Icons.person_outline_rounded, const Color(0xFF10B981), () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen(userId: widget.providerId, userType: 'provider')))),
                       ],
                     )
                   ],
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
                 if (isEarningsLoading)
-                  const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator(color: Color(0xFF00E676), strokeWidth: 3)))
+                  const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator(color: Color(0xFF10B981), strokeWidth: 3)))
                 else
                   _buildModernEarningsCard(),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
                 GestureDetector(
                   onTap: isCheckingSubscription ? null : _handleGoOnline,
@@ -1199,26 +1211,26 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                     animation: _pulseController,
                     builder: (context, child) {
                       return Transform.scale(
-                        scale: 1.0 + (_pulseController.value * 0.03),
+                        scale: 1.0 + (_pulseController.value * 0.02),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          padding: const EdgeInsets.symmetric(vertical: 20),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(28),
+                            borderRadius: BorderRadius.circular(20),
                             gradient: isSuspended 
                                 ? const LinearGradient(colors: [Color(0xFFEF4444), Color(0xFF991B1B)])
-                                : const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00C853)]),
+                                : const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)]),
                             boxShadow: [
-                              BoxShadow(color: isSuspended ? const Color(0xFF991B1B).withOpacity(0.4) : const Color(0xFF00C853).withOpacity(0.4), blurRadius: 25, offset: const Offset(0, 12))
+                              BoxShadow(color: isSuspended ? const Color(0xFF991B1B).withOpacity(0.35) : const Color(0xFF059669).withOpacity(0.35), blurRadius: 20, offset: const Offset(0, 8))
                             ],
                           ),
                           child: isCheckingSubscription
-                              ? const Center(child: SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 4)))
+                              ? const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3)))
                               : Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(isSuspended ? Icons.block_rounded : Icons.power_settings_new_rounded, size: 28, color: Colors.black),
-                                    const SizedBox(width: 12),
-                                    Text(isSuspended ? "HESAP ASKIYA ALINDI" : "ÇEVRİMİÇİ OL", style: const TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 1.0)),
+                                    Icon(isSuspended ? Icons.block_rounded : Icons.power_settings_new_rounded, size: 24, color: Colors.white),
+                                    const SizedBox(width: 10),
+                                    Text(isSuspended ? "HESAP ASKIYA ALINDI" : "ÇEVRİMİÇİ OL", style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                                   ],
                                 ),
                         ),
@@ -1236,15 +1248,15 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
   @override
   Widget build(BuildContext context) {
-    final Color bgColor = const Color(0xFF050505);
-    final Color cardColor = const Color(0xFF111111);
+    final Color bgColor = const Color(0xFF0F172A);
+    final Color cardColor = const Color(0xFF1E293B);
     final Color textColor = Colors.white;
     
     return Scaffold(
       backgroundColor: bgColor,
       extendBodyBehindAppBar: true,
       body: isLoading
-          ? Center(child: CircularProgressIndicator(color: const Color(0xFF00E676), strokeWidth: 4, backgroundColor: const Color(0xFF00E676).withOpacity(0.2)))
+          ? Center(child: CircularProgressIndicator(color: const Color(0xFF10B981), strokeWidth: 4, backgroundColor: const Color(0xFF10B981).withOpacity(0.2)))
           : Stack(
               children: [
                 Positioned.fill(
@@ -1286,21 +1298,21 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                 if (isOnline) ...[
                   Positioned(
                     top: MediaQuery.paddingOf(context).top + 16,
-                    left: 20, right: 20,
+                    left: 16, right: 16,
                     child: Center(
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 800), // Responsive constraint eklendi
+                        constraints: const BoxConstraints(maxWidth: 800),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(20),
                           child: BackdropFilter(
                             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF050505).withOpacity(0.8),
-                                borderRadius: BorderRadius.circular(24),
-                                border: Border.all(color: Colors.white12),
-                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 20, offset: const Offset(0, 5))]
+                                color: cardColor.withOpacity(0.9),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: Colors.white.withOpacity(0.08)),
+                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 4))]
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1311,30 +1323,30 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                         animation: _pulseController,
                                         builder: (context, child) {
                                           return Container(
-                                            width: 12, height: 12, 
+                                            width: 10, height: 10, 
                                             decoration: BoxDecoration(
-                                              color: const Color(0xFF00E676), 
+                                              color: const Color(0xFF10B981), 
                                               shape: BoxShape.circle, 
                                               boxShadow: [
                                                 BoxShadow(
-                                                  color: const Color(0xFF00E676).withOpacity(0.6 * _pulseController.value), 
-                                                  blurRadius: 10 * _pulseController.value, 
-                                                  spreadRadius: 4 * _pulseController.value
+                                                  color: const Color(0xFF10B981).withOpacity(0.6 * _pulseController.value), 
+                                                  blurRadius: 8 * _pulseController.value, 
+                                                  spreadRadius: 3 * _pulseController.value
                                                 )
                                               ]
                                             )
                                           );
                                         }
                                       ),
-                                      const SizedBox(width: 12),
-                                      Text("Çevrimiçi", style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
+                                      const SizedBox(width: 10),
+                                      Text("Çevrimiçi", style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 15)),
                                     ],
                                   ),
                                   Row(
                                     children: [
                                       _buildPerformanceBadge(),
-                                      const SizedBox(width: 12),
-                                      _buildTopIconBtn(Icons.power_settings_new_rounded, const Color(0xFFE11D48), () {
+                                      const SizedBox(width: 10),
+                                      _buildTopIconBtn(Icons.power_settings_new_rounded, const Color(0xFFEF4444), () {
                                         setState(() {
                                           isOnline = false;
                                           _showJobCard = false;
@@ -1363,9 +1375,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                     child: FloatingActionButton(
                       heroTag: "location_osm_btn", 
                       backgroundColor: cardColor,
-                      elevation: 8,
+                      elevation: 6,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      child: const Icon(Icons.my_location_rounded, color: Color(0xFF00E676)), 
+                      child: const Icon(Icons.my_location_rounded, color: Color(0xFF10B981)), 
                       onPressed: () { if (currentPosition != null) mapController.move(LatLng(currentPosition!.latitude, currentPosition!.longitude), 15.0); }
                     ),
                   ),
@@ -1376,7 +1388,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                     bottom: (isOnline && jobList.isNotEmpty && _showJobCard) ? 30 : -250,
                     left: 0,
                     right: 0,
-                    height: 170, // Çakışmaları en aza indirmek için slider yüksekliği idealize edildi
+                    height: 165,
                     child: jobList.isEmpty 
                         ? const SizedBox.shrink()
                         : PageView.builder(
@@ -1409,45 +1421,45 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                   double value = 1.0;
                                   if (_pageController.position.haveDimensions) {
                                     value = _pageController.page! - index;
-                                    value = (1 - (value.abs() * 0.1)).clamp(0.9, 1.0);
+                                    value = (1 - (value.abs() * 0.08)).clamp(0.9, 1.0);
                                   }
                                   return Transform.scale(
                                     scale: value,
                                     child: GestureDetector(
                                       onTap: () => _showBidDialog(int.parse(job['id'].toString()), serviceName, probDesc, distance, serviceType),
                                       child: Container(
-                                        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                                         decoration: BoxDecoration(
                                           color: cardColor,
-                                          borderRadius: BorderRadius.circular(28),
-                                          border: isFlashing ? Border.all(color: Colors.redAccent, width: 2) : null,
+                                          borderRadius: BorderRadius.circular(22),
+                                          border: isFlashing ? Border.all(color: Colors.redAccent, width: 2) : Border.all(color: Colors.white.withOpacity(0.06)),
                                           boxShadow: isFlashing 
-                                            ? [BoxShadow(color: Colors.red.withOpacity(0.4), blurRadius: 25, offset: const Offset(0, 10))] 
-                                            : [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 20, offset: const Offset(0, 10))],
+                                            ? [BoxShadow(color: Colors.red.withOpacity(0.35), blurRadius: 20, offset: const Offset(0, 8))] 
+                                            : [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 16, offset: const Offset(0, 8))],
                                         ),
                                         child: Padding(
-                                          padding: const EdgeInsets.all(20),
+                                          padding: const EdgeInsets.all(16),
                                           child: Column(
                                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
                                               Row(
                                                 children: [
                                                   Container(
-                                                    padding: const EdgeInsets.all(12),
+                                                    padding: const EdgeInsets.all(10),
                                                     decoration: BoxDecoration(
-                                                      color: isFlashing ? Colors.red.withOpacity(0.15) : const Color(0xFF00E676).withOpacity(0.15), 
-                                                      borderRadius: BorderRadius.circular(16)
+                                                      color: isFlashing ? Colors.red.withOpacity(0.15) : const Color(0xFF10B981).withOpacity(0.15), 
+                                                      borderRadius: BorderRadius.circular(14)
                                                     ),
-                                                    child: Icon(isFlashing ? Icons.notifications_active_rounded : _getServiceIcon(serviceType), color: isFlashing ? Colors.redAccent : const Color(0xFF00E676), size: 24),
+                                                    child: Icon(isFlashing ? Icons.notifications_active_rounded : _getServiceIcon(serviceType), color: isFlashing ? Colors.redAccent : const Color(0xFF10B981), size: 22),
                                                   ),
-                                                  const SizedBox(width: 16),
+                                                  const SizedBox(width: 14),
                                                   Expanded(
                                                     child: Column(
                                                       crossAxisAlignment: CrossAxisAlignment.start,
                                                       children: [
-                                                        Text(isFlashing ? "YENİ İŞ TALEBİ!" : serviceName, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: isFlashing ? Colors.redAccent : Colors.white, letterSpacing: -0.5)),
-                                                        const SizedBox(height: 4),
-                                                        Text("$distance KM Uzaklıkta", style: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
+                                                        Text(isFlashing ? "YENİ İŞ TALEBİ!" : serviceName, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isFlashing ? Colors.redAccent : Colors.white, letterSpacing: -0.3)),
+                                                        const SizedBox(height: 3),
+                                                        Text("$distance KM Uzaklıkta", style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
                                                       ],
                                                     ),
                                                   ),
@@ -1456,9 +1468,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                               ),
                                               Container(
                                                 width: double.infinity,
-                                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                                decoration: BoxDecoration(color: isFlashing ? Colors.redAccent : const Color(0xFF00E676), borderRadius: BorderRadius.circular(14)),
-                                                child: Center(child: Text(isFlashing ? "Hemen İncele" : "Teklif Ver", style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15))),
+                                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                                decoration: BoxDecoration(color: isFlashing ? Colors.redAccent : const Color(0xFF10B981), borderRadius: BorderRadius.circular(12)),
+                                                child: Center(child: Text(isFlashing ? "Hemen İncele" : "Teklif Ver", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14))),
                                               )
                                             ],
                                           ),

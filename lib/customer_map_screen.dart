@@ -35,10 +35,10 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
   final String baseUrl = "https://eliteagency.sbs/api.php";
 
   final List<Map<String, dynamic>> services = [
-    {'id': 'mechanic', 'name': 'Tamirci', 'icon': Icons.build_rounded, 'color': const Color(0xFF00E676), 'gradient': [const Color(0xFF222222), const Color(0xFF111111)]},
-    {'id': 'tow', 'name': 'Çekici', 'icon': Icons.car_repair_rounded, 'color': const Color(0xFF00E676), 'gradient': [const Color(0xFF222222), const Color(0xFF111111)]},
-    {'id': 'tire', 'name': 'Lastikçi', 'icon': Icons.tire_repair_rounded, 'color': const Color(0xFF00E676), 'gradient': [const Color(0xFF222222), const Color(0xFF111111)]},
-    {'id': 'wash', 'name': 'Yıkama', 'icon': Icons.local_car_wash_rounded, 'color': const Color(0xFF00E676), 'gradient': [const Color(0xFF222222), const Color(0xFF111111)]},
+    {'id': 'mechanic', 'name': 'Tamirci', 'icon': Icons.build_rounded, 'color': const Color(0xFF10B981), 'gradient': [const Color(0xFF1E293B), const Color(0xFF0F172A)]},
+    {'id': 'tow', 'name': 'Çekici', 'icon': Icons.car_repair_rounded, 'color': const Color(0xFF10B981), 'gradient': [const Color(0xFF1E293B), const Color(0xFF0F172A)]},
+    {'id': 'tire', 'name': 'Lastikçi', 'icon': Icons.tire_repair_rounded, 'color': const Color(0xFF10B981), 'gradient': [const Color(0xFF1E293B), const Color(0xFF0F172A)]},
+    {'id': 'wash', 'name': 'Yıkama', 'icon': Icons.local_car_wash_rounded, 'color': const Color(0xFF10B981), 'gradient': [const Color(0xFF1E293B), const Color(0xFF0F172A)]},
   ];
 
   @override
@@ -114,56 +114,61 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFF111111).withOpacity(0.95),
+              color: const Color(0xFF0F172A).withOpacity(0.95),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-              border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
+              border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.4), borderRadius: BorderRadius.circular(10)))),
-                const SizedBox(height: 24),
-                const Row(
+            child: SafeArea(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(Icons.notifications_active_rounded, color: Color(0xFF00E676), size: 28),
-                    SizedBox(width: 12),
-                    Text("Araç Hatırlatmaları", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
+                    Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.4), borderRadius: BorderRadius.circular(10)))),
+                    const SizedBox(height: 24),
+                    const Row(
+                      children: [
+                        Icon(Icons.notifications_active_rounded, color: Color(0xFF10B981), size: 28),
+                        SizedBox(width: 12),
+                        Text("Araç Hatırlatmaları", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: -0.5)),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    if (reminderAlerts.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 24),
+                        child: Text("Şu an için yaklaşan bir hatırlatmanız yok.", style: TextStyle(fontSize: 16, fontWeight: FontWeight.normal, color: Colors.white)),
+                      )
+                    else
+                      ...reminderAlerts.map((alert) {
+                        bool isDanger = alert.contains("GECİKTİ");
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                          decoration: BoxDecoration(
+                            color: isDanger ? const Color(0xFFEF4444).withOpacity(0.1) : const Color(0xFF10B981).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: isDanger ? const Color(0xFFEF4444).withOpacity(0.5) : const Color(0xFF10B981).withOpacity(0.5), width: 1.5),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(isDanger ? Icons.warning_rounded : Icons.info_rounded, color: isDanger ? const Color(0xFFEF4444) : const Color(0xFF10B981), size: 24),
+                              const SizedBox(width: 12),
+                              Expanded(child: Text(alert, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14))),
+                            ],
+                          ),
+                        );
+                      }),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981), padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0),
+                      child: const Text("Kapat", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                    )
                   ],
                 ),
-                const SizedBox(height: 24),
-                if (reminderAlerts.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 24),
-                    child: Text("Şu an için yaklaşan bir hatırlatmanız yok.", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
-                  )
-                else
-                  ...reminderAlerts.map((alert) {
-                    bool isDanger = alert.contains("GECİKTİ");
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                      decoration: BoxDecoration(
-                        color: isDanger ? const Color(0xFFEF4444).withOpacity(0.1) : const Color(0xFF00E676).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: isDanger ? const Color(0xFFEF4444).withOpacity(0.5) : const Color(0xFF00E676).withOpacity(0.5), width: 1.5),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(isDanger ? Icons.warning_rounded : Icons.info_rounded, color: isDanger ? const Color(0xFFEF4444) : const Color(0xFF00E676), size: 24),
-                          const SizedBox(width: 12),
-                          Expanded(child: Text(alert, style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 14))),
-                        ],
-                      ),
-                    );
-                  }),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00E676), padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0),
-                  child: const Text("Kapat", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16)),
-                )
-              ],
+              ),
             ),
           ),
         );
@@ -222,10 +227,10 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
               child: Icon(isError ? Icons.error_rounded : Icons.check_circle_rounded, color: Colors.white, size: 24),
             ),
             const SizedBox(width: 16),
-            Expanded(child: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15, letterSpacing: 0.3))),
+            Expanded(child: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15, letterSpacing: 0.3))),
           ],
         ),
-        backgroundColor: isError ? const Color(0xFFEF4444) : const Color(0xFF00E676),
+        backgroundColor: isError ? const Color(0xFFEF4444) : const Color(0xFF10B981),
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(24),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -311,18 +316,18 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
               height: 180 * _radarController.value,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFF00E676).withOpacity((1.0 - _radarController.value).clamp(0.0, 1.0)), width: 2.5),
-                color: const Color(0xFF00E676).withOpacity((0.15 - (_radarController.value * 0.15)).clamp(0.0, 1.0)),
+                border: Border.all(color: const Color(0xFF10B981).withOpacity((1.0 - _radarController.value).clamp(0.0, 1.0)), width: 2.5),
+                color: const Color(0xFF10B981).withOpacity((0.15 - (_radarController.value * 0.15)).clamp(0.0, 1.0)),
               ),
             ),
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00C853)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)], begin: Alignment.topLeft, end: Alignment.bottomRight),
                 shape: BoxShape.circle, 
-                boxShadow: [BoxShadow(color: const Color(0xFF00C853).withOpacity(0.5), blurRadius: 15)]
+                boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.5), blurRadius: 15)]
               ),
-              child: const Icon(Icons.navigation_rounded, color: Colors.black, size: 28),
+              child: const Icon(Icons.navigation_rounded, color: Colors.white, size: 28),
             ),
           ],
         );
@@ -335,8 +340,8 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     final size = MediaQuery.sizeOf(context);
     double bottomInsets = math.max(0.0, MediaQuery.viewInsetsOf(context).bottom);
     
-    final Color bgColor = const Color(0xFF050505);
-    final Color glassColor = const Color(0xFF111111).withOpacity(0.90);
+    final Color bgColor = const Color(0xFF0F172A);
+    final Color glassColor = const Color(0xFF1E293B).withOpacity(0.95);
     final Color textColor = Colors.white;
     final Color subtitleColor = const Color(0xFF94A3B8);
 
@@ -347,7 +352,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: isLoading
-            ? Center(child: CircularProgressIndicator(color: const Color(0xFF00E676), strokeWidth: 4, backgroundColor: const Color(0xFF00E676).withOpacity(0.2)))
+            ? Center(child: CircularProgressIndicator(color: const Color(0xFF10B981), strokeWidth: 4, backgroundColor: const Color(0xFF10B981).withOpacity(0.2)))
             : Stack(
                 children: [
                   Positioned.fill(
@@ -382,21 +387,21 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 800),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(32),
+                          borderRadius: BorderRadius.circular(24),
                           child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                               decoration: BoxDecoration(
                                 color: glassColor,
-                                borderRadius: BorderRadius.circular(32),
-                                border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5),
-                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 20, offset: const Offset(0, 8))],
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
+                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 20, offset: const Offset(0, 5))],
                               ),
                               child: Row(
                                 children: [
                                   Container(
-                                    decoration: const BoxDecoration(color: Colors.white12, shape: BoxShape.circle),
+                                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), shape: BoxShape.circle),
                                     child: IconButton(
                                       icon: Icon(Icons.arrow_back_rounded, color: textColor, size: 24),
                                       onPressed: () => Navigator.pop(context),
@@ -411,7 +416,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                     onTap: _showNotificationsDialog,
                                     child: Container(
                                       padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(color: hasReminders ? const Color(0xFFEF4444).withOpacity(0.15) : Colors.white12, shape: BoxShape.circle),
+                                      decoration: BoxDecoration(color: hasReminders ? const Color(0xFFEF4444).withOpacity(0.15) : Colors.white.withOpacity(0.1), shape: BoxShape.circle),
                                       child: Stack(
                                         clipBehavior: Clip.none,
                                         children: [
@@ -444,7 +449,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                       elevation: 4,
                       mini: true,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.white.withOpacity(0.1), width: 1.5)),
-                      child: const Icon(Icons.my_location_rounded, color: Color(0xFF00E676), size: 22),
+                      child: const Icon(Icons.my_location_rounded, color: Color(0xFF10B981), size: 22),
                       onPressed: () {
                         if (currentPosition != null) {
                           mapController.move(LatLng(currentPosition!.latitude, currentPosition!.longitude), 15.0);
@@ -467,22 +472,22 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                             margin: const EdgeInsets.only(bottom: 16),
                             decoration: BoxDecoration(
                               color: glassColor,
-                              borderRadius: BorderRadius.circular(32),
-                              border: Border.all(color: Colors.white.withOpacity(0.15), width: 1.5),
-                              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 40, offset: const Offset(0, 15))],
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5),
+                              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 40, offset: const Offset(0, 10))],
                             ),
                             child: ClipRRect(
-                              borderRadius: BorderRadius.circular(32),
+                              borderRadius: BorderRadius.circular(24),
                               child: BackdropFilter(
-                                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                                 child: Padding(
-                                  padding: const EdgeInsets.all(20),
+                                  padding: const EdgeInsets.all(24),
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min, 
                                     crossAxisAlignment: CrossAxisAlignment.stretch,
                                     children: [
                                       Center(child: Container(width: 40, height: 5, decoration: BoxDecoration(color: subtitleColor.withOpacity(0.3), borderRadius: BorderRadius.circular(10)))),
-                                      const SizedBox(height: 16),
+                                      const SizedBox(height: 20),
                                       
                                       SizedBox(
                                         height: 80,
@@ -502,17 +507,17 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                                 width: 80,
                                                 decoration: BoxDecoration(
                                                   gradient: isSelected ? LinearGradient(colors: service['gradient'], begin: Alignment.topLeft, end: Alignment.bottomRight) : null,
-                                                  color: isSelected ? null : const Color(0xFF050505),
-                                                  borderRadius: BorderRadius.circular(20),
-                                                  border: Border.all(color: isSelected ? const Color(0xFF00E676) : Colors.white.withOpacity(0.08), width: 1.5),
-                                                  boxShadow: isSelected ? [BoxShadow(color: service['color'].withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 4))] : [],
+                                                  color: isSelected ? null : const Color(0xFF0F172A),
+                                                  borderRadius: BorderRadius.circular(16),
+                                                  border: Border.all(color: isSelected ? const Color(0xFF10B981) : Colors.white.withOpacity(0.05), width: 1),
+                                                  boxShadow: isSelected ? [BoxShadow(color: service['color'].withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 4))] : [],
                                                 ),
                                                 child: Column(
                                                   mainAxisAlignment: MainAxisAlignment.center,
                                                   children: [
-                                                    Icon(service['icon'], color: isSelected ? const Color(0xFF00E676) : subtitleColor, size: 24),
+                                                    Icon(service['icon'], color: isSelected ? const Color(0xFF10B981) : subtitleColor, size: 24),
                                                     const SizedBox(height: 4),
-                                                    Text(service['name'], style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11, color: isSelected ? Colors.white : subtitleColor)),
+                                                    Text(service['name'], style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: isSelected ? Colors.white : subtitleColor)),
                                                   ],
                                                 ),
                                               ),
@@ -523,25 +528,25 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                       const SizedBox(height: 16),
                                       
                                       Container(
-                                        decoration: BoxDecoration(boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))]),
+                                        decoration: BoxDecoration(boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))]),
                                         child: TextField(
                                           controller: problemController,
                                           keyboardType: TextInputType.multiline,
                                           maxLines: 3,
-                                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: textColor),
+                                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.normal, color: textColor),
                                           decoration: InputDecoration(
                                             labelText: "Aracınızdaki Sorunu Anlatın",
-                                            labelStyle: TextStyle(fontSize: 14, color: subtitleColor, fontWeight: FontWeight.w700),
-                                            prefixIcon: const Padding(padding: EdgeInsets.only(bottom: 40, left: 16, right: 12), child: Icon(Icons.build_circle_rounded, color: Color(0xFF00E676), size: 22)),
+                                            labelStyle: TextStyle(fontSize: 14, color: subtitleColor, fontWeight: FontWeight.normal),
+                                            prefixIcon: const Padding(padding: EdgeInsets.only(bottom: 40, left: 16, right: 12), child: Icon(Icons.build_circle_rounded, color: Color(0xFF10B981), size: 22)),
                                             filled: true,
-                                            fillColor: const Color(0xFF050505),
-                                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-                                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: Color(0xFF00E676), width: 2)),
+                                            fillColor: const Color(0xFF0F172A),
+                                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF10B981), width: 2)),
                                             contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(height: 16),
+                                      const SizedBox(height: 20),
 
                                       AnimatedBuilder(
                                         animation: _buttonPulseController,
@@ -550,20 +555,20 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                             scale: isCreatingJob ? 0.98 : 1.0 + (_buttonPulseController.value * 0.01),
                                             child: Container(
                                               decoration: BoxDecoration(
-                                                borderRadius: BorderRadius.circular(20),
-                                                gradient: const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00C853)]),
-                                                boxShadow: [BoxShadow(color: const Color(0xFF00C853).withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 8))],
+                                                borderRadius: BorderRadius.circular(16),
+                                                gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)]),
+                                                boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 5))],
                                               ),
                                               child: ElevatedButton(
                                                 onPressed: isCreatingJob || currentPosition == null ? null : _createJobRequest,
                                                 style: ElevatedButton.styleFrom(
-                                                  backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))
+                                                  backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
                                                 ),
                                                 child: isCreatingJob
-                                                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3))
+                                                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
                                                     : const Row(
                                                         mainAxisAlignment: MainAxisAlignment.center,
-                                                        children: [Text("Usta Bul", style: TextStyle(fontSize: 16, color: Colors.black, fontWeight: FontWeight.w900, letterSpacing: 0.5)), SizedBox(width: 10), Icon(Icons.arrow_forward_rounded, color: Colors.black, size: 20)],
+                                                        children: [Text("Usta Bul", style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5)), SizedBox(width: 10), Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20)],
                                                       ),
                                               ),
                                             ),

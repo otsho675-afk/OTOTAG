@@ -84,18 +84,17 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
 
   @override
   Widget build(BuildContext context) {
-    final Color bgColor = const Color(0xFF050505);
-    final Color cardColor = const Color(0xFF111111);
+    final Color bgColor = const Color(0xFF0F172A);
+    final Color cardColor = const Color(0xFF1E293B);
     final Color textColor = Colors.white;
     final Color subtitleColor = const Color(0xFF94A3B8);
-    final primaryColor = const Color(0xFF00E676);
-    final shadowColor = const Color(0xFF00C853);
-    final themeGradient = const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00C853)], begin: Alignment.topLeft, end: Alignment.bottomRight);
+    final primaryColor = const Color(0xFF10B981);
+    final themeGradient = const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)], begin: Alignment.topLeft, end: Alignment.bottomRight);
 
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        title: Text("Usta Profili", style: TextStyle(fontWeight: FontWeight.w900, color: textColor, fontSize: 24, letterSpacing: -0.5)),
+        title: Text("Usta Profili", style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 20, letterSpacing: -0.5)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
@@ -103,164 +102,166 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
         flexibleSpace: ClipRect(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(color: cardColor.withOpacity(0.85)),
+            child: Container(decoration: BoxDecoration(color: bgColor.withOpacity(0.85), border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.05))))),
           ),
         ),
       ),
-      body: isLoading
-          ? Center(child: CircularProgressIndicator(color: primaryColor, strokeWidth: 4, backgroundColor: primaryColor.withOpacity(0.2)))
-          : SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 800),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Center(
-                        child: Container(
-                          padding: const EdgeInsets.all(32),
-                          decoration: BoxDecoration(
-                            gradient: themeGradient,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(color: shadowColor.withOpacity(0.4), blurRadius: 30, offset: const Offset(0, 10)),
-                              BoxShadow(color: shadowColor.withOpacity(0.2), blurRadius: 60, spreadRadius: 10),
-                            ]
+      body: SafeArea(
+        child: isLoading
+            ? Center(child: CircularProgressIndicator(color: primaryColor, strokeWidth: 4, backgroundColor: primaryColor.withOpacity(0.2)))
+            : SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 800),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(28),
+                            decoration: BoxDecoration(
+                              gradient: themeGradient,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(color: primaryColor.withOpacity(0.35), blurRadius: 24, offset: const Offset(0, 8)),
+                              ],
+                            ),
+                            child: Icon(_getServiceIcon(profile['service_category']), size: 60, color: Colors.white),
                           ),
-                          child: Icon(_getServiceIcon(profile['service_category']), size: 72, color: Colors.black),
                         ),
-                      ),
-                      const SizedBox(height: 32),
-                      
-                      Text(
-                        profile['name'] ?? 'Bilinmeyen Usta',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: textColor, letterSpacing: -0.5),
-                      ),
-                      const SizedBox(height: 8),
-                      
-                      Center(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        const SizedBox(height: 24),
+                        
+                        Text(
+                          profile['name'] ?? 'Bilinmeyen Usta',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: textColor, letterSpacing: -0.5),
+                        ),
+                        const SizedBox(height: 10),
+                        
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: primaryColor.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: primaryColor.withOpacity(0.3), width: 1.2),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.verified_user_rounded, color: primaryColor, size: 18),
+                                const SizedBox(width: 8),
+                                Text(
+                                  _getServiceTypeName(profile['service_category']),
+                                  style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 14),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+  
+                        Container(
+                          padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: primaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: primaryColor.withOpacity(0.3), width: 1.5),
+                            color: cardColor,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: Colors.white.withOpacity(0.05)),
+                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 8))],
                           ),
                           child: Row(
-                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.verified_user_rounded, color: primaryColor, size: 18),
-                              const SizedBox(width: 8),
-                              Text(
-                                _getServiceTypeName(profile['service_category']),
-                                style: TextStyle(color: primaryColor, fontWeight: FontWeight.w900, fontSize: 16),
+                              Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(color: primaryColor.withOpacity(0.12), shape: BoxShape.circle),
+                                child: Icon(Icons.handyman_rounded, color: primaryColor, size: 28),
+                              ),
+                              const SizedBox(width: 18),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text("Tamamlanan İş", style: TextStyle(color: subtitleColor, fontSize: 13, fontWeight: FontWeight.w600)),
+                                    const SizedBox(height: 4),
+                                    Text("${earnings['total_jobs'] ?? 0}", style: TextStyle(color: textColor, fontSize: 26, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 32),
-
-                      Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: cardColor,
-                          borderRadius: BorderRadius.circular(32),
-                          border: Border.all(color: Colors.white.withOpacity(0.05)),
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 30, offset: const Offset(0, 15))],
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(color: primaryColor.withOpacity(0.15), shape: BoxShape.circle),
-                              child: Icon(Icons.handyman_rounded, color: primaryColor, size: 32),
-                            ),
-                            const SizedBox(width: 20),
-                            Expanded(
+                        const SizedBox(height: 36),
+  
+                        Text("Son Tamamlanan İşler", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
+                        const SizedBox(height: 16),
+  
+                        if (historyJobs.isEmpty)
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(32.0),
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text("Tamamlanan İş", style: TextStyle(color: subtitleColor, fontSize: 14, fontWeight: FontWeight.w700)),
-                                  const SizedBox(height: 4),
-                                  Text("${earnings['total_jobs'] ?? 0}", style: TextStyle(color: textColor, fontSize: 28, fontWeight: FontWeight.w900)),
+                                  Icon(Icons.history_rounded, size: 56, color: subtitleColor.withOpacity(0.3)),
+                                  const SizedBox(height: 16),
+                                  Text("Henüz tamamlanan iş yok.", style: TextStyle(color: subtitleColor, fontSize: 15, fontWeight: FontWeight.w600)),
                                 ],
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 48),
-
-                      Text("Son Tamamlanan İşler", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: textColor)),
-                      const SizedBox(height: 16),
-
-                      if (historyJobs.isEmpty)
-                        Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(32.0),
-                            child: Column(
-                              children: [
-                                Icon(Icons.history_rounded, size: 64, color: subtitleColor.withOpacity(0.3)),
-                                const SizedBox(height: 16),
-                                Text("Henüz tamamlanan iş yok.", style: TextStyle(color: subtitleColor, fontSize: 16, fontWeight: FontWeight.w800)),
-                              ],
-                            ),
+                          )
+                        else
+                          ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: historyJobs.length > 5 ? 5 : historyJobs.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final job = historyJobs[index];
+                              final bool isCompleted = job['status'] == 'completed';
+                              
+                              if (!isCompleted) return const SizedBox.shrink();
+  
+                              return Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: cardColor,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: primaryColor.withOpacity(0.12),
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: Icon(Icons.verified_rounded, color: primaryColor, size: 22),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text("${job['service_type'].toString().toUpperCase()}", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textColor)),
+                                          const SizedBox(height: 3),
+                                          Text("Başarıyla tamamlandı", style: TextStyle(fontSize: 13, color: subtitleColor, fontWeight: FontWeight.w500)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           ),
-                        )
-                      else
-                        ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: historyJobs.length > 5 ? 5 : historyJobs.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 16),
-                          itemBuilder: (context, index) {
-                            final job = historyJobs[index];
-                            final bool isCompleted = job['status'] == 'completed';
-                            
-                            if (!isCompleted) return const SizedBox.shrink();
-
-                            return Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: cardColor,
-                                borderRadius: BorderRadius.circular(24),
-                                border: Border.all(color: Colors.white.withOpacity(0.05)),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: primaryColor.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    child: Icon(Icons.verified_rounded, color: primaryColor, size: 24),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text("${job['service_type'].toString().toUpperCase()}", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: textColor)),
-                                        const SizedBox(height: 4),
-                                        Text("Başarıyla tamamlandı", style: TextStyle(fontSize: 13, color: subtitleColor, fontWeight: FontWeight.w700)),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
+      ),
     );
   }
 }

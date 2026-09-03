@@ -71,7 +71,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     super.dispose();
   }
 
-  void _showTopSnackBar(String message, {bool isError = false}) {
+  void _showCustomSnackBar(String message, {bool isError = false}) {
     if (mounted) {
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -80,17 +80,17 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-              child: Icon(isError ? Icons.error_rounded : Icons.check_circle_rounded, color: Colors.white, size: 24),
+              child: Icon(isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded, color: Colors.white, size: 24),
             ),
             const SizedBox(width: 16),
-            Expanded(child: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15, letterSpacing: 0.3))),
+            Expanded(child: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14, letterSpacing: 0.2))),
           ],
         ),
-        backgroundColor: isError ? const Color(0xFFEF4444) : const Color(0xFF00E676),
+        backgroundColor: isError ? const Color(0xFFFF3366) : const Color(0xFF00FFA3),
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(24),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        elevation: 12,
+        elevation: 20,
         duration: const Duration(seconds: 4),
       ));
     }
@@ -124,19 +124,27 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
   Future<void> _deleteRecord(dynamic recordId) async {
     bool confirm = await showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF111111),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: BorderSide(color: Colors.white.withOpacity(0.08))),
-        title: const Text("İşlem Kaydını Sil", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
-        content: const Text("Bu işlem geçmişi kaydı kalıcı olarak silinecektir. Emin misiniz?", style: TextStyle(color: Color(0xFF94A3B8))),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Vazgeç", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white54))),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444), elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text("Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          )
-        ],
+      builder: (ctx) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: AlertDialog(
+          backgroundColor: const Color(0xFF111115).withOpacity(0.9),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32), side: BorderSide(color: Colors.white.withOpacity(0.1))),
+          title: const Text("İşlem Kaydını Sil", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
+          content: Text("Bu işlem geçmişi kaydı kalıcı olarak silinecektir. Emin misiniz?", style: TextStyle(color: Colors.white.withOpacity(0.7))),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Vazgeç", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white54))),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF3366), 
+                elevation: 10, 
+                shadowColor: const Color(0xFFFF3366).withOpacity(0.5),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text("Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            )
+          ],
+        ),
       ),
     ) ?? false;
 
@@ -153,13 +161,13 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
       );
       final data = json.decode(response.body);
       if (data['status'] == 'success') {
-        _showTopSnackBar("Kayıt başarıyla silindi.");
+        _showCustomSnackBar("Kayıt başarıyla silindi.");
         await _fetchRecords();
       } else {
-        _showTopSnackBar(data['message'] ?? "Kayıt silinemedi.", isError: true);
+        _showCustomSnackBar(data['message'] ?? "Kayıt silinemedi.", isError: true);
       }
     } catch (e) {
-      _showTopSnackBar("Bağlantı hatası.", isError: true);
+      _showCustomSnackBar("Bağlantı hatası.", isError: true);
     }
   }
 
@@ -204,51 +212,57 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
         context: context,
         builder: (context) {
           final size = MediaQuery.of(context).size;
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-              side: BorderSide(color: Colors.white.withOpacity(0.08), width: 1.5)
-            ),
-            backgroundColor: const Color(0xFF111111),
-            title: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8), 
-                  decoration: BoxDecoration(color: const Color(0xFFEF4444).withOpacity(0.15), shape: BoxShape.circle), 
-                  child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444), size: 28)
+          return BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(32),
+                side: BorderSide(color: Colors.white.withOpacity(0.1), width: 1.5)
+              ),
+              backgroundColor: const Color(0xFF111115).withOpacity(0.9),
+              elevation: 0,
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12), 
+                    decoration: BoxDecoration(color: const Color(0xFFFF3366).withOpacity(0.15), shape: BoxShape.circle), 
+                    child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFFF3366), size: 28)
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text("Hatırlatmalar", style: TextStyle(fontWeight: FontWeight.w900, fontSize: size.width * 0.05, color: Colors.white, letterSpacing: -0.5))),
+                ],
+              ),
+              content: SizedBox(
+                width: size.width * 0.8,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: alerts.map((a) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.circle, size: 8, color: Color(0xFFFF3366)),
+                        const SizedBox(width: 12),
+                        Expanded(child: Text(a, style: TextStyle(fontSize: size.width * 0.038, fontWeight: FontWeight.w500, color: Colors.white.withOpacity(0.7)))),
+                      ],
+                    ),
+                  )).toList(),
                 ),
-                const SizedBox(width: 12),
-                Expanded(child: Text("Hatırlatmalar", style: TextStyle(fontWeight: FontWeight.w900, fontSize: size.width * 0.05, color: Colors.white, letterSpacing: -0.5))),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: TextButton.styleFrom(
+                    backgroundColor: const Color(0xFF00FFA3), 
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), 
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    elevation: 10,
+                    shadowColor: const Color(0xFF00FFA3).withOpacity(0.5)
+                  ),
+                  child: const Text("Anladım", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16)),
+                )
               ],
             ),
-            content: SizedBox(
-              width: size.width * 0.8,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: alerts.map((a) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.circle, size: 8, color: Color(0xFFEF4444)),
-                      const SizedBox(width: 12),
-                      Expanded(child: Text(a, style: TextStyle(fontSize: size.width * 0.038, fontWeight: FontWeight.w600, color: const Color(0xFF94A3B8)))),
-                    ],
-                  ),
-                )).toList(),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                style: TextButton.styleFrom(
-                  backgroundColor: const Color(0xFF00E676), 
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), 
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)
-                ),
-                child: const Text("Anladım", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16)),
-              )
-            ],
           );
         }
       );
@@ -312,41 +326,44 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
       padding: EdgeInsets.symmetric(horizontal: size.width * 0.04),
       child: Row(
         children: [
-          Expanded(child: _buildMiniExpenseCard("Servis & Parça", totalExpense - totalFuelExpense, Icons.build_circle_rounded, const [Color(0xFF00E676), Color(0xFF00C853)], size)),
+          Expanded(child: _buildMiniExpenseCard("Servis & Parça", totalExpense - totalFuelExpense, Icons.build_circle_rounded, const Color(0xFF00FFA3), size)),
           SizedBox(width: size.width * 0.04),
-          Expanded(child: _buildMiniExpenseCard("Yakıt Gideri", totalFuelExpense, Icons.local_gas_station_rounded, const [Color(0xFFFF9100), Color(0xFFFF6D00)], size)),
+          Expanded(child: _buildMiniExpenseCard("Yakıt Gideri", totalFuelExpense, Icons.local_gas_station_rounded, const Color(0xFFFF9100), size)),
         ]
       )
     );
   }
 
-  Widget _buildMiniExpenseCard(String title, double amount, IconData icon, List<Color> gradient, Size size) {
+  Widget _buildMiniExpenseCard(String title, double amount, IconData icon, Color color, Size size) {
     return Container(
       padding: EdgeInsets.all(size.width * 0.04),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: gradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
+        color: Colors.white.withOpacity(0.03),
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(color: gradient.last.withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 8))
-        ],
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: Colors.black.withOpacity(0.6), size: size.width * 0.07),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: color.withOpacity(0.15), shape: BoxShape.circle),
+                child: Icon(icon, color: color, size: size.width * 0.06),
+              ),
+              const SizedBox(height: 12),
+              Text(title, style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: size.width * 0.035, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text("${amount.toStringAsFixed(2)} ₺", style: TextStyle(color: Colors.white, fontSize: size.width * 0.055, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+              ),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(title, style: TextStyle(color: Colors.black.withOpacity(0.7), fontSize: size.width * 0.035, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 4),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text("${amount.toStringAsFixed(2)} ₺", style: TextStyle(color: Colors.black, fontSize: size.width * 0.055, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -359,34 +376,35 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: size.width * 0.04, vertical: size.height * 0.015),
-      padding: EdgeInsets.all(size.width * 0.05),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: Colors.white.withOpacity(0.02),
         borderRadius: BorderRadius.circular(32),
         border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3), 
-            blurRadius: 30, 
-            offset: const Offset(0, 10)
-          )
-        ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildInfoRow("Trafik Sigortası", insDate, Icons.shield_rounded, 365, size),
-          Padding(
-            padding: EdgeInsets.symmetric(vertical: size.height * 0.02), 
-            child: Divider(height: 1, color: Colors.white.withOpacity(0.05))
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(32),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          child: Padding(
+            padding: EdgeInsets.all(size.width * 0.05),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildInfoRow("Trafik Sigortası", insDate, Icons.shield_rounded, 365, size),
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: size.height * 0.02), 
+                  child: Divider(height: 1, color: Colors.white.withOpacity(0.05))
+                ),
+                _buildInfoRow("Araç Muayenesi", inspDate, Icons.fact_check_rounded, 730, size),
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: size.height * 0.02), 
+                  child: Divider(height: 1, color: Colors.white.withOpacity(0.05))
+                ),
+                _buildMaintenanceRow(cKm, mKm, size),
+              ],
+            ),
           ),
-          _buildInfoRow("Araç Muayenesi", inspDate, Icons.fact_check_rounded, 730, size),
-          Padding(
-            padding: EdgeInsets.symmetric(vertical: size.height * 0.02), 
-            child: Divider(height: 1, color: Colors.white.withOpacity(0.05))
-          ),
-          _buildMaintenanceRow(cKm, mKm, size),
-        ],
+        ),
       ),
     );
   }
@@ -396,7 +414,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     double progress = date != null ? (daysLeft / totalDays).clamp(0.0, 1.0) : 0.0;
     Color statusColor = date == null 
       ? const Color(0xFF64748B)
-      : (daysLeft <= 15 ? const Color(0xFFEF4444) : (daysLeft <= 30 ? const Color(0xFFF59E0B) : const Color(0xFF00E676)));
+      : (daysLeft <= 15 ? const Color(0xFFFF3366) : (daysLeft <= 30 ? const Color(0xFFF59E0B) : const Color(0xFF00FFA3)));
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -413,9 +431,9 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: TextStyle(fontSize: size.width * 0.04, fontWeight: FontWeight.w900, color: Colors.white)),
+                  Text(title, style: TextStyle(fontSize: size.width * 0.04, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.3)),
                   const SizedBox(height: 4),
-                  Text(date == null ? "Tarih Girilmedi" : DateFormat('dd.MM.yyyy').format(date), style: TextStyle(fontSize: size.width * 0.035, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w600)),
+                  Text(date == null ? "Tarih Girilmedi" : DateFormat('dd.MM.yyyy').format(date), style: TextStyle(fontSize: size.width * 0.035, color: Colors.white.withOpacity(0.6), fontWeight: FontWeight.w500)),
                 ],
               ),
             ),
@@ -423,11 +441,12 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
               padding: EdgeInsets.symmetric(horizontal: size.width * 0.03, vertical: size.height * 0.008),
               decoration: BoxDecoration(
                 color: statusColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12)
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: statusColor.withOpacity(0.3))
               ),
               child: Text(
                 date == null ? "Belirsiz" : (daysLeft < 0 ? "${daysLeft.abs()} Gün Gecikti" : "$daysLeft Gün"), 
-                style: TextStyle(fontSize: size.width * 0.035, fontWeight: FontWeight.w900, color: statusColor)
+                style: TextStyle(fontSize: size.width * 0.032, fontWeight: FontWeight.w800, color: statusColor)
               ),
             ),
           ],
@@ -438,8 +457,8 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
             borderRadius: BorderRadius.circular(12),
             child: LinearProgressIndicator(
               value: progress, 
-              minHeight: 8, 
-              backgroundColor: const Color(0xFF1E293B), 
+              minHeight: 6, 
+              backgroundColor: Colors.white.withOpacity(0.05), 
               valueColor: AlwaysStoppedAnimation<Color>(statusColor)
             ),
           ),
@@ -451,7 +470,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
   Widget _buildMaintenanceRow(int cKm, int mKm, Size size) {
     int remainingKm = mKm - cKm;
     double progress = mKm > 0 ? (cKm / mKm).clamp(0.0, 1.0) : 0.0;
-    Color statusColor = remainingKm <= 1000 ? const Color(0xFFEF4444) : const Color(0xFF00E676);
+    Color statusColor = remainingKm <= 1000 ? const Color(0xFFFF3366) : const Color(0xFF00FFA3);
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -468,9 +487,9 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Periyodik Bakım", style: TextStyle(fontSize: size.width * 0.04, fontWeight: FontWeight.w900, color: Colors.white)),
+                  Text("Periyodik Bakım", style: TextStyle(fontSize: size.width * 0.04, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.3)),
                   const SizedBox(height: 4),
-                  Text("Güncel: $cKm KM", style: TextStyle(fontSize: size.width * 0.035, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w600)),
+                  Text("Güncel: $cKm KM", style: TextStyle(fontSize: size.width * 0.035, color: Colors.white.withOpacity(0.6), fontWeight: FontWeight.w500)),
                 ],
               ),
             ),
@@ -478,11 +497,12 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
               padding: EdgeInsets.symmetric(horizontal: size.width * 0.03, vertical: size.height * 0.008),
               decoration: BoxDecoration(
                 color: statusColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12)
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: statusColor.withOpacity(0.3))
               ),
               child: Text(
                 remainingKm < 0 ? "${remainingKm.abs()} KM Gecikti" : "$remainingKm KM", 
-                style: TextStyle(fontSize: size.width * 0.035, fontWeight: FontWeight.w900, color: statusColor)
+                style: TextStyle(fontSize: size.width * 0.032, fontWeight: FontWeight.w800, color: statusColor)
               ),
             ),
           ],
@@ -492,8 +512,8 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
           borderRadius: BorderRadius.circular(12),
           child: LinearProgressIndicator(
             value: progress, 
-            minHeight: 8, 
-            backgroundColor: const Color(0xFF1E293B), 
+            minHeight: 6, 
+            backgroundColor: Colors.white.withOpacity(0.05), 
             valueColor: AlwaysStoppedAnimation<Color>(statusColor)
           ),
         ),
@@ -509,33 +529,39 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
         children: [
           Container(
             decoration: BoxDecoration(
-              color: const Color(0xFF111111),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
+              color: Colors.white.withOpacity(0.03),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5),
             ),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (val) => setState(() => searchQuery = val),
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14),
-              decoration: InputDecoration(
-                hintText: "İşlem veya açıklama ara...",
-                hintStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 14, fontWeight: FontWeight.w600),
-                prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF00E676), size: 22),
-                suffixIcon: searchQuery.isNotEmpty 
-                  ? IconButton(
-                      icon: const Icon(Icons.clear_rounded, color: Colors.white54, size: 18),
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() => searchQuery = "");
-                      },
-                    )
-                  : null,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (val) => setState(() => searchQuery = val),
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
+                  decoration: InputDecoration(
+                    hintText: "İşlem veya açıklama ara...",
+                    hintStyle: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 14, fontWeight: FontWeight.w500),
+                    prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF00FFA3), size: 22),
+                    suffixIcon: searchQuery.isNotEmpty 
+                      ? IconButton(
+                          icon: const Icon(Icons.clear_rounded, color: Colors.white54, size: 18),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => searchQuery = "");
+                          },
+                        )
+                      : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                  ),
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
@@ -545,13 +571,13 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                 return Padding(
                   padding: const EdgeInsets.only(right: 8.0),
                   child: ChoiceChip(
-                    label: Text(f, style: TextStyle(color: isSelected ? Colors.black : Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
+                    label: Text(f, style: TextStyle(color: isSelected ? Colors.black : Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
                     selected: isSelected,
-                    selectedColor: const Color(0xFF00E676),
-                    backgroundColor: const Color(0xFF111111),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    side: BorderSide(color: isSelected ? Colors.transparent : Colors.white.withOpacity(0.08), width: 1.2),
+                    selectedColor: const Color(0xFF00FFA3),
+                    backgroundColor: Colors.white.withOpacity(0.05),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    side: BorderSide(color: isSelected ? Colors.transparent : Colors.white.withOpacity(0.1), width: 1.2),
                     onSelected: (val) {
                       if (val) setState(() => selectedFilter = f);
                     },
@@ -592,10 +618,10 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     }
     Color getColor() {
       switch (type) {
-        case 'Periyodik Bakım': return const Color(0xFF00E676);
+        case 'Periyodik Bakım': return const Color(0xFF00FFA3);
         case 'Yakıt Alımı': return const Color(0xFFFF9100);
         case 'Tamir & Onarım':
-        case 'Tamir': return const Color(0xFFEF4444);
+        case 'Tamir': return const Color(0xFFFF3366);
         case 'Lastik & Balans': return const Color(0xFF00E5FF);
         case 'Fren & Balata': return const Color(0xFFF59E0B);
         case 'Akü & Elektrik': return const Color(0xFFFFD600);
@@ -604,9 +630,9 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
         case 'MTV & Harç':
         case 'MTV': return const Color(0xFFE040FB);
         case 'Aksesuar & Parça': return const Color(0xFF76FF03);
-        case 'Muayene': return const Color(0xFF00E676);
+        case 'Muayene': return const Color(0xFF00FFA3);
         case 'Sigorta': return const Color(0xFF00E5FF);
-        default: return const Color(0xFF94A3B8);
+        default: return Colors.white54;
       }
     }
 
@@ -619,11 +645,11 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
               Container(
                 width: size.width * 0.12, height: size.width * 0.12,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF111111), 
+                  color: Colors.white.withOpacity(0.02), 
                   shape: BoxShape.circle, 
                   border: Border.all(color: getColor().withOpacity(0.5), width: 2),
                   boxShadow: [
-                    BoxShadow(color: getColor().withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 4))
+                    BoxShadow(color: getColor().withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 5))
                   ]
                 ),
                 child: Icon(getIcon(), color: getColor(), size: size.width * 0.055),
@@ -646,122 +672,129 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
             child: Padding(
               padding: EdgeInsets.only(bottom: size.height * 0.03),
               child: Container(
-                padding: EdgeInsets.all(size.width * 0.05),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF111111),
+                  color: Colors.white.withOpacity(0.02),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 8))
-                  ],
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: size.width * 0.025, vertical: size.height * 0.005),
-                          decoration: BoxDecoration(
-                            color: getColor().withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8)
-                          ),
-                          child: Text(type.toUpperCase(), style: TextStyle(color: getColor(), fontWeight: FontWeight.w900, fontSize: size.width * 0.03, letterSpacing: 0.5)),
-                        ),
-                        Row(
-                          children: [
-                            Text(DateFormat('dd.MM.yyyy').format(date), style: TextStyle(color: const Color(0xFF94A3B8), fontWeight: FontWeight.bold, fontSize: size.width * 0.03)),
-                            const SizedBox(width: 8),
-                            PopupMenuButton<String>(
-                              icon: const Icon(Icons.more_vert_rounded, color: Color(0xFF94A3B8), size: 20),
-                              color: const Color(0xFF1E293B),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                              onSelected: (val) {
-                                if (val == 'edit') {
-                                  _showRecordSheet(recordToEdit: record);
-                                } else if (val == 'delete') {
-                                  _deleteRecord(recordId);
-                                }
-                              },
-                              itemBuilder: (ctx) => [
-                                const PopupMenuItem(
-                                  value: 'edit',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.edit_rounded, color: Color(0xFF00E676), size: 18),
-                                      SizedBox(width: 10),
-                                      Text("Düzenle", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                                    ],
-                                  ),
-                                ),
-                                const PopupMenuItem(
-                                  value: 'delete',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 18),
-                                      SizedBox(width: 10),
-                                      Text("Sil", style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 14)),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    if (record['description'] != null && record['description'].toString().isNotEmpty) ...[
-                      SizedBox(height: size.height * 0.015),
-                      Text(record['description'], style: TextStyle(color: Colors.white, fontSize: size.width * 0.038, height: 1.5, fontWeight: FontWeight.w500)),
-                    ],
-                    if (cost > 0) ...[
-                      SizedBox(height: size.height * 0.015),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF00E676).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12)
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.payments_rounded, color: Color(0xFF00E676), size: 18),
-                            const SizedBox(width: 8),
-                            Text("${cost.toStringAsFixed(2)} ₺", style: TextStyle(color: const Color(0xFF00E676), fontWeight: FontWeight.w900, fontSize: size.width * 0.035)),
-                          ],
-                        ),
-                      )
-                    ],
-                    if (record['document_url'] != null || record['image_url'] != null) ...[
-                      SizedBox(height: size.height * 0.02),
-                      Wrap(
-                        spacing: size.width * 0.03, runSpacing: size.height * 0.015,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: Padding(
+                      padding: EdgeInsets.all(size.width * 0.05),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (record['document_url'] != null)
-                            ActionChip(
-                              avatar: Icon(Icons.picture_as_pdf, color: const Color(0xFFEF4444), size: size.width * 0.045),
-                              label: Text("Belgeyi Gör", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: size.width * 0.03)),
-                              backgroundColor: const Color(0xFF050505),
-                              padding: EdgeInsets.all(size.width * 0.02),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              side: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
-                              onPressed: () => _openFile(record['document_url']),
-                            ),
-                          if (record['image_url'] != null)
-                            ActionChip(
-                              avatar: Icon(Icons.image, color: const Color(0xFF00E676), size: size.width * 0.045),
-                              label: Text("Resmi Gör", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: size.width * 0.03)),
-                              backgroundColor: const Color(0xFF050505),
-                              padding: EdgeInsets.all(size.width * 0.02),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              side: const BorderSide(color: Color(0xFF00E676), width: 1.5),
-                              onPressed: () => _openFile(record['image_url']),
-                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: size.width * 0.03, vertical: size.height * 0.008),
+                                decoration: BoxDecoration(
+                                  color: getColor().withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: getColor().withOpacity(0.3))
+                                ),
+                                child: Text(type.toUpperCase(), style: TextStyle(color: getColor(), fontWeight: FontWeight.w900, fontSize: size.width * 0.028, letterSpacing: 0.5)),
+                              ),
+                              Row(
+                                children: [
+                                  Text(DateFormat('dd.MM.yyyy').format(date), style: TextStyle(color: Colors.white.withOpacity(0.6), fontWeight: FontWeight.bold, fontSize: size.width * 0.03)),
+                                  const SizedBox(width: 8),
+                                  PopupMenuButton<String>(
+                                    icon: Icon(Icons.more_horiz_rounded, color: Colors.white.withOpacity(0.6), size: 24),
+                                    color: const Color(0xFF111115),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: Colors.white.withOpacity(0.1))),
+                                    onSelected: (val) {
+                                      if (val == 'edit') {
+                                        _showRecordSheet(recordToEdit: record);
+                                      } else if (val == 'delete') {
+                                        _deleteRecord(recordId);
+                                      }
+                                    },
+                                    itemBuilder: (ctx) => [
+                                      const PopupMenuItem(
+                                        value: 'edit',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.edit_rounded, color: Color(0xFF00FFA3), size: 18),
+                                            SizedBox(width: 10),
+                                            Text("Düzenle", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                                          ],
+                                        ),
+                                      ),
+                                      const PopupMenuItem(
+                                        value: 'delete',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.delete_outline_rounded, color: Color(0xFFFF3366), size: 18),
+                                            SizedBox(width: 10),
+                                            Text("Sil", style: TextStyle(color: Color(0xFFFF3366), fontWeight: FontWeight.bold, fontSize: 14)),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          if (record['description'] != null && record['description'].toString().isNotEmpty) ...[
+                            SizedBox(height: size.height * 0.02),
+                            Text(record['description'], style: TextStyle(color: Colors.white, fontSize: size.width * 0.038, height: 1.5, fontWeight: FontWeight.w500)),
+                          ],
+                          if (cost > 0) ...[
+                            SizedBox(height: size.height * 0.02),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF00FFA3).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFF00FFA3).withOpacity(0.2))
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.payments_rounded, color: Color(0xFF00FFA3), size: 18),
+                                  const SizedBox(width: 8),
+                                  Text("${cost.toStringAsFixed(2)} ₺", style: TextStyle(color: const Color(0xFF00FFA3), fontWeight: FontWeight.w900, fontSize: size.width * 0.035)),
+                                ],
+                              ),
+                            )
+                          ],
+                          if (record['document_url'] != null || record['image_url'] != null) ...[
+                            SizedBox(height: size.height * 0.02),
+                            Wrap(
+                              spacing: size.width * 0.03, runSpacing: size.height * 0.015,
+                              children: [
+                                if (record['document_url'] != null)
+                                  ActionChip(
+                                    avatar: Icon(Icons.picture_as_pdf, color: const Color(0xFFFF3366), size: size.width * 0.045),
+                                    label: Text("Belge", style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: size.width * 0.032)),
+                                    backgroundColor: Colors.white.withOpacity(0.05),
+                                    padding: EdgeInsets.all(size.width * 0.02),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                    side: const BorderSide(color: Color(0xFFFF3366), width: 1.5),
+                                    onPressed: () => _openFile(record['document_url']),
+                                  ),
+                                if (record['image_url'] != null)
+                                  ActionChip(
+                                    avatar: Icon(Icons.image, color: const Color(0xFF00FFA3), size: size.width * 0.045),
+                                    label: Text("Resim", style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: size.width * 0.032)),
+                                    backgroundColor: Colors.white.withOpacity(0.05),
+                                    padding: EdgeInsets.all(size.width * 0.02),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                    side: const BorderSide(color: Color(0xFF00FFA3), width: 1.5),
+                                    onPressed: () => _openFile(record['image_url']),
+                                  ),
+                              ],
+                            )
+                          ]
                         ],
-                      )
-                    ]
-                  ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -773,7 +806,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = const Color(0xFF050505);
+    final bgColor = const Color(0xFF030305);
     final textColor = Colors.white;
     final size = MediaQuery.of(context).size;
     final displayRecords = _filteredRecords;
@@ -781,117 +814,135 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     return Scaffold(
       backgroundColor: bgColor,
       body: isLoading 
-        ? const Center(child: CircularProgressIndicator(color: Color(0xFF00E676)))
-        : RefreshIndicator(
-            onRefresh: _fetchRecords,
-            color: const Color(0xFF00E676),
-            backgroundColor: const Color(0xFF111111),
-            child: FadeTransition(
-              opacity: _fadeController,
-              child: CustomScrollView(
-                physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-                slivers: [
-                  SliverAppBar(
-                    expandedHeight: math.max(135.0, size.height * 0.16),
-                    floating: false,
-                    pinned: true,
-                    backgroundColor: bgColor,
-                    iconTheme: IconThemeData(color: textColor),
-                    elevation: 0,
-                    flexibleSpace: FlexibleSpaceBar(
-                      titlePadding: const EdgeInsets.only(left: 20, bottom: 14),
-                      centerTitle: false,
-                      title: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              currentVehicleData['plate'] ?? '', 
-                              style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 18, letterSpacing: 0.8)
-                            ),
-                          ),
-                          if ((currentVehicleData['brand_model'] ?? '').toString().isNotEmpty)
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                currentVehicleData['brand_model'] ?? '', 
-                                style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600)
-                              ),
-                            ),
-                        ],
-                      ),
+        ? const Center(child: CircularProgressIndicator(color: Color(0xFF00FFA3)))
+        : Stack(
+            children: [
+              Positioned(
+                top: -size.height * 0.1,
+                left: -size.width * 0.2,
+                child: Container(
+                  width: size.width * 1.5,
+                  height: size.width * 1.5,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [const Color(0xFF00FFA3).withOpacity(0.05), Colors.transparent],
                     ),
                   ),
-                  SliverToBoxAdapter(
-                    child: SafeArea(
-                      top: false,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _buildExpenseCards(size),
-                          SizedBox(height: size.height * 0.02),
-                          _buildVerticalSummary(size),
-                          Padding(
-                            padding: EdgeInsets.fromLTRB(size.width * 0.05, size.height * 0.04, size.width * 0.05, size.height * 0.015),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text("İşlem Geçmişi", style: TextStyle(fontSize: size.width * 0.055, fontWeight: FontWeight.w900, color: textColor, letterSpacing: -0.5)),
-                                Container(
-                                  padding: EdgeInsets.symmetric(horizontal: size.width * 0.035, vertical: size.height * 0.01),
-                                  decoration: BoxDecoration(color: const Color(0xFF00E676).withOpacity(0.1), borderRadius: BorderRadius.circular(16)),
-                                  child: Text("${records.length} Kayıt", style: TextStyle(color: const Color(0xFF00E676), fontWeight: FontWeight.w900, fontSize: size.width * 0.035)),
-                                )
-                              ],
-                            ),
+                ),
+              ),
+              RefreshIndicator(
+                onRefresh: _fetchRecords,
+                color: const Color(0xFF00FFA3),
+                backgroundColor: const Color(0xFF111115),
+                child: FadeTransition(
+                  opacity: _fadeController,
+                  child: CustomScrollView(
+                    physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                    slivers: [
+                      SliverAppBar(
+                        expandedHeight: math.max(135.0, size.height * 0.16),
+                        floating: false,
+                        pinned: true,
+                        backgroundColor: Colors.transparent,
+                        iconTheme: IconThemeData(color: textColor),
+                        elevation: 0,
+                        flexibleSpace: FlexibleSpaceBar(
+                          titlePadding: const EdgeInsets.only(left: 20, bottom: 14),
+                          centerTitle: false,
+                          title: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  currentVehicleData['plate'] ?? '', 
+                                  style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 20, letterSpacing: 0.5)
+                                ),
+                              ),
+                              if ((currentVehicleData['brand_model'] ?? '').toString().isNotEmpty)
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    currentVehicleData['brand_model'] ?? '', 
+                                    style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.6), fontWeight: FontWeight.w600)
+                                  ),
+                                ),
+                            ],
                           ),
-                          _buildFilterAndSearchBar(size),
-                          SizedBox(height: size.height * 0.025),
-                          if (displayRecords.isEmpty)
-                            Padding(
-                              padding: EdgeInsets.all(size.width * 0.1),
-                              child: Center(
-                                child: Column(
+                        ),
+                      ),
+                      SliverToBoxAdapter(
+                        child: SafeArea(
+                          top: false,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _buildExpenseCards(size),
+                              SizedBox(height: size.height * 0.02),
+                              _buildVerticalSummary(size),
+                              Padding(
+                                padding: EdgeInsets.fromLTRB(size.width * 0.05, size.height * 0.04, size.width * 0.05, size.height * 0.015),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Icon(Icons.history_toggle_off_rounded, size: size.width * 0.2, color: Colors.white24),
-                                    SizedBox(height: size.height * 0.02),
-                                    Text(
-                                      records.isEmpty 
-                                        ? "Henüz bu araca ait işlem bulunmuyor." 
-                                        : "Arama veya filtreye uygun işlem bulunamadı.", 
-                                      textAlign: TextAlign.center, 
-                                      style: TextStyle(color: const Color(0xFF94A3B8), fontSize: size.width * 0.04, fontWeight: FontWeight.bold)
-                                    ),
+                                    Text("İşlem Geçmişi", style: TextStyle(fontSize: size.width * 0.055, fontWeight: FontWeight.w900, color: textColor, letterSpacing: -0.5)),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(horizontal: size.width * 0.035, vertical: size.height * 0.01),
+                                      decoration: BoxDecoration(color: const Color(0xFF00FFA3).withOpacity(0.1), borderRadius: BorderRadius.circular(16)),
+                                      child: Text("${records.length} Kayıt", style: TextStyle(color: const Color(0xFF00FFA3), fontWeight: FontWeight.w900, fontSize: size.width * 0.035)),
+                                    )
                                   ],
                                 ),
                               ),
-                            )
-                          else
-                            Padding(
-                              padding: EdgeInsets.symmetric(horizontal: size.width * 0.05),
-                              child: Column(
-                                children: List.generate(displayRecords.length, (index) => _buildTimelineItem(displayRecords[index], index == displayRecords.length - 1, size)),
-                              ),
-                            ),
-                          SizedBox(height: size.height * 0.15), 
-                        ],
+                              _buildFilterAndSearchBar(size),
+                              SizedBox(height: size.height * 0.025),
+                              if (displayRecords.isEmpty)
+                                Padding(
+                                  padding: EdgeInsets.all(size.width * 0.1),
+                                  child: Center(
+                                    child: Column(
+                                      children: [
+                                        Icon(Icons.history_toggle_off_rounded, size: size.width * 0.2, color: Colors.white24),
+                                        SizedBox(height: size.height * 0.02),
+                                        Text(
+                                          records.isEmpty 
+                                            ? "Henüz bu araca ait işlem bulunmuyor." 
+                                            : "Arama veya filtreye uygun işlem bulunamadı.", 
+                                          textAlign: TextAlign.center, 
+                                          style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: size.width * 0.04, fontWeight: FontWeight.bold)
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                              else
+                                Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: size.width * 0.05),
+                                  child: Column(
+                                    children: List.generate(displayRecords.length, (index) => _buildTimelineItem(displayRecords[index], index == displayRecords.length - 1, size)),
+                                  ),
+                                ),
+                              SizedBox(height: size.height * 0.15), 
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showRecordSheet(),
-        backgroundColor: const Color(0xFF00E676),
-        elevation: 6,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: const Color(0xFF00FFA3),
+        elevation: 10,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         icon: const Icon(Icons.add_chart_rounded, color: Colors.black, size: 24),
         label: const Text("İşlem Ekle", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
       ),
@@ -941,8 +992,8 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
   
   final List<Map<String, dynamic>> operationTypes = [
     {'id': 'Yakıt Alımı', 'icon': Icons.local_gas_station_rounded, 'color': const Color(0xFFFF9100)},
-    {'id': 'Periyodik Bakım', 'icon': Icons.build_circle_rounded, 'color': const Color(0xFF00E676)},
-    {'id': 'Tamir & Onarım', 'icon': Icons.car_repair_rounded, 'color': const Color(0xFFEF4444)},
+    {'id': 'Periyodik Bakım', 'icon': Icons.build_circle_rounded, 'color': const Color(0xFF00FFA3)},
+    {'id': 'Tamir & Onarım', 'icon': Icons.car_repair_rounded, 'color': const Color(0xFFFF3366)},
     {'id': 'Lastik & Balans', 'icon': Icons.tire_repair_rounded, 'color': const Color(0xFF00E5FF)},
     {'id': 'Fren & Balata', 'icon': Icons.disc_full_rounded, 'color': const Color(0xFFF59E0B)},
     {'id': 'Akü & Elektrik', 'icon': Icons.battery_charging_full_rounded, 'color': const Color(0xFFFFD600)},
@@ -978,7 +1029,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
     super.dispose();
   }
 
-  void _showTopSnackBar(String message, {bool isError = false}) {
+  void _showCustomSnackBar(String message, {bool isError = false}) {
     if (mounted) {
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -987,16 +1038,17 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-              child: Icon(isError ? Icons.error_rounded : Icons.check_circle_rounded, color: Colors.white, size: 24),
+              child: Icon(isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded, color: Colors.white, size: 24),
             ),
             const SizedBox(width: 16),
-            Expanded(child: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15, letterSpacing: 0.3))),
+            Expanded(child: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14, letterSpacing: 0.2))),
           ],
         ),
-        backgroundColor: isError ? const Color(0xFFEF4444) : const Color(0xFF00E676),
+        backgroundColor: isError ? const Color(0xFFFF3366) : const Color(0xFF00FFA3),
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(20),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 20,
       ));
     }
   }
@@ -1081,32 +1133,65 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
             );
           }
         }
-        _showTopSnackBar(isEditing ? "İşlem güncellendi!" : "İşlem başarıyla eklendi!");
+        _showCustomSnackBar(isEditing ? "İşlem güncellendi!" : "İşlem başarıyla eklendi!");
         widget.onSaved();
       } else {
-        _showTopSnackBar("İşlem kaydedilemedi.", isError: true);
+        _showCustomSnackBar("İşlem kaydedilemedi.", isError: true);
       }
     } catch (e) {
-      _showTopSnackBar("Bağlantı hatası lütfen tekrar deneyin.", isError: true);
+      _showCustomSnackBar("Bağlantı hatası lütfen tekrar deneyin.", isError: true);
     } finally {
       if (mounted) setState(() => isSaving = false);
     }
   }
 
+  Widget _buildGlassInput(TextEditingController controller, String label, IconData icon, Color color, {TextInputType type = TextInputType.text, int maxLines = 1}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.03),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: TextField(
+            controller: controller,
+            keyboardType: type,
+            maxLines: maxLines,
+            textInputAction: maxLines > 1 ? TextInputAction.done : TextInputAction.next,
+            style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 16),
+            decoration: InputDecoration(
+              labelText: label,
+              labelStyle: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 14, fontWeight: FontWeight.w500),
+              prefixIcon: Padding(padding: const EdgeInsets.only(left: 20, right: 16), child: Icon(icon, color: color, size: 22)),
+              filled: true,
+              fillColor: Colors.transparent,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+              border: InputBorder.none,
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide(color: color, width: 1.5)),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final bgColor = const Color(0xFF111111).withOpacity(0.98);
+    final bgColor = const Color(0xFF111115).withOpacity(0.9);
     final textColor = Colors.white;
     final size = MediaQuery.of(context).size;
 
     return BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
       child: Container(
         padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + size.height * 0.03, top: size.height * 0.02),
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
-          border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
+          border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5),
           boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 40, offset: const Offset(0, -10))]
         ),
         child: SafeArea(
@@ -1115,7 +1200,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
             children: [
               Center(
                 child: Container(
-                  width: size.width * 0.15, height: 6, 
+                  width: size.width * 0.15, height: 5, 
                   decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10))
                 )
               ),
@@ -1140,14 +1225,14 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                             return Padding(
                               padding: EdgeInsets.only(right: size.width * 0.03),
                               child: ChoiceChip(
-                                label: Text(type['id'], style: TextStyle(color: isSelected ? Colors.black : textColor, fontWeight: FontWeight.w900, fontSize: size.width * 0.035)),
+                                label: Text(type['id'], style: TextStyle(color: isSelected ? Colors.black : textColor, fontWeight: FontWeight.w800, fontSize: size.width * 0.035)),
                                 selected: isSelected,
                                 padding: EdgeInsets.symmetric(horizontal: size.width * 0.035, vertical: size.height * 0.015),
                                 onSelected: (val) {
                                   if (val) setState(() { selectedType = type['id']; selectedNextDate = null; });
                                 },
                                 selectedColor: color,
-                                backgroundColor: const Color(0xFF050505),
+                                backgroundColor: Colors.white.withOpacity(0.05),
                                 avatar: Icon(type['icon'], color: isSelected ? Colors.black : color, size: size.width * 0.05),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                                 side: BorderSide(color: isSelected ? color : Colors.white.withOpacity(0.1), width: 1.5),
@@ -1159,7 +1244,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                       SizedBox(height: size.height * 0.025),
 
                       InkWell(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(24),
                         onTap: () async {
                           final date = await showDatePicker(
                             context: context, 
@@ -1171,27 +1256,27 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                           if (date != null) setState(() => selectedRecordDate = date);
                         },
                         child: Container(
-                          padding: EdgeInsets.symmetric(horizontal: size.width * 0.05, vertical: size.height * 0.02),
+                          padding: EdgeInsets.symmetric(horizontal: size.width * 0.05, vertical: size.height * 0.025),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF050505), 
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: const Color(0xFF00E676).withOpacity(0.3), width: 1.5)
+                            color: Colors.white.withOpacity(0.03), 
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: const Color(0xFF00FFA3).withOpacity(0.5), width: 1.5)
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.event_available_rounded, color: const Color(0xFF00E676), size: size.width * 0.07),
+                              Icon(Icons.event_available_rounded, color: const Color(0xFF00FFA3), size: size.width * 0.07),
                               SizedBox(width: size.width * 0.04),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text("İşlem Tarihi", style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13, fontWeight: FontWeight.w700)),
+                                    Text("İşlem Tarihi", style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 14, fontWeight: FontWeight.w600)),
                                     const SizedBox(height: 4),
-                                    Text(DateFormat('dd.MM.yyyy').format(selectedRecordDate), style: TextStyle(fontSize: size.width * 0.04, fontWeight: FontWeight.w900, color: textColor)),
+                                    Text(DateFormat('dd.MM.yyyy').format(selectedRecordDate), style: TextStyle(fontSize: size.width * 0.045, fontWeight: FontWeight.w800, color: textColor)),
                                   ],
                                 ),
                               ),
-                              const Icon(Icons.edit_calendar_rounded, color: Color(0xFF00E676), size: 20),
+                              const Icon(Icons.edit_calendar_rounded, color: Color(0xFF00FFA3), size: 20),
                             ],
                           ),
                         ),
@@ -1200,7 +1285,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
 
                       if (_supportsNextDate(selectedType)) ...[
                         InkWell(
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(24),
                           onTap: () async {
                             final date = await showDatePicker(
                               context: context, 
@@ -1212,23 +1297,23 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                             if (date != null) setState(() => selectedNextDate = date);
                           },
                           child: Container(
-                            padding: EdgeInsets.symmetric(horizontal: size.width * 0.05, vertical: size.height * 0.02),
+                            padding: EdgeInsets.symmetric(horizontal: size.width * 0.05, vertical: size.height * 0.025),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF050505), 
-                              borderRadius: BorderRadius.circular(20),
+                              color: Colors.white.withOpacity(0.03), 
+                              borderRadius: BorderRadius.circular(24),
                               border: Border.all(color: Colors.white.withOpacity(0.1))
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.calendar_month_rounded, color: const Color(0xFF00E676), size: size.width * 0.07),
+                                Icon(Icons.calendar_month_rounded, color: const Color(0xFF00FFA3), size: size.width * 0.07),
                                 SizedBox(width: size.width * 0.04),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(_getNextDateLabel(selectedType), style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13, fontWeight: FontWeight.w700)),
+                                      Text(_getNextDateLabel(selectedType), style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13, fontWeight: FontWeight.w600)),
                                       const SizedBox(height: 4),
-                                      Text(selectedNextDate != null ? DateFormat('dd.MM.yyyy').format(selectedNextDate!) : "Tarih Seçilmedi", style: TextStyle(fontSize: size.width * 0.04, fontWeight: FontWeight.w900, color: textColor)),
+                                      Text(selectedNextDate != null ? DateFormat('dd.MM.yyyy').format(selectedNextDate!) : "Tarih Seçilmedi", style: TextStyle(fontSize: size.width * 0.04, fontWeight: FontWeight.w800, color: textColor)),
                                     ],
                                   ),
                                 ),
@@ -1239,15 +1324,15 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                         if (selectedNextDate != null) ...[
                           SizedBox(height: size.height * 0.015),
                           Container(
-                            decoration: BoxDecoration(color: const Color(0xFF00E676).withOpacity(0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFF00E676).withOpacity(0.2))),
+                            decoration: BoxDecoration(color: const Color(0xFF00FFA3).withOpacity(0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFF00FFA3).withOpacity(0.2))),
                             child: SwitchListTile(
                               value: enableNotification,
                               onChanged: (val) => setState(() => enableNotification = val),
-                              activeColor: const Color(0xFF00E676),
-                              activeTrackColor: const Color(0xFF00E676).withOpacity(0.4),
+                              activeColor: const Color(0xFF00FFA3),
+                              activeTrackColor: const Color(0xFF00FFA3).withOpacity(0.4),
                               contentPadding: EdgeInsets.symmetric(horizontal: size.width * 0.05, vertical: size.height * 0.005),
-                              title: const Text("Cihazda Hatırlatıcı Kur", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Colors.white)),
-                              secondary: const Icon(Icons.notifications_active_rounded, color: Color(0xFF00E676), size: 24),
+                              title: const Text("Cihazda Hatırlatıcı Kur", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Colors.white)),
+                              secondary: const Icon(Icons.notifications_active_rounded, color: Color(0xFF00FFA3), size: 24),
                             ),
                           ),
                         ],
@@ -1256,82 +1341,19 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                       
                       Row(
                         children: [
-                          Expanded(
-                            child: TextField(
-                              controller: currentKmController,
-                              keyboardType: TextInputType.number,
-                              textInputAction: TextInputAction.next,
-                              style: TextStyle(color: textColor, fontWeight: FontWeight.w900, fontSize: size.width * 0.04),
-                              decoration: InputDecoration(
-                                labelText: "Güncel KM",
-                                labelStyle: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
-                                prefixIcon: Icon(Icons.speed_rounded, color: const Color(0xFF00E676), size: size.width * 0.06),
-                                filled: true,
-                                fillColor: const Color(0xFF050505),
-                                contentPadding: EdgeInsets.symmetric(vertical: size.height * 0.025),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-                                focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(20)), borderSide: BorderSide(color: Color(0xFF00E676), width: 2)),
-                              ),
-                            ),
-                          ),
+                          Expanded(child: _buildGlassInput(currentKmController, "Güncel KM", Icons.speed_rounded, const Color(0xFF00FFA3), type: TextInputType.number)),
                           if (selectedType == 'Periyodik Bakım') ...[
                             SizedBox(width: size.width * 0.04),
-                            Expanded(
-                              child: TextField(
-                                controller: maintenanceKmController,
-                                keyboardType: TextInputType.number,
-                                textInputAction: TextInputAction.next,
-                                style: TextStyle(color: textColor, fontWeight: FontWeight.w900, fontSize: size.width * 0.04),
-                                decoration: InputDecoration(
-                                  labelText: "Sonraki Bakım",
-                                  labelStyle: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
-                                  prefixIcon: Icon(Icons.build_circle_rounded, color: const Color(0xFFF59E0B), size: size.width * 0.06),
-                                  filled: true,
-                                  fillColor: const Color(0xFF050505),
-                                  contentPadding: EdgeInsets.symmetric(vertical: size.height * 0.025),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-                                  focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(20)), borderSide: BorderSide(color: Color(0xFFF59E0B), width: 2)),
-                                ),
-                              ),
-                            ),
+                            Expanded(child: _buildGlassInput(maintenanceKmController, "Sonraki Bakım", Icons.build_circle_rounded, const Color(0xFFF59E0B), type: TextInputType.number)),
                           ]
                         ],
                       ),
                       SizedBox(height: size.height * 0.02),
                       
-                      TextField(
-                        controller: costController,
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.next,
-                        style: TextStyle(color: const Color(0xFF00E676), fontWeight: FontWeight.w900, fontSize: size.width * 0.04),
-                        decoration: InputDecoration(
-                          labelText: "Maliyet / Tutar (TL)",
-                          labelStyle: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
-                          prefixIcon: Icon(Icons.payments_rounded, color: const Color(0xFF00E676), size: size.width * 0.06),
-                          filled: true,
-                          fillColor: const Color(0xFF050505),
-                          contentPadding: EdgeInsets.symmetric(vertical: size.height * 0.025),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-                          focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(20)), borderSide: BorderSide(color: Color(0xFF00E676), width: 2)),
-                        ),
-                      ),
+                      _buildGlassInput(costController, "Maliyet / Tutar (TL)", Icons.payments_rounded, const Color(0xFF00FFA3), type: TextInputType.number),
                       SizedBox(height: size.height * 0.02),
                       
-                      TextField(
-                        controller: descController,
-                        maxLines: 3,
-                        textInputAction: TextInputAction.done,
-                        style: TextStyle(color: textColor, fontSize: size.width * 0.038, fontWeight: FontWeight.w600),
-                        decoration: InputDecoration(
-                          labelText: selectedType == 'Yakıt Alımı' ? "Alınan Litre, İstasyon vb." : "Yapılan İşlemler / Notlar",
-                          labelStyle: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
-                          alignLabelWithHint: true,
-                          filled: true,
-                          fillColor: const Color(0xFF050505),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-                          focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(20)), borderSide: BorderSide(color: Color(0xFF00E676), width: 2)),
-                        ),
-                      ),
+                      _buildGlassInput(descController, selectedType == 'Yakıt Alımı' ? "Alınan Litre, İstasyon vb." : "Yapılan İşlemler / Notlar", Icons.notes_rounded, Colors.white, maxLines: 3),
                       SizedBox(height: size.height * 0.025),
                       
                       Row(
@@ -1343,19 +1365,19 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                                 selectedImage = await picker.pickImage(source: ImageSource.gallery);
                                 setState(() {});
                               },
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(24),
                               child: Container(
                                 padding: EdgeInsets.symmetric(vertical: size.height * 0.025),
                                 decoration: BoxDecoration(
-                                  color: selectedImage != null ? const Color(0xFF00E676).withOpacity(0.1) : const Color(0xFF050505),
-                                  border: Border.all(color: selectedImage != null ? const Color(0xFF00E676) : Colors.white24, width: 1.5),
-                                  borderRadius: BorderRadius.circular(20)
+                                  color: selectedImage != null ? const Color(0xFF00FFA3).withOpacity(0.1) : Colors.white.withOpacity(0.03),
+                                  border: Border.all(color: selectedImage != null ? const Color(0xFF00FFA3) : Colors.white.withOpacity(0.1), width: 1.5),
+                                  borderRadius: BorderRadius.circular(24)
                                 ),
                                 child: Column(
                                   children: [
-                                    Icon(selectedImage == null ? Icons.add_photo_alternate_rounded : Icons.check_circle_rounded, color: selectedImage == null ? Colors.white70 : const Color(0xFF00E676), size: size.width * 0.08),
+                                    Icon(selectedImage == null ? Icons.add_photo_alternate_rounded : Icons.check_circle_rounded, color: selectedImage == null ? Colors.white70 : const Color(0xFF00FFA3), size: size.width * 0.08),
                                     SizedBox(height: size.height * 0.01),
-                                    Text(selectedImage == null ? "Fotoğraf Değiştir" : "Fotoğraf Seçildi", style: TextStyle(fontWeight: FontWeight.w900, fontSize: size.width * 0.032, color: selectedImage == null ? Colors.white70 : const Color(0xFF00E676))),
+                                    Text(selectedImage == null ? "Fotoğraf Değiştir" : "Fotoğraf Seçildi", style: TextStyle(fontWeight: FontWeight.w800, fontSize: size.width * 0.032, color: selectedImage == null ? Colors.white70 : const Color(0xFF00FFA3))),
                                   ],
                                 ),
                               ),
@@ -1369,19 +1391,19 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                                 if (result != null) selectedDoc = result.files.first;
                                 setState(() {});
                               },
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(24),
                               child: Container(
                                 padding: EdgeInsets.symmetric(vertical: size.height * 0.025),
                                 decoration: BoxDecoration(
-                                  color: selectedDoc != null ? const Color(0xFFB388FF).withOpacity(0.1) : const Color(0xFF050505),
-                                  border: Border.all(color: selectedDoc != null ? const Color(0xFFB388FF) : Colors.white24, width: 1.5),
-                                  borderRadius: BorderRadius.circular(20)
+                                  color: selectedDoc != null ? const Color(0xFFB388FF).withOpacity(0.1) : Colors.white.withOpacity(0.03),
+                                  border: Border.all(color: selectedDoc != null ? const Color(0xFFB388FF) : Colors.white.withOpacity(0.1), width: 1.5),
+                                  borderRadius: BorderRadius.circular(24)
                                 ),
                                 child: Column(
                                   children: [
                                     Icon(selectedDoc == null ? Icons.upload_file_rounded : Icons.check_circle_rounded, color: selectedDoc == null ? Colors.white70 : const Color(0xFFB388FF), size: size.width * 0.08),
                                     SizedBox(height: size.height * 0.01),
-                                    Text(selectedDoc == null ? "Belge Değiştir" : "Belge Seçildi", style: TextStyle(fontWeight: FontWeight.w900, fontSize: size.width * 0.032, color: selectedDoc == null ? Colors.white70 : const Color(0xFFB388FF))),
+                                    Text(selectedDoc == null ? "Belge Değiştir" : "Belge Seçildi", style: TextStyle(fontWeight: FontWeight.w800, fontSize: size.width * 0.032, color: selectedDoc == null ? Colors.white70 : const Color(0xFFB388FF))),
                                   ],
                                 ),
                               ),
@@ -1393,21 +1415,21 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                       
                       Container(
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          gradient: const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00C853)]),
-                          boxShadow: [BoxShadow(color: const Color(0xFF00C853).withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 8))],
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [BoxShadow(color: const Color(0xFF00FFA3).withOpacity(0.25), blurRadius: 30, offset: const Offset(0, 10))],
                         ),
                         child: ElevatedButton(
                           onPressed: isSaving ? null : _saveRecord,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
+                            backgroundColor: const Color(0xFF00FFA3),
+                            foregroundColor: Colors.black,
+                            elevation: 0,
                             padding: EdgeInsets.symmetric(vertical: size.height * 0.025),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                           ),
                           child: isSaving 
                             ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3)) 
-                            : Text(isEditing ? "Değişiklikleri Kaydet" : "İşlemi Kaydet", style: TextStyle(fontSize: size.width * 0.045, fontWeight: FontWeight.w900, color: Colors.black, letterSpacing: 0.5)),
+                            : Text(isEditing ? "Değişiklikleri Kaydet" : "İşlemi Kaydet", style: TextStyle(fontSize: size.width * 0.045, fontWeight: FontWeight.w900, color: Colors.black, letterSpacing: -0.3)),
                         ),
                       )
                     ],

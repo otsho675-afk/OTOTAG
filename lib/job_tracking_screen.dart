@@ -49,6 +49,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   final MapController _mapController = MapController();
   int _selectedRating = 5;
 
+  List<LatLng> routePoints = []; // OSRM Rota noktaları
+
   Timer? _timer;
   final String _baseUrl = "https://eliteagency.sbs/api.php";
   
@@ -80,6 +82,52 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     super.dispose();
   }
 
+  // --- ANİMASYONLU KAMERA HAREKETİ ---
+  void _animatedMapMove(LatLng destLocation, double destZoom) {
+    final latTween = Tween<double>(begin: _mapController.camera.center.latitude, end: destLocation.latitude);
+    final lngTween = Tween<double>(begin: _mapController.camera.center.longitude, end: destLocation.longitude);
+    final zoomTween = Tween<double>(begin: _mapController.camera.zoom, end: destZoom);
+
+    final controller = AnimationController(duration: const Duration(milliseconds: 800), vsync: this);
+    final Animation<double> animation = CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn);
+
+    controller.addListener(() {
+      _mapController.move(
+        LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)),
+        zoomTween.evaluate(animation),
+      );
+    });
+
+    animation.addStatusListener((status) {
+      if (status == AnimationStatus.completed || status == AnimationStatus.dismissed) {
+        controller.dispose();
+      }
+    });
+
+    controller.forward();
+  }
+
+  // --- OSRM İLE GERÇEK SOKAK ROTASI ÇİZİMİ ---
+  Future<void> _fetchRoute(double lat1, double lng1, double lat2, double lng2) async {
+    try {
+      final url = Uri.parse("http://router.project-osrm.org/route/v1/driving/$lng1,$lat1;$lng2,$lat2?geometries=geojson");
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['routes'] != null && data['routes'].isNotEmpty) {
+          final coords = data['routes'][0]['geometry']['coordinates'] as List;
+          if (mounted) {
+            setState(() {
+              routePoints = coords.map((c) => LatLng(c[1], c[0])).toList();
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Rota alınamadı: $e");
+    }
+  }
+
   Future<void> _updateProviderLiveLocation() async {
     if (widget.userType != 'provider' || widget.userId == null) return;
     
@@ -100,9 +148,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           "lng": position.longitude.toString()
         }
       );
-    } catch (e) {
-      // Hata durumunda yoksay
-    }
+    } catch (e) {}
   }
 
   Future<void> _cancelJob() async {
@@ -234,13 +280,18 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
             double distMeters = Geolocator.distanceBetween(customerLat, customerLng, providerLat, providerLng);
             distanceInKm = distMeters / 1000;
             
+            // Rota yoksa çek
+            if (routePoints.isEmpty) {
+               _fetchRoute(customerLat, customerLng, providerLat, providerLng);
+            }
+
             try {
               double centerLat = (customerLat + providerLat) / 2;
               double centerLng = (customerLng + providerLng) / 2;
-              _mapController.move(LatLng(centerLat, centerLng), 14.0);
+              _animatedMapMove(LatLng(centerLat, centerLng), 14.0); // Zıplama yerine animasyon
             } catch(e){}
           } else if (customerLat != 0.0) {
-            try { _mapController.move(LatLng(customerLat, customerLng), 15.0); } catch(e){}
+            try { _animatedMapMove(LatLng(customerLat, customerLng), 15.0); } catch(e){}
           }
 
           if (jobStatus == 'completed' && oldStatus != 'completed' && widget.userType == 'customer' && !isRated) {
@@ -718,19 +769,25 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         initialZoom: 14.0,
       ),
       children: [
-        ColorFiltered(
-          colorFilter: const ColorFilter.matrix([
-            -0.9,    0,    0, 0, 255,
-               0, -0.9,    0, 0, 255,
-               0,    0, -0.9, 0, 255,
-               0,    0,    0, 1,   0,
-          ]),
-          child: TileLayer(
-            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            userAgentPackageName: 'com.berdas.otoyardim',
-          ),
+        // Koyu Tema Harita Katmanı (CartoDB)
+        TileLayer(
+          urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+          subdomains: const ['a', 'b', 'c', 'd'],
+          userAgentPackageName: 'com.berdas.otoyardim',
         ),
-        if (linePoints.length == 2)
+        
+        // Gerçek Rota Çizimi
+        if (routePoints.isNotEmpty)
+          PolylineLayer(
+            polylines: [
+              Polyline(
+                points: routePoints,
+                color: const Color(0xFF00E676),
+                strokeWidth: 5.0,
+              )
+            ],
+          )
+        else if (linePoints.length == 2)
           PolylineLayer(
             polylines: [
               Polyline(
@@ -741,6 +798,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
               )
             ],
           ),
+          
         MarkerLayer(markers: mapMarkers),
       ],
     );

@@ -83,6 +83,27 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     });
   }
 
+  void _animatedMapMove(LatLng destLocation, double destZoom) {
+    final latTween = Tween<double>(begin: mapController.camera.center.latitude, end: destLocation.latitude);
+    final lngTween = Tween<double>(begin: mapController.camera.center.longitude, end: destLocation.longitude);
+    final zoomTween = Tween<double>(begin: mapController.camera.zoom, end: destZoom);
+
+    final controller = AnimationController(duration: const Duration(milliseconds: 800), vsync: this);
+    final Animation<double> animation = CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn);
+
+    controller.addListener(() {
+      mapController.move(LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)), zoomTween.evaluate(animation));
+    });
+
+    animation.addStatusListener((status) {
+      if (status == AnimationStatus.completed || status == AnimationStatus.dismissed) {
+        controller.dispose();
+      }
+    });
+
+    controller.forward();
+  }
+
   Future<void> _checkActiveJob() async {
     try {
       final res = await http.get(Uri.parse("$baseUrl?action=check_active_job&user_id=${widget.providerId}&user_type=provider"));
@@ -319,7 +340,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             });
 
             Future.delayed(const Duration(milliseconds: 300), () {
-              mapController.move(LatLng(double.parse(newJobData['latitude'].toString()), double.parse(newJobData['longitude'].toString())), 16.5);
+              _animatedMapMove(LatLng(double.parse(newJobData['latitude'].toString()), double.parse(newJobData['longitude'].toString())), 16.5);
               if (_pageController.hasClients) {
                 _pageController.animateToPage(_currentJobIndex, duration: const Duration(milliseconds: 600), curve: Curves.fastOutSlowIn);
               }
@@ -1271,17 +1292,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                       }
                     ),
                     children: [
-                       ColorFiltered(
-                          colorFilter: const ColorFilter.matrix([
-                            -0.9,    0,    0, 0, 255,
-                               0, -0.9,    0, 0, 255,
-                               0,    0, -0.9, 0, 255,
-                               0,    0,    0, 1,   0,
-                          ]),
-                          child: TileLayer(
-                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            userAgentPackageName: 'com.berdas.otoyardim', 
-                          ),
+                        TileLayer(
+                          urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+                          subdomains: const ['a', 'b', 'c', 'd'],
+                          userAgentPackageName: 'com.berdas.otoyardim',
                         ),
                       if (isOnline) MarkerLayer(markers: _buildMarkers()),
                     ],
@@ -1379,7 +1393,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                       elevation: 6,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       child: const Icon(Icons.my_location_rounded, color: Color(0xFF10B981)), 
-                      onPressed: () { if (currentPosition != null) mapController.move(LatLng(currentPosition!.latitude, currentPosition!.longitude), 15.0); }
+                      onPressed: () { if (currentPosition != null) _animatedMapMove(LatLng(currentPosition!.latitude, currentPosition!.longitude), 15.0); }
                     ),
                   ),
 
@@ -1403,7 +1417,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                 if (_flitchingJobId == int.parse(job['id'].toString())) {
                                   _flitchingJobId = null;
                                 }
-                                mapController.move(LatLng(double.tryParse(job['latitude'].toString()) ?? 0, double.tryParse(job['longitude'].toString()) ?? 0), 15.5);
+                                _animatedMapMove(LatLng(double.tryParse(job['latitude'].toString()) ?? 0, double.tryParse(job['longitude'].toString()) ?? 0), 15.5);
                               });
                             },
                             itemBuilder: (context, index) {

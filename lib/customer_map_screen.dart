@@ -5,7 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:ui';
-import 'dart:async'; // StreamSubscription için eklendi
+import 'dart:async'; 
 import 'dart:math' as math; 
 import 'customer_bids_screen.dart';
 
@@ -23,7 +23,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
   final TextEditingController problemController = TextEditingController();
   
   Position? currentPosition;
-  StreamSubscription<Position>? _positionStream; // Canlı konum akışı için
+  StreamSubscription<Position>? _positionStream; 
   
   bool isLoading = true;
   bool isCreatingJob = false;
@@ -51,13 +51,13 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     _radarController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2500))..repeat();
     _buttonPulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat(reverse: true);
     
-    _initLocationStream(); // Sürekli konum akışını başlat
+    _initLocationStream(); 
     _checkVehicleReminders(); 
   }
 
   @override
   void dispose() {
-    _positionStream?.cancel(); // Bellek sızıntısını önlemek için stream iptal ediliyor
+    _positionStream?.cancel(); 
     problemController.dispose();
     _radarController.dispose();
     _buttonPulseController.dispose();
@@ -99,9 +99,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
           });
         }
       }
-    } catch (e) {
-      debugPrint("Hatırlatıcı çekilirken hata: $e");
-    }
+    } catch (e) {}
   }
 
   void _showNotificationsDialog() {
@@ -198,10 +196,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
         }
       }
 
-      // Canlı konum takibi (Müşteri hareket ettikçe radar güncellenir)
       const LocationSettings locationSettings = LocationSettings(
         accuracy: LocationAccuracy.high,
-        distanceFilter: 3, // Her 3 metrede bir konumu güncelle
+        distanceFilter: 3, 
       );
 
       _positionStream = Geolocator.getPositionStream(locationSettings: locationSettings).listen((Position position) {
@@ -211,7 +208,6 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
             currentPosition = position;
             isLoading = false;
 
-            // İlk konum bulunduğunda haritayı oraya merkezle
             if (isFirstLoad) {
               mapController.move(LatLng(position.latitude, position.longitude), 15.0);
             }
@@ -281,9 +277,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
           customerCity = address['province'] ?? address['city'] ?? address['town'] ?? address['county'] ?? "Bilinmiyor";
         }
       }
-    } catch (e) {
-      debugPrint("Şehir tespit edilemedi: $e");
-    }
+    } catch (e) {}
 
     try {
       final response = await http.post(
@@ -382,7 +376,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                       ),
                       children: [
                         TileLayer(
-                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
                           userAgentPackageName: 'com.example.ototag',
                         ),
                         MarkerLayer(

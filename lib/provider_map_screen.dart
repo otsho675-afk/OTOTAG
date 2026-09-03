@@ -44,11 +44,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   int? _flitchingJobId;
   bool isCheckingSubscription = false;
 
-  // Bölgede Ara Mekanizması İçin
   LatLng? _lastSearchCenter;
   bool _showSearchAreaBtn = false;
 
-  // Akıcı Marker (Sliding & Heading) Değişkenleri
   LatLng? _animatedProviderPos;
   LatLng? _oldProviderPos;
   LatLng? _targetProviderPos;
@@ -86,7 +84,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     _pageController = PageController(viewportFraction: 0.90);
     _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 400))..repeat(reverse: true);
     
-    // Pürüzsüz kayma animasyonu ve dönüş
     _slideController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))
       ..addListener(() {
         if (_oldProviderPos != null && _targetProviderPos != null && mounted) {
@@ -115,7 +112,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
           "lng": currentPosition!.longitude.toString()
         });
         
-        // Eğer harita kaydırılmadıysa güncel işleri çek
         if (!_isMapPannedAway() && !isRefreshing) {
           _fetchNearbyJobs(isAuto: true);
         }
@@ -282,7 +278,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             currentPosition = position;
             isLoading = false;
 
-            // Anlık animasyon için yeni konumu hedefle
             LatLng newPos = LatLng(position.latitude, position.longitude);
             if (_animatedProviderPos == null) {
               _animatedProviderPos = newPos;
@@ -1003,7 +998,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     }
   }
 
-  // Animasyonlu Ok İkonu (Sliding & Heading)
   List<Marker> _buildProviderMarker() {
     if (_animatedProviderPos == null) return [];
     return [
@@ -1020,7 +1014,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
               ),
               child: Center(
                 child: Transform.rotate(
-                  angle: _animatedHeading * (math.pi / 180), // Telefonun veya gidilen yöne dönüş
+                  angle: _animatedHeading * (math.pi / 180), 
                   child: Container(
                     width: 32, height: 32,
                     decoration: BoxDecoration(
@@ -1367,7 +1361,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                     ),
                     children: [
                        TileLayer(
-                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
                           userAgentPackageName: 'com.berdas.otoyardim', 
                         ),
                       

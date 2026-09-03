@@ -39,11 +39,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   double providerLng = 0.0;
   double distanceInKm = 0.0;
   
-  // OSRM API Rotası 
   List<LatLng> routePoints = [];
   LatLng? lastRoutedProviderPos;
   
-  // Akıcı Marker (Sliding & Heading) Değişkenleri
   LatLng? _animatedProviderPos;
   LatLng? _oldProviderPos;
   LatLng? _targetProviderPos;
@@ -75,7 +73,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat(reverse: true);
     _glowController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000))..repeat(reverse: true);
     
-    // Pürüzsüz kayma animasyonu ve dönüş
     _slideController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))
       ..addListener(() {
         if (_oldProviderPos != null && _targetProviderPos != null && mounted) {
@@ -131,19 +128,17 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           "user_id": widget.userId.toString(),
           "lat": position.latitude.toString(),
           "lng": position.longitude.toString(),
-          "heading": position.heading.toString(), // Heading'i de yolla
+          "heading": position.heading.toString(),
         }
       );
-    } catch (e) {
-      // Hata durumunda yoksay
-    }
+    } catch (e) {}
   }
 
   Future<void> _fetchRoute() async {
     if (customerLat == 0.0 || providerLat == 0.0) return;
     
     try {
-      final url = 'http://router.project-osrm.org/route/v1/driving/$customerLng,$customerLat;$providerLng,$providerLat?geometries=geojson';
+      final url = 'http://routing.openstreetmap.de/routed-car/route/v1/driving/$customerLng,$customerLat;$providerLng,$providerLat?geometries=geojson';
       final response = await http.get(Uri.parse(url));
       
       if (response.statusCode == 200) {
@@ -278,7 +273,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           providerLng = double.tryParse(data['provider_lng']?.toString() ?? "0") ?? 0.0;
           double pHeading = double.tryParse(data['provider_heading']?.toString() ?? "0") ?? 0.0;
 
-          // Ustanın konumu geldiğinde animasyonlu kaydırmayı (Sliding) tetikle
           if (providerLat != 0.0 && providerLng != 0.0) {
             LatLng newPos = LatLng(providerLat, providerLng);
             if (_animatedProviderPos == null) {
@@ -811,7 +805,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       ),
       children: [
         TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
           userAgentPackageName: 'com.berdas.otoyardim',
         ),
         

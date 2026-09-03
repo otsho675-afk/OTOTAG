@@ -138,7 +138,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     if (customerLat == 0.0 || providerLat == 0.0) return;
     
     try {
-      final url = 'http://routing.openstreetmap.de/routed-car/route/v1/driving/$customerLng,$customerLat;$providerLng,$providerLat?geometries=geojson';
+      // MIXED CONTENT (HTTP/HTTPS) HATASI ÇÖZÜMÜ: https:// kullanıldı
+      final url = 'https://routing.openstreetmap.de/routed-car/route/v1/driving/$customerLng,$customerLat;$providerLng,$providerLat?geometries=geojson';
       final response = await http.get(Uri.parse(url));
       
       if (response.statusCode == 200) {

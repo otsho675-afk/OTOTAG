@@ -446,6 +446,26 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     }
   }
 
+  void _toggleOnlineStatus(bool value) {
+    if (value) {
+      if (!isCheckingSubscription && !isSuspended) {
+        _handleGoOnline();
+      } else if (isSuspended) {
+        _showSuspensionSheet();
+      }
+    } else {
+      setState(() {
+        isOnline = false;
+        _showJobCard = false;
+        _showSearchAreaBtn = false;
+        jobList.clear();
+        knownJobIds.clear();
+        _flitchingJobId = null;
+        _fetchEarningsAndPerformance(); 
+      });
+    }
+  }
+
   void _showPerformancePanel() {
     showModalBottomSheet(
       context: context,
@@ -1195,17 +1215,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     );
   }
 
-  Widget _buildTopIconBtn(IconData icon, Color color, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color: color.withOpacity(0.12), shape: BoxShape.circle),
-        child: Icon(icon, color: color, size: 20)
-      ),
-    );
-  }
-
   Widget _buildTopButton(IconData icon, Color color, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
@@ -1287,37 +1296,40 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
                 const SizedBox(height: 24),
 
-                GestureDetector(
-                  onTap: isCheckingSubscription ? null : _handleGoOnline,
-                  child: AnimatedBuilder(
-                    animation: _pulseController,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: 1.0 + (_pulseController.value * 0.02),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 20),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            gradient: isSuspended 
-                                ? const LinearGradient(colors: [Color(0xFFEF4444), Color(0xFF991B1B)])
-                                : const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)]),
-                            boxShadow: [
-                              BoxShadow(color: isSuspended ? const Color(0xFF991B1B).withOpacity(0.35) : const Color(0xFF059669).withOpacity(0.35), blurRadius: 20, offset: const Offset(0, 8))
-                            ],
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withOpacity(0.08)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            isSuspended ? Icons.block_rounded : Icons.power_settings_new_rounded, 
+                            color: isSuspended ? const Color(0xFFEF4444) : const Color(0xFF94A3B8), 
+                            size: 28
                           ),
-                          child: isCheckingSubscription
-                              ? const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3)))
-                              : Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(isSuspended ? Icons.block_rounded : Icons.power_settings_new_rounded, size: 24, color: Colors.white),
-                                    const SizedBox(width: 10),
-                                    Text(isSuspended ? "HESAP ASKIYA ALINDI" : "ÇEVRİMİÇİ OL", style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-                                  ],
-                                ),
-                        ),
-                      );
-                    }
+                          const SizedBox(width: 12),
+                          Text(
+                            isSuspended ? "Hesap Askıda" : "İş Alımına Açık", 
+                            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)
+                          ),
+                        ],
+                      ),
+                      isCheckingSubscription 
+                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Color(0xFF10B981), strokeWidth: 2))
+                        : Switch(
+                            value: isOnline,
+                            activeColor: const Color(0xFF10B981),
+                            inactiveThumbColor: const Color(0xFF94A3B8),
+                            inactiveTrackColor: Colors.black26,
+                            onChanged: _toggleOnlineStatus,
+                          ),
+                    ],
                   ),
                 ),
               ],
@@ -1482,17 +1494,14 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                     children: [
                                       _buildPerformanceBadge(),
                                       const SizedBox(width: 10),
-                                      _buildTopIconBtn(Icons.power_settings_new_rounded, const Color(0xFFEF4444), () {
-                                        setState(() {
-                                          isOnline = false;
-                                          _showJobCard = false;
-                                          _showSearchAreaBtn = false;
-                                          jobList.clear();
-                                          knownJobIds.clear();
-                                          _flitchingJobId = null;
-                                          _fetchEarningsAndPerformance(); 
-                                        });
-                                      }),
+                                      Switch(
+                                        value: isOnline,
+                                        activeColor: const Color(0xFF10B981),
+                                        activeTrackColor: const Color(0xFF10B981).withOpacity(0.4),
+                                        inactiveThumbColor: const Color(0xFFEF4444),
+                                        inactiveTrackColor: const Color(0xFFEF4444).withOpacity(0.4),
+                                        onChanged: _toggleOnlineStatus,
+                                      ),
                                     ],
                                   )
                                 ],

@@ -23,6 +23,7 @@ dependencies:
   flutter_local_notifications: ^17.2.3
   in_app_purchase: ^3.1.5
   geocoding: ^5.0.0
+  flutter_map_marker_cluster: ^1.4.0
 
 dev_dependencies:
   flutter_test:

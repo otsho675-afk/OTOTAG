@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'dart:math' as math;
 import 'provider_map_screen.dart'; 
 import 'customer_dashboard_screen.dart';
 import 'chat_screen.dart';
@@ -38,10 +39,19 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   double providerLng = 0.0;
   double distanceInKm = 0.0;
   
-  // OSRM API Rotası için eklendi
+  // OSRM API Rotası 
   List<LatLng> routePoints = [];
   LatLng? lastRoutedProviderPos;
   
+  // Akıcı Marker (Sliding & Heading) Değişkenleri
+  LatLng? _animatedProviderPos;
+  LatLng? _oldProviderPos;
+  LatLng? _targetProviderPos;
+  double _animatedHeading = 0.0;
+  double _oldHeading = 0.0;
+  double _targetHeading = 0.0;
+  late AnimationController _slideController;
+
   int? providerId;
   int? customerId;
   bool isRated = false;
@@ -65,6 +75,24 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat(reverse: true);
     _glowController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000))..repeat(reverse: true);
     
+    // Pürüzsüz kayma animasyonu ve dönüş
+    _slideController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))
+      ..addListener(() {
+        if (_oldProviderPos != null && _targetProviderPos != null && mounted) {
+          setState(() {
+            _animatedProviderPos = LatLng(
+              _oldProviderPos!.latitude + (_targetProviderPos!.latitude - _oldProviderPos!.latitude) * _slideController.value,
+              _oldProviderPos!.longitude + (_targetProviderPos!.longitude - _oldProviderPos!.longitude) * _slideController.value,
+            );
+            
+            double diff = (_targetHeading - _oldHeading) % 360.0;
+            if (diff > 180.0) diff -= 360.0;
+            else if (diff < -180.0) diff += 360.0;
+            _animatedHeading = _oldHeading + diff * _slideController.value;
+          });
+        }
+      });
+
     _fetchJobStatus(); 
     _timer = Timer.periodic(const Duration(seconds: 3), (_) {
       _fetchJobStatus();
@@ -77,6 +105,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   @override
   void dispose() {
     _timer?.cancel();
+    _slideController.dispose();
     _pulseController.dispose();
     _glowController.dispose();
     _codeController.dispose();
@@ -101,7 +130,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         body: {
           "user_id": widget.userId.toString(),
           "lat": position.latitude.toString(),
-          "lng": position.longitude.toString()
+          "lng": position.longitude.toString(),
+          "heading": position.heading.toString(), // Heading'i de yolla
         }
       );
     } catch (e) {
@@ -109,7 +139,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     }
   }
 
-  // OSRM API üzerinden gerçek yol rotasını çeken fonksiyon
   Future<void> _fetchRoute() async {
     if (customerLat == 0.0 || providerLat == 0.0) return;
     
@@ -130,7 +159,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         }
       }
     } catch (e) {
-      // Hata durumunda veya internet yoksa eski düz çizgiye dön
       if (mounted) {
         setState(() {
           routePoints = [LatLng(customerLat, customerLng), LatLng(providerLat, providerLng)];
@@ -248,6 +276,24 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           
           providerLat = double.tryParse(data['provider_lat']?.toString() ?? "0") ?? 0.0;
           providerLng = double.tryParse(data['provider_lng']?.toString() ?? "0") ?? 0.0;
+          double pHeading = double.tryParse(data['provider_heading']?.toString() ?? "0") ?? 0.0;
+
+          // Ustanın konumu geldiğinde animasyonlu kaydırmayı (Sliding) tetikle
+          if (providerLat != 0.0 && providerLng != 0.0) {
+            LatLng newPos = LatLng(providerLat, providerLng);
+            if (_animatedProviderPos == null) {
+              _animatedProviderPos = newPos;
+              _targetProviderPos = newPos;
+              _animatedHeading = pHeading;
+              _targetHeading = pHeading;
+            } else if (_targetProviderPos != newPos || _targetHeading != pHeading) {
+              _oldProviderPos = _animatedProviderPos;
+              _targetProviderPos = newPos;
+              _oldHeading = _animatedHeading;
+              _targetHeading = pHeading;
+              _slideController.forward(from: 0.0);
+            }
+          }
 
           providerId = int.tryParse(data['provider_id']?.toString() ?? "0");
           customerId = int.tryParse(data['customer_id']?.toString() ?? "0");
@@ -268,14 +314,13 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
             double distMeters = Geolocator.distanceBetween(customerLat, customerLng, providerLat, providerLng);
             distanceInKm = distMeters / 1000;
             
-            // Eğer rota henüz çizilmediyse veya usta 50 metreden fazla hareket ettiyse yeni rota çek
             if (routePoints.isEmpty || lastRoutedProviderPos == null || 
                 Geolocator.distanceBetween(lastRoutedProviderPos!.latitude, lastRoutedProviderPos!.longitude, providerLat, providerLng) > 50) {
               _fetchRoute();
             }
 
             try {
-              if (routePoints.isEmpty) { // Eğer henüz rota çekilemediyse ortalamayı al
+              if (routePoints.isEmpty) { 
                 double centerLat = (customerLat + providerLat) / 2;
                 double centerLng = (customerLng + providerLng) / 2;
                 _mapController.move(LatLng(centerLat, centerLng), 14.0);
@@ -725,24 +770,32 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       ));
     }
 
-    if (providerLat != 0.0 && providerLng != 0.0 && (jobStatus == 'matched' || jobStatus == 'in_progress' || widget.userType == 'customer')) {
-      LatLng pPos = LatLng(providerLat, providerLng);
+    if (_animatedProviderPos != null && (jobStatus == 'matched' || jobStatus == 'in_progress' || widget.userType == 'customer')) {
       mapMarkers.add(Marker(
-        point: pPos,
-        width: 60, height: 60,
+        point: _animatedProviderPos!, 
+        width: 80, height: 80,
         child: AnimatedBuilder(
           animation: _pulseController,
           builder: (context, child) {
-            return Transform.scale(
-              scale: 1.0 + (_pulseController.value * 0.1),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00E676),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.black, width: 3),
-                  boxShadow: [BoxShadow(color: const Color(0xFF00E676).withOpacity(0.8), blurRadius: 15)]
+            return Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF00E676).withOpacity(0.2 - (_pulseController.value * 0.1)),
+              ),
+              child: Center(
+                child: Transform.rotate(
+                  angle: _animatedHeading * (math.pi / 180), 
+                  child: Container(
+                    width: 32, height: 32,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF059669),
+                      shape: BoxShape.circle, 
+                      border: Border.all(color: Colors.white, width: 2),
+                      boxShadow: [BoxShadow(color: const Color(0xFF059669).withOpacity(0.6), blurRadius: 10)]
+                    ),
+                    child: const Icon(Icons.navigation_rounded, color: Colors.white, size: 20),
+                  ),
                 ),
-                child: const Icon(Icons.handyman_rounded, color: Colors.black, size: 30),
               ),
             );
           }
@@ -757,14 +810,12 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         initialZoom: 14.0,
       ),
       children: [
-        // Doğal Karanlık Tema (ColorFilter yerine doğrudan CartoDB çinileri)
         TileLayer(
           urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
           subdomains: const ['a', 'b', 'c', 'd'],
           userAgentPackageName: 'com.berdas.otoyardim',
         ),
         
-        // OSRM API üzerinden çekilen Gerçek Sürüş Rotası
         if (routePoints.isNotEmpty)
           PolylineLayer(
             polylines: [
@@ -772,7 +823,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                 points: routePoints,
                 color: const Color(0xFF00E676),
                 strokeWidth: 4.0,
-                // Artık kesikli/noktalı (dashed) değil, kesintisiz gerçek yol çizimi.
               )
             ],
           ),

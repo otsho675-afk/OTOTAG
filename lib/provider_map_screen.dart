@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
@@ -10,6 +11,7 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import 'dart:convert';
 import 'dart:ui';
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:intl/intl.dart';
 import 'job_tracking_screen.dart';
 import 'profile_screen.dart';
@@ -29,7 +31,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
   
   Position? currentPosition;
-  StreamSubscription<Position>? _positionStream; // Canlı konum akışı için eklendi
+  StreamSubscription<Position>? _positionStream; 
 
   List<Map<String, dynamic>> jobList = [];
   Set<int> knownJobIds = {}; 
@@ -41,6 +43,19 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   int _currentJobIndex = 0;
   int? _flitchingJobId;
   bool isCheckingSubscription = false;
+
+  // Bölgede Ara Mekanizması İçin
+  LatLng? _lastSearchCenter;
+  bool _showSearchAreaBtn = false;
+
+  // Akıcı Marker (Sliding & Heading) Değişkenleri
+  LatLng? _animatedProviderPos;
+  LatLng? _oldProviderPos;
+  LatLng? _targetProviderPos;
+  double _animatedHeading = 0.0;
+  double _oldHeading = 0.0;
+  double _targetHeading = 0.0;
+  late AnimationController _slideController;
 
   Map<String, dynamic> earningsData = {};
   bool isEarningsLoading = true;
@@ -71,10 +86,27 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     _pageController = PageController(viewportFraction: 0.90);
     _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 400))..repeat(reverse: true);
     
-    _initLocationStream(); // Stream başlatılıyor
+    // Pürüzsüz kayma animasyonu ve dönüş
+    _slideController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))
+      ..addListener(() {
+        if (_oldProviderPos != null && _targetProviderPos != null && mounted) {
+          setState(() {
+            _animatedProviderPos = LatLng(
+              _oldProviderPos!.latitude + (_targetProviderPos!.latitude - _oldProviderPos!.latitude) * _slideController.value,
+              _oldProviderPos!.longitude + (_targetProviderPos!.longitude - _oldProviderPos!.longitude) * _slideController.value,
+            );
+            
+            double diff = (_targetHeading - _oldHeading) % 360.0;
+            if (diff > 180.0) diff -= 360.0;
+            else if (diff < -180.0) diff += 360.0;
+            _animatedHeading = _oldHeading + diff * _slideController.value;
+          });
+        }
+      });
+    
+    _initLocationStream(); 
     _fetchEarningsAndPerformance();
 
-    // UI stream ile anlık güncellenirken, sunucu 5 saniyede bir haberdar edilir
     _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (currentPosition != null && isOnline && !isSuspended) {
         http.post(Uri.parse("$baseUrl?action=update_location"), body: {
@@ -82,9 +114,19 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
           "lat": currentPosition!.latitude.toString(),
           "lng": currentPosition!.longitude.toString()
         });
-        if (!isRefreshing) _fetchNearbyJobs(isAuto: true);
+        
+        // Eğer harita kaydırılmadıysa güncel işleri çek
+        if (!_isMapPannedAway() && !isRefreshing) {
+          _fetchNearbyJobs(isAuto: true);
+        }
       }
     });
+  }
+
+  bool _isMapPannedAway() {
+    if (_lastSearchCenter == null || currentPosition == null) return false;
+    final dist = const Distance().as(LengthUnit.Meter, _lastSearchCenter!, LatLng(currentPosition!.latitude, currentPosition!.longitude));
+    return dist > 500; 
   }
 
   Future<void> _checkActiveJob() async {
@@ -180,17 +222,13 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     );
     const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
     
-    await flutterLocalNotificationsPlugin.show(
-      0,
-      title,
-      body,
-      platformChannelSpecifics,
-    );
+    await flutterLocalNotificationsPlugin.show(0, title, body, platformChannelSpecifics);
   }
 
   @override
   void dispose() {
-    _positionStream?.cancel(); // Stream temizliği
+    _slideController.dispose();
+    _positionStream?.cancel(); 
     _refreshTimer?.cancel();
     _pulseController.dispose();
     _pageController.dispose();
@@ -244,7 +282,23 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             currentPosition = position;
             isLoading = false;
 
+            // Anlık animasyon için yeni konumu hedefle
+            LatLng newPos = LatLng(position.latitude, position.longitude);
+            if (_animatedProviderPos == null) {
+              _animatedProviderPos = newPos;
+              _targetProviderPos = newPos;
+              _animatedHeading = position.heading;
+              _targetHeading = position.heading;
+            } else if (_targetProviderPos != newPos || _targetHeading != position.heading) {
+              _oldProviderPos = _animatedProviderPos;
+              _targetProviderPos = newPos;
+              _oldHeading = _animatedHeading;
+              _targetHeading = position.heading;
+              _slideController.forward(from: 0.0);
+            }
+
             if (isFirstLoad) {
+              _lastSearchCenter = LatLng(position.latitude, position.longitude);
               mapController.move(LatLng(position.latitude, position.longitude), 15.0);
               if (isOnline && !isSuspended) _fetchNearbyJobs();
             }
@@ -261,6 +315,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       _showTopSnackBar(message, isError: true);
       setState(() {
         currentPosition = Position(longitude: 32.4846, latitude: 37.8666, timestamp: DateTime.now(), accuracy: 0, altitude: 0, heading: 0, speed: 0, speedAccuracy: 0, altitudeAccuracy: 0, headingAccuracy: 0); 
+        _lastSearchCenter = LatLng(currentPosition!.latitude, currentPosition!.longitude);
         isLoading = false;
       });
       if (isOnline && !isSuspended) _fetchNearbyJobs();
@@ -306,12 +361,15 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     Future.delayed(const Duration(milliseconds: 600), () => SystemSound.play(SystemSoundType.alert));
   }
 
-  Future<void> _fetchNearbyJobs({bool isAuto = false}) async {
+  Future<void> _fetchNearbyJobs({bool isAuto = false, bool useMapCenter = false}) async {
     if (currentPosition == null || !isOnline || isSuspended) return;
     if (!isAuto) setState(() { isRefreshing = true; });
+
+    double targetLat = useMapCenter ? mapController.camera.center.latitude : currentPosition!.latitude;
+    double targetLng = useMapCenter ? mapController.camera.center.longitude : currentPosition!.longitude;
     
     try {
-      final response = await http.get(Uri.parse("$baseUrl?action=get_pending_jobs&lat=${currentPosition!.latitude}&lng=${currentPosition!.longitude}&provider_id=${widget.providerId}"));
+      final response = await http.get(Uri.parse("$baseUrl?action=get_pending_jobs&lat=$targetLat&lng=$targetLng&provider_id=${widget.providerId}"));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success' && mounted) {
@@ -353,6 +411,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       }
     } catch (e) {
       if (!isAuto) _showTopSnackBar("İşler yüklenirken hata oluştu.", isError: true);
+      setState(() => isRefreshing = false);
     }
   }
 
@@ -373,6 +432,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
           setState(() {
             isOnline = true;
             isCheckingSubscription = false;
+            if (currentPosition != null) {
+              _lastSearchCenter = LatLng(currentPosition!.latitude, currentPosition!.longitude);
+            }
           });
           _fetchNearbyJobs();
         } else {
@@ -941,11 +1003,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     }
   }
 
-  List<Marker> _buildMarkers() {
-    List<Marker> markers = [];
-    if (currentPosition != null) {
-      markers.add(Marker(
-        point: LatLng(currentPosition!.latitude, currentPosition!.longitude),
+  // Animasyonlu Ok İkonu (Sliding & Heading)
+  List<Marker> _buildProviderMarker() {
+    if (_animatedProviderPos == null) return [];
+    return [
+      Marker(
+        point: _animatedProviderPos!,
         width: 80, height: 80,
         child: AnimatedBuilder(
           animation: _pulseController,
@@ -956,22 +1019,29 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                 color: const Color(0xFF10B981).withOpacity(0.2 - (_pulseController.value * 0.1)),
               ),
               child: Center(
-                child: Container(
-                  width: 24, height: 24,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF059669),
-                    shape: BoxShape.circle, 
-                    border: Border.all(color: Colors.white, width: 3),
-                    boxShadow: [BoxShadow(color: const Color(0xFF059669).withOpacity(0.6), blurRadius: 10)]
+                child: Transform.rotate(
+                  angle: _animatedHeading * (math.pi / 180), // Telefonun veya gidilen yöne dönüş
+                  child: Container(
+                    width: 32, height: 32,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF059669),
+                      shape: BoxShape.circle, 
+                      border: Border.all(color: Colors.white, width: 2),
+                      boxShadow: [BoxShadow(color: const Color(0xFF059669).withOpacity(0.6), blurRadius: 10)]
+                    ),
+                    child: const Icon(Icons.navigation_rounded, color: Colors.white, size: 20),
                   ),
                 ),
               ),
             );
           }
         ),
-      ));
-    }
+      )
+    ];
+  }
 
+  List<Marker> _buildJobMarkers() {
+    List<Marker> markers = [];
     for (int i = 0; i < jobList.length; i++) {
       final job = jobList[i];
       final int currentJobId = int.parse(job['id'].toString());
@@ -1283,6 +1353,14 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                     options: MapOptions(
                       initialCenter: LatLng(currentPosition!.latitude, currentPosition!.longitude), 
                       initialZoom: 15.0,
+                      onPositionChanged: (MapCamera camera, bool hasGesture) {
+                        if (hasGesture && isOnline && _lastSearchCenter != null) {
+                          final dist = const Distance().as(LengthUnit.Meter, _lastSearchCenter!, camera.center);
+                          if (dist > 500 && !_showSearchAreaBtn) {
+                            setState(() => _showSearchAreaBtn = true);
+                          }
+                        }
+                      },
                       onTap: (_, __) {
                         if (_showJobCard) setState(() => _showJobCard = false);
                       }
@@ -1293,7 +1371,36 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                           subdomains: const ['a', 'b', 'c', 'd'],
                           userAgentPackageName: 'com.berdas.otoyardim', 
                         ),
-                      if (isOnline) MarkerLayer(markers: _buildMarkers()),
+                      
+                      if (isOnline) 
+                        MarkerClusterLayerWidget(
+                          options: MarkerClusterLayerOptions(
+                            maxClusterRadius: 45,
+                            size: const Size(44, 44),
+                            alignment: Alignment.center,
+                            padding: const EdgeInsets.all(50),
+                            maxZoom: 15,
+                            markers: _buildJobMarkers(),
+                            builder: (context, markers) {
+                              return Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF059669),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white, width: 2),
+                                  boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.5), blurRadius: 10)]
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    markers.length.toString(),
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+
+                      if (isOnline) MarkerLayer(markers: _buildProviderMarker()),
                     ],
                   ),
                 ),
@@ -1303,6 +1410,31 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                     child: Container(
                       color: bgColor,
                       child: _buildOfflineDashboard(),
+                    ),
+                  ),
+
+                if (isOnline && _showSearchAreaBtn)
+                  Positioned(
+                    top: MediaQuery.paddingOf(context).top + 80,
+                    left: 0, right: 0,
+                    child: Center(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.search_rounded, color: Colors.white, size: 20),
+                        label: const Text("Bu Bölgede Ara", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: cardColor.withOpacity(0.95),
+                          elevation: 8,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: BorderSide(color: const Color(0xFF10B981).withOpacity(0.5), width: 1.5)),
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _showSearchAreaBtn = false;
+                            _lastSearchCenter = mapController.camera.center;
+                          });
+                          _fetchNearbyJobs(useMapCenter: true);
+                        },
+                      )
                     ),
                   ),
 
@@ -1361,6 +1493,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                         setState(() {
                                           isOnline = false;
                                           _showJobCard = false;
+                                          _showSearchAreaBtn = false;
                                           jobList.clear();
                                           knownJobIds.clear();
                                           _flitchingJobId = null;
@@ -1389,7 +1522,16 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                       elevation: 6,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       child: const Icon(Icons.my_location_rounded, color: Color(0xFF10B981)), 
-                      onPressed: () { if (currentPosition != null) mapController.move(LatLng(currentPosition!.latitude, currentPosition!.longitude), 15.0); }
+                      onPressed: () { 
+                        if (currentPosition != null) {
+                          setState(() {
+                             _showSearchAreaBtn = false;
+                             _lastSearchCenter = LatLng(currentPosition!.latitude, currentPosition!.longitude);
+                          });
+                          mapController.move(LatLng(currentPosition!.latitude, currentPosition!.longitude), 15.0); 
+                          _fetchNearbyJobs();
+                        }
+                      }
                     ),
                   ),
 

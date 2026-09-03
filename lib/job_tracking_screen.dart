@@ -811,8 +811,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       ),
       children: [
         TileLayer(
-          urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-          subdomains: const ['a', 'b', 'c', 'd'],
+          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           userAgentPackageName: 'com.berdas.otoyardim',
         ),
         

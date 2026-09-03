@@ -381,10 +381,8 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                         initialZoom: 15.0
                       ),
                       children: [
-                        // Doğal karanlık tema çinileri (TileLayer) entegre edildi, filtre kaldırıldı.
                         TileLayer(
-                          urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-                          subdomains: const ['a', 'b', 'c', 'd'],
+                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                           userAgentPackageName: 'com.example.ototag',
                         ),
                         MarkerLayer(

@@ -15,8 +15,8 @@ dependencies:
   timezone: ^0.9.4
   http: ^1.2.0
   geolocator: ^11.0.0
-  google_maps_flutter: ^2.5.3           # Native Google Maps eklendi
-  flutter_polyline_points: ^2.0.0       # Gerçek yol rotası çizimi için eklendi
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
   url_launcher: ^6.3.0
   image_picker: ^1.1.2
   file_picker: ^8.1.2

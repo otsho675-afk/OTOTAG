@@ -3,11 +3,10 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 import 'dart:ui';
-import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:flutter_polyline_points/flutter_polyline_points.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'provider_map_screen.dart'; 
 import 'customer_dashboard_screen.dart';
@@ -47,7 +46,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
   final TextEditingController _codeController = TextEditingController();
   final TextEditingController _commentController = TextEditingController();
-  GoogleMapController? _mapController;
+  final MapController _mapController = MapController();
   int _selectedRating = 5;
 
   Timer? _timer;
@@ -55,12 +54,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   
   late AnimationController _pulseController;
   late AnimationController _glowController;
-
-  Map<PolylineId, Polyline> polylines = {};
-  PolylinePoints polylinePoints = PolylinePoints();
-  bool _isRouteFetched = false;
-
-  final String _darkMapStyle = '[{"elementType":"geometry","stylers":[{"color":"#0F172A"}]},{"elementType":"labels.text.fill","stylers":[{"color":"#94A3B8"}]},{"elementType":"labels.text.stroke","stylers":[{"color":"#0F172A"}]},{"featureType":"administrative.locality","elementType":"labels.text.fill","stylers":[{"color":"#10B981"}]},{"featureType":"road","elementType":"geometry","stylers":[{"color":"#1E293B"}]},{"featureType":"road","elementType":"geometry.stroke","stylers":[{"color":"#0F172A"}]},{"featureType":"road.highway","elementType":"geometry","stylers":[{"color":"#1E293B"}]},{"featureType":"water","elementType":"geometry","stylers":[{"color":"#0B1120"}]}]';
 
   @override
   void initState() {
@@ -108,7 +101,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         }
       );
     } catch (e) {
-      // Ignore
+      // Hata durumunda yoksay
     }
   }
 
@@ -180,58 +173,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     }
   }
 
-  Future<void> _getRoute() async {
-    if (customerLat == 0.0 || providerLat == 0.0 || _isRouteFetched) return;
-    
-    try {
-      PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
-        googleApiKey: "AIzaSyD_aPCzGMPci2XW5lbJwxpbzuWdZZOf9AI", 
-        request: PolylineRequest(
-          origin: PointLatLng(customerLat, customerLng),
-          destination: PointLatLng(providerLat, providerLng),
-          mode: TravelMode.driving,
-        ),
-      );
-
-      if (result.points.isNotEmpty) {
-        List<LatLng> polylineCoordinates = [];
-        for (var point in result.points) {
-          polylineCoordinates.add(LatLng(point.latitude, point.longitude));
-        }
-        if (mounted) {
-          setState(() {
-            polylines[const PolylineId("route")] = Polyline(
-              polylineId: const PolylineId("route"),
-              color: const Color(0xFF00E676),
-              points: polylineCoordinates,
-              width: 5,
-            );
-            _isRouteFetched = true;
-          });
-        }
-      } else {
-        _setFallbackRoute();
-      }
-    } catch (e) {
-      _setFallbackRoute();
-    }
-  }
-
-  void _setFallbackRoute() {
-    if (mounted) {
-      setState(() {
-        polylines[const PolylineId("route")] = Polyline(
-          polylineId: const PolylineId("route"),
-          color: const Color(0xFF00E676),
-          points: [LatLng(customerLat, customerLng), LatLng(providerLat, providerLng)],
-          width: 4,
-          patterns: [PatternItem.dash(20), PatternItem.gap(10)], 
-        );
-        _isRouteFetched = true;
-      });
-    }
-  }
-
   Future<void> _fetchJobStatus() async {
     try {
       final response = await http.get(Uri.parse("$_baseUrl?action=get_job_status&job_id=${widget.jobId}"));
@@ -293,24 +234,13 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
             double distMeters = Geolocator.distanceBetween(customerLat, customerLng, providerLat, providerLng);
             distanceInKm = distMeters / 1000;
             
-            if (!_isRouteFetched) _getRoute(); 
-            
             try {
-              if (_mapController != null) {
-                double minLat = math.min(customerLat, providerLat);
-                double maxLat = math.max(customerLat, providerLat);
-                double minLng = math.min(customerLng, providerLng);
-                double maxLng = math.max(customerLng, providerLng);
-                
-                LatLngBounds bounds = LatLngBounds(
-                  southwest: LatLng(minLat, minLng), 
-                  northeast: LatLng(maxLat, maxLng)
-                );
-                _mapController?.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100)); 
-              }
+              double centerLat = (customerLat + providerLat) / 2;
+              double centerLng = (customerLng + providerLng) / 2;
+              _mapController.move(LatLng(centerLat, centerLng), 14.0);
             } catch(e){}
           } else if (customerLat != 0.0) {
-            try { _mapController?.animateCamera(CameraUpdate.newLatLngZoom(LatLng(customerLat, customerLng), 15.0)); } catch(e){}
+            try { _mapController.move(LatLng(customerLat, customerLng), 15.0); } catch(e){}
           }
 
           if (jobStatus == 'completed' && oldStatus != 'completed' && widget.userType == 'customer' && !isRated) {
@@ -330,7 +260,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
               String? previousLastBidder = activeBid?['last_bidder'];
               setState(() => activeBid = bidsList[0]);
               
-              if (previousLastBidder == 'provider' && activeBid?['last_bidder'] == 'customer') {
+              if (previousLastBidder == 'provider' && activeBid!['last_bidder'] == 'customer') {
                  HapticFeedback.heavyImpact();
                  SystemSound.play(SystemSoundType.alert);
                  _showTopSnackBar("Müşteriden yeni bir karşı teklif geldi!", isNewAlert: true);
@@ -343,7 +273,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                  
                  _timer?.cancel();
                  _showTopSnackBar("Teklifiniz müşteri tarafından reddedildi.", isError: true);
-                 Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ProviderMapScreen(providerId: widget.userId ?? 0))); 
+                 Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ProviderMapScreen(providerId: widget.userId!))); 
               }
             }
           }
@@ -733,40 +663,87 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     }[jobStatus] ?? Icons.sync_rounded;
   }
 
-  Set<Marker> _buildGoogleMarkers() {
-    Set<Marker> markers = {};
-    if (customerLat != 0.0 && customerLng != 0.0) {
-      markers.add(Marker(
-        markerId: const MarkerId('customer'),
-        position: LatLng(customerLat, customerLng),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-        infoWindow: const InfoWindow(title: 'Müşteri Konumu')
-      ));
-    }
-    if (providerLat != 0.0 && providerLng != 0.0 && (jobStatus == 'matched' || jobStatus == 'in_progress' || widget.userType == 'customer')) {
-      markers.add(Marker(
-        markerId: const MarkerId('provider'),
-        position: LatLng(providerLat, providerLng),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-        infoWindow: const InfoWindow(title: 'Usta Konumu')
-      ));
-    }
-    return markers;
-  }
+  Widget _buildFullScreenMap() {
+    List<Marker> mapMarkers = [];
+    List<LatLng> linePoints = [];
 
-  Set<Circle> _buildGoogleCircles() {
-    Set<Circle> circles = {};
-    if (providerLat != 0.0 && providerLng != 0.0 && (jobStatus == 'matched' || jobStatus == 'in_progress' || widget.userType == 'customer')) {
-      circles.add(Circle(
-        circleId: const CircleId('provider_pulse'),
-        center: LatLng(providerLat, providerLng),
-        radius: 30 + (_pulseController.value * 40),
-        fillColor: const Color(0xFF00E676).withOpacity(0.3),
-        strokeWidth: 2,
-        strokeColor: const Color(0xFF00E676),
+    if (customerLat != 0.0 && customerLng != 0.0) {
+      LatLng cPos = LatLng(customerLat, customerLng);
+      linePoints.add(cPos);
+      mapMarkers.add(Marker(
+        point: cPos,
+        width: 60, height: 60,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.blue,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 3),
+            boxShadow: [BoxShadow(color: Colors.blue.withOpacity(0.5), blurRadius: 10)]
+          ),
+          child: const Icon(Icons.person_rounded, color: Colors.white, size: 30),
+        ),
       ));
     }
-    return circles;
+
+    if (providerLat != 0.0 && providerLng != 0.0 && (jobStatus == 'matched' || jobStatus == 'in_progress' || widget.userType == 'customer')) {
+      LatLng pPos = LatLng(providerLat, providerLng);
+      linePoints.add(pPos);
+      mapMarkers.add(Marker(
+        point: pPos,
+        width: 60, height: 60,
+        child: AnimatedBuilder(
+          animation: _pulseController,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: 1.0 + (_pulseController.value * 0.1),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00E676),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.black, width: 3),
+                  boxShadow: [BoxShadow(color: const Color(0xFF00E676).withOpacity(0.8), blurRadius: 15)]
+                ),
+                child: const Icon(Icons.handyman_rounded, color: Colors.black, size: 30),
+              ),
+            );
+          }
+        ),
+      ));
+    }
+
+    return FlutterMap(
+      mapController: _mapController,
+      options: MapOptions(
+        initialCenter: customerLat != 0.0 ? LatLng(customerLat, customerLng) : const LatLng(39.92, 32.85),
+        initialZoom: 14.0,
+      ),
+      children: [
+        ColorFiltered(
+          colorFilter: const ColorFilter.matrix([
+            -0.9,    0,    0, 0, 255,
+               0, -0.9,    0, 0, 255,
+               0,    0, -0.9, 0, 255,
+               0,    0,    0, 1,   0,
+          ]),
+          child: TileLayer(
+            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            userAgentPackageName: 'com.berdas.otoyardim',
+          ),
+        ),
+        if (linePoints.length == 2)
+          PolylineLayer(
+            polylines: [
+              Polyline(
+                points: linePoints,
+                color: const Color(0xFF00E676),
+                strokeWidth: 4.0,
+                pattern: StrokePattern.dashed(segments: [10, 15]), 
+              )
+            ],
+          ),
+        MarkerLayer(markers: mapMarkers),
+      ],
+    );
   }
 
   @override
@@ -815,28 +792,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
           return Stack(
             children: [
-              AnimatedBuilder(
-                animation: _pulseController,
-                builder: (context, child) {
-                  return GoogleMap(
-                    initialCameraPosition: CameraPosition(
-                      target: customerLat != 0.0 ? LatLng(customerLat, customerLng) : const LatLng(39.92, 32.85),
-                      zoom: 14.0,
-                    ),
-                    mapType: MapType.normal,
-                    zoomControlsEnabled: false,
-                    compassEnabled: false,
-                    mapToolbarEnabled: false,
-                    onMapCreated: (controller) {
-                      _mapController = controller;
-                      controller.setMapStyle(_darkMapStyle);
-                    },
-                    markers: _buildGoogleMarkers(),
-                    circles: _buildGoogleCircles(),
-                    polylines: Set<Polyline>.of(polylines.values),
-                  );
-                }
-              ),
+              _buildFullScreenMap(),
 
               if (distanceInKm > 0 && jobStatus != 'completed')
                 Positioned(

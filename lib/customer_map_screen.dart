@@ -60,30 +60,6 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     super.dispose();
   }
 
-  void _animatedMapMove(LatLng destLocation, double destZoom) {
-    final latTween = Tween<double>(begin: mapController.camera.center.latitude, end: destLocation.latitude);
-    final lngTween = Tween<double>(begin: mapController.camera.center.longitude, end: destLocation.longitude);
-    final zoomTween = Tween<double>(begin: mapController.camera.zoom, end: destZoom);
-
-    final controller = AnimationController(duration: const Duration(milliseconds: 800), vsync: this);
-    final Animation<double> animation = CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn);
-
-    controller.addListener(() {
-      mapController.move(
-        LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)),
-        zoomTween.evaluate(animation),
-      );
-    });
-
-    animation.addStatusListener((status) {
-      if (status == AnimationStatus.completed || status == AnimationStatus.dismissed) {
-        controller.dispose();
-      }
-    });
-
-    controller.forward();
-  }
-
   Future<void> _checkVehicleReminders() async {
     try {
       final response = await http.get(Uri.parse("$baseUrl?action=get_vehicles&customer_id=${widget.customerId}"));
@@ -384,10 +360,17 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                       mapController: mapController,
                       options: MapOptions(initialCenter: LatLng(currentPosition!.latitude, currentPosition!.longitude), initialZoom: 15.0),
                       children: [
-                        TileLayer(
-                          urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-                          subdomains: const ['a', 'b', 'c', 'd'],
-                          userAgentPackageName: 'com.berdas.otoyardim',
+                        ColorFiltered(
+                          colorFilter: const ColorFilter.matrix([
+                            -0.9,    0,    0, 0, 255,
+                               0, -0.9,    0, 0, 255,
+                               0,    0, -0.9, 0, 255,
+                               0,    0,    0, 1,   0,
+                          ]),
+                          child: TileLayer(
+                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            userAgentPackageName: 'com.example.ototag',
+                          ),
                         ),
                         MarkerLayer(
                           markers: [Marker(point: LatLng(currentPosition!.latitude, currentPosition!.longitude), width: 180, height: 180, child: _buildRadarMarker())],
@@ -469,7 +452,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                       child: const Icon(Icons.my_location_rounded, color: Color(0xFF10B981), size: 22),
                       onPressed: () {
                         if (currentPosition != null) {
-                          _animatedMapMove(LatLng(currentPosition!.latitude, currentPosition!.longitude), 15.0);
+                          mapController.move(LatLng(currentPosition!.latitude, currentPosition!.longitude), 15.0);
                         }
                       },
                     ),

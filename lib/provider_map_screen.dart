@@ -28,7 +28,7 @@ class ProviderMapScreen extends StatefulWidget {
 class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProviderStateMixin {
   final MapController mapController = MapController();
   late PageController _pageController;
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  FlutterLocalNotificationsPlugin? flutterLocalNotificationsPlugin;
   
   Position? currentPosition;
   StreamSubscription<Position>? _positionStream; 
@@ -40,6 +40,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   bool isRefreshing = false;
   bool isOnline = false; 
   bool _showJobCard = false; 
+  bool _isModalOpen = false; 
   int _currentJobIndex = 0;
   int? _flitchingJobId;
   bool isCheckingSubscription = false;
@@ -76,6 +77,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     super.initState();
     _checkActiveJob();
     if (!kIsWeb) {
+      flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
       _initNotifications();
       _inAppPurchase = InAppPurchase.instance;
       _initInAppPurchase();
@@ -136,10 +138,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   }
 
   void _initNotifications() async {
-    if (kIsWeb) return;
+    if (kIsWeb || flutterLocalNotificationsPlugin == null) return;
     const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
     const InitializationSettings initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
-    await flutterLocalNotificationsPlugin.initialize(initializationSettings); 
+    await flutterLocalNotificationsPlugin!.initialize(initializationSettings); 
   }
 
   void _initInAppPurchase() {
@@ -204,7 +206,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   }
 
   Future<void> _showLocalNotification(String title, String body) async {
-    if (kIsWeb) return; 
+    if (kIsWeb || flutterLocalNotificationsPlugin == null) return; 
     const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
       'new_job_channel', 
       'Yeni İş Bildirimleri',
@@ -218,7 +220,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     );
     const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
     
-    await flutterLocalNotificationsPlugin.show(0, title, body, platformChannelSpecifics);
+    await flutterLocalNotificationsPlugin!.show(0, title, body, platformChannelSpecifics);
   }
 
   @override
@@ -383,17 +385,21 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             }
             
             setState(() {
-              _showJobCard = true; 
-              _currentJobIndex = fetchedJobs.indexWhere((j) => int.parse(j['id'].toString()) == newJobId);
+              if (!_isModalOpen) {
+                _showJobCard = true; 
+                _currentJobIndex = fetchedJobs.indexWhere((j) => int.parse(j['id'].toString()) == newJobId);
+              }
               _flitchingJobId = newJobId;
             });
 
-            Future.delayed(const Duration(milliseconds: 300), () {
-              mapController.move(LatLng(double.parse(newJobData['latitude'].toString()), double.parse(newJobData['longitude'].toString())), 16.5);
-              if (_pageController.hasClients) {
-                _pageController.animateToPage(_currentJobIndex, duration: const Duration(milliseconds: 600), curve: Curves.fastOutSlowIn);
-              }
-            });
+            if (!_isModalOpen) {
+              Future.delayed(const Duration(milliseconds: 300), () {
+                mapController.move(LatLng(double.parse(newJobData['latitude'].toString()), double.parse(newJobData['longitude'].toString())), 16.5);
+                if (_pageController.hasClients) {
+                  _pageController.animateToPage(_currentJobIndex, duration: const Duration(milliseconds: 600), curve: Curves.fastOutSlowIn);
+                }
+              });
+            }
           }
 
           setState(() {
@@ -812,7 +818,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   }
 
   void _showBidDialog(int jobId, String serviceName, String problemDesc, String distance, String serviceType) {
-    setState(() => _flitchingJobId = null);
+    setState(() {
+      _flitchingJobId = null;
+      _showJobCard = false; 
+      _isModalOpen = true; 
+    });
+    
     TextEditingController priceController = TextEditingController();
     TextEditingController noteController = TextEditingController();
 
@@ -990,7 +1001,13 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
           },
         );
       },
-    );
+    ).then((_) {
+      if (mounted) {
+        setState(() {
+          _isModalOpen = false;
+        });
+      }
+    });
   }
 
   Future<void> _sendBid(int jobId, String amount, String providerNote) async {
@@ -1377,35 +1394,34 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                           userAgentPackageName: 'com.berdas.otoyardim', 
                         ),
                       
-                      if (isOnline) 
-                        MarkerClusterLayerWidget(
-                          options: MarkerClusterLayerOptions(
-                            maxClusterRadius: 45,
-                            size: const Size(44, 44),
-                            alignment: Alignment.center,
-                            padding: const EdgeInsets.all(50),
-                            maxZoom: 15,
-                            markers: _buildJobMarkers(),
-                            builder: (context, markers) {
-                              return Container(
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF059669),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: 2),
-                                  boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.5), blurRadius: 10)]
+                      MarkerClusterLayerWidget(
+                        options: MarkerClusterLayerOptions(
+                          maxClusterRadius: 45,
+                          size: const Size(44, 44),
+                          alignment: Alignment.center,
+                          padding: const EdgeInsets.all(50),
+                          maxZoom: 15,
+                          markers: isOnline ? _buildJobMarkers() : [],
+                          builder: (context, markers) {
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF059669),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2),
+                                boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.5), blurRadius: 10)]
+                              ),
+                              child: Center(
+                                child: Text(
+                                  markers.length.toString(),
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                                 ),
-                                child: Center(
-                                  child: Text(
-                                    markers.length.toString(),
-                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
+                              ),
+                            );
+                          },
                         ),
+                      ),
 
-                      if (isOnline) MarkerLayer(markers: _buildProviderMarker()),
+                      MarkerLayer(markers: isOnline ? _buildProviderMarker() : []),
                     ],
                   ),
                 ),
@@ -1540,103 +1556,104 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                   AnimatedPositioned(
                     duration: const Duration(milliseconds: 500),
                     curve: Curves.easeOutExpo,
-                    bottom: (isOnline && jobList.isNotEmpty && _showJobCard) ? 30 : -250,
+                    bottom: (isOnline && jobList.isNotEmpty && _showJobCard && !_isModalOpen) ? 30 : -250,
                     left: 0,
                     right: 0,
                     height: 165,
-                    child: jobList.isEmpty 
-                        ? const SizedBox.shrink()
-                        : PageView.builder(
-                            controller: _pageController,
-                            physics: const BouncingScrollPhysics(),
-                            itemCount: jobList.length,
-                            onPageChanged: (index) {
-                              setState(() {
-                                _currentJobIndex = index;
-                                final job = jobList[index];
-                                if (_flitchingJobId == int.parse(job['id'].toString())) {
-                                  _flitchingJobId = null;
-                                }
-                                mapController.move(LatLng(double.tryParse(job['latitude'].toString()) ?? 0, double.tryParse(job['longitude'].toString()) ?? 0), 15.5);
-                              });
-                            },
-                            itemBuilder: (context, index) {
-                              if (jobList.isEmpty) return const SizedBox.shrink();
-                              final job = jobList[index];
-                              final String serviceType = job['service_type']?.toString() ?? 'mechanic';
-                              final String serviceName = _getServiceName(serviceType);
-                              final String distance = job['distance'] != null ? double.parse(job['distance'].toString()).toStringAsFixed(1) : "0.0";
-                              
-                              final String probDesc = job['problem_description']?.toString() ?? '';
-                              final bool isFlashing = int.parse(job['id'].toString()) == _flitchingJobId;
-                              
-                              return AnimatedBuilder(
-                                animation: _pageController,
-                                builder: (context, child) {
-                                  double value = 1.0;
-                                  if (_pageController.position.haveDimensions) {
-                                    value = _pageController.page! - index;
-                                    value = (1 - (value.abs() * 0.08)).clamp(0.9, 1.0);
-                                  }
-                                  return Transform.scale(
-                                    scale: value,
-                                    child: GestureDetector(
-                                      onTap: () => _showBidDialog(int.parse(job['id'].toString()), serviceName, probDesc, distance, serviceType),
-                                      child: Container(
-                                        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: cardColor,
-                                          borderRadius: BorderRadius.circular(22),
-                                          border: isFlashing ? Border.all(color: Colors.redAccent, width: 2) : Border.all(color: Colors.white.withOpacity(0.06)),
-                                          boxShadow: isFlashing 
-                                            ? [BoxShadow(color: Colors.red.withOpacity(0.35), blurRadius: 20, offset: const Offset(0, 8))] 
-                                            : [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 16, offset: const Offset(0, 8))],
-                                        ),
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(16),
-                                          child: Column(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Row(
+                    child: PageView.builder(
+                      controller: _pageController,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: isOnline ? jobList.length : 0,
+                      onPageChanged: (index) {
+                        setState(() {
+                          _currentJobIndex = index;
+                          final job = jobList[index];
+                          if (_flitchingJobId == int.parse(job['id'].toString())) {
+                            _flitchingJobId = null;
+                          }
+                          mapController.move(LatLng(double.tryParse(job['latitude'].toString()) ?? 0, double.tryParse(job['longitude'].toString()) ?? 0), 15.5);
+                        });
+                      },
+                      itemBuilder: (context, index) {
+                        if (jobList.isEmpty) return const SizedBox.shrink();
+                        final job = jobList[index];
+                        final String serviceType = job['service_type']?.toString() ?? 'mechanic';
+                        final String serviceName = _getServiceName(serviceType);
+                        final String distance = job['distance'] != null ? double.parse(job['distance'].toString()).toStringAsFixed(1) : "0.0";
+                        
+                        final String probDesc = job['problem_description']?.toString() ?? '';
+                        final bool isFlashing = int.parse(job['id'].toString()) == _flitchingJobId;
+                        
+                        return AnimatedBuilder(
+                          animation: _pageController,
+                          builder: (context, child) {
+                            double value = 1.0;
+                            if (_pageController.position.haveDimensions) {
+                              value = _pageController.page! - index;
+                              value = (1 - (value.abs() * 0.08)).clamp(0.9, 1.0);
+                            }
+                            return Transform.scale(
+                              scale: value,
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() => _showJobCard = false);
+                                  _showBidDialog(int.parse(job['id'].toString()), serviceName, probDesc, distance, serviceType);
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: cardColor,
+                                    borderRadius: BorderRadius.circular(22),
+                                    border: isFlashing ? Border.all(color: Colors.redAccent, width: 2) : Border.all(color: Colors.white.withOpacity(0.06)),
+                                    boxShadow: isFlashing 
+                                      ? [BoxShadow(color: Colors.red.withOpacity(0.35), blurRadius: 20, offset: const Offset(0, 8))] 
+                                      : [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 16, offset: const Offset(0, 8))],
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(10),
+                                              decoration: BoxDecoration(
+                                                color: isFlashing ? Colors.red.withOpacity(0.15) : const Color(0xFF10B981).withOpacity(0.15), 
+                                                borderRadius: BorderRadius.circular(14)
+                                              ),
+                                              child: Icon(isFlashing ? Icons.notifications_active_rounded : _getServiceIcon(serviceType), color: isFlashing ? Colors.redAccent : const Color(0xFF10B981), size: 22),
+                                            ),
+                                            const SizedBox(width: 14),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
                                                 children: [
-                                                  Container(
-                                                    padding: const EdgeInsets.all(10),
-                                                    decoration: BoxDecoration(
-                                                      color: isFlashing ? Colors.red.withOpacity(0.15) : const Color(0xFF10B981).withOpacity(0.15), 
-                                                      borderRadius: BorderRadius.circular(14)
-                                                    ),
-                                                    child: Icon(isFlashing ? Icons.notifications_active_rounded : _getServiceIcon(serviceType), color: isFlashing ? Colors.redAccent : const Color(0xFF10B981), size: 22),
-                                                  ),
-                                                  const SizedBox(width: 14),
-                                                  Expanded(
-                                                    child: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      children: [
-                                                        Text(isFlashing ? "YENİ İŞ TALEBİ!" : serviceName, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isFlashing ? Colors.redAccent : Colors.white, letterSpacing: -0.3)),
-                                                        const SizedBox(height: 3),
-                                                        Text("$distance KM Uzaklıkta", style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  const SizedBox.shrink()
+                                                  Text(isFlashing ? "YENİ İŞ TALEBİ!" : serviceName, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isFlashing ? Colors.redAccent : Colors.white, letterSpacing: -0.3)),
+                                                  const SizedBox(height: 3),
+                                                  Text("$distance KM Uzaklıkta", style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
                                                 ],
                                               ),
-                                              Container(
-                                                width: double.infinity,
-                                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                                decoration: BoxDecoration(color: isFlashing ? Colors.redAccent : const Color(0xFF10B981), borderRadius: BorderRadius.circular(12)),
-                                                child: Center(child: Text(isFlashing ? "Hemen İncele" : "Teklif Ver", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14))),
-                                              )
-                                            ],
-                                          ),
+                                            ),
+                                            const SizedBox.shrink()
+                                          ],
                                         ),
-                                      ),
+                                        Container(
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.symmetric(vertical: 10),
+                                          decoration: BoxDecoration(color: isFlashing ? Colors.redAccent : const Color(0xFF10B981), borderRadius: BorderRadius.circular(12)),
+                                          child: Center(child: Text(isFlashing ? "Hemen İncele" : "Teklif Ver", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14))),
+                                        )
+                                      ],
                                     ),
-                                  );
-                                },
-                              );
-                            },
-                          ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
                   ),
                 ]
               ],

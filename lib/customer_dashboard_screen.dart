@@ -32,6 +32,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   
   List<Map<String, dynamic>> vehicles = [];
   int selectedVehicleIndex = 0;
+  bool isPremium = false;
   
   List<dynamic> notifications = [];
   int unreadCount = 0;
@@ -44,8 +45,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   
   late final InAppPurchase _inAppPurchase;
   StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
-  Map<String, dynamic>? _pendingVehicleData;
-  final String _vehicleProductId = 'vehicle_add_premium'; 
+  final String _premiumProductId = 'customer_premium_subscription'; 
 
   final List<Map<String, dynamic>> services = [
     {'id': 'mechanic', 'name': 'Tamirci', 'icon': Icons.build_rounded, 'color': const Color(0xFF10B981), 'gradient': [const Color(0xFF1E293B), const Color(0xFF0F172A)]},
@@ -60,6 +60,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     _fadeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800))..forward();
     _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))..repeat(reverse: true);
     
+    _fetchProfile();
     _checkActiveJob();
     _fetchVehicles();
     _fetchNotifications();
@@ -92,6 +93,20 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     super.dispose();
   }
 
+  Future<void> _fetchProfile() async {
+    try {
+      final res = await http.get(Uri.parse("$baseUrl?action=get_profile&user_id=${widget.customerId}"));
+      if (res.statusCode == 200) {
+        final data = json.decode(res.body);
+        if (data['status'] == 'success' && mounted) {
+          setState(() {
+            isPremium = data['profile']['is_premium'] == 1 || data['profile']['is_premium'] == '1';
+          });
+        }
+      }
+    } catch (e) {}
+  }
+
   Future<void> _checkActiveJob() async {
     try {
       final res = await http.get(Uri.parse("$baseUrl?action=check_active_job&user_id=${widget.customerId}&user_type=customer"));
@@ -117,24 +132,64 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
           _showTopSnackBar("Ödeme başarısız veya iptal edildi.", isError: true);
         } else if (purchaseDetails.status == PurchaseStatus.purchased ||
                    purchaseDetails.status == PurchaseStatus.restored) {
-          if (_pendingVehicleData != null) {
-            _saveVehicle(
-              vehicleId: _pendingVehicleData!['vehicleId'],
-              plate: _pendingVehicleData!['plate'],
-              brandModel: _pendingVehicleData!['brandModel'],
-              insDate: _pendingVehicleData!['insDate'],
-              inspDate: _pendingVehicleData!['inspDate'],
-              cKm: _pendingVehicleData!['cKm'],
-              mKm: _pendingVehicleData!['mKm'],
-            );
-            _pendingVehicleData = null; 
-          }
+          _activatePremium(purchaseDetails);
         }
         if (purchaseDetails.pendingCompletePurchase) {
           _inAppPurchase.completePurchase(purchaseDetails);
         }
       }
     }
+  }
+
+  Future<void> _activatePremium(PurchaseDetails purchaseDetails) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl?action=activate_premium"),
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: {
+          "user_id": widget.customerId.toString(),
+          "purchase_token": purchaseDetails.verificationData.serverVerificationData
+        }
+      );
+      final data = json.decode(response.body);
+      if (data['status'] == 'success') {
+        setState(() => isPremium = true);
+        _showTopSnackBar("Premium üyeliğiniz aktif edildi! Artık sınırsız araç ekleyebilirsiniz.");
+      }
+    } catch (e) {
+      _showTopSnackBar("Sunucu onayı başarısız oldu.", isError: true);
+    } finally {
+      if (mounted) setState(() => isSaving = false);
+    }
+  }
+
+  Future<void> _startPremiumPurchase() async {
+    setState(() => isSaving = true);
+    
+    if (kIsWeb) {
+      _showTopSnackBar("Web platformunda uygulama içi ödeme desteklenmiyor. Lütfen mobil uygulamayı kullanın.", isError: true);
+      setState(() => isSaving = false);
+      return;
+    }
+
+    final bool available = await _inAppPurchase.isAvailable();
+    if (!available) {
+      _showTopSnackBar("Mağaza bağlantısı kurulamadı.", isError: true);
+      setState(() => isSaving = false);
+      return;
+    }
+
+    final ProductDetailsResponse response = await _inAppPurchase.queryProductDetails({_premiumProductId});
+    if (response.notFoundIDs.isNotEmpty || response.productDetails.isEmpty) {
+      _showTopSnackBar("Abonelik ürünü mağazada bulunamadı.", isError: true);
+      setState(() => isSaving = false);
+      return;
+    }
+
+    final ProductDetails productDetails = response.productDetails.first;
+    final PurchaseParam purchaseParam = PurchaseParam(productDetails: productDetails);
+    
+    _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
   }
 
   Future<void> _fetchNotifications() async {
@@ -576,7 +631,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     try {
       final response = await http.post(Uri.parse("$baseUrl?action=$action"), headers: {"Content-Type": "application/x-www-form-urlencoded"}, body: body);
       final data = json.decode(response.body);
-      if (response.statusCode == 200 || response.statusCode == 201) {
+      
+      if (response.statusCode == 403 && data['status'] == 'limit_reached') {
+        _showPremiumModal();
+      } else if (response.statusCode == 200 || response.statusCode == 201) {
         _showTopSnackBar(isEditing ? "Araç güncellendi!" : "Araç eklendi!");
         await _fetchVehicles();
       } else {
@@ -600,6 +658,113 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     } catch (e) {
       _showTopSnackBar("Araç silinemedi.", isError: true);
     }
+  }
+
+  void _showPremiumModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24, 
+            left: 24, 
+            right: 24, 
+            top: 24
+          ),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F172A).withOpacity(0.98),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.2),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 40, offset: const Offset(0, -10))],
+          ),
+          child: SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(child: Container(width: 48, height: 5, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
+                      const SizedBox(height: 20),
+                      Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFD97706)]),
+                            shape: BoxShape.circle,
+                            boxShadow: [BoxShadow(color: const Color(0xFFF59E0B).withOpacity(0.35), blurRadius: 18, offset: const Offset(0, 6))]
+                          ),
+                          child: const Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 36),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      const Text("Premium'a Geçin", textAlign: TextAlign.center, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: -0.5)),
+                      const SizedBox(height: 8),
+                      const Text(
+                        "Ücretsiz 3 araç ekleme sınırına ulaştınız. Daha fazla araç eklemek ve sınırsız tüm premium özellikleri kullanmak için Premium'a geçiş yapın.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8), height: 1.5, fontWeight: FontWeight.normal),
+                      ),
+                      const SizedBox(height: 22),
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E293B),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.3), width: 1.2),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("1 Aylık Premium Paket", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
+                                SizedBox(height: 3),
+                                Text("Sınırsız Araç ve Hatırlatıcı", style: TextStyle(color: Color(0xFFF59E0B), fontWeight: FontWeight.bold, fontSize: 12)),
+                              ],
+                            ),
+                            Text("₺300", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFFF59E0B))),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: isSaving ? null : () async {
+                          Navigator.pop(context);
+                          await _startPremiumPurchase();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFF59E0B),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          elevation: 0,
+                        ),
+                        child: isSaving 
+                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+                            : const Text("300 TL ile Kilidi Aç", textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                      ),
+                      const SizedBox(height: 10),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text("Daha Sonra", style: TextStyle(color: Colors.white60, fontWeight: FontWeight.bold, fontSize: 14)),
+                      )
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _showVehicleDialog({Map<String, dynamic>? vehicleToEdit}) {
@@ -651,7 +816,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                             children: [
                               Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
                               const SizedBox(height: 24),
-                              Text(isEditing ? "Aracı Düzenle" : "Yeni Araç Ekle (Ücretli)", textAlign: TextAlign.center, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: -0.5)),
+                              Text(isEditing ? "Aracı Düzenle" : "Yeni Araç Ekle", textAlign: TextAlign.center, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: -0.5)),
                               const SizedBox(height: 32),
                               
                               Wrap(
@@ -718,60 +883,26 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                                       ),
                                       child: ElevatedButton(
                                         onPressed: isSaving ? null : () async {
-                                          if (plateCtrl.text.trim().isEmpty || brandCtrl.text.trim().isEmpty) return _showTopSnackBar("Plaka ve model zorunludur.", isError: true);
+                                          if (plateCtrl.text.trim().isEmpty || brandCtrl.text.trim().isEmpty) {
+                                            return _showTopSnackBar("Plaka ve model zorunludur.", isError: true);
+                                          }
                                           
                                           Navigator.pop(context);
                                           
-                                          if (isEditing) {
-                                            await _saveVehicle(
-                                              vehicleId: int.parse(vehicleToEdit['id'].toString()),
-                                              plate: plateCtrl.text.trim(), brandModel: brandCtrl.text.trim(),
-                                              insDate: tempIns, inspDate: tempInsp,
-                                              cKm: int.tryParse(cKmCtrl.text.trim()) ?? 0, mKm: int.tryParse(mKmCtrl.text.trim()) ?? 10000,
-                                            );
-                                          } else {
-                                            setState(() => isSaving = true);
-                                            
-                                            if (kIsWeb) {
-                                              _showTopSnackBar("Web sürümünde satın alma yapılamaz.", isError: true);
-                                              setState(() => isSaving = false);
-                                              return;
-                                            }
-    
-                                            final bool available = await _inAppPurchase.isAvailable();
-                                            if (!available) {
-                                              _showTopSnackBar("Mağaza bağlantısı kurulamadı.", isError: true);
-                                              setState(() => isSaving = false);
-                                              return;
-                                            }
-    
-                                            final ProductDetailsResponse response = await _inAppPurchase.queryProductDetails({_vehicleProductId});
-                                            if (response.notFoundIDs.isNotEmpty || response.productDetails.isEmpty) {
-                                              _showTopSnackBar("Ürün mağazada bulunamadı.", isError: true);
-                                              setState(() => isSaving = false);
-                                              return;
-                                            }
-                                            
-                                            _pendingVehicleData = {
-                                              'vehicleId': null,
-                                              'plate': plateCtrl.text.trim(),
-                                              'brandModel': brandCtrl.text.trim(),
-                                              'insDate': tempIns,
-                                              'inspDate': tempInsp,
-                                              'cKm': int.tryParse(cKmCtrl.text.trim()) ?? 0,
-                                              'mKm': int.tryParse(mKmCtrl.text.trim()) ?? 10000,
-                                            };
-    
-                                            final ProductDetails productDetails = response.productDetails.first;
-                                            final PurchaseParam purchaseParam = PurchaseParam(productDetails: productDetails);
-                                            
-                                            _inAppPurchase.buyConsumable(purchaseParam: purchaseParam);
-                                          }
+                                          await _saveVehicle(
+                                            vehicleId: isEditing ? int.parse(vehicleToEdit['id'].toString()) : null,
+                                            plate: plateCtrl.text.trim(), 
+                                            brandModel: brandCtrl.text.trim(),
+                                            insDate: tempIns, 
+                                            inspDate: tempInsp,
+                                            cKm: int.tryParse(cKmCtrl.text.trim()) ?? 0, 
+                                            mKm: int.tryParse(mKmCtrl.text.trim()) ?? 10000,
+                                          );
                                         },
                                         style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 20), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
                                         child: isSaving 
                                             ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
-                                            : Text(isEditing ? "Değişiklikleri Kaydet" : "Aracı Kaydet (Satın Al)", style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                                            : Text("Kaydet", style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                                       ),
                                     ),
                                   ),
@@ -1015,7 +1146,13 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                                       boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))],
                                     ),
                                     child: ElevatedButton.icon(
-                                      onPressed: () => _showVehicleDialog(),
+                                      onPressed: () {
+                                        if (vehicles.length >= 3 && !isPremium) {
+                                          _showPremiumModal();
+                                        } else {
+                                          _showVehicleDialog();
+                                        }
+                                      },
                                       icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
                                       label: const Text("Ekle", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
                                       style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),

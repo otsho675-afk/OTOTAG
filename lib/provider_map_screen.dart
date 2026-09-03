@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; 
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -24,7 +23,7 @@ class ProviderMapScreen extends StatefulWidget {
 }
 
 class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProviderStateMixin {
-  final MapController mapController = MapController();
+  GoogleMapController? mapController;
   late PageController _pageController;
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
   
@@ -56,6 +55,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
   final String _subscriptionProductId = 'provider_monthly_subscription';
 
+  final String _darkMapStyle = '[{"elementType":"geometry","stylers":[{"color":"#0F172A"}]},{"elementType":"labels.text.fill","stylers":[{"color":"#94A3B8"}]},{"elementType":"labels.text.stroke","stylers":[{"color":"#0F172A"}]},{"featureType":"administrative.locality","elementType":"labels.text.fill","stylers":[{"color":"#10B981"}]},{"featureType":"road","elementType":"geometry","stylers":[{"color":"#1E293B"}]},{"featureType":"road","elementType":"geometry.stroke","stylers":[{"color":"#0F172A"}]},{"featureType":"road.highway","elementType":"geometry","stylers":[{"color":"#1E293B"}]},{"featureType":"water","elementType":"geometry","stylers":[{"color":"#0B1120"}]}]';
+
   @override
   void initState() {
     super.initState();
@@ -67,7 +68,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     }
     
     _pageController = PageController(viewportFraction: 0.90);
-    _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 400))..repeat(reverse: true);
+    _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600))..repeat(reverse: true);
     _determinePosition();
     _fetchEarningsAndPerformance();
 
@@ -172,16 +173,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       playSound: true,
       enableVibration: true,
       color: Color(0xFFEF4444),
-      sound: RawResourceAndroidNotificationSound('notification_sound'), 
     );
     const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
     
-    await flutterLocalNotificationsPlugin.show(
-      0,
-      title,
-      body,
-      platformChannelSpecifics,
-    );
+    await flutterLocalNotificationsPlugin.show(0, title, body, platformChannelSpecifics);
   }
 
   @override
@@ -319,7 +314,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             });
 
             Future.delayed(const Duration(milliseconds: 300), () {
-              mapController.move(LatLng(double.parse(newJobData['latitude'].toString()), double.parse(newJobData['longitude'].toString())), 16.5);
+              mapController?.animateCamera(CameraUpdate.newLatLngZoom(LatLng(double.parse(newJobData['latitude'].toString()), double.parse(newJobData['longitude'].toString())), 16.5));
               if (_pageController.hasClients) {
                 _pageController.animateToPage(_currentJobIndex, duration: const Duration(milliseconds: 600), curve: Curves.fastOutSlowIn);
               }
@@ -924,94 +919,66 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     }
   }
 
-  List<Marker> _buildMarkers() {
-    List<Marker> markers = [];
-    if (currentPosition != null) {
+  Set<Marker> _buildGoogleMarkers() {
+    Set<Marker> markers = {};
+    for (int i = 0; i < jobList.length; i++) {
+      final job = jobList[i];
+      final lat = double.tryParse(job['latitude'].toString()) ?? 0.0;
+      final lng = double.tryParse(job['longitude'].toString()) ?? 0.0;
+      final isFlashing = int.parse(job['id'].toString()) == _flitchingJobId;
+      
       markers.add(Marker(
-        point: LatLng(currentPosition!.latitude, currentPosition!.longitude),
-        width: 80, height: 80,
-        child: AnimatedBuilder(
-          animation: _pulseController,
-          builder: (context, child) {
-            return Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF10B981).withOpacity(0.2 - (_pulseController.value * 0.1)),
-              ),
-              child: Center(
-                child: Container(
-                  width: 24, height: 24,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF059669),
-                    shape: BoxShape.circle, 
-                    border: Border.all(color: Colors.white, width: 3),
-                    boxShadow: [BoxShadow(color: const Color(0xFF059669).withOpacity(0.6), blurRadius: 10)]
-                  ),
-                ),
-              ),
-            );
+        markerId: MarkerId(job['id'].toString()),
+        position: LatLng(lat, lng),
+        icon: BitmapDescriptor.defaultMarkerWithHue(isFlashing ? BitmapDescriptor.hueRed : BitmapDescriptor.hueGreen),
+        onTap: () {
+          setState(() {
+            _showJobCard = true;
+            _currentJobIndex = i;
+            _flitchingJobId = null;
+          });
+          if (_pageController.hasClients) {
+            _pageController.animateToPage(i, duration: const Duration(milliseconds: 400), curve: Curves.fastOutSlowIn);
           }
-        ),
+        }
+      ));
+    }
+    return markers;
+  }
+
+  Set<Circle> _buildGoogleCircles() {
+    Set<Circle> circles = {};
+    
+    if (currentPosition != null) {
+      circles.add(Circle(
+        circleId: const CircleId('provider_pulse'),
+        center: LatLng(currentPosition!.latitude, currentPosition!.longitude),
+        radius: 40 + (_pulseController.value * 30),
+        fillColor: const Color(0xFF10B981).withOpacity(0.2),
+        strokeWidth: 2,
+        strokeColor: const Color(0xFF10B981),
       ));
     }
 
     for (int i = 0; i < jobList.length; i++) {
       final job = jobList[i];
-      final int currentJobId = int.parse(job['id'].toString());
-      final double lat = double.tryParse(job['latitude'].toString()) ?? 0.0;
-      final double lng = double.tryParse(job['longitude'].toString()) ?? 0.0;
-      final String serviceType = job['service_type']?.toString() ?? 'mechanic';
-      final bool isSelected = (i == _currentJobIndex) && _showJobCard;
-      final bool isFlashing = currentJobId == _flitchingJobId;
-
-      markers.add(Marker(
-        point: LatLng(lat, lng),
-        width: isSelected || isFlashing ? 84 : 56, 
-        height: isSelected || isFlashing ? 84 : 56,
-        child: GestureDetector(
-          onTap: () {
-            setState(() {
-              _showJobCard = true;
-              _currentJobIndex = i;
-              _flitchingJobId = null;
-            });
-            if (_pageController.hasClients) {
-              _pageController.animateToPage(i, duration: const Duration(milliseconds: 400), curve: Curves.fastOutSlowIn);
-            }
-          },
-          child: AnimatedBuilder(
-            animation: _pulseController,
-            builder: (context, child) {
-              double scale = isSelected ? 1.15 : (isFlashing ? 1.2 + (_pulseController.value * 0.4) : 1.0);
-              List<Color> gradientColors = isFlashing 
-                  ? [const Color(0xFFEF4444), const Color(0xFF991B1B)] 
-                  : [const Color(0xFF10B981), const Color(0xFF059669)];
-              
-              double shadowOpacity = isFlashing ? _pulseController.value * 0.8 : (isSelected ? 0.5 : 0.2);
-              Color shadowColor = isFlashing ? Colors.red : const Color(0xFF10B981);
-
-              return Transform.scale(
-                scale: scale,
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: gradientColors),
-                    shape: BoxShape.circle, 
-                    border: Border.all(color: Colors.white, width: isSelected || isFlashing ? 3 : 2),
-                    boxShadow: [BoxShadow(color: shadowColor.withOpacity(shadowOpacity), blurRadius: isFlashing ? 20 : 12, spreadRadius: isFlashing ? 4 : 0, offset: const Offset(0, 4))]
-                  ), 
-                  child: Icon(
-                    isFlashing ? Icons.notifications_active_rounded : _getServiceIcon(serviceType), 
-                    color: Colors.white, 
-                    size: isSelected || isFlashing ? 30 : 22
-                  )
-                ),
-              );
-            }
-          ),
-        ),
-      ));
+      final isFlashing = int.parse(job['id'].toString()) == _flitchingJobId;
+      final isSelected = (i == _currentJobIndex) && _showJobCard;
+      
+      if (isFlashing || isSelected) {
+         final lat = double.tryParse(job['latitude'].toString()) ?? 0.0;
+         final lng = double.tryParse(job['longitude'].toString()) ?? 0.0;
+         circles.add(Circle(
+           circleId: CircleId('job_pulse_${job['id']}'),
+           center: LatLng(lat, lng),
+           radius: isFlashing ? 30 + (_pulseController.value * 40) : 40,
+           fillColor: (isFlashing ? Colors.red : Colors.green).withOpacity(0.3),
+           strokeWidth: 2,
+           strokeColor: isFlashing ? Colors.red : Colors.green,
+         ));
+      }
     }
-    return markers;
+    return circles;
   }
 
   Widget _buildMiniStat(String label, String val, IconData icon) {
@@ -1261,30 +1228,32 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
           : Stack(
               children: [
                 Positioned.fill(
-                  child: FlutterMap(
-                    mapController: mapController,
-                    options: MapOptions(
-                      initialCenter: LatLng(currentPosition!.latitude, currentPosition!.longitude), 
-                      initialZoom: 15.0,
-                      onTap: (_, __) {
-                        if (_showJobCard) setState(() => _showJobCard = false);
-                      }
-                    ),
-                    children: [
-                       ColorFiltered(
-                          colorFilter: const ColorFilter.matrix([
-                            -0.9,    0,    0, 0, 255,
-                               0, -0.9,    0, 0, 255,
-                               0,    0, -0.9, 0, 255,
-                               0,    0,    0, 1,   0,
-                          ]),
-                          child: TileLayer(
-                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            userAgentPackageName: 'com.berdas.otoyardim', 
-                          ),
+                  child: AnimatedBuilder(
+                    animation: _pulseController,
+                    builder: (context, child) {
+                      return GoogleMap(
+                        initialCameraPosition: CameraPosition(
+                          target: currentPosition != null 
+                              ? LatLng(currentPosition!.latitude, currentPosition!.longitude)
+                              : const LatLng(39.92, 32.85),
+                          zoom: 15.0,
                         ),
-                      if (isOnline) MarkerLayer(markers: _buildMarkers()),
-                    ],
+                        myLocationEnabled: true,
+                        myLocationButtonEnabled: false,
+                        zoomControlsEnabled: false,
+                        mapToolbarEnabled: false,
+                        compassEnabled: false,
+                        onMapCreated: (GoogleMapController controller) {
+                          mapController = controller;
+                          controller.setMapStyle(_darkMapStyle);
+                        },
+                        markers: isOnline ? _buildGoogleMarkers() : <Marker>{},
+                        circles: isOnline ? _buildGoogleCircles() : <Circle>{},
+                        onTap: (LatLng location) {
+                          if (_showJobCard) setState(() => _showJobCard = false);
+                        },
+                      );
+                    }
                   ),
                 ),
 
@@ -1379,7 +1348,11 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                       elevation: 6,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       child: const Icon(Icons.my_location_rounded, color: Color(0xFF10B981)), 
-                      onPressed: () { if (currentPosition != null) mapController.move(LatLng(currentPosition!.latitude, currentPosition!.longitude), 15.0); }
+                      onPressed: () { 
+                        if (currentPosition != null && mapController != null) {
+                           mapController!.animateCamera(CameraUpdate.newLatLngZoom(LatLng(currentPosition!.latitude, currentPosition!.longitude), 15.0));
+                        }
+                      }
                     ),
                   ),
 
@@ -1403,7 +1376,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                 if (_flitchingJobId == int.parse(job['id'].toString())) {
                                   _flitchingJobId = null;
                                 }
-                                mapController.move(LatLng(double.tryParse(job['latitude'].toString()) ?? 0, double.tryParse(job['longitude'].toString()) ?? 0), 15.5);
+                                mapController?.animateCamera(CameraUpdate.newLatLngZoom(LatLng(double.tryParse(job['latitude'].toString()) ?? 0, double.tryParse(job['longitude'].toString()) ?? 0), 15.5));
                               });
                             },
                             itemBuilder: (context, index) {

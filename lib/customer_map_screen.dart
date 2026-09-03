@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -18,7 +17,7 @@ class CustomerMapScreen extends StatefulWidget {
 }
 
 class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProviderStateMixin {
-  final MapController mapController = MapController();
+  GoogleMapController? mapController;
   final TextEditingController problemController = TextEditingController();
   
   Position? currentPosition;
@@ -40,6 +39,8 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     {'id': 'tire', 'name': 'Lastikçi', 'icon': Icons.tire_repair_rounded, 'color': const Color(0xFF10B981), 'gradient': [const Color(0xFF1E293B), const Color(0xFF0F172A)]},
     {'id': 'wash', 'name': 'Yıkama', 'icon': Icons.local_car_wash_rounded, 'color': const Color(0xFF10B981), 'gradient': [const Color(0xFF1E293B), const Color(0xFF0F172A)]},
   ];
+
+  final String _darkMapStyle = '[{"elementType":"geometry","stylers":[{"color":"#0F172A"}]},{"elementType":"labels.text.fill","stylers":[{"color":"#94A3B8"}]},{"elementType":"labels.text.stroke","stylers":[{"color":"#0F172A"}]},{"featureType":"administrative.locality","elementType":"labels.text.fill","stylers":[{"color":"#10B981"}]},{"featureType":"road","elementType":"geometry","stylers":[{"color":"#1E293B"}]},{"featureType":"road","elementType":"geometry.stroke","stylers":[{"color":"#0F172A"}]},{"featureType":"road.highway","elementType":"geometry","stylers":[{"color":"#1E293B"}]},{"featureType":"water","elementType":"geometry","stylers":[{"color":"#0B1120"}]}]';
 
   @override
   void initState() {
@@ -78,13 +79,13 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
           if (insDate != null) {
             int days = insDate.difference(now).inDays;
             if (days < 0) tempAlerts.add("$plate: Trafik Sigortası ${days.abs()} gün GECİKTİ!");
-            else if (days <= 15) tempAlerts.add("$plate: Trafik Sigortasına $days gün kaldı.");
+            else if (days <= 15) tempAlerts.add("$plate: Trafik Sigortasına $days kaldı.");
           }
 
           if (inspDate != null) {
             int days = inspDate.difference(now).inDays;
             if (days < 0) tempAlerts.add("$plate: Muayene süresi ${days.abs()} gün GECİKTİ!");
-            else if (days <= 15) tempAlerts.add("$plate: Muayene bitimine $days gün kaldı.");
+            else if (days <= 15) tempAlerts.add("$plate: Muayene bitimine $days kaldı.");
           }
         }
 
@@ -252,8 +253,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
 
     String customerCity = "Bilinmiyor";
     try {
-      final url = Uri.parse(
-          'https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentPosition!.latitude}&lon=${currentPosition!.longitude}');
+      final url = Uri.parse('https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentPosition!.latitude}&lon=${currentPosition!.longitude}');
       final response = await http.get(url, headers: {'User-Agent': 'oto_tamir_app'});
       
       if (response.statusCode == 200) {
@@ -304,37 +304,6 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     }
   }
 
-  Widget _buildRadarMarker() {
-    return AnimatedBuilder(
-      animation: _radarController,
-      builder: (context, child) {
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            Container(
-              width: 180 * _radarController.value,
-              height: 180 * _radarController.value,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFF10B981).withOpacity((1.0 - _radarController.value).clamp(0.0, 1.0)), width: 2.5),
-                color: const Color(0xFF10B981).withOpacity((0.15 - (_radarController.value * 0.15)).clamp(0.0, 1.0)),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                shape: BoxShape.circle, 
-                boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.5), blurRadius: 15)]
-              ),
-              child: const Icon(Icons.navigation_rounded, color: Colors.white, size: 28),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
@@ -356,26 +325,35 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
             : Stack(
                 children: [
                   Positioned.fill(
-                    child: FlutterMap(
-                      mapController: mapController,
-                      options: MapOptions(initialCenter: LatLng(currentPosition!.latitude, currentPosition!.longitude), initialZoom: 15.0),
-                      children: [
-                        ColorFiltered(
-                          colorFilter: const ColorFilter.matrix([
-                            -0.9,    0,    0, 0, 255,
-                               0, -0.9,    0, 0, 255,
-                               0,    0, -0.9, 0, 255,
-                               0,    0,    0, 1,   0,
-                          ]),
-                          child: TileLayer(
-                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            userAgentPackageName: 'com.example.ototag',
+                    child: AnimatedBuilder(
+                      animation: _radarController,
+                      builder: (context, child) {
+                        return GoogleMap(
+                          initialCameraPosition: CameraPosition(
+                            target: LatLng(currentPosition!.latitude, currentPosition!.longitude),
+                            zoom: 15.0,
                           ),
-                        ),
-                        MarkerLayer(
-                          markers: [Marker(point: LatLng(currentPosition!.latitude, currentPosition!.longitude), width: 180, height: 180, child: _buildRadarMarker())],
-                        ),
-                      ],
+                          myLocationEnabled: true,
+                          myLocationButtonEnabled: false,
+                          zoomControlsEnabled: false,
+                          mapToolbarEnabled: false,
+                          compassEnabled: false,
+                          onMapCreated: (GoogleMapController controller) {
+                            mapController = controller;
+                            controller.setMapStyle(_darkMapStyle);
+                          },
+                          circles: {
+                            Circle(
+                              circleId: const CircleId('radar'),
+                              center: LatLng(currentPosition!.latitude, currentPosition!.longitude),
+                              radius: 300 * _radarController.value, // Radar animasyonu için Google Circle
+                              fillColor: const Color(0xFF10B981).withOpacity((0.15 - (_radarController.value * 0.15)).clamp(0.0, 1.0)),
+                              strokeColor: const Color(0xFF10B981).withOpacity((1.0 - _radarController.value).clamp(0.0, 1.0)),
+                              strokeWidth: 2,
+                            ),
+                          },
+                        );
+                      }
                     ),
                   ),
 
@@ -451,8 +429,8 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.white.withOpacity(0.1), width: 1.5)),
                       child: const Icon(Icons.my_location_rounded, color: Color(0xFF10B981), size: 22),
                       onPressed: () {
-                        if (currentPosition != null) {
-                          mapController.move(LatLng(currentPosition!.latitude, currentPosition!.longitude), 15.0);
+                        if (currentPosition != null && mapController != null) {
+                          mapController!.animateCamera(CameraUpdate.newLatLngZoom(LatLng(currentPosition!.latitude, currentPosition!.longitude), 15.0));
                         }
                       },
                     ),

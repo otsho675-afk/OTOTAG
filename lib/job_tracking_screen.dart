@@ -56,7 +56,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   late AnimationController _pulseController;
   late AnimationController _glowController;
 
-  // Rotalama için değişkenler
   Map<PolylineId, Polyline> polylines = {};
   PolylinePoints polylinePoints = PolylinePoints();
   bool _isRouteFetched = false;
@@ -109,7 +108,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         }
       );
     } catch (e) {
-      // Hata yoksay
+      // Ignore
     }
   }
 
@@ -186,7 +185,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     
     try {
       PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
-        googleApiKey: "AIzaSyD_aPCzGMPci2XW5lbJwxpbzuWdZZOf9AI", // API KEY
+        googleApiKey: "AIzaSyD_aPCzGMPci2XW5lbJwxpbzuWdZZOf9AI", 
         request: PolylineRequest(
           origin: PointLatLng(customerLat, customerLng),
           destination: PointLatLng(providerLat, providerLng),
@@ -226,7 +225,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           color: const Color(0xFF00E676),
           points: [LatLng(customerLat, customerLng), LatLng(providerLat, providerLng)],
           width: 4,
-          patterns: [PatternItem.dash(20), PatternItem.gap(10)], // Native Kesik Çizgi
+          patterns: [PatternItem.dash(20), PatternItem.gap(10)], 
         );
         _isRouteFetched = true;
       });
@@ -290,12 +289,11 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
              }
           }
 
-          // Kamera Odaklama (Bounds)
           if (customerLat != 0.0 && providerLat != 0.0) {
             double distMeters = Geolocator.distanceBetween(customerLat, customerLng, providerLat, providerLng);
             distanceInKm = distMeters / 1000;
             
-            if (!_isRouteFetched) _getRoute(); // Rota Çiz
+            if (!_isRouteFetched) _getRoute(); 
             
             try {
               if (_mapController != null) {
@@ -308,7 +306,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                   southwest: LatLng(minLat, minLng), 
                   northeast: LatLng(maxLat, maxLng)
                 );
-                _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100)); // 100 Padding
+                _mapController?.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100)); 
               }
             } catch(e){}
           } else if (customerLat != 0.0) {
@@ -332,7 +330,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
               String? previousLastBidder = activeBid?['last_bidder'];
               setState(() => activeBid = bidsList[0]);
               
-              if (previousLastBidder == 'provider' && activeBid!['last_bidder'] == 'customer') {
+              if (previousLastBidder == 'provider' && activeBid?['last_bidder'] == 'customer') {
                  HapticFeedback.heavyImpact();
                  SystemSound.play(SystemSoundType.alert);
                  _showTopSnackBar("Müşteriden yeni bir karşı teklif geldi!", isNewAlert: true);
@@ -345,7 +343,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                  
                  _timer?.cancel();
                  _showTopSnackBar("Teklifiniz müşteri tarafından reddedildi.", isError: true);
-                 Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ProviderMapScreen(providerId: widget.userId!))); 
+                 Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ProviderMapScreen(providerId: widget.userId ?? 0))); 
               }
             }
           }
@@ -735,7 +733,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     }[jobStatus] ?? Icons.sync_rounded;
   }
 
-  // Google Maps Native İşaretçileri Oluşturma
   Set<Marker> _buildGoogleMarkers() {
     Set<Marker> markers = {};
     if (customerLat != 0.0 && customerLng != 0.0) {
@@ -757,7 +754,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     return markers;
   }
 
-  // Google Maps Native Titreşim Çemberi
   Set<Circle> _buildGoogleCircles() {
     Set<Circle> circles = {};
     if (providerLat != 0.0 && providerLng != 0.0 && (jobStatus == 'matched' || jobStatus == 'in_progress' || widget.userType == 'customer')) {

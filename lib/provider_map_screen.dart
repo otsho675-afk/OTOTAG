@@ -76,8 +76,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       if (currentPosition != null && isOnline && !isSuspended) {
         http.post(Uri.parse("$baseUrl?action=update_location"), body: {
           "user_id": widget.providerId.toString(),
-          "lat": currentPosition!.latitude.toString(),
-          "lng": currentPosition!.longitude.toString()
+          "lat": currentPosition?.latitude.toString() ?? "0.0",
+          "lng": currentPosition?.longitude.toString() ?? "0.0"
         });
         if (!isRefreshing) _fetchNearbyJobs(isAuto: true);
       }
@@ -104,14 +104,16 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   void _initInAppPurchase() {
     if (_inAppPurchase == null || kIsWeb) return;
     
-    final Stream<List<PurchaseDetails>> purchaseUpdated = _inAppPurchase!.purchaseStream;
-    _purchaseSubscription = purchaseUpdated.listen((purchaseDetailsList) {
-      _listenToPurchaseUpdated(purchaseDetailsList);
-    }, onDone: () {
-      _purchaseSubscription?.cancel();
-    }, onError: (error) {
-      _showTopSnackBar("Ödeme servisi hatası: $error", isError: true);
-    });
+    final Stream<List<PurchaseDetails>>? purchaseUpdated = _inAppPurchase?.purchaseStream;
+    if (purchaseUpdated != null) {
+      _purchaseSubscription = purchaseUpdated.listen((purchaseDetailsList) {
+        _listenToPurchaseUpdated(purchaseDetailsList);
+      }, onDone: () {
+        _purchaseSubscription?.cancel();
+      }, onError: (error) {
+        _showTopSnackBar("Ödeme servisi hatası: $error", isError: true);
+      });
+    }
   }
 
   void _listenToPurchaseUpdated(List<PurchaseDetails> purchaseDetailsList) {
@@ -289,7 +291,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     if (!isAuto) setState(() { isRefreshing = true; });
     
     try {
-      final response = await http.get(Uri.parse("$baseUrl?action=get_pending_jobs&lat=${currentPosition!.latitude}&lng=${currentPosition!.longitude}&provider_id=${widget.providerId}"));
+      final response = await http.get(Uri.parse("$baseUrl?action=get_pending_jobs&lat=${currentPosition?.latitude ?? 0.0}&lng=${currentPosition?.longitude ?? 0.0}&provider_id=${widget.providerId}"));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success' && mounted) {
@@ -682,15 +684,15 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       return;
     }
 
-    final bool available = await _inAppPurchase!.isAvailable();
+    final bool available = await _inAppPurchase?.isAvailable() ?? false;
     if (!available) {
       _showTopSnackBar("Mağaza bağlantısı kurulamadı.", isError: true);
       setState(() => isCheckingSubscription = false);
       return;
     }
 
-    final ProductDetailsResponse response = await _inAppPurchase!.queryProductDetails({_subscriptionProductId});
-    if (response.notFoundIDs.isNotEmpty || response.productDetails.isEmpty) {
+    final ProductDetailsResponse? response = await _inAppPurchase?.queryProductDetails({_subscriptionProductId});
+    if (response == null || response.notFoundIDs.isNotEmpty || response.productDetails.isEmpty) {
       _showTopSnackBar("Abonelik ürünü mağazada bulunamadı.", isError: true);
       setState(() => isCheckingSubscription = false);
       return;
@@ -699,7 +701,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     final ProductDetails productDetails = response.productDetails.first;
     final PurchaseParam purchaseParam = PurchaseParam(productDetails: productDetails);
     
-    _inAppPurchase!.buyNonConsumable(purchaseParam: purchaseParam);
+    _inAppPurchase?.buyNonConsumable(purchaseParam: purchaseParam);
   }
 
   String _getServiceName(String type) {
@@ -1350,7 +1352,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                       child: const Icon(Icons.my_location_rounded, color: Color(0xFF10B981)), 
                       onPressed: () { 
                         if (currentPosition != null && mapController != null) {
-                           mapController!.animateCamera(CameraUpdate.newLatLngZoom(LatLng(currentPosition!.latitude, currentPosition!.longitude), 15.0));
+                           mapController?.animateCamera(CameraUpdate.newLatLngZoom(LatLng(currentPosition!.latitude, currentPosition!.longitude), 15.0));
                         }
                       }
                     ),
@@ -1394,7 +1396,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                 builder: (context, child) {
                                   double value = 1.0;
                                   if (_pageController.position.haveDimensions) {
-                                    value = _pageController.page! - index;
+                                    value = (_pageController.page ?? index.toDouble()) - index;
                                     value = (1 - (value.abs() * 0.08)).clamp(0.9, 1.0);
                                   }
                                   return Transform.scale(

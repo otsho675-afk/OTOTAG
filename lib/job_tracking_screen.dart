@@ -38,6 +38,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   double providerLng = 0.0;
   double distanceInKm = 0.0;
   
+  // OSRM API Rotası için eklendi
+  List<LatLng> routePoints = [];
+  LatLng? lastRoutedProviderPos;
+  
   int? providerId;
   int? customerId;
   bool isRated = false;
@@ -102,6 +106,36 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       );
     } catch (e) {
       // Hata durumunda yoksay
+    }
+  }
+
+  // OSRM API üzerinden gerçek yol rotasını çeken fonksiyon
+  Future<void> _fetchRoute() async {
+    if (customerLat == 0.0 || providerLat == 0.0) return;
+    
+    try {
+      final url = 'http://router.project-osrm.org/route/v1/driving/$customerLng,$customerLat;$providerLng,$providerLat?geometries=geojson';
+      final response = await http.get(Uri.parse(url));
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['routes'] != null && data['routes'].isNotEmpty) {
+          final List coordinates = data['routes'][0]['geometry']['coordinates'];
+          if (mounted) {
+            setState(() {
+              routePoints = coordinates.map((c) => LatLng(c[1], c[0])).toList();
+              lastRoutedProviderPos = LatLng(providerLat, providerLng);
+            });
+          }
+        }
+      }
+    } catch (e) {
+      // Hata durumunda veya internet yoksa eski düz çizgiye dön
+      if (mounted) {
+        setState(() {
+          routePoints = [LatLng(customerLat, customerLng), LatLng(providerLat, providerLng)];
+        });
+      }
     }
   }
 
@@ -234,10 +268,18 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
             double distMeters = Geolocator.distanceBetween(customerLat, customerLng, providerLat, providerLng);
             distanceInKm = distMeters / 1000;
             
+            // Eğer rota henüz çizilmediyse veya usta 50 metreden fazla hareket ettiyse yeni rota çek
+            if (routePoints.isEmpty || lastRoutedProviderPos == null || 
+                Geolocator.distanceBetween(lastRoutedProviderPos!.latitude, lastRoutedProviderPos!.longitude, providerLat, providerLng) > 50) {
+              _fetchRoute();
+            }
+
             try {
-              double centerLat = (customerLat + providerLat) / 2;
-              double centerLng = (customerLng + providerLng) / 2;
-              _mapController.move(LatLng(centerLat, centerLng), 14.0);
+              if (routePoints.isEmpty) { // Eğer henüz rota çekilemediyse ortalamayı al
+                double centerLat = (customerLat + providerLat) / 2;
+                double centerLng = (customerLng + providerLng) / 2;
+                _mapController.move(LatLng(centerLat, centerLng), 14.0);
+              }
             } catch(e){}
           } else if (customerLat != 0.0) {
             try { _mapController.move(LatLng(customerLat, customerLng), 15.0); } catch(e){}
@@ -665,11 +707,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
   Widget _buildFullScreenMap() {
     List<Marker> mapMarkers = [];
-    List<LatLng> linePoints = [];
 
     if (customerLat != 0.0 && customerLng != 0.0) {
       LatLng cPos = LatLng(customerLat, customerLng);
-      linePoints.add(cPos);
       mapMarkers.add(Marker(
         point: cPos,
         width: 60, height: 60,
@@ -687,7 +727,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
     if (providerLat != 0.0 && providerLng != 0.0 && (jobStatus == 'matched' || jobStatus == 'in_progress' || widget.userType == 'customer')) {
       LatLng pPos = LatLng(providerLat, providerLng);
-      linePoints.add(pPos);
       mapMarkers.add(Marker(
         point: pPos,
         width: 60, height: 60,
@@ -718,26 +757,22 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         initialZoom: 14.0,
       ),
       children: [
-        ColorFiltered(
-          colorFilter: const ColorFilter.matrix([
-            -0.9,    0,    0, 0, 255,
-               0, -0.9,    0, 0, 255,
-               0,    0, -0.9, 0, 255,
-               0,    0,    0, 1,   0,
-          ]),
-          child: TileLayer(
-            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            userAgentPackageName: 'com.berdas.otoyardim',
-          ),
+        // Doğal Karanlık Tema (ColorFilter yerine doğrudan CartoDB çinileri)
+        TileLayer(
+          urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+          subdomains: const ['a', 'b', 'c', 'd'],
+          userAgentPackageName: 'com.berdas.otoyardim',
         ),
-        if (linePoints.length == 2)
+        
+        // OSRM API üzerinden çekilen Gerçek Sürüş Rotası
+        if (routePoints.isNotEmpty)
           PolylineLayer(
             polylines: [
               Polyline(
-                points: linePoints,
+                points: routePoints,
                 color: const Color(0xFF00E676),
                 strokeWidth: 4.0,
-                pattern: StrokePattern.dashed(segments: [10, 15]), 
+                // Artık kesikli/noktalı (dashed) değil, kesintisiz gerçek yol çizimi.
               )
             ],
           ),

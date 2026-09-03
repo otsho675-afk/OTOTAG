@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:ui';
+import 'dart:async'; // StreamSubscription için eklendi
 import 'dart:math' as math; 
 import 'customer_bids_screen.dart';
 
@@ -22,6 +23,8 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
   final TextEditingController problemController = TextEditingController();
   
   Position? currentPosition;
+  StreamSubscription<Position>? _positionStream; // Canlı konum akışı için
+  
   bool isLoading = true;
   bool isCreatingJob = false;
   late String selectedService;
@@ -48,12 +51,13 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     _radarController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2500))..repeat();
     _buttonPulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat(reverse: true);
     
-    _determinePosition();
+    _initLocationStream(); // Sürekli konum akışını başlat
     _checkVehicleReminders(); 
   }
 
   @override
   void dispose() {
+    _positionStream?.cancel(); // Bellek sızıntısını önlemek için stream iptal ediliyor
     problemController.dispose();
     _radarController.dispose();
     _buttonPulseController.dispose();
@@ -178,7 +182,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     });
   }
 
-  Future<void> _determinePosition() async {
+  Future<void> _initLocationStream() async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
@@ -193,13 +197,27 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
           return;
         }
       }
-      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-      if (mounted) {
-        setState(() {
-          currentPosition = position;
-          isLoading = false;
-        });
-      }
+
+      // Canlı konum takibi (Müşteri hareket ettikçe radar güncellenir)
+      const LocationSettings locationSettings = LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 3, // Her 3 metrede bir konumu güncelle
+      );
+
+      _positionStream = Geolocator.getPositionStream(locationSettings: locationSettings).listen((Position position) {
+        if (mounted) {
+          setState(() {
+            bool isFirstLoad = currentPosition == null;
+            currentPosition = position;
+            isLoading = false;
+
+            // İlk konum bulunduğunda haritayı oraya merkezle
+            if (isFirstLoad) {
+              mapController.move(LatLng(position.latitude, position.longitude), 15.0);
+            }
+          });
+        }
+      });
     } catch (e) {
       _setFallbackPosition('Konum alınamadı.');
     }
@@ -351,26 +369,23 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
       resizeToAvoidBottomInset: false, 
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
-        child: isLoading
+        child: isLoading || currentPosition == null
             ? Center(child: CircularProgressIndicator(color: const Color(0xFF10B981), strokeWidth: 4, backgroundColor: const Color(0xFF10B981).withOpacity(0.2)))
             : Stack(
                 children: [
                   Positioned.fill(
                     child: FlutterMap(
                       mapController: mapController,
-                      options: MapOptions(initialCenter: LatLng(currentPosition!.latitude, currentPosition!.longitude), initialZoom: 15.0),
+                      options: MapOptions(
+                        initialCenter: LatLng(currentPosition!.latitude, currentPosition!.longitude), 
+                        initialZoom: 15.0
+                      ),
                       children: [
-                        ColorFiltered(
-                          colorFilter: const ColorFilter.matrix([
-                            -0.9,    0,    0, 0, 255,
-                               0, -0.9,    0, 0, 255,
-                               0,    0, -0.9, 0, 255,
-                               0,    0,    0, 1,   0,
-                          ]),
-                          child: TileLayer(
-                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            userAgentPackageName: 'com.example.ototag',
-                          ),
+                        // Doğal karanlık tema çinileri (TileLayer) entegre edildi, filtre kaldırıldı.
+                        TileLayer(
+                          urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+                          subdomains: const ['a', 'b', 'c', 'd'],
+                          userAgentPackageName: 'com.example.ototag',
                         ),
                         MarkerLayer(
                           markers: [Marker(point: LatLng(currentPosition!.latitude, currentPosition!.longitude), width: 180, height: 180, child: _buildRadarMarker())],

@@ -29,6 +29,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
   
   Position? currentPosition;
+  StreamSubscription<Position>? _positionStream; // Canlı konum akışı için eklendi
+
   List<Map<String, dynamic>> jobList = [];
   Set<int> knownJobIds = {}; 
   
@@ -68,9 +70,11 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     
     _pageController = PageController(viewportFraction: 0.90);
     _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 400))..repeat(reverse: true);
-    _determinePosition();
+    
+    _initLocationStream(); // Stream başlatılıyor
     _fetchEarningsAndPerformance();
 
+    // UI stream ile anlık güncellenirken, sunucu 5 saniyede bir haberdar edilir
     _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (currentPosition != null && isOnline && !isSuspended) {
         http.post(Uri.parse("$baseUrl?action=update_location"), body: {
@@ -186,6 +190,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
   @override
   void dispose() {
+    _positionStream?.cancel(); // Stream temizliği
     _refreshTimer?.cancel();
     _pulseController.dispose();
     _pageController.dispose();
@@ -214,7 +219,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     }
   }
 
-  Future<void> _determinePosition() async {
+  Future<void> _initLocationStream() async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) return _setFallbackPosition('Konum servisleri kapalı.');
@@ -226,14 +231,26 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
           return _setFallbackPosition('Konum izni reddedildi.');
         }
       }
-      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-      if (mounted) {
-        setState(() {
-          currentPosition = position;
-          isLoading = false;
-        });
-        if (isOnline && !isSuspended) _fetchNearbyJobs();
-      }
+
+      const LocationSettings locationSettings = LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 3, 
+      );
+
+      _positionStream = Geolocator.getPositionStream(locationSettings: locationSettings).listen((Position position) {
+        if (mounted) {
+          setState(() {
+            bool isFirstLoad = currentPosition == null;
+            currentPosition = position;
+            isLoading = false;
+
+            if (isFirstLoad) {
+              mapController.move(LatLng(position.latitude, position.longitude), 15.0);
+              if (isOnline && !isSuspended) _fetchNearbyJobs();
+            }
+          });
+        }
+      });
     } catch (e) {
       _setFallbackPosition('Konum alınamadı.');
     }
@@ -1271,17 +1288,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                       }
                     ),
                     children: [
-                       ColorFiltered(
-                          colorFilter: const ColorFilter.matrix([
-                            -0.9,    0,    0, 0, 255,
-                               0, -0.9,    0, 0, 255,
-                               0,    0, -0.9, 0, 255,
-                               0,    0,    0, 1,   0,
-                          ]),
-                          child: TileLayer(
-                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            userAgentPackageName: 'com.berdas.otoyardim', 
-                          ),
+                       TileLayer(
+                          urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+                          subdomains: const ['a', 'b', 'c', 'd'],
+                          userAgentPackageName: 'com.berdas.otoyardim', 
                         ),
                       if (isOnline) MarkerLayer(markers: _buildMarkers()),
                     ],

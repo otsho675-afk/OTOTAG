@@ -1,0 +1,38 @@
+name: Build and Upload to App Store Connect
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build_and_upload:
+    runs-on: macos-latest
+    steps:
+      - name: Depoyu Indir
+        uses: actions/checkout@v4
+
+      - name: Flutter Ortamini Kur
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Paketleri Yukle
+        run: flutter pub get
+
+      - name: iOS Derlemesini Yap
+        run: flutter build ipa --no-codesign
+
+      - name: API Key Hazirla
+        env:
+          PRIVATE_KEY: ${{ secrets.APP_STORE_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_7AX3MTC43V.p8
+
+      - name: App Store Connect'e Yukle
+        run: |
+          xcrun altool --upload-app \
+            -f build/ios/ipa/*.ipa \
+            -t ios \
+            --apiKey "7AX3MTC43V" \
+            --apiIssuer "36b48b95-a241-487f-ab43-188b92bece28"

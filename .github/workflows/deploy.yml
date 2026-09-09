@@ -1,24 +1,42 @@
+# .github/workflows/deploy.yml
 name: App Store Connect Upload
 
 on:
   workflow_dispatch:
 
 jobs:
-  upload:
+  build_and_upload:
     runs-on: macos-latest
     steps:
       - name: Depoyu Indir
         uses: actions/checkout@v4
+
+      - name: Flutter Kurulumu
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Paketleri Getir
+        run: flutter pub get
 
       - name: API Key Hazirla
         run: |
           mkdir -p ~/.appstoreconnect/private_keys
           cp AuthKey_7AX3MTC43V.p8 ~/.appstoreconnect/private_keys/
 
+      - name: Flutter iOS Release Derlemesi
+        run: |
+          flutter build ipa --release --no-codesign
+
       - name: Hazir IPA Dosyasini Apple'a Gonder
         run: |
+          IPA_PATH=$(find build/ios/archive -name "*.xcarchive" -o -name "*.ipa" | head -n 1)
+          if [ -z "$IPA_PATH" ]; then
+            IPA_PATH="OTOTAG.ipa"
+          fi
           xcrun altool --upload-app \
-            -f OTOTAG.ipa \
+            -f "$IPA_PATH" \
             -t ios \
             --apiKey "7AX3MTC43V" \
-            --apiIssuer "36b48b95-a241-487f-ab43-188b92bece28" 
+            --apiIssuer "36b48b95-a241-487f-ab43-188b92bece28"

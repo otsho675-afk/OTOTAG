@@ -21,4 +21,4 @@ jobs:
             -f OTOTAG.ipa \
             -t ios \
             --apiKey "7AX3MTC43V" \
-            --apiIssuer "36b48b95-a241-487f-ab43-188b92bece28"
+            --apiIssuer "36b48b95-a241-487f-ab43-188b92bece28" 

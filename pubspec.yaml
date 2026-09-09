@@ -1,7 +1,7 @@
 name: ototag
 description: Oto Eslestirme Sistemi
 publish_to: 'none'
-version: 1.0.0+11
+version: 1.0.0+12
 
 
 environment:

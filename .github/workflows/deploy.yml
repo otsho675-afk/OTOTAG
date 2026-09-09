@@ -25,33 +25,33 @@ jobs:
           mkdir -p ~/.appstoreconnect/private_keys
           cp AuthKey_7AX3MTC43V.p8 ~/.appstoreconnect/private_keys/
 
-      - name: Apple Profil ve Sertifikasini Cek
+      - name: Fastlane ile Sertifika ve Profil Cek
         env:
-          API_KEY_ID: "7AX3MTC43V"
-          API_ISSUER_ID: "36b48b95-a241-487f-ab43-188b92bece28"
+          APP_STORE_CONNECT_API_KEY_KEY_ID: "7AX3MTC43V"
+          APP_STORE_CONNECT_API_KEY_ISSUER_ID: "36b48b95-a241-487f-ab43-188b92bece28"
+          APP_STORE_CONNECT_API_KEY_KEY_FILEPATH: "AuthKey_7AX3MTC43V.p8"
         run: |
           gem install fastlane --no-document
-          bundle exec fastlane run app_store_connect_api_key \
-            key_id:"$API_KEY_ID" \
-            issuer_id:"$API_ISSUER_ID" \
-            key_filepath:"AuthKey_7AX3MTC43V.p8" \
-            in_house:false
+          fastlane run get_provisioning_profile app_identifier:"com.oto.tag"
 
-      - name: Flutter iOS Release Derle ve Paketle
+      - name: CocoaPods Kurulumu
         run: |
           cd ios
           pod install
           cd ..
+
+      - name: Flutter iOS Release Derlemesi
+        run: |
           flutter build ipa --release
 
-      - name: IPA Dosyasini TestFlight'a Gonder
+      - name: IPA Dosyasini Apple'a Gonder
         run: |
-          IPA_PATH=$(find build/ios/archive -name "*.xcarchive" -o -name "*.ipa" | head -n 1)
-          if [ -z "$IPA_PATH" ]; then
-            IPA_PATH=$(find build/ios/ipa -name "*.ipa" | head -n 1)
+          IPA_FILE=$(find build/ios/ipa -name "*.ipa" | head -n 1)
+          if [ -z "$IPA_FILE" ]; then
+            IPA_FILE=$(find build/ios/archive -name "*.xcarchive" | head -n 1)
           fi
           xcrun altool --upload-app \
-            -f "$IPA_PATH" \
+            -f "$IPA_FILE" \
             -t ios \
             --apiKey "7AX3MTC43V" \
             --apiIssuer "36b48b95-a241-487f-ab43-188b92bece28"

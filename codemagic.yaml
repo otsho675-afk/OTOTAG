@@ -1,0 +1,30 @@
+# codemagic.yaml
+workflows:
+  ios-workflow:
+    name: iOS Release
+    max_build_duration: 60
+    instance_type: mac_mini_m1
+    integrations:
+      app_store_connect: OTOTAG
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.oto.tag
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Get Flutter dependencies
+        script: flutter packages pub get
+      - name: Install CocoaPods
+        script: find . -maxdepth 2 -name Podfile -execdir pod install \;
+      - name: Set up code signing settings on Xcode project
+        script: xcode-project use-profiles
+      - name: Build IPA
+        script: flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

@@ -25,7 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   
   bool isLoggingIn = false;
-  bool _obscurePassword = true; // Şifre gizleme/gösterme durumu
+  bool _obscurePassword = true; 
   final String baseUrl = "https://eliteagency.sbs/api.php";
 
   @override
@@ -47,8 +47,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    HapticFeedback.lightImpact(); // Tıklama hissiyatı
-    FocusScope.of(context).unfocus(); // Klavyeyi kapat
+    HapticFeedback.lightImpact(); 
+    FocusScope.of(context).unfocus(); 
 
     String input = _phoneController.text.trim();
     String pass = _passwordController.text.trim();
@@ -88,7 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success') {
-          HapticFeedback.mediumImpact(); // Başarılı giriş hissiyatı
+          HapticFeedback.mediumImpact(); 
           if (wasAdminCall) {
             Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const AdminDashboardScreen()));
           } else {
@@ -361,7 +361,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final isTablet = size.width > 600;
     
     return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(), // Boşluğa tıklayınca klavyeyi kapat
+      onTap: () => FocusScope.of(context).unfocus(), 
       child: Scaffold(
         backgroundColor: const Color(0xFF030305),
         extendBodyBehindAppBar: true,
@@ -384,7 +384,6 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         body: Stack(
           children: [
-            // Arka Plan Glow Efekti
             Positioned(
               top: size.height * 0.05,
               left: -size.width * 0.4,
@@ -452,7 +451,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             label: "Telefon Numarası (Örn: 0535...)", 
                             icon: Icons.phone_android_rounded, 
                             isPasswordField: false, 
-                            type: TextInputType.phone,
+                            // TextInputType.number ile sayı klavyesinin açılması sağlandı
+                            type: isCustomer ? TextInputType.number : TextInputType.number, 
                             inputFormatters: [LengthLimitingTextInputFormatter(11)]
                           ),
                           const SizedBox(height: 20),
@@ -587,4 +587,4 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
-} 
+}

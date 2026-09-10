@@ -1,21 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Dokunsal geri bildirim (Haptic) için eklendi
+import 'package:flutter/services.dart'; 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:ui';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'; // Lokalizasyon ayarları
+import 'package:flutter_localizations/flutter_localizations.dart'; 
 
 import 'customer_dashboard_screen.dart';
 import 'provider_map_screen.dart';
 import 'registration_screen.dart';
 import 'admin_dashboard_screen.dart';
 
-// UYGULAMANIN ANA GİRİŞ NOKTASI
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  // Durum çubuğu ve navigasyon çubuğu renklerini temaya uygun hale getirme
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -36,17 +34,15 @@ class MyApp extends StatelessWidget {
       title: 'Oto Tamir App',
       debugShowCheckedModeBanner: false,
 
-      // ---- DİL (LOKALİZASYON) AYARLARI BAŞLANGICI ----
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [
-        Locale('tr', 'TR'), // Türkçe
-        Locale('en', 'US'), // İngilizce
+        Locale('tr', 'TR'), 
+        Locale('en', 'US'), 
       ],
-      // ---- DİL AYARLARI BİTİŞİ ----
 
       theme: ThemeData(
         scaffoldBackgroundColor: const Color(0xFF030305),
@@ -57,7 +53,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// --- SPLASH SCREEN (AÇILIŞ EKRANI) ---
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -73,7 +68,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   void initState() {
     super.initState();
     
-    // Animasyon ayarları (Daha akıcı bir yaylanma efekti ile)
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -82,10 +76,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     
     _animationController.forward();
 
-    // 2.5 Saniye sonra RoleSelectionScreen'e yönlendirme
     Future.delayed(const Duration(milliseconds: 2500), () {
       if (mounted) {
-        HapticFeedback.lightImpact(); // Geçişte hafif titreşim
+        // Haptic feedback is blocked on web browsers before user interaction.
+        if (!kIsWeb) {
+           HapticFeedback.lightImpact(); 
+        }
         Navigator.pushReplacement(
           context,
           PageRouteBuilder(
@@ -118,7 +114,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logonun yedeği olarak araba ikonu
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
@@ -138,7 +133,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   ),
                 ),
                 const SizedBox(height: 48),
-                // Yükleniyor animasyonu
                 const SizedBox(
                   width: 30,
                   height: 30,
@@ -155,7 +149,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     );
   }
 }
-// ---------------------------------------------------
 
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
@@ -169,7 +162,6 @@ class RoleSelectionScreen extends StatelessWidget {
       backgroundColor: const Color(0xFF030305),
       body: Stack(
         children: [
-          // Arka plan neon aydınlatma
           Positioned(
             top: size.height * 0.05,
             right: -size.width * 0.4,
@@ -202,47 +194,47 @@ class RoleSelectionScreen extends StatelessWidget {
                       ),
                     );
                   },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Logonun yedeği olarak araba ikonu
-                        Image.asset('assets/images/logo.png', height: 80, errorBuilder: (context, error, stackTrace) => const Icon(Icons.directions_car_rounded, color: Color(0xFF00FFA3), size: 80)),
-                        const SizedBox(height: 50),
-                        const Text(
-                          "Hoş Geldiniz",
-                          style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -1.0),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          "Lütfen devam etmek istediğiniz rolü seçin",
-                          style: TextStyle(fontSize: 16, color: Colors.white.withOpacity(0.6), fontWeight: FontWeight.w500, height: 1.4),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 60),
-                        
-                        // Hizmet Almak İstiyorum Butonu
-                        _buildRoleButton(
-                          context: context,
-                          title: "Hizmet Almak İstiyorum",
-                          subtitle: "Çekici, tamirci veya yıkama ara",
-                          icon: Icons.person_search_rounded,
-                          userType: 'customer',
-                        ),
-                        
-                        const SizedBox(height: 20),
-                        
-                        // Hizmet Vermek İstiyorum Butonu
-                        _buildRoleButton(
-                          context: context,
-                          title: "Hizmet Vermek İstiyorum",
-                          subtitle: "Müşterilere hizmet sun ve kazan",
-                          icon: Icons.engineering_rounded,
-                          userType: 'provider',
-                          isOutline: true,
-                        ),
-                      ],
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Image.asset('assets/images/logo.png', height: 80, errorBuilder: (context, error, stackTrace) => const Icon(Icons.directions_car_rounded, color: Color(0xFF00FFA3), size: 80)),
+                          const SizedBox(height: 50),
+                          const Text(
+                            "Hoş Geldiniz",
+                            style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -1.0),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            "Lütfen devam etmek istediğiniz rolü seçin",
+                            style: TextStyle(fontSize: 16, color: Colors.white.withOpacity(0.6), fontWeight: FontWeight.w500, height: 1.4),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 60),
+                          
+                          _buildRoleButton(
+                            context: context,
+                            title: "Hizmet Almak İstiyorum",
+                            subtitle: "Çekici, tamirci veya yıkama ara",
+                            icon: Icons.person_search_rounded,
+                            userType: 'customer',
+                          ),
+                          
+                          const SizedBox(height: 20),
+                          
+                          _buildRoleButton(
+                            context: context,
+                            title: "Hizmet Vermek İstiyorum",
+                            subtitle: "Müşterilere hizmet sun ve kazan",
+                            icon: Icons.engineering_rounded,
+                            userType: 'provider',
+                            isOutline: true,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -264,7 +256,7 @@ class RoleSelectionScreen extends StatelessWidget {
   }) {
     return InkWell(
       onTap: () {
-        HapticFeedback.selectionClick();
+        if (!kIsWeb) HapticFeedback.selectionClick();
         Navigator.push(
           context,
           PageRouteBuilder(
@@ -347,18 +339,18 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool isLoggingIn = false;
-  bool _obscurePassword = true; // Şifre görünürlüğü state'i
+  bool _obscurePassword = true; 
   final String baseUrl = "https://eliteagency.sbs/api.php";
 
   Future<void> _login() async {
-    HapticFeedback.lightImpact(); // Tıklama hissiyatı
-    FocusScope.of(context).unfocus(); // Klavyeyi kapat
+    if (!kIsWeb) HapticFeedback.lightImpact(); 
+    FocusScope.of(context).unfocus(); 
     
     String input = _phoneController.text.trim();
     String pass = _passwordController.text.trim();
 
     if (input.isEmpty || pass.isEmpty) {
-      HapticFeedback.vibrate();
+      if (!kIsWeb) HapticFeedback.vibrate();
       _showCustomSnackBar('Lütfen bilgilerinizi girin.', isError: true);
       return;
     }
@@ -367,13 +359,11 @@ class _LoginScreenState extends State<LoginScreen> {
     
     try {
       bool isCustomerForm = widget.userType == 'customer';
-      // Sadece rakam, artı ve boşluk içeriyorsa telefon numarasıdır
       bool looksLikePhone = RegExp(r'^\+?[0-9\s]+$').hasMatch(input);
       
       http.Response response;
       bool wasAdminCall = false;
 
-      // Müşteri formundaysa ve girilen metin telefona benzemiyorsa (kullanıcı adıysa) direkt admin girişi denenir
       if (isCustomerForm && !looksLikePhone) {
         wasAdminCall = true;
         response = await http.post(
@@ -382,7 +372,6 @@ class _LoginScreenState extends State<LoginScreen> {
           body: {"username": input, "password": pass},
         );
       } else {
-        // Normal kullanıcı veya usta girişi
         response = await http.post(
           Uri.parse("$baseUrl?action=login"),
           headers: {"Content-Type": "application/x-www-form-urlencoded"},
@@ -395,17 +384,15 @@ class _LoginScreenState extends State<LoginScreen> {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success') {
-          HapticFeedback.mediumImpact(); // Başarılı giriş
+          if (!kIsWeb) HapticFeedback.mediumImpact(); 
           if (wasAdminCall) {
             Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const AdminDashboardScreen()));
           } else {
             int userId = int.parse(data['user_id'].toString());
             
-            // --- ONESIGNAL BİLDİRİM KAYDI ---
             if (!kIsWeb) {
               OneSignal.login(userId.toString());
             }
-            // --------------------------------
 
             Navigator.pushReplacement(context, MaterialPageRoute(
               builder: (context) => data['user_type'] == 'customer' 
@@ -414,7 +401,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ));
           }
         } else {
-          // Eğer müşteri ekranında telefon girişi başarısız olduysa, sadece rakamlardan oluşan bir admin hesabı olabilir (Fallback)
           if (isCustomerForm && !wasAdminCall) {
             final adminFallback = await http.post(
               Uri.parse("$baseUrl?action=admin_login"),
@@ -424,21 +410,21 @@ class _LoginScreenState extends State<LoginScreen> {
             final adminData = json.decode(adminFallback.body);
             if (adminData['status'] == 'success') {
               if (!mounted) return;
-              HapticFeedback.mediumImpact();
+              if (!kIsWeb) HapticFeedback.mediumImpact();
               Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const AdminDashboardScreen()));
               return;
             }
           }
-          HapticFeedback.vibrate();
+          if (!kIsWeb) HapticFeedback.vibrate();
           _showCustomSnackBar(data['message'] ?? 'Hatalı bilgiler veya şifre.', isError: true);
         }
       } else {
-        HapticFeedback.vibrate();
+        if (!kIsWeb) HapticFeedback.vibrate();
         _showCustomSnackBar('Giriş başarısız. Bilgilerinizi kontrol edin.', isError: true);
       }
     } catch (e) {
       if (mounted) {
-        HapticFeedback.vibrate();
+        if (!kIsWeb) HapticFeedback.vibrate();
         _showCustomSnackBar('Bağlantı hatası: Sunucuya ulaşılamıyor.', isError: true);
       }
     } finally {
@@ -477,7 +463,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showTrackingDialog() {
-    HapticFeedback.lightImpact();
+    if (!kIsWeb) HapticFeedback.lightImpact();
     final TextEditingController trackCtrl = TextEditingController();
     bool isChecking = false;
 
@@ -536,7 +522,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Expanded(
                         child: TextButton(
                           onPressed: isChecking ? null : () {
-                            HapticFeedback.selectionClick();
+                            if (!kIsWeb) HapticFeedback.selectionClick();
                             Navigator.pop(context);
                           }, 
                           style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
@@ -555,7 +541,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))
                           ),
                           onPressed: isChecking ? null : () async {
-                            HapticFeedback.selectionClick();
+                            if (!kIsWeb) HapticFeedback.selectionClick();
                             if (trackCtrl.text.trim().isEmpty) {
                               _showCustomSnackBar('Takip numarası boş bırakılamaz.', isError: true);
                               return;
@@ -639,7 +625,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           size: 20,
                         ),
                         onPressed: () {
-                          HapticFeedback.selectionClick();
+                          if (!kIsWeb) HapticFeedback.selectionClick();
                           setState(() {
                             _obscurePassword = !_obscurePassword;
                           });
@@ -669,7 +655,6 @@ class _LoginScreenState extends State<LoginScreen> {
     final isTablet = size.width > 600;
     
     return GestureDetector(
-      // Ekranda boşluğa tıklanınca klavyeyi kapatmak için eklendi
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         backgroundColor: const Color(0xFF030305),
@@ -682,7 +667,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: Colors.white),
             ),
             onPressed: () {
-              HapticFeedback.selectionClick();
+              if (!kIsWeb) HapticFeedback.selectionClick();
               Navigator.pop(context);
             },
           ),
@@ -693,7 +678,6 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         body: Stack(
           children: [
-            // Arka Plan Glow Efekti
             Positioned(
               top: size.height * 0.05,
               left: -size.width * 0.4,
@@ -756,7 +740,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const SizedBox(height: 48),
                           
-                          // USTA VE MÜŞTERİ AYRIMININ YAPILDIĞI ALAN BURASI
                           _buildGlassTextField(
                             controller: _phoneController, 
                             label: isCustomer ? "Telefon No / Yönetici Adı" : "Telefon Numarası", 
@@ -801,7 +784,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             fit: BoxFit.scaleDown,
                             child: TextButton(
                               onPressed: () {
-                                HapticFeedback.selectionClick();
+                                if (!kIsWeb) HapticFeedback.selectionClick();
                                 Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => RegistrationScreen(userType: widget.userType)));
                               },
                               style: TextButton.styleFrom(
@@ -821,8 +804,39 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                           
+                          const SizedBox(height: 12),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: TextButton.icon(
+                              onPressed: () {
+                                if (!kIsWeb) HapticFeedback.selectionClick();
+                                Navigator.pushReplacement(
+                                  context, 
+                                  MaterialPageRoute(
+                                    builder: (context) => LoginScreen(
+                                      userType: isCustomer ? 'provider' : 'customer'
+                                    )
+                                  )
+                                );
+                              },
+                              icon: Icon(isCustomer ? Icons.engineering_rounded : Icons.person_rounded, size: 22),
+                              style: TextButton.styleFrom(
+                                foregroundColor: const Color(0xFF00FFA3),
+                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20), 
+                                  side: BorderSide(color: const Color(0xFF00FFA3).withOpacity(0.3))
+                                )
+                              ),
+                              label: Text(
+                                isCustomer ? "Usta Girişine Geç" : "Müşteri Girişine Geç", 
+                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)
+                              ),
+                            ),
+                          ),
+                          
                           if (!isCustomer) ...[
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 16),
                             FittedBox(
                               fit: BoxFit.scaleDown,
                               child: TextButton.icon(

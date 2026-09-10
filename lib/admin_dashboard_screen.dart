@@ -47,6 +47,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   List<Map<String, dynamic>> allAds = [];
   List<dynamic> allPartListings = [];
 
+  // --- YENİ EKLENEN: Satın alım ve premium takip listeleri ---
+  List<dynamic> allPurchases = [];
+  Map<String, dynamic> purchaseStats = {};
+
   bool isJobSelectionMode = false;
   Set<int> selectedJobs = {};
   Set<int> hiddenJobs = {}; 
@@ -80,9 +84,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       _fetchTickets(),
       _fetchAds(),
       _fetchPartListings(),
+      _fetchPurchases(), // --- YENİ EKLENEN ---
     ]);
     if (mounted) {
       setState(() => isLoading = false);
+    }
+  }
+
+  // --- YENİ EKLENEN: Satın alımları çeken fonksiyon ---
+  Future<void> _fetchPurchases() async {
+    try {
+      final response = await http.get(Uri.parse("$baseUrl?action=admin_get_purchases"));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data is Map && data['status'] == 'success' && mounted) {
+          setState(() {
+            allPurchases = (data['purchases'] is List) ? List.from(data['purchases']) : [];
+            purchaseStats = (data['stats'] is Map) ? data['stats'] : {};
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Satın alımlar çekilirken hata: $e");
     }
   }
 
@@ -1557,6 +1580,115 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  // --- YENİ EKLENEN: Satın Alım ve Premium Takip Paneli (Modalı) ---
+  void _showPurchasesModal(BuildContext context, bool isDark) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final int premiumCount = int.tryParse(purchaseStats['premium_count']?.toString() ?? '0') ?? 0;
+            final int subscriptionCount = int.tryParse(purchaseStats['subscriptions_count']?.toString() ?? '0') ?? 0;
+
+            return SizedBox(
+              height: MediaQuery.of(context).size.height * 0.90,
+              child: Column(
+                children: [
+                  const SizedBox(height: 12),
+                  Container(width: 40, height: 5, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10))),
+                  const SizedBox(height: 16),
+                  
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text("Satın Alım & Premium Takibi", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        Expanded(child: _buildGradientCard("Premium Alan", premiumCount.toString(), Icons.star_rounded, [Colors.orange, Colors.deepOrange])),
+                        const SizedBox(width: 12),
+                        Expanded(child: _buildGradientCard("Abonelik", subscriptionCount.toString(), Icons.autorenew_rounded, [Colors.blue, Colors.lightBlueAccent])),
+                      ],
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text("Son İşlemler", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey)),
+                    ),
+                  ),
+
+                  Expanded(
+                    child: allPurchases.isEmpty
+                      ? _buildEmptyState("Henüz satın alım bulunmuyor.", Icons.money_off_rounded)
+                      : ListView.separated(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          itemCount: allPurchases.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final purchase = allPurchases[index];
+                            final bool isPremium = purchase['purchase_type'] == 'premium';
+                            final bool isApple = purchase['platform'] == 'apple';
+                            
+                            return Material(
+                              color: isDark ? Colors.white10 : Colors.grey.shade50,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                side: BorderSide(color: (isPremium ? Colors.orange : Colors.blue).withOpacity(0.3)),
+                              ),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                leading: CircleAvatar(
+                                  backgroundColor: isPremium ? Colors.orange.withOpacity(0.2) : Colors.blue.withOpacity(0.2),
+                                  child: Icon(isPremium ? Icons.star_rounded : Icons.autorenew_rounded, color: isPremium ? Colors.orange : Colors.blue),
+                                ),
+                                title: Text(purchase['user_name']?.toString() ?? 'Bilinmeyen Kullanıcı', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(height: 4),
+                                    Text(purchase['user_phone']?.toString() ?? ''),
+                                    const SizedBox(height: 4),
+                                    Text("Tarih: ${_formatDate(purchase['created_at']?.toString())}", style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                  ],
+                                ),
+                                trailing: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(color: (isApple ? Colors.black87 : Colors.green).withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                                      child: Text(isApple ? "Apple" : "Google", style: TextStyle(color: isApple ? (isDark ? Colors.white : Colors.black87) : Colors.green, fontWeight: FontWeight.bold, fontSize: 10)),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(isPremium ? "PREMİUM" : "ABONELİK", style: TextStyle(color: isPremium ? Colors.orange : Colors.blue, fontWeight: FontWeight.w900, fontSize: 10)),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                  )
+                ],
+              ),
+            );
+          }
+        );
+      }
+    );
+  }
+
   void _showAdManagementModal(BuildContext context, bool isDark) {
     showModalBottomSheet(
       context: context,
@@ -2549,7 +2681,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       final search = userSearchQuery.toLowerCase();
       
       final matchesSearch = name.contains(search) || phone.contains(search);
-      final matchesType = userFilter == 'all' || user['user_type'] == userFilter;
+      
+      // --- GÜNCELLENDİ: Premium filtresi desteği ---
+      final matchesType = userFilter == 'all' || 
+          (userFilter == 'premium' 
+              ? (user['is_premium'] == 1 || user['is_premium'] == '1') 
+              : user['user_type'] == userFilter);
       
       return matchesSearch && matchesType;
     }).toList();
@@ -2631,6 +2768,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             : const SizedBox.shrink(),
         ),
 
+        // --- GÜNCELLENDİ: Premium filtresi çipi eklendi ---
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -2641,6 +2779,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               _buildFilterChip("Müşteriler", "customer", userFilter, (val) => setState(() => userFilter = val)),
               const SizedBox(width: 8),
               _buildFilterChip("Ustalar", "provider", userFilter, (val) => setState(() => userFilter = val)),
+              const SizedBox(width: 8),
+              _buildFilterChip("Premium", "premium", userFilter, (val) => setState(() => userFilter = val)),
             ],
           ),
         ),
@@ -3442,6 +3582,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   onTap: () => _showAdManagementModal(context, isDark),
                   leading: const Icon(Icons.campaign_rounded, color: Colors.purple),
                   title: const Text("Reklam (Banner) Yönetimi", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                ),
+                const Divider(height: 1),
+                // --- YENİ EKLENEN: Satın alım takip butonu ---
+                ListTile(
+                  onTap: () => _showPurchasesModal(context, isDark),
+                  leading: const Icon(Icons.workspace_premium_rounded, color: Colors.orange),
+                  title: const Text("Premium ve Satın Alım Takibi", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
                 ),
                 const Divider(height: 1),

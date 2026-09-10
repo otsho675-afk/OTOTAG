@@ -1,9 +1,10 @@
-// profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:ui';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'provider_profile_screen.dart';
+import 'login_screen.dart'; 
 
 class ProfileScreen extends StatefulWidget {
   final int userId;
@@ -189,7 +190,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
   Future<void> _updateProfile() async {
     setState(() => isSaving = true);
-    FocusScope.of(context).unfocus(); // Klavyeyi kapat
+    FocusScope.of(context).unfocus(); 
     try {
       final response = await _httpClient.post(
         Uri.parse("$baseUrl?action=update_profile"),
@@ -205,7 +206,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       final data = json.decode(response.body);
       if (mounted) {
         setState(() => isSaving = false);
-        if (data['status'] == 'success') {
+        if (response.statusCode == 200 && data['status'] == 'success') {
           _showCustomSnackBar("Profiliniz başarıyla güncellendi!");
         } else {
           _showCustomSnackBar(data['message'] ?? "Güncelleme başarısız.", isError: true);
@@ -348,7 +349,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   void _handleLogout() {
     showDialog(
       context: context,
-      builder: (context) => BackdropFilter(
+      builder: (dialogContext) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: AlertDialog(
           backgroundColor: const Color(0xFF1E293B).withOpacity(0.95),
@@ -377,7 +378,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               children: [
                 Expanded(
                   child: TextButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.pop(dialogContext),
                     style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                     child: const Text("İptal", style: TextStyle(color: Colors.white60, fontWeight: FontWeight.w800, fontSize: 14)),
                   ),
@@ -391,10 +392,103 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       padding: const EdgeInsets.symmetric(vertical: 14)
                     ),
-                    onPressed: () {
-                      Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
+                    onPressed: () async {
+                      Navigator.pop(dialogContext);
+                      try {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.clear();
+                      } catch (e) {
+                        debugPrint("Çıkış yaparken önbellek temizlenemedi: $e");
+                      }
+                      if (mounted) {
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(builder: (context) => LoginScreen(userType: widget.userType)),
+                          (Route<dynamic> route) => false,
+                        );
+                      }
                     },
                     child: const FittedBox(child: Text("Çıkış Yap", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14))),
+                  ),
+                ),
+              ],
+            )
+          ],
+        ),
+      )
+    );
+  }
+
+  void _handleDeleteAccount() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: AlertDialog(
+          backgroundColor: const Color(0xFF1E293B).withOpacity(0.95),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: BorderSide(color: const Color(0xFFFF3366).withOpacity(0.3), width: 1.5)
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: const Color(0xFFFF3366).withOpacity(0.15), shape: BoxShape.circle),
+                child: const Icon(Icons.delete_forever_rounded, color: Color(0xFFFF3366), size: 24),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text("Hesabı Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20, letterSpacing: -0.5), overflow: TextOverflow.ellipsis),
+              ),
+            ],
+          ),
+          content: const Text("Hesabınız ve tüm verileriniz kalıcı olarak silinecektir. Bu işlem geri alınamaz. Emin misiniz?", style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14, height: 1.4, fontWeight: FontWeight.w500)),
+          actionsPadding: const EdgeInsets.all(16),
+          actions: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                    child: const Text("İptal", style: TextStyle(color: Colors.white60, fontWeight: FontWeight.w800, fontSize: 14)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF3366),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 14)
+                    ),
+                    onPressed: () async {
+                      Navigator.pop(dialogContext);
+                      setState(() => isLoading = true);
+                      
+                      try {
+                        await http.post(
+                          Uri.parse("$baseUrl?action=delete_account"),
+                          headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                          body: {"user_id": widget.userId.toString()},
+                        );
+                      } catch (_) {
+                      }
+                      
+                      try {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.clear(); 
+                      } catch (_) {}
+                      
+                      if (mounted) {
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(builder: (context) => LoginScreen(userType: widget.userType)),
+                          (Route<dynamic> route) => false,
+                        );
+                      }
+                    },
+                    child: const FittedBox(child: Text("Kalıcı Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14))),
                   ),
                 ),
               ],
@@ -410,7 +504,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     final isProvider = widget.userType == 'provider';
     
     const Color bgColor = Color(0xFF0F172A);
-    const Color primaryColor = Color(0xFF10B981); // Emerald (Neon yeşil yerine daha soft yeşil)
+    const Color primaryColor = Color(0xFF10B981); 
 
     return DefaultTabController(
       length: isProvider ? 3 : 2,
@@ -630,6 +724,33 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                       Icon(Icons.power_settings_new_rounded, color: Color(0xFFFF3366), size: 20),
                       SizedBox(width: 8),
                       Text("Güvenli Çıkış", style: TextStyle(fontSize: 15, color: Color(0xFFFF3366), fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                    ],
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 16),
+
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white12, width: 1.5),
+                ),
+                child: ElevatedButton(
+                  onPressed: _handleDeleteAccount,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent, 
+                    elevation: 0,
+                    shadowColor: Colors.transparent, 
+                    padding: const EdgeInsets.symmetric(vertical: 16), 
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.delete_forever_rounded, color: Colors.white54, size: 20),
+                      SizedBox(width: 8),
+                      Text("Hesabımı Sil", style: TextStyle(fontSize: 15, color: Colors.white54, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
                     ],
                   ),
                 ),

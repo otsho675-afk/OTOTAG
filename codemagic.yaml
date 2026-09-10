@@ -1,6 +1,6 @@
 # codemagic.yaml
 workflows:
-  ios-workflow:
+  ios-release:
     name: iOS Release
     max_build_duration: 60
     instance_type: mac_mini_m1
@@ -12,15 +12,14 @@ workflows:
         bundle_identifier: com.oto.tag
       flutter: stable
       xcode: latest
-      cocoapods: default
     scripts:
-      - name: Get Flutter dependencies
+      - name: Paketleri Getir
         script: flutter packages pub get
-      - name: Install CocoaPods
+      - name: Pod Kurulumu
         script: find . -maxdepth 2 -name Podfile -execdir pod install \;
-      - name: Set up code signing settings on Xcode project
+      - name: Xcode Profilini Bagla
         script: xcode-project use-profiles
-      - name: Build IPA
+      - name: Release Derlemesi
         script: flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
     artifacts:
       - build/ios/ipa/*.ipa

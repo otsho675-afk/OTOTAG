@@ -1,4 +1,3 @@
-// customer_dashboard_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart'; 
 import 'package:http/http.dart' as http;
@@ -6,6 +5,7 @@ import 'dart:convert';
 import 'dart:ui';
 import 'package:intl/intl.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'customer_map_screen.dart';
 import 'customer_bids_screen.dart';
 import 'profile_screen.dart';
@@ -359,13 +359,18 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {
           "user_id": widget.customerId.toString(),
-          "purchase_token": purchaseDetails.verificationData.serverVerificationData
+          "purchase_token": purchaseDetails.verificationData.serverVerificationData,
+          "product_id": _premiumProductId,
+          "platform": defaultTargetPlatform == TargetPlatform.iOS ? "apple" : "google",
+          "package_name": "com.berdas.otoyardim",
         }
       );
       final data = json.decode(response.body);
       if (data['status'] == 'success' && mounted) {
         setState(() => isPremium = true);
         _showTopSnackBar("Premium üyeliğiniz aktif edildi! Artık sınırsız araç ekleyebilirsiniz.");
+      } else {
+        _showTopSnackBar(data['message'] ?? "Doğrulama başarısız.", isError: true);
       }
     } catch (e) {
       _showTopSnackBar("Sunucu onayı başarısız oldu.", isError: true);
@@ -821,8 +826,17 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    onPressed: () {
-                      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      try {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.clear(); 
+                      } catch (e) {
+                        debugPrint("Cache clear error: $e");
+                      }
+                      if (context.mounted) {
+                        Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                      }
                     },
                     child: const Text("Çıkış Yap", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14), overflow: TextOverflow.ellipsis),
                   ),

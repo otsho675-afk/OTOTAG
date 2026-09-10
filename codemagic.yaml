@@ -1,4 +1,3 @@
-# codemagic.yaml
 workflows:
   ios-release:
     name: iOS Release
@@ -12,15 +11,21 @@ workflows:
         bundle_identifier: com.oto.tag
       flutter: stable
       xcode: latest
+      cocoapods: default
     scripts:
       - name: Paketleri Getir
-        script: flutter packages pub get
+        script: |
+          flutter packages pub get
       - name: Pod Kurulumu
-        script: find . -maxdepth 2 -name Podfile -execdir pod install \;
+        script: |
+          find . -maxdepth 2 -name Podfile -execdir pod install --repo-update \;
       - name: Xcode Profilini Bagla
-        script: xcode-project use-profiles
+        script: |
+          xcode-project use-profiles
       - name: Release Derlemesi
-        script: flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
+        script: |
+          flutter build ipa --release \
+            --export-options-plist=/Users/builder/export_options.plist
     artifacts:
       - build/ios/ipa/*.ipa
     publishing:

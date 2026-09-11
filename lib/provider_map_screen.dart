@@ -1,7 +1,7 @@
 /// Dosya: provider_map_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; 
-import 'package:flutter/foundation.dart'; // GÜNCELLENDİ (show kIsWeb silindi)
+import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:latlong2/latlong.dart' hide Path;
@@ -230,7 +230,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     }
   }
 
-  // --- BURASI GÜNCELLENDİ (APPLE & GOOGLE DESTEĞİ) ---
   Future<void> _verifyAndActivateSubscription(PurchaseDetails purchaseDetails) async {
     try {
       final response = await _httpClient.post(
@@ -1197,20 +1196,28 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     HapticFeedback.lightImpact();
     setState(() {
       _flitchingJobId = null;
-      _showJobCard = false; 
-      _isModalOpen = true; 
+      _showJobCard = false;
+      _isModalOpen = true;
     });
-    
+
     TextEditingController priceController = TextEditingController();
     TextEditingController noteController = TextEditingController();
 
-    List<String> quickReplies = ["Yoldayım, 10 dk içinde oradayım.", "Malzemeler hazır, hemen geliyorum.", "Lütfen konumunuzu teyit edin."];
+    // Hızlı Mesajlar (Önceden Tanımlı)
+    List<Map<String, dynamic>> quickReplies = [
+      {"text": "Hemen Geliyorum", "icon": Icons.rocket_launch_rounded},
+      {"text": "10 Dakikaya Oradayım", "icon": Icons.timer_rounded},
+      {"text": "Malzemeler Hazır", "icon": Icons.inventory_2_rounded},
+      {"text": "Konum Teyidi Gerekli", "icon": Icons.location_on_rounded},
+      {"text": "Trafik Var, Gecikebilirim", "icon": Icons.traffic_rounded},
+    ];
 
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, 
+      isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
+      transitionAnimationController: AnimationController(vsync: this, duration: const Duration(milliseconds: 700))..forward(),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
@@ -1218,223 +1225,285 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
               builder: (context, constraints) {
                 final isSmallScreen = constraints.maxWidth < 400;
                 return BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                   child: SafeArea(
                     child: Center(
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 600),
-                        child: Container(
-                          constraints: BoxConstraints(
-                            maxHeight: MediaQuery.of(context).size.height * 0.90,
-                          ),
-                          decoration: BoxDecoration(
-                            color: panelBlack.withOpacity(0.95), 
-                            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                            border: Border.all(color: neonGreen.withOpacity(0.5), width: 2.0),
-                            boxShadow: [
-                              BoxShadow(color: neonGreen.withOpacity(0.2), blurRadius: 40, spreadRadius: 5),
-                              BoxShadow(color: pureBlack, blurRadius: 40, offset: const Offset(0, -10))
-                            ]
-                          ),
-                          padding: EdgeInsets.only(
-                            bottom: MediaQuery.of(context).viewInsets.bottom + 24, 
-                            left: isSmallScreen ? 16 : 24, 
-                            right: isSmallScreen ? 16 : 24, 
-                            top: 24
-                          ),
-                          child: SingleChildScrollView(
-                            physics: const BouncingScrollPhysics(),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const SizedBox(width: 40), 
-                                    Container(width: 48, height: 5, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10))),
-                                    InkWell(
-                                      onTap: () {
-                                        HapticFeedback.selectionClick();
-                                        Navigator.pop(context);
-                                      },
-                                      borderRadius: BorderRadius.circular(20),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle),
-                                        child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 24),
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(16),
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 600),
+                          curve: Curves.easeOutBack,
+                          builder: (context, scale, child) {
+                            return Transform.scale(
+                              scale: 0.9 + (0.1 * scale),
+                              child: Opacity(
+                                opacity: scale.clamp(0.0, 1.0),
+                                child: AnimatedBuilder(
+                                  animation: _buttonPulseController,
+                                  builder: (context, child) {
+                                    return Container(
+                                      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.90),
                                       decoration: BoxDecoration(
-                                        gradient: const LinearGradient(colors: [neonGreen, darkGreen], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                                        borderRadius: BorderRadius.circular(20),
-                                        boxShadow: [BoxShadow(color: neonGreen.withOpacity(0.5), blurRadius: 15, offset: const Offset(0, 5))]
-                                      ),
-                                      child: Icon(_getServiceIcon(serviceType), color: pureBlack, size: 32),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            serviceName, 
-                                            style: TextStyle(fontSize: isSmallScreen ? 18 : 22, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
+                                        color: panelBlack.withOpacity(0.95),
+                                        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                                        border: Border(
+                                          top: const BorderSide(color: neonGreen, width: 3.0),
+                                          left: BorderSide(color: neonGreen.withOpacity(0.3 + (_buttonPulseController.value * 0.3)), width: 1.5),
+                                          right: BorderSide(color: neonGreen.withOpacity(0.3 + (_buttonPulseController.value * 0.3)), width: 1.5),
+                                          bottom: BorderSide(color: neonGreen.withOpacity(0.3 + (_buttonPulseController.value * 0.3)), width: 1.5),
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: neonGreen.withOpacity(0.2 + (_buttonPulseController.value * 0.2)), 
+                                            blurRadius: 40 + (_buttonPulseController.value * 20), 
+                                            spreadRadius: 5 + (_buttonPulseController.value * 10), 
+                                            offset: const Offset(0, -5)
                                           ),
-                                          const SizedBox(height: 6),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                            decoration: BoxDecoration(color: neonGreen.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
+                                          const BoxShadow(color: pureBlack, blurRadius: 40, offset: Offset(0, -10))
+                                        ]
+                                      ),
+                                      padding: EdgeInsets.only(
+                                        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                                        left: isSmallScreen ? 16 : 24,
+                                        right: isSmallScreen ? 16 : 24,
+                                        top: 16
+                                      ),
+                                      child: SingleChildScrollView(
+                                        physics: const BouncingScrollPhysics(),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                                          children: [
+                                            Center(child: Container(width: 60, height: 6, decoration: BoxDecoration(color: neonGreen.withOpacity(0.5), borderRadius: BorderRadius.circular(10), boxShadow: const [BoxShadow(color: neonGreen, blurRadius: 8)]))),
+                                            const SizedBox(height: 24),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(vertical: 12),
+                                              decoration: BoxDecoration(
+                                                color: alertRed.withOpacity(0.15),
+                                                borderRadius: BorderRadius.circular(16),
+                                                border: Border.all(color: alertRed.withOpacity(0.5), width: 1.5)
+                                              ),
+                                              child: Row(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  RepaintBoundary(
+                                                    child: AnimatedBuilder(
+                                                      animation: _buttonPulseController,
+                                                      builder: (context, child) => Icon(Icons.crisis_alert_rounded, color: alertRed.withOpacity(0.5 + (_buttonPulseController.value * 0.5)), size: 28),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  const Text("YENİ GÖREV TALEBİ", style: TextStyle(color: alertRed, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 2.0)),
+                                                ],
+                                              ),
+                                            ),
+                                            const SizedBox(height: 24),
+                                            Row(
                                               children: [
-                                                const Icon(Icons.location_on_rounded, color: neonGreen, size: 14),
-                                                const SizedBox(width: 6),
-                                                Text(
-                                                  "$distance KM Uzaklıkta", 
-                                                  style: const TextStyle(fontSize: 13, color: neonGreen, fontWeight: FontWeight.w900),
-                                                  maxLines: 1,
+                                                Container(
+                                                  padding: const EdgeInsets.all(20),
+                                                  decoration: BoxDecoration(
+                                                    gradient: const LinearGradient(colors: [neonGreen, darkGreen], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                                                    shape: BoxShape.circle,
+                                                    boxShadow: [BoxShadow(color: neonGreen.withOpacity(0.6), blurRadius: 20, spreadRadius: 5)]
+                                                  ),
+                                                  child: Icon(_getServiceIcon(serviceType), color: pureBlack, size: 36),
+                                                ),
+                                                const SizedBox(width: 20),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(serviceName, style: TextStyle(fontSize: isSmallScreen ? 20 : 26, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                                      const SizedBox(height: 8),
+                                                      Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                                        decoration: BoxDecoration(color: pureBlack, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white12)),
+                                                        child: Row(
+                                                          mainAxisSize: MainAxisSize.min,
+                                                          children: [
+                                                            const Icon(Icons.radar_rounded, color: neonGreen, size: 16),
+                                                            const SizedBox(width: 8),
+                                                            Text("$distance KM UZAKLIKTA", style: const TextStyle(fontSize: 12, color: textGray, fontWeight: FontWeight.w800, letterSpacing: 1.0)),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
                                               ],
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 24),
-                                
-                                Container(
-                                  width: double.infinity,
-                                  padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
-                                  decoration: BoxDecoration(
-                                    color: pureBlack,
-                                    borderRadius: BorderRadius.circular(24),
-                                    border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5)
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Row(
-                                        children: [
-                                          Icon(Icons.report_problem_rounded, color: Color(0xFFF59E0B), size: 20),
-                                          SizedBox(width: 10),
-                                          Text("Müşterinin Sorunu", style: TextStyle(fontSize: 15, color: Color(0xFFF59E0B), fontWeight: FontWeight.w900)),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Text(problemDesc.isEmpty ? "Sorun belirtilmemiş." : problemDesc, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600, height: 1.5)),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 24),
-                                TextField(
-                                  controller: priceController,
-                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*'))],
-                                  style: TextStyle(fontSize: isSmallScreen ? 24 : 32, fontWeight: FontWeight.w900, color: neonGreen),
-                                  textAlign: TextAlign.center,
-                                  decoration: InputDecoration(
-                                    labelText: "Teklifiniz (TL)",
-                                    labelStyle: const TextStyle(fontSize: 15, color: textGray, fontWeight: FontWeight.w800),
-                                    prefixIcon: const Padding(padding: EdgeInsets.only(left: 12), child: Icon(Icons.account_balance_wallet_rounded, color: neonGreen, size: 28)),
-                                    filled: true,
-                                    fillColor: pureBlack,
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
-                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide(color: Colors.white.withOpacity(0.1), width: 1.5)),
-                                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: neonGreen, width: 2.0)),
-                                    contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                TextField(
-                                  controller: noteController,
-                                  maxLines: 2,
-                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
-                                  decoration: InputDecoration(
-                                    labelText: "Müşteriye Notunuz (İsteğe Bağlı)",
-                                    labelStyle: const TextStyle(fontSize: 14, color: textGray, fontWeight: FontWeight.w700),
-                                    prefixIcon: const Padding(padding: EdgeInsets.only(bottom: 20, top: 16, left: 12), child: Icon(Icons.chat_bubble_rounded, color: neonGreen, size: 24)),
-                                    filled: true,
-                                    fillColor: pureBlack,
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
-                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide(color: Colors.white.withOpacity(0.1), width: 1.5)),
-                                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: neonGreen, width: 2.0)),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Wrap(
-                                  spacing: 8.0,
-                                  runSpacing: 8.0,
-                                  children: quickReplies.map((reply) => ActionChip(
-                                    label: Text(reply, style: const TextStyle(color: pureBlack, fontWeight: FontWeight.bold, fontSize: 13)),
-                                    backgroundColor: neonGreen,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                    onPressed: () {
-                                      HapticFeedback.selectionClick();
-                                      setState(() {
-                                        noteController.text = reply;
-                                      });
-                                    },
-                                  )).toList(),
-                                ),
-                                const SizedBox(height: 32),
-                                RepaintBoundary(
-                                  child: AnimatedBuilder(
-                                    animation: _buttonPulseController,
-                                    builder: (context, child) {
-                                      return Container(
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(24),
-                                          gradient: const LinearGradient(colors: [neonGreen, darkGreen]),
-                                          boxShadow: [BoxShadow(color: neonGreen.withOpacity(0.4 + (_buttonPulseController.value * 0.4)), blurRadius: 20 + (_buttonPulseController.value * 10), offset: const Offset(0, 5))],
+                                            const SizedBox(height: 32),
+                                            Container(
+                                              width: double.infinity,
+                                              padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                                              decoration: BoxDecoration(
+                                                color: pureBlack,
+                                                borderRadius: BorderRadius.circular(24),
+                                                border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5)
+                                              ),
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  const Row(
+                                                    children: [
+                                                      Icon(Icons.report_problem_rounded, color: Color(0xFFF59E0B), size: 20),
+                                                      SizedBox(width: 10),
+                                                      Text("Müşterinin Sorunu", style: TextStyle(fontSize: 15, color: Color(0xFFF59E0B), fontWeight: FontWeight.w800, letterSpacing: 0.5)),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 12),
+                                                  Text(problemDesc.isEmpty ? "Sorun belirtilmemiş." : problemDesc, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600, height: 1.5)),
+                                                ],
+                                              ),
+                                            ),
+                                            const SizedBox(height: 24),
+                                            TextField(
+                                              controller: priceController,
+                                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*'))],
+                                              style: TextStyle(fontSize: isSmallScreen ? 24 : 32, fontWeight: FontWeight.w900, color: neonGreen),
+                                              textAlign: TextAlign.center,
+                                              decoration: InputDecoration(
+                                                labelText: "Teklifiniz (TL)",
+                                                labelStyle: const TextStyle(fontSize: 15, color: textGray, fontWeight: FontWeight.w700),
+                                                prefixIcon: const Padding(padding: EdgeInsets.only(left: 12), child: Icon(Icons.account_balance_wallet_rounded, color: neonGreen, size: 28)),
+                                                filled: true,
+                                                fillColor: pureBlack,
+                                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
+                                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide(color: Colors.white.withOpacity(0.1), width: 1.5)),
+                                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: neonGreen, width: 2.0)),
+                                                contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 16),
+                                            TextField(
+                                              controller: noteController,
+                                              maxLines: 2,
+                                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
+                                              decoration: InputDecoration(
+                                                labelText: "Müşteriye Özel Not (İsteğe Bağlı)",
+                                                labelStyle: const TextStyle(fontSize: 14, color: textGray, fontWeight: FontWeight.w700),
+                                                prefixIcon: const Padding(padding: EdgeInsets.only(bottom: 20, top: 16, left: 12), child: Icon(Icons.chat_bubble_rounded, color: neonGreen, size: 24)),
+                                                filled: true,
+                                                fillColor: pureBlack,
+                                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
+                                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide(color: Colors.white.withOpacity(0.1), width: 1.5)),
+                                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: neonGreen, width: 2.0)),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 16),
+                                            // YENİ: Akıllı ve Şık Hazır Mesajlar
+                                            SizedBox(
+                                              height: 44,
+                                              child: ListView.separated(
+                                                scrollDirection: Axis.horizontal,
+                                                physics: const BouncingScrollPhysics(),
+                                                itemCount: quickReplies.length,
+                                                separatorBuilder: (context, index) => const SizedBox(width: 8),
+                                                itemBuilder: (context, index) {
+                                                  final reply = quickReplies[index];
+                                                  final bool isSelected = noteController.text == reply["text"];
+                                                  
+                                                  return GestureDetector(
+                                                    onTap: () {
+                                                      HapticFeedback.selectionClick();
+                                                      setModalState(() {
+                                                        noteController.text = reply["text"];
+                                                      });
+                                                    },
+                                                    child: AnimatedContainer(
+                                                      duration: const Duration(milliseconds: 200),
+                                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                                      decoration: BoxDecoration(
+                                                        color: isSelected ? neonGreen : pureBlack,
+                                                        borderRadius: BorderRadius.circular(22),
+                                                        border: Border.all(
+                                                          color: isSelected ? neonGreen : Colors.white.withOpacity(0.15),
+                                                          width: 1.5,
+                                                        ),
+                                                        boxShadow: isSelected 
+                                                            ? [BoxShadow(color: neonGreen.withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 4))] 
+                                                            : [],
+                                                      ),
+                                                      child: Row(
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+                                                          Icon(
+                                                            reply["icon"], 
+                                                            color: isSelected ? pureBlack : textGray, 
+                                                            size: 16
+                                                          ),
+                                                          const SizedBox(width: 8),
+                                                          Text(
+                                                            reply["text"], 
+                                                            style: TextStyle(
+                                                              color: isSelected ? pureBlack : textGray, 
+                                                              fontWeight: FontWeight.w800, 
+                                                              fontSize: 13
+                                                            )
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                            const SizedBox(height: 32),
+                                            RepaintBoundary(
+                                              child: AnimatedBuilder(
+                                                animation: _buttonPulseController,
+                                                builder: (context, child) {
+                                                  return Container(
+                                                    decoration: BoxDecoration(
+                                                      borderRadius: BorderRadius.circular(24),
+                                                      gradient: const LinearGradient(colors: [neonGreen, darkGreen]),
+                                                      boxShadow: [BoxShadow(color: neonGreen.withOpacity(0.4 + (_buttonPulseController.value * 0.4)), blurRadius: 20 + (_buttonPulseController.value * 10), offset: const Offset(0, 5))],
+                                                    ),
+                                                    child: ElevatedButton(
+                                                      onPressed: () async {
+                                                        String price = priceController.text.trim();
+                                                        if ((double.tryParse(price) ?? 0) > 0) {
+                                                          HapticFeedback.mediumImpact();
+                                                          Navigator.pop(context);
+                                                          await _sendBid(jobId, price, noteController.text.trim());
+                                                        } else {
+                                                          HapticFeedback.heavyImpact();
+                                                          _showTopSnackBar("Lütfen geçerli bir tutar girin.", isError: true);
+                                                        }
+                                                      },
+                                                      style: ElevatedButton.styleFrom(
+                                                        backgroundColor: Colors.transparent,
+                                                        shadowColor: Colors.transparent,
+                                                        padding: const EdgeInsets.symmetric(vertical: 20),
+                                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                                                        elevation: 0,
+                                                      ),
+                                                      child: Text("Teklifi Gönder", style: TextStyle(fontSize: isSmallScreen ? 16 : 18, color: pureBlack, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                                                    ),
+                                                  );
+                                                }
+                                              ),
+                                            ),
+                                            const SizedBox(height: 12),
+                                            TextButton(
+                                              onPressed: () {
+                                                HapticFeedback.selectionClick();
+                                                Navigator.pop(context);
+                                              },
+                                              child: const Text("İlgilenmiyorum", style: TextStyle(color: Colors.white60, fontWeight: FontWeight.w800, fontSize: 15, letterSpacing: 0.5))
+                                            ),
+                                          ],
                                         ),
-                                        child: ElevatedButton(
-                                          onPressed: () async {
-                                            String price = priceController.text.trim();
-                                            if ((double.tryParse(price) ?? 0) > 0) {
-                                              HapticFeedback.mediumImpact();
-                                              Navigator.pop(context);
-                                              await _sendBid(jobId, price, noteController.text.trim());
-                                            } else {
-                                              HapticFeedback.heavyImpact();
-                                              _showTopSnackBar("Lütfen geçerli bir tutar girin.", isError: true);
-                                            }
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.transparent,
-                                            shadowColor: Colors.transparent,
-                                            padding: const EdgeInsets.symmetric(vertical: 20),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                                            elevation: 0,
-                                          ),
-                                          child: Text("Teklifi Gönder", style: TextStyle(fontSize: isSmallScreen ? 16 : 18, color: pureBlack, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-                                        ),
-                                      );
-                                    }
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                TextButton(
-                                  onPressed: () {
-                                    HapticFeedback.selectionClick();
-                                    Navigator.pop(context);
-                                  }, 
-                                  child: const Text("İlgilenmiyorum", style: TextStyle(color: Colors.white60, fontWeight: FontWeight.w800, fontSize: 15))
-                                ),
-                              ],
-                            ),
-                          ),
+                                      ),
+                                    );
+                                  }
+                                )
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -1505,6 +1574,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     ];
   }
 
+  // --- EFSANE DİNAMİK HARİTA İKONLARI (Radar Ripple Efekti) ---
   List<Marker> _buildJobMarkers() {
     List<Marker> markers = [];
     for (int i = 0; i < jobList.length; i++) {
@@ -1518,8 +1588,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
       markers.add(Marker(
         point: LatLng(lat, lng),
-        width: isSelected || isFlashing ? 90 : 50,
-        height: isSelected || isFlashing ? 90 : 50,
+        width: isSelected || isFlashing ? 120 : 50,
+        height: isSelected || isFlashing ? 120 : 50,
         child: GestureDetector(
           onTap: () {
             HapticFeedback.selectionClick();
@@ -1536,7 +1606,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             child: AnimatedBuilder(
               animation: _pulseController,
               builder: (context, child) {
-                double scale = isSelected ? 1.15 : (isFlashing ? 1.2 + (_pulseController.value * 0.4) : 1.0);
+                double scale = isSelected ? 1.15 : (isFlashing ? 1.2 + (_pulseController.value * 0.2) : 1.0);
                 List<Color> gradientColors = isFlashing 
                     ? const [alertRed, Color(0xFFB91C1C)] 
                     : const [neonGreen, darkGreen];
@@ -1548,11 +1618,21 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                   alignment: Alignment.center,
                   children: [
                     if (isFlashing)
-                      Container(
-                        width: 60 + (_pulseController.value * 40),
-                        height: 60 + (_pulseController.value * 40),
-                        decoration: BoxDecoration(shape: BoxShape.circle, color: shadowColor.withOpacity(0.4 - (_pulseController.value * 0.4))),
-                      ),
+                      ...List.generate(3, (index) {
+                        double delay = index * 0.33;
+                        double progress = (_pulseController.value + delay) % 1.0;
+                        return Container(
+                          width: 42 + (progress * 80),
+                          height: 42 + (progress * 80),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle, 
+                            border: Border.all(
+                              color: shadowColor.withOpacity((1.0 - progress) * 0.8),
+                              width: 2.0
+                            )
+                          ),
+                        );
+                      }),
                     Transform.scale(
                       scale: scale,
                       child: Container(
@@ -1629,6 +1709,24 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     );
   }
 
+  Widget _buildAnimatedDashboardItem({required Widget child, required int index}) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 500 + (index * 150)),
+      curve: Curves.easeOutQuart,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 30 * (1 - value)),
+            child: child,
+          ),
+        );
+      },
+      child: child,
+    );
+  }
+
   Widget _buildOfflineDashboard(BoxConstraints constraints) {
     bool isSmallScreen = constraints.maxWidth < 400;
 
@@ -1642,278 +1740,294 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        _buildAvatar(), 
-                        const SizedBox(width: 14),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: alertRed.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: alertRed.withOpacity(0.3))
-                          ),
-                          child: const Text("ÇEVRİMDİŞI", style: TextStyle(color: alertRed, fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 0.5)),
-                        )
-                      ],
-                    ),
-                    _buildPerformanceBadge(),
-                  ],
-                ),
-                const SizedBox(height: 40),
-                Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.end,
-                  spacing: 16,
-                  runSpacing: 16,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text("Kontrol Merkezi", style: TextStyle(color: Colors.white, fontSize: isSmallScreen ? 26 : 32, fontWeight: FontWeight.w900, letterSpacing: -1.0)),
-                        const SizedBox(height: 10),
-                        Text("İş almak ve kazanmak için\nçevrimiçi olun.", style: TextStyle(color: textGray, fontSize: isSmallScreen ? 14 : 16, height: 1.5, fontWeight: FontWeight.w600)),
-                      ],
-                    ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _buildTopButton(Icons.history_rounded, neonGreen, () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProviderBidsScreen(providerId: widget.providerId)))),
-                        const SizedBox(width: 12),
-                        _buildTopButton(Icons.person_rounded, neonGreen, () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen(userId: widget.providerId, userType: 'provider')))),
-                      ],
-                    )
-                  ],
-                ),
-                const SizedBox(height: 36),
-
-                if (isEarningsLoading)
-                  const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator(color: neonGreen, strokeWidth: 4)))
-                else
-                  Container(
-                    padding: EdgeInsets.all(isSmallScreen ? 20 : 28),
-                    decoration: BoxDecoration(
-                      color: panelBlack.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(32),
-                      border: Border.all(color: neonGreen.withOpacity(0.3), width: 1.5),
-                      boxShadow: [BoxShadow(color: pureBlack, blurRadius: 40, offset: const Offset(0, 15))],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(color: neonGreen.withOpacity(0.15), borderRadius: BorderRadius.circular(16)),
-                              child: const Icon(Icons.account_balance_wallet_rounded, color: neonGreen, size: 30),
-                            ),
-                            const SizedBox(width: 16),
-                            const Expanded(child: Text("Bu Ayki Kazanç", style: TextStyle(color: textGray, fontWeight: FontWeight.w800, fontSize: 16))),
-                            const Icon(Icons.trending_up_rounded, color: neonGreen, size: 30),
-                          ],
-                        ),
-                        const SizedBox(height: 28),
-                        TweenAnimationBuilder<double>(
-                          tween: Tween<double>(begin: 0, end: double.tryParse(earningsData['monthly']?.toString() ?? '0') ?? 0),
-                          duration: const Duration(seconds: 2),
-                          curve: Curves.easeOutQuart,
-                          builder: (context, value, child) {
-                            return FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerLeft,
-                                child: Text("₺${value.toInt()}", style: TextStyle(fontSize: isSmallScreen ? 46 : 56, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -1.5))
-                            );
-                          }
-                        ),
-                        const SizedBox(height: 36),
-                        Container(
-                          padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
-                          decoration: BoxDecoration(color: pureBlack, borderRadius: BorderRadius.circular(24), border: Border.all(color: Colors.white.withOpacity(0.08))),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              Column(
-                                children: [
-                                  const Row(
-                                    children: [
-                                      Icon(Icons.calendar_today_rounded, color: textGray, size: 18),
-                                      SizedBox(width: 8),
-                                      Text("Yıllık", style: TextStyle(color: textGray, fontWeight: FontWeight.w800, fontSize: 14)),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text("₺${earningsData['yearly'] ?? 0}", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: isSmallScreen ? 18 : 22)),
-                                ],
-                              ),
-                              Container(width: 1.5, height: 50, color: Colors.white.withOpacity(0.15)),
-                              Column(
-                                children: [
-                                  const Row(
-                                    children: [
-                                      Icon(Icons.handyman_rounded, color: textGray, size: 18),
-                                      SizedBox(width: 8),
-                                      Text("İşlem", style: TextStyle(color: textGray, fontWeight: FontWeight.w800, fontSize: 14)),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text("${earningsData['total_jobs'] ?? 0}", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: isSmallScreen ? 18 : 22)),
-                                ],
-                              ),
-                            ],
-                          ),
-                        )
-                      ],
-                    ),
-                  ),
-
-                const SizedBox(height: 36),
-                
-                // Mesai Planlayıcı Modülü UI
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 20, vertical: 20),
-                  decoration: BoxDecoration(
-                    color: pureBlack,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5)
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.access_time_filled_rounded, color: neonGreen, size: 24),
-                              SizedBox(width: 12),
-                              Text("Mesai Planlayıcı", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
-                            ],
-                          ),
-                          Switch(
-                            value: _isScheduleActive,
-                            activeColor: neonGreen,
-                            onChanged: (val) {
-                              HapticFeedback.selectionClick();
-                              setState(() {
-                                _isScheduleActive = val;
-                                if(val) {
-                                  _showTopSnackBar("Otomatik çalışma saatleri aktifleştirildi.");
-                                }
-                              });
-                            },
-                          )
-                        ],
-                      ),
-                      if (_isScheduleActive) ...[
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: InkWell(
-                                onTap: () => _selectTime(context, true),
-                                child: Container(
-                                  padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
-                                  decoration: BoxDecoration(color: panelBlack, borderRadius: BorderRadius.circular(12), border: Border.all(color: textGray.withOpacity(0.3))),
-                                  child: Column(
-                                    children: [
-                                      Text("Başlangıç", style: TextStyle(color: textGray, fontSize: isSmallScreen ? 11 : 12)),
-                                      const SizedBox(height: 4),
-                                      Text(_plannedStartTime != null ? _plannedStartTime!.format(context) : "Seçiniz", style: TextStyle(color: neonGreen, fontWeight: FontWeight.bold, fontSize: isSmallScreen ? 14 : 16)),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: InkWell(
-                                onTap: () => _selectTime(context, false),
-                                child: Container(
-                                  padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
-                                  decoration: BoxDecoration(color: panelBlack, borderRadius: BorderRadius.circular(12), border: Border.all(color: textGray.withOpacity(0.3))),
-                                  child: Column(
-                                    children: [
-                                      Text("Bitiş", style: TextStyle(color: textGray, fontSize: isSmallScreen ? 11 : 12)),
-                                      const SizedBox(height: 4),
-                                      Text(_plannedEndTime != null ? _plannedEndTime!.format(context) : "Seçiniz", style: TextStyle(color: alertRed, fontWeight: FontWeight.bold, fontSize: isSmallScreen ? 14 : 16)),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        )
-                      ]
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 20, vertical: 20),
-                  decoration: BoxDecoration(
-                    color: panelBlack.withOpacity(0.9),
-                    borderRadius: BorderRadius.circular(28),
-                    border: Border.all(color: Colors.white.withOpacity(0.15), width: 1.5),
-                    boxShadow: [BoxShadow(color: pureBlack, blurRadius: 20, offset: const Offset(0, 10))]
-                  ),
+                _buildAnimatedDashboardItem(
+                  index: 0,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Row(
                         children: [
-                          Icon(
-                            isSuspended ? Icons.block_rounded : Icons.power_settings_new_rounded, 
-                            color: isSuspended ? alertRed : textGray, 
-                            size: 32
-                          ),
-                          const SizedBox(width: 16),
-                          Text(
-                            isSuspended ? "Hesap Askıda" : "İş Alımına Açık", 
-                            style: TextStyle(color: Colors.white, fontSize: isSmallScreen ? 15 : 18, fontWeight: FontWeight.w900)
-                          ),
+                          _buildAvatar(), 
+                          const SizedBox(width: 14),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: alertRed.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: alertRed.withOpacity(0.3))
+                            ),
+                            child: const Text("ÇEVRİMDİŞI", style: TextStyle(color: alertRed, fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 0.5)),
+                          )
                         ],
                       ),
-                      isCheckingSubscription 
-                        ? const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: neonGreen, strokeWidth: 3))
-                        : AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            decoration: isOnline ? BoxDecoration(shape: BoxShape.circle, boxShadow: [BoxShadow(color: neonGreen.withOpacity(0.4), blurRadius: 15)]) : null,
-                            child: Switch(
-                              value: isOnline,
-                              activeColor: neonGreen,
-                              inactiveThumbColor: textGray,
-                              inactiveTrackColor: Colors.black26,
-                              onChanged: _toggleOnlineStatus,
-                            ),
-                          ),
+                      _buildPerformanceBadge(),
                     ],
+                  ),
+                ),
+                const SizedBox(height: 40),
+                
+                _buildAnimatedDashboardItem(
+                  index: 1,
+                  child: Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.end,
+                    spacing: 16,
+                    runSpacing: 16,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Kontrol Merkezi", style: TextStyle(color: Colors.white, fontSize: isSmallScreen ? 26 : 32, fontWeight: FontWeight.w900, letterSpacing: -1.0)),
+                          const SizedBox(height: 10),
+                          Text("İş almak ve kazanmak için\nçevrimiçi olun.", style: TextStyle(color: textGray, fontSize: isSmallScreen ? 14 : 16, height: 1.5, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildTopButton(Icons.history_rounded, neonGreen, () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProviderBidsScreen(providerId: widget.providerId)))),
+                          const SizedBox(width: 12),
+                          _buildTopButton(Icons.person_rounded, neonGreen, () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen(userId: widget.providerId, userType: 'provider')))),
+                        ],
+                      )
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 36),
+
+                _buildAnimatedDashboardItem(
+                  index: 2,
+                  child: isEarningsLoading
+                    ? const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator(color: neonGreen, strokeWidth: 4)))
+                    : Container(
+                        padding: EdgeInsets.all(isSmallScreen ? 20 : 28),
+                        decoration: BoxDecoration(
+                          color: panelBlack.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(32),
+                          border: Border.all(color: neonGreen.withOpacity(0.3), width: 1.5),
+                          boxShadow: [BoxShadow(color: pureBlack, blurRadius: 40, offset: const Offset(0, 15))],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(color: neonGreen.withOpacity(0.15), borderRadius: BorderRadius.circular(16)),
+                                  child: const Icon(Icons.account_balance_wallet_rounded, color: neonGreen, size: 30),
+                                ),
+                                const SizedBox(width: 16),
+                                const Expanded(child: Text("Bu Ayki Kazanç", style: TextStyle(color: textGray, fontWeight: FontWeight.w800, fontSize: 16))),
+                                const Icon(Icons.trending_up_rounded, color: neonGreen, size: 30),
+                              ],
+                            ),
+                            const SizedBox(height: 28),
+                            TweenAnimationBuilder<double>(
+                              tween: Tween<double>(begin: 0, end: double.tryParse(earningsData['monthly']?.toString() ?? '0') ?? 0),
+                              duration: const Duration(seconds: 2),
+                              curve: Curves.easeOutQuart,
+                              builder: (context, value, child) {
+                                return FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text("₺${value.toInt()}", style: TextStyle(fontSize: isSmallScreen ? 46 : 56, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -1.5))
+                                );
+                              }
+                            ),
+                            const SizedBox(height: 36),
+                            Container(
+                              padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+                              decoration: BoxDecoration(color: pureBlack, borderRadius: BorderRadius.circular(24), border: Border.all(color: Colors.white.withOpacity(0.08))),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                children: [
+                                  Column(
+                                    children: [
+                                      const Row(
+                                        children: [
+                                          Icon(Icons.calendar_today_rounded, color: textGray, size: 18),
+                                          SizedBox(width: 8),
+                                          Text("Yıllık", style: TextStyle(color: textGray, fontWeight: FontWeight.w800, fontSize: 14)),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Text("₺${earningsData['yearly'] ?? 0}", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: isSmallScreen ? 18 : 22)),
+                                    ],
+                                  ),
+                                  Container(width: 1.5, height: 50, color: Colors.white.withOpacity(0.15)),
+                                  Column(
+                                    children: [
+                                      const Row(
+                                        children: [
+                                          Icon(Icons.handyman_rounded, color: textGray, size: 18),
+                                          SizedBox(width: 8),
+                                          Text("İşlem", style: TextStyle(color: textGray, fontWeight: FontWeight.w800, fontSize: 14)),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Text("${earningsData['total_jobs'] ?? 0}", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: isSmallScreen ? 18 : 22)),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            )
+                          ],
+                        ),
+                      ),
+                ),
+                const SizedBox(height: 36),
+                
+                _buildAnimatedDashboardItem(
+                  index: 3,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 20, vertical: 20),
+                    decoration: BoxDecoration(
+                      color: pureBlack,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5)
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.access_time_filled_rounded, color: neonGreen, size: 24),
+                                SizedBox(width: 12),
+                                Text("Mesai Planlayıcı", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
+                              ],
+                            ),
+                            Switch(
+                              value: _isScheduleActive,
+                              activeColor: neonGreen,
+                              onChanged: (val) {
+                                HapticFeedback.selectionClick();
+                                setState(() {
+                                  _isScheduleActive = val;
+                                  if(val) {
+                                    _showTopSnackBar("Otomatik çalışma saatleri aktifleştirildi.");
+                                  }
+                                });
+                              },
+                            )
+                          ],
+                        ),
+                        if (_isScheduleActive) ...[
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => _selectTime(context, true),
+                                  child: Container(
+                                    padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
+                                    decoration: BoxDecoration(color: panelBlack, borderRadius: BorderRadius.circular(12), border: Border.all(color: textGray.withOpacity(0.3))),
+                                    child: Column(
+                                      children: [
+                                        Text("Başlangıç", style: TextStyle(color: textGray, fontSize: isSmallScreen ? 11 : 12, fontWeight: FontWeight.w700)),
+                                        const SizedBox(height: 4),
+                                        Text(_plannedStartTime != null ? _plannedStartTime!.format(context) : "Seçiniz", style: TextStyle(color: neonGreen, fontWeight: FontWeight.bold, fontSize: isSmallScreen ? 14 : 16)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => _selectTime(context, false),
+                                  child: Container(
+                                    padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
+                                    decoration: BoxDecoration(color: panelBlack, borderRadius: BorderRadius.circular(12), border: Border.all(color: textGray.withOpacity(0.3))),
+                                    child: Column(
+                                      children: [
+                                        Text("Bitiş", style: TextStyle(color: textGray, fontSize: isSmallScreen ? 11 : 12, fontWeight: FontWeight.w700)),
+                                        const SizedBox(height: 4),
+                                        Text(_plannedEndTime != null ? _plannedEndTime!.format(context) : "Seçiniz", style: TextStyle(color: alertRed, fontWeight: FontWeight.bold, fontSize: isSmallScreen ? 14 : 16)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        ]
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                _buildAnimatedDashboardItem(
+                  index: 4,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 20, vertical: 20),
+                    decoration: BoxDecoration(
+                      color: panelBlack.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(color: Colors.white.withOpacity(0.15), width: 1.5),
+                      boxShadow: [BoxShadow(color: pureBlack, blurRadius: 20, offset: const Offset(0, 10))]
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              isSuspended ? Icons.block_rounded : Icons.power_settings_new_rounded, 
+                              color: isSuspended ? alertRed : textGray, 
+                              size: 32
+                            ),
+                            const SizedBox(width: 16),
+                            Text(
+                              isSuspended ? "Hesap Askıda" : "İş Alımına Açık", 
+                              style: TextStyle(color: Colors.white, fontSize: isSmallScreen ? 15 : 18, fontWeight: FontWeight.w900)
+                            ),
+                          ],
+                        ),
+                        isCheckingSubscription 
+                          ? const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: neonGreen, strokeWidth: 3))
+                          : AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              decoration: isOnline ? BoxDecoration(shape: BoxShape.circle, boxShadow: [BoxShadow(color: neonGreen.withOpacity(0.4), blurRadius: 15)]) : null,
+                              child: Switch(
+                                value: isOnline,
+                                activeColor: neonGreen,
+                                inactiveThumbColor: textGray,
+                                inactiveTrackColor: Colors.black26,
+                                onChanged: _toggleOnlineStatus,
+                              ),
+                            ),
+                      ],
+                    ),
                   ),
                 ),
                 
                 const SizedBox(height: 24),
-                Container(
-                  padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
-                  decoration: BoxDecoration(
-                    color: alertRed.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: alertRed.withOpacity(0.3), width: 1.5)
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline_rounded, color: alertRed, size: isSmallScreen ? 22 : 28),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Text(
-                          "Unutmayın: Müşteri memnuniyeti temelimizdir. Puanınızı yüksek tutmaya özen gösterin.",
-                          style: TextStyle(color: alertRed, fontSize: isSmallScreen ? 12 : 14, fontWeight: FontWeight.w800, height: 1.4)
-                        ),
-                      )
-                    ],
+                
+                _buildAnimatedDashboardItem(
+                  index: 5,
+                  child: Container(
+                    padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                    decoration: BoxDecoration(
+                      color: alertRed.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: alertRed.withOpacity(0.3), width: 1.5)
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline_rounded, color: alertRed, size: isSmallScreen ? 22 : 28),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Text(
+                            "Unutmayın: Müşteri memnuniyeti temelimizdir. Puanınızı yüksek tutmaya özen gösterin.",
+                            style: TextStyle(color: alertRed, fontSize: isSmallScreen ? 12 : 14, fontWeight: FontWeight.w800, height: 1.4, letterSpacing: 0.2)
+                          ),
+                        )
+                      ],
+                    ),
                   ),
                 )
               ],
@@ -1928,7 +2042,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   Widget build(BuildContext context) {
     const Color bgColor = pureBlack;
     const Color cardColor = panelBlack;
-    const Color textColor = Colors.white;
+    const Color textColor = Colors.white; // BU SATIRI EKLEDİK
     
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -2032,13 +2146,13 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(24),
                               child: BackdropFilter(
-                                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                   decoration: BoxDecoration(
                                     color: cardColor.withOpacity(0.9),
                                     borderRadius: BorderRadius.circular(24),
-                                    border: Border.all(color: neonGreen.withOpacity(0.2), width: 1.5),
+                                    border: Border.all(color: neonGreen.withOpacity(0.3), width: 1.5),
                                     boxShadow: [BoxShadow(color: pureBlack, blurRadius: 15, offset: const Offset(0, 5))]
                                   ),
                                   child: Row(
@@ -2110,7 +2224,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                         ),
                       ),
                       
-                      // Radius Kaydırıcı (Mesafe Filtresi) UI
                       if (isOnline)
                         Positioned(
                           top: MediaQuery.paddingOf(context).top + 100,

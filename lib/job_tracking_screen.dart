@@ -1,4 +1,3 @@
-/// Dosya: job_tracking_screen.dart
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -10,41 +9,11 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:math' as math;
+import 'package:cached_network_image/cached_network_image.dart';
 import 'provider_map_screen.dart'; 
 import 'customer_dashboard_screen.dart';
 import 'chat_screen.dart';
-
-List<LatLng> decodePolylineBackground(String encoded) {
-  List<LatLng> poly = [];
-  int index = 0, len = encoded.length;
-  int lat = 0, lng = 0;
-
-  while (index < len) {
-    int b, shift = 0, result = 0;
-    do {
-      b = encoded.codeUnitAt(index++) - 63;
-      result |= (b & 0x1f) << shift;
-      shift += 5;
-    } while (b >= 0x20);
-    int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
-    lat += dlat;
-
-    shift = 0;
-    result = 0;
-    do {
-      b = encoded.codeUnitAt(index++) - 63;
-      result |= (b & 0x1f) << shift;
-      shift += 5;
-    } while (b >= 0x20);
-    int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
-    lng += dlng;
-
-    poly.add(LatLng(lat / 1E5, lng / 1E5));
-  }
-  return poly;
-}
 
 class JobTrackingScreen extends StatefulWidget {
   final int jobId;
@@ -67,6 +36,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   String agreedPrice = "";
   String contactPhone = "";
   String contactName = "";
+  String serviceType = "mechanic";
   
   double customerLat = 0.0;
   double customerLng = 0.0;
@@ -74,8 +44,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   double providerLng = 0.0;
   double distanceInKm = 0.0;
   
-  List<LatLng> routePoints = [];
-  LatLng? lastRoutedProviderPos;
   Position? _myPosition; 
   Position? _lastSentPosition; 
   
@@ -97,6 +65,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   Map<String, dynamic>? activeBid;
 
   bool _isPanelExpanded = true;
+  bool _autoFollowBounds = true;
+
   bool _notified5km = false;
   bool _notified1km = false;
   bool _notifiedArrived = false;
@@ -104,6 +74,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   bool _providerNotified5km = false;
   bool _providerNotified1km = false;
   bool _providerNotifiedArrived = false;
+  
+  bool _notified500m = false;
+  bool _providerNotified500m = false;
 
   final TextEditingController _codeController = TextEditingController();
   final TextEditingController _commentController = TextEditingController();
@@ -118,8 +91,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   int unreadMessageCount = 0;
   bool _isFirstMessageCheck = true; 
   
-  late final String googleApiKey;
-  
   late AnimationController _pulseController;
   late AnimationController _glowController;
   late AnimationController _warningPulseController;
@@ -130,13 +101,23 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   static const Color panelBlack = Color(0xFF0F172A); 
   static const Color textGray = Color(0xFF94A3B8);
 
+  List<LatLng> _routePoints = [];
+  String _etaString = "";
+  DateTime? _lastRouteFetch;
+
+  IconData _getServiceIcon(String type) {
+    const map = {
+      'mechanic': Icons.build_rounded, 
+      'tow': Icons.car_repair_rounded, 
+      'tire': Icons.tire_repair_rounded, 
+      'wash': Icons.local_car_wash_rounded
+    };
+    return map[type] ?? Icons.handyman_rounded;
+  }
+
   @override
   void initState() {
     super.initState();
-    googleApiKey = dotenv.isInitialized 
-        ? (dotenv.env['GOOGLE_MAPS_API_KEY'] ?? "AIzaSyD_aPCzGMPci2XW5lbJwxpbzuWdZZOf9AI")
-        : "AIzaSyD_aPCzGMPci2XW5lbJwxpbzuWdZZOf9AI";
-
     WidgetsBinding.instance.addObserver(this); 
     _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat(reverse: true);
     _glowController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000))..repeat(reverse: true);
@@ -160,6 +141,55 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     _fetchJobStatus(); 
     _startTimer();
     _startLiveLocationStream();
+  }
+
+  int _findClosestRoutePointIndex(LatLng currentPos) {
+    if (_routePoints.isEmpty) return -1;
+    double minDist = double.infinity;
+    int closestIndex = -1;
+    for (int i = 0; i < _routePoints.length; i++) {
+      double dist = Geolocator.distanceBetween(
+          currentPos.latitude, currentPos.longitude,
+          _routePoints[i].latitude, _routePoints[i].longitude);
+      if (dist < minDist) {
+        minDist = dist;
+        closestIndex = i;
+      }
+    }
+    return closestIndex;
+  }
+
+  Future<void> _fetchRoute() async {
+    if (customerLat == 0.0 || providerLat == 0.0) return;
+    
+    if (_lastRouteFetch != null && DateTime.now().difference(_lastRouteFetch!).inSeconds < 20) return;
+    _lastRouteFetch = DateTime.now();
+
+    try {
+      final url = Uri.parse('https://router.project-osrm.org/route/v1/driving/$providerLng,$providerLat;$customerLng,$customerLat?geometries=geojson');
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['routes'] != null && data['routes'].isNotEmpty) {
+          final route = data['routes'][0];
+          final geometry = route['geometry']['coordinates'] as List;
+          final durationSeconds = route['duration'] as double;
+
+          if (mounted) {
+            setState(() {
+              _routePoints = geometry.map((coord) => LatLng(coord[1], coord[0])).toList();
+              int minutes = (durationSeconds / 60).round();
+              _etaString = minutes > 0 ? "~$minutes Dk" : "Az Kaldı";
+            });
+            if (_autoFollowBounds) {
+              _fitMapBounds();
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Route fetch error: $e");
+    }
   }
 
   Future<void> _sendPushNotificationToCustomer(String title, String message) async {
@@ -244,8 +274,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           forceLocationManager: true,
           intervalDuration: const Duration(seconds: 5),
           foregroundNotificationConfig: const ForegroundNotificationConfig(
-            notificationText: "Müşteriye giderken konumunuz arka planda takip ediliyor.",
-            notificationTitle: "Oto TAG - Usta Yolda",
+            notificationText: "Konumunuz arka planda takip ediliyor.",
+            notificationTitle: "Oto TAG Takip Sürüyor",
             enableWakeLock: true,
           ),
         );
@@ -281,24 +311,44 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                 if (customerLat != 0.0 && providerLat != 0.0) {
                     distanceInKm = Geolocator.distanceBetween(customerLat, customerLng, providerLat, providerLng) / 1000;
                     
+                    if (_routePoints.isNotEmpty && widget.userType == 'provider') {
+                        int closestIndex = _findClosestRoutePointIndex(LatLng(providerLat, providerLng));
+                        if (closestIndex != -1) {
+                            double distToClosest = Geolocator.distanceBetween(
+                                providerLat, providerLng,
+                                _routePoints[closestIndex].latitude, _routePoints[closestIndex].longitude);
+                            
+                            if (distToClosest > 100) {
+                                _lastRouteFetch = null;
+                                _fetchRoute();
+                            } else if (closestIndex > 1) {
+                                _routePoints = _routePoints.sublist(closestIndex);
+                            }
+                        }
+                    } else {
+                        _fetchRoute(); 
+                    }
+                    
                     if (widget.userType == 'provider' && customerId != null && customerId != 0 && 
                         (jobStatus == 'in_progress' || jobStatus == 'matched' || jobStatus == 'accepted')) {
                         
                         if (distanceInKm <= 5.0 && distanceInKm > 1.0 && !_providerNotified5km) {
                             _providerNotified5km = true;
-                            _sendPushNotificationToCustomer("Usta Yola Çıktı!", "Ustanız size doğru yaklaşıyor. (Son 5 KM)");
-                        } else if (distanceInKm <= 1.0 && distanceInKm > 0.1 && !_providerNotified1km) {
+                            _sendPushNotificationToCustomer("Usta Yola Çıktı!", "Ustanız yolda.");
+                        } else if (distanceInKm <= 1.0 && distanceInKm > 0.5 && !_providerNotified1km) {
                             _providerNotified1km = true;
-                            _sendPushNotificationToCustomer("Usta Çok Yaklaştı!", "Ustanız konumunuza ulaşmak üzere! (Son 1 KM)");
+                            _sendPushNotificationToCustomer("Usta Çok Yaklaştı!", "Ustanız 1 KM içerisinde!");
+                        } else if (distanceInKm <= 0.5 && distanceInKm > 0.1 && !_providerNotified500m) {
+                            _providerNotified500m = true;
+                            _sendPushNotificationToCustomer("Usta Bölgeye Girdi! 🚨", "Usta 500 metrelik çembere girdi. Lütfen aracınızın yanında hazır bulunun.");
                         } else if (distanceInKm <= 0.1 && !_providerNotifiedArrived) {
                             _providerNotifiedArrived = true;
                             _sendPushNotificationToCustomer("Usta Geldi!", "Ustanız şu an konumunuza ulaştı.");
                         }
                     }
 
-                    if (routePoints.isEmpty || lastRoutedProviderPos == null || 
-                        Geolocator.distanceBetween(lastRoutedProviderPos!.latitude, lastRoutedProviderPos!.longitude, providerLat, providerLng) > 30) {
-                      _fetchRoute();
+                    if (_autoFollowBounds) {
+                        _fitMapBounds();
                     }
                 }
             });
@@ -354,50 +404,34 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     super.dispose();
   }
 
-  Future<void> _fetchRoute() async {
-    if (customerLat == 0.0 || providerLat == 0.0) return;
-    
-    try {
-      final url = '$_baseUrl?action=get_directions&origin=$providerLat,$providerLng&destination=$customerLat,$customerLng&key=$googleApiKey';
-      final response = await _httpClient.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
-      
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['status'] == 'OK' && data['routes'].isNotEmpty) {
-          final String encodedPolyline = data['routes'][0]['overview_polyline']['points'];
-          final newRoutePoints = await compute(decodePolylineBackground, encodedPolyline);
-          
-          if (mounted) {
-            setState(() {
-              routePoints = newRoutePoints;
-              lastRoutedProviderPos = LatLng(providerLat, providerLng);
-            });
-            _fitMapBounds(); 
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint("Route fetch error: $e");
-      if (mounted) {
-        setState(() {
-          routePoints = [LatLng(customerLat, customerLng), LatLng(providerLat, providerLng)];
-        });
-        _fitMapBounds();
-      }
-    }
-  }
-
   void _fitMapBounds() {
     if (customerLat == 0.0 || providerLat == 0.0) return;
     try {
-      final bounds = LatLngBounds.fromPoints([
+      final screenWidth = MediaQuery.sizeOf(context).width;
+      final screenHeight = MediaQuery.sizeOf(context).height;
+      
+      final bottomPadding = _isPanelExpanded ? (screenHeight * 0.55) : (screenHeight * 0.15);
+
+      List<LatLng> boundsPoints = [
         LatLng(customerLat, customerLng),
         LatLng(providerLat, providerLng)
-      ]);
+      ];
+
+      if (_routePoints.isNotEmpty) {
+        boundsPoints.addAll(_routePoints);
+      }
+
+      final bounds = LatLngBounds.fromPoints(boundsPoints);
+      
       _mapController.fitCamera(
         CameraFit.bounds(
           bounds: bounds,
-          padding: const EdgeInsets.all(80.0), 
+          padding: EdgeInsets.only(
+            left: screenWidth * 0.15,
+            right: screenWidth * 0.15,
+            top: screenHeight * 0.15,
+            bottom: bottomPadding,
+          ),
         ),
       );
     } catch (e) {
@@ -527,6 +561,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
             }
           }
 
+          serviceType = data['service_type']?.toString() ?? 'mechanic';
+
           if (agreedPrice != (data['agreed_price']?.toString() ?? "")) {
             agreedPrice = data['agreed_price']?.toString() ?? "";
           }
@@ -562,6 +598,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
               } else {
                   providerLat = apiProvLat;
                   providerLng = apiProvLng;
+                  if (providerLat != 0.0 && providerLng != 0.0) {
+                      _animatedProviderPos.value = LatLng(providerLat, providerLng);
+                  }
               }
           } else {
               providerLat = apiProvLat;
@@ -613,13 +652,34 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
             double distMeters = Geolocator.distanceBetween(customerLat, customerLng, providerLat, providerLng);
             distanceInKm = distMeters / 1000;
             
+            if (_routePoints.isNotEmpty && widget.userType == 'provider') {
+                int closestIndex = _findClosestRoutePointIndex(LatLng(providerLat, providerLng));
+                if (closestIndex != -1) {
+                    double distToClosest = Geolocator.distanceBetween(
+                        providerLat, providerLng,
+                        _routePoints[closestIndex].latitude, _routePoints[closestIndex].longitude);
+                    if (distToClosest > 100) {
+                        _lastRouteFetch = null;
+                        _fetchRoute();
+                    } else if (closestIndex > 1) {
+                        _routePoints = _routePoints.sublist(closestIndex);
+                    }
+                }
+            } else {
+                _fetchRoute(); 
+            }
+            
             if (widget.userType == 'customer' && (jobStatus == 'in_progress' || jobStatus == 'matched' || jobStatus == 'accepted')) {
                 if (distanceInKm <= 5.0 && distanceInKm > 1.0 && !_notified5km) {
                     _notified5km = true;
                     HapticFeedback.heavyImpact();
                     SystemSound.play(SystemSoundType.alert);
-                } else if (distanceInKm <= 1.0 && distanceInKm > 0.1 && !_notified1km) {
+                } else if (distanceInKm <= 1.0 && distanceInKm > 0.5 && !_notified1km) {
                     _notified1km = true;
+                    HapticFeedback.heavyImpact();
+                    SystemSound.play(SystemSoundType.alert);
+                } else if (distanceInKm <= 0.5 && distanceInKm > 0.1 && !_notified500m) {
+                    _notified500m = true;
                     HapticFeedback.heavyImpact();
                     SystemSound.play(SystemSoundType.alert);
                 } else if (distanceInKm <= 0.1 && !_notifiedArrived) {
@@ -629,11 +689,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                 }
             }
 
-            if (routePoints.isEmpty || lastRoutedProviderPos == null || 
-                Geolocator.distanceBetween(lastRoutedProviderPos!.latitude, lastRoutedProviderPos!.longitude, providerLat, providerLng) > 30) {
-              _fetchRoute();
+            if (_autoFollowBounds) {
+              _fitMapBounds();
             }
-          } else if (customerLat != 0.0 && routePoints.isEmpty) {
+          } else if (customerLat != 0.0) {
             try { _mapController.move(LatLng(customerLat, customerLng), 15.0); } catch(e){}
           }
 
@@ -1252,6 +1311,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       title = "Usta Konumunuza Ulaştı!";
       alertColor = neonGreen;
       alertIcon = Icons.check_circle_rounded;
+    } else if (distanceInKm <= 0.5) {
+      title = "Usta Sokağınıza Girdi! (500m)";
+      alertColor = Colors.purpleAccent;
+      alertIcon = Icons.radar_rounded;
     } else if (distanceInKm <= 1.0) {
       title = "Usta Çok Yaklaştı! (${distanceInKm.toStringAsFixed(1)} KM)";
       alertColor = const Color(0xFFEF4444);
@@ -1264,6 +1327,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       title = "Uzaklık: ${distanceInKm.toStringAsFixed(1)} KM";
       alertColor = const Color(0xFF3B82F6);
       alertIcon = Icons.route_rounded;
+    }
+    
+    if (_etaString.isNotEmpty && distanceInKm > 0.1) {
+      title += " • $_etaString";
     }
 
     return ClipRRect(
@@ -1341,12 +1408,12 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           if (camera.rotation != _mapRotation) {
              setState(() => _mapRotation = camera.rotation);
           }
-          if (hasGesture && _isPanelExpanded) {
-             setState(() => _isPanelExpanded = false);
+          if (hasGesture) {
+             setState(() => _autoFollowBounds = false);
+             if (_isPanelExpanded) {
+                setState(() => _isPanelExpanded = false);
+             }
           }
-        },
-        onTap: (_, __) {
-           if (_isPanelExpanded) setState(() => _isPanelExpanded = false);
         },
       ),
       children: [
@@ -1359,39 +1426,45 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           ]),
           child: RepaintBoundary(
             child: TileLayer(
-              urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+              urlTemplate: kIsWeb 
+                  ? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png' 
+                  : 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
               userAgentPackageName: 'com.berdas.otoyardim',
+              tileProvider: kIsWeb ? NetworkTileProvider() : CachedMapTileProvider(), 
               keepBuffer: 3,
               panBuffer: 2,
+              retinaMode: MediaQuery.devicePixelRatioOf(context) > 1.0, 
             ),
           ),
         ),
         
-        if (routePoints.isNotEmpty)
-          PolylineLayer(
-            polylines: [
+        PolylineLayer(
+          polylines: [
+            if (_routePoints.isNotEmpty)
               Polyline(
-                points: routePoints,
-                color: neonGreen.withOpacity(0.3),
-                strokeWidth: 10.0, 
-              ),
-              Polyline(
-                points: routePoints,
+                points: _routePoints,
+                strokeWidth: 4.5,
                 color: neonGreen,
-                strokeWidth: 4.0, 
-                borderColor: Colors.white,
-                borderStrokeWidth: 1.0,
-              )
-            ],
-          ),
+                borderStrokeWidth: 1.5,
+                borderColor: Colors.black.withOpacity(0.5),
+              ),
+          ],
+        ),
+
         MarkerLayer(markers: mapMarkers),
         
         ValueListenableBuilder<LatLng?>(
           valueListenable: _animatedProviderPos,
           builder: (context, currentPos, child) {
-            if (currentPos == null || (jobStatus != 'matched' && jobStatus != 'accepted' && jobStatus != 'approved' && jobStatus != 'in_progress' && widget.userType != 'customer')) {
+            if (currentPos == null) {
               return const SizedBox.shrink();
             }
+
+            if (widget.userType == 'customer' && 
+                (jobStatus != 'matched' && jobStatus != 'accepted' && jobStatus != 'approved' && jobStatus != 'in_progress')) {
+              return const SizedBox.shrink();
+            }
+            
             return MarkerLayer(
               markers: [
                 Marker(
@@ -1412,23 +1485,15 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                                 color: neonGreen.withOpacity(0.4 - (_pulseController.value * 0.2)),
                               ),
                             ),
-                            ValueListenableBuilder<double>(
-                              valueListenable: _animatedHeading,
-                              builder: (context, heading, child) {
-                                return Transform.rotate(
-                                  angle: heading * (math.pi / 180), 
-                                  child: Container(
-                                    width: 42, height: 42,
-                                    decoration: BoxDecoration(
-                                      color: darkGreen,
-                                      shape: BoxShape.circle, 
-                                      border: Border.all(color: Colors.white, width: 2.5),
-                                      boxShadow: [BoxShadow(color: darkGreen.withOpacity(0.8), blurRadius: 12, spreadRadius: 2)]
-                                    ),
-                                    child: const Icon(Icons.navigation_rounded, color: Colors.white, size: 26),
-                                  ),
-                                );
-                              }
+                            Container(
+                              width: 42, height: 42,
+                              decoration: BoxDecoration(
+                                color: darkGreen,
+                                shape: BoxShape.circle, 
+                                border: Border.all(color: Colors.white, width: 2.5),
+                                boxShadow: [BoxShadow(color: darkGreen.withOpacity(0.8), blurRadius: 12, spreadRadius: 2)]
+                              ),
+                              child: Icon(_getServiceIcon(serviceType), color: Colors.white, size: 24),
                             ),
                           ],
                         );
@@ -1491,7 +1556,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
             children: [
               _buildFullScreenMap(),
               
-              // Yüzen Şeffaf Harita Kontrol Menüsü (Yenilenmiş Tasarım)
               Positioned(
                 top: MediaQuery.paddingOf(context).top + 60, 
                 right: 16,
@@ -1511,16 +1575,17 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                           IconButton(
                             padding: const EdgeInsets.all(12),
                             constraints: const BoxConstraints(),
-                            icon: const Icon(Icons.route_rounded, color: neonGreen, size: 20),
-                            onPressed: _fitMapBounds,
-                          ),
-                          Container(width: 32, height: 1, color: Colors.white.withOpacity(0.1)),
-                          IconButton(
-                            padding: const EdgeInsets.all(12),
-                            constraints: const BoxConstraints(),
-                            icon: const Icon(Icons.my_location_rounded, color: neonGreen, size: 20),
+                            icon: Icon(
+                              _autoFollowBounds ? Icons.gps_fixed_rounded : Icons.my_location_rounded, 
+                              color: _autoFollowBounds ? Colors.white : neonGreen, 
+                              size: 20
+                            ),
                             onPressed: () {
-                              if (_myPosition != null) {
+                              HapticFeedback.selectionClick();
+                              setState(() => _autoFollowBounds = true);
+                              if (customerLat != 0.0 && providerLat != 0.0) {
+                                 _fitMapBounds();
+                              } else if (_myPosition != null) {
                                  _mapController.move(LatLng(_myPosition!.latitude, _myPosition!.longitude), 16.0);
                               } else if (widget.userType == 'customer' && customerLat != 0.0) {
                                  _mapController.move(LatLng(customerLat, customerLng), 16.0);
@@ -2061,12 +2126,12 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       key: const ValueKey("customer_code"),
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: cardColor.withOpacity(0.85),
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: primaryColor.withOpacity(0.5), width: 2.0),
+        color: cardColor.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(36),
+        border: Border.all(color: primaryColor.withOpacity(0.6), width: 2.5),
         boxShadow: [
-          BoxShadow(color: primaryColor.withOpacity(0.25), blurRadius: 30, spreadRadius: 5, offset: const Offset(0, 10)),
-          const BoxShadow(color: pureBlack, blurRadius: 20, offset: Offset(0, 10))
+          BoxShadow(color: primaryColor.withOpacity(0.15), blurRadius: 50, spreadRadius: 10),
+          const BoxShadow(color: pureBlack, blurRadius: 30, offset: Offset(0, 15))
         ]
       ),
       child: Column(
@@ -2074,54 +2139,64 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           AnimatedBuilder(
             animation: _pulseController,
             builder: (context, child) {
-              return Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.15),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: primaryColor.withOpacity(0.5 + (_pulseController.value * 0.5)), width: 2),
-                  boxShadow: [BoxShadow(color: primaryColor.withOpacity(0.4 * _pulseController.value), blurRadius: 20)]
-                ),
-                child: Icon(Icons.pin_rounded, color: primaryColor, size: 36),
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: 80, height: 80,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: primaryColor.withOpacity(0.3 + (_pulseController.value * 0.7)), width: 3),
+                      boxShadow: [BoxShadow(color: primaryColor.withOpacity(0.5 * _pulseController.value), blurRadius: 25, spreadRadius: 5)]
+                    ),
+                  ),
+                  Icon(Icons.lock_person_rounded, color: primaryColor, size: 40),
+                ],
               );
             }
           ),
-          const SizedBox(height: 20),
-          Text(
-            "Ustaya Verilecek Onay Kodu", 
-            textAlign: TextAlign.center, 
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: subtitleColor, letterSpacing: 0.5)
-          ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
+          Text("SİSTEM ONAY KODU", textAlign: TextAlign.center, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: primaryColor, letterSpacing: 3.0)),
+          const SizedBox(height: 24),
+          
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 24),
+            padding: const EdgeInsets.symmetric(vertical: 28),
             decoration: BoxDecoration(
               color: pureBlack,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: primaryColor.withOpacity(0.3), width: 1.5),
-              boxShadow: const [BoxShadow(color: pureBlack, blurRadius: 10)]
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: primaryColor.withOpacity(0.5), width: 2.0),
+              boxShadow: [BoxShadow(color: primaryColor.withOpacity(0.2), blurRadius: 20)] 
             ),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                matchCode, 
-                textAlign: TextAlign.center, 
-                style: TextStyle(
-                  fontSize: 56, 
-                  fontWeight: FontWeight.w900, 
-                  letterSpacing: 20, 
-                  color: primaryColor,
-                  shadows: [Shadow(color: primaryColor.withOpacity(0.7), blurRadius: 20, offset: const Offset(0, 5))]
-                )
-              ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    matchCode, 
+                    textAlign: TextAlign.center, 
+                    style: TextStyle(
+                      fontFamily: 'Courier', 
+                      fontSize: 64, 
+                      fontWeight: FontWeight.w900, 
+                      letterSpacing: 24, 
+                      color: Colors.white,
+                      shadows: [
+                        Shadow(color: primaryColor, blurRadius: 15, offset: const Offset(0, 0)),
+                        Shadow(color: primaryColor, blurRadius: 30, offset: const Offset(0, 0)),
+                      ]
+                    )
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
           Text(
-            "Usta geldiğinde işleme başlaması için bu kodu paylaşın.", 
+            "Usta işlemi başlatmak için bu şifreyi girmelidir.", 
             textAlign: TextAlign.center, 
-            style: TextStyle(fontSize: 14, color: subtitleColor, fontWeight: FontWeight.w600, height: 1.5)
+            style: TextStyle(fontSize: 14, color: subtitleColor, fontWeight: FontWeight.w600, height: 1.6)
           ),
         ],
       ),
@@ -2282,6 +2357,15 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         if (!isCustomer && jobStatus == 'in_progress')
           Padding(padding: const EdgeInsets.only(top: 24), child: Center(child: Text("Müşteri ödeme bildirimi bekleniyor...", textAlign: TextAlign.center, style: TextStyle(color: subtitleColor, fontWeight: FontWeight.w900, fontSize: 14)))),
       ],
+    );
+  }
+}
+
+class CachedMapTileProvider extends TileProvider {
+  @override
+  ImageProvider getImage(TileCoordinates coordinates, TileLayer options) {
+    return CachedNetworkImageProvider(
+      getTileUrl(coordinates, options),
     );
   }
 }

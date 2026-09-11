@@ -1,6 +1,6 @@
 /// Dosya: customer_bids_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Dokunsal geri bildirim (Haptic) için eklendi
+import 'package:flutter/services.dart'; 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
@@ -531,87 +531,120 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
             child: Stack(
               alignment: Alignment.center,
               children: [
-                CustomPaint(size: Size(radarSize, radarSize), painter: RadarGridPainter(const Color(0xFF10B981).withOpacity(0.15))),
+                CustomPaint(size: Size(radarSize, radarSize), painter: RadarGridPainter(const Color(0xFF10B981).withOpacity(0.1))),
+                
                 AnimatedBuilder(
                   animation: _rippleController,
                   builder: (context, child) => CustomPaint(painter: RipplePainter(_rippleController.value, const Color(0xFF10B981)), size: Size(radarSize, radarSize)),
                 ),
+                
                 ValueListenableBuilder<List<Offset>>(
                   valueListenable: _blips,
                   builder: (context, blipsValue, child) {
                     return CustomPaint(size: Size(radarSize, radarSize), painter: BlipPainter(blipsValue, const Color(0xFF10B981)));
                   },
                 ),
+                
                 AnimatedBuilder(
                   animation: _radarController,
                   builder: (context, child) {
                     return Transform.rotate(
                       angle: _radarController.value * 2 * math.pi,
-                      child: child,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: SweepGradient(
+                            colors: [
+                              Colors.transparent, 
+                              const Color(0xFF10B981).withOpacity(0.05), 
+                              const Color(0xFF10B981).withOpacity(0.4), 
+                              const Color(0xFF10B981).withOpacity(0.9), 
+                              Colors.transparent
+                            ],
+                            stops: const [0.0, 0.5, 0.85, 0.99, 1.0],
+                            startAngle: 0.0,
+                            endAngle: math.pi / 1.5,
+                          ),
+                        ),
+                        alignment: Alignment.centerRight,
+                        child: Container(
+                          width: radarSize / 2,
+                          height: 2,
+                          decoration: const BoxDecoration(
+                            boxShadow: [BoxShadow(color: Color(0xFF10B981), blurRadius: 10, spreadRadius: 2)],
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
                     );
                   },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: SweepGradient(
-                        colors: [
-                          Colors.transparent, 
-                          const Color(0xFF10B981).withOpacity(0.05), 
-                          const Color(0xFF10B981).withOpacity(0.4), 
-                          const Color(0xFF10B981).withOpacity(0.8), 
-                          Colors.transparent
-                        ],
-                        stops: const [0.0, 0.5, 0.85, 0.98, 1.0],
-                        startAngle: 0.0,
-                        endAngle: math.pi / 1.5,
-                      ),
-                    ),
-                  ),
                 ),
+                
                 AnimatedBuilder(
                   animation: _pulseController,
                   builder: (context, child) {
                     return Container(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1E293B),
+                        color: const Color(0xFF0F172A), 
                         shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFF10B981), width: 2.5),
+                        border: Border.all(color: const Color(0xFF10B981), width: 2.0),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF10B981).withOpacity(0.3 + (_pulseController.value * 0.5)), 
-                            blurRadius: 20 + (_pulseController.value * 20), 
-                            spreadRadius: 4 + (_pulseController.value * 8)
+                            color: const Color(0xFF10B981).withOpacity(0.4 + (_pulseController.value * 0.6)), 
+                            blurRadius: 30 + (_pulseController.value * 30), 
+                            spreadRadius: 5 + (_pulseController.value * 15)
                           )
                         ],
                       ),
-                      child: child,
+                      child: Transform.scale(
+                        scale: 1.0 + (_pulseController.value * 0.15),
+                        child: const Icon(Icons.satellite_alt_rounded, size: 44, color: Color(0xFF10B981)),
+                      ),
                     );
                   },
-                  child: const Icon(Icons.my_location_rounded, size: 40, color: Color(0xFF10B981)),
                 ),
               ],
             ),
           ),
         ),
-        const SizedBox(height: 40),
+        const SizedBox(height: 48),
+        
         AnimatedBuilder(
-          animation: _pulseController,
+          animation: _radarController,
           builder: (context, child) {
-            return Opacity(
-              opacity: 0.6 + (_pulseController.value * 0.4),
-              child: child,
+            return ShaderMask(
+              shaderCallback: (bounds) {
+                return LinearGradient(
+                  colors: [Colors.white.withOpacity(0.5), Colors.white, const Color(0xFF10B981), Colors.white, Colors.white.withOpacity(0.5)],
+                  stops: [0.0, _radarController.value - 0.2, _radarController.value, _radarController.value + 0.2, 1.0],
+                  begin: const Alignment(-1.0, -0.5),
+                  end: const Alignment(1.0, 0.5),
+                  tileMode: TileMode.clamp,
+                ).createShader(bounds);
+              },
+              child: const Text("USTALAR TARANIYOR...", style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 2.0)),
             );
-          },
-          child: const Text("Usta Aranıyor...", style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
+          }
         ),
         const SizedBox(height: 16),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Text(
-            "Bölgenizdeki ($currentRadius KM) ustalar taranıyor.\nGelen teklifler anında burada belirecek.", 
-            textAlign: TextAlign.center, 
-            style: TextStyle(fontSize: 15, color: Colors.white.withOpacity(0.6), height: 1.5, fontWeight: FontWeight.w500)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF10B981).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3))
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Color(0xFF10B981), strokeWidth: 2)),
+              const SizedBox(width: 12),
+              Text(
+                "Menzil: $currentRadius KM", 
+                style: const TextStyle(fontSize: 14, color: Color(0xFF10B981), fontWeight: FontWeight.w800, letterSpacing: 1.0)
+              ),
+            ],
           ),
         ),
       ],
@@ -677,6 +710,10 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     final String lastBidder = bid['last_bidder']?.toString() ?? 'provider';
     final bool canNegotiate = negCount < 2 && lastBidder == 'provider';
     final bool isWaitingProvider = lastBidder == 'customer';
+
+    // Akıllı Rozet Algoritması: Puanı yüksek, fiyat veren ve listede üstte olanı "EN İYİ" seç
+    final double ratingVal = double.tryParse(rating) ?? 0.0;
+    final bool isBestMatch = ratingVal >= 4.5 && priceVal > 0 && index == 0;
 
     double startAnim = (index * 0.1).clamp(0.0, 1.0);
     double endAnim = (startAnim + 0.35).clamp(0.0, 1.0);
@@ -748,11 +785,38 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
+                    if (isBestMatch)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B).withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.5)),
+                          boxShadow: [BoxShadow(color: const Color(0xFFF59E0B).withOpacity(0.3), blurRadius: 8)],
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.auto_awesome_rounded, color: Color(0xFFF59E0B), size: 12),
+                            SizedBox(width: 4),
+                            Text("EN İYİ", style: TextStyle(color: Color(0xFFF59E0B), fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                          ],
+                        ),
+                      ),
                     const Text("Teklif", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white54)),
                     const SizedBox(height: 2),
                     FittedBox(
                       fit: BoxFit.scaleDown, 
-                      child: Text(displayPrice, style: TextStyle(fontSize: priceVal > 0 ? 22 : 16, fontWeight: FontWeight.w900, color: const Color(0xFF10B981), letterSpacing: -1.0))
+                      child: Text(
+                        displayPrice, 
+                        style: TextStyle(
+                          fontSize: priceVal > 0 ? (isBestMatch ? 26 : 22) : 16, 
+                          fontWeight: FontWeight.w900, 
+                          color: isBestMatch ? const Color(0xFFF59E0B) : const Color(0xFF10B981), 
+                          letterSpacing: -1.0, 
+                          shadows: isBestMatch ? [const Shadow(color: Color(0xFFF59E0B), blurRadius: 15)] : []
+                        )
+                      ),
                     ),
                   ],
                 ),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Dokunsal geri bildirim (Haptic) için eklendi
+import 'package:flutter/services.dart'; 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:ui';
@@ -26,7 +26,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   String _selectedService = 'mechanic';
   String? _selectedCity;
   bool isRegistering = false;
-  bool _obscurePassword = true; // Şifre görünürlüğü için state eklendi
+  bool _obscurePassword = true; 
 
   final List<String> _cities = [
     "Adana", "Adıyaman", "Afyonkarahisar", "Ağrı", "Amasya", "Ankara", "Antalya", "Artvin", "Aydın", "Balıkesir", "Bilecik", "Bingöl", "Bitlis", "Bolu", "Burdur", "Bursa", "Çanakkale", "Çankırı", "Çorum", "Denizli", "Diyarbakır", "Edirne", "Elazığ", "Erzincan", "Erzurum", "Eskişehir", "Gaziantep", "Giresun", "Gümüşhane", "Hakkari", "Hatay", "Isparta", "Mersin", "İstanbul", "İzmir", "Kars", "Kastamonu", "Kayseri", "Kırklareli", "Kırşehir", "Kocaeli", "Konya", "Kütahya", "Malatya", "Manisa", "Kahramanmaraş", "Mardin", "Muğla", "Muş", "Nevşehir", "Niğde", "Ordu", "Rize", "Sakarya", "Samsun", "Siirt", "Sinop", "Sivas", "Tekirdağ", "Tokat", "Trabzon", "Tunceli", "Şanlıurfa", "Uşak", "Van", "Yozgat", "Zonguldak", "Aksaray", "Bayburt", "Karaman", "Kırıkkale", "Batman", "Şırnak", "Bartın", "Ardahan", "Iğdır", "Yalova", "Karabük", "Kilis", "Osmaniye", "Düzce"
@@ -37,6 +37,27 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   XFile? _driverLicense;
   XFile? _vehiclePhoto;
   XFile? _equipmentPhoto;
+
+  @override
+  void initState() {
+    super.initState();
+    _ibanController.text = 'TR';
+    _ibanController.addListener(() {
+      if (!_ibanController.text.startsWith('TR')) {
+        _ibanController.text = 'TR';
+        _ibanController.selection = TextSelection.fromPosition(const TextPosition(offset: 2));
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _passwordController.dispose();
+    _ibanController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickImage(String type) async {
     HapticFeedback.selectionClick();
@@ -84,7 +105,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   Future<void> _register() async {
     HapticFeedback.lightImpact();
-    FocusScope.of(context).unfocus(); // Kayıt olurken klavyeyi kapat
+    FocusScope.of(context).unfocus(); 
 
     if (_nameController.text.trim().isEmpty || _phoneController.text.trim().isEmpty || _passwordController.text.trim().isEmpty) {
       HapticFeedback.vibrate();
@@ -106,6 +127,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       if (_selectedService != 'wash' && _taxPlate == null) {
         HapticFeedback.vibrate();
         _showCustomSnackBar('Lütfen vergi levhasını yükleyin.', isError: true);
+        return;
+      }
+      if (_ibanController.text.length < 24) {
+        HapticFeedback.vibrate();
+        _showCustomSnackBar('IBAN numarası eksik.', isError: true);
         return;
       }
     }
@@ -279,7 +305,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     required IconData icon,
     required bool isPasswordField,
     TextInputType type = TextInputType.text,
-    TextCapitalization capitalization = TextCapitalization.none
+    TextCapitalization capitalization = TextCapitalization.none,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -297,6 +324,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             textInputAction: isPasswordField ? TextInputAction.done : TextInputAction.next,
             keyboardType: type,
             textCapitalization: capitalization,
+            inputFormatters: inputFormatters,
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
             decoration: InputDecoration(
               labelText: label,
@@ -431,7 +459,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     final isTablet = size.width > 600;
     
     return GestureDetector(
-      // Ekranda boş bir alana dokunulduğunda klavyenin kapanmasını sağlar
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         backgroundColor: const Color(0xFF030305),
@@ -530,7 +557,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                             label: "Telefon Numarası", 
                             icon: Icons.phone_android_rounded, 
                             isPasswordField: false, 
-                            type: TextInputType.phone
+                            type: TextInputType.phone,
+                            inputFormatters: [
+                              LengthLimitingTextInputFormatter(11), 
+                              FilteringTextInputFormatter.digitsOnly
+                            ]
                           ),
                           const SizedBox(height: 16),
                           _buildGlassTextField(
@@ -561,7 +592,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                               label: "IBAN Numarası", 
                               icon: Icons.account_balance_rounded, 
                               isPasswordField: false, 
-                              capitalization: TextCapitalization.characters
+                              capitalization: TextCapitalization.characters,
+                              inputFormatters: [LengthLimitingTextInputFormatter(24)]
                             ),
                             const SizedBox(height: 16),
                             

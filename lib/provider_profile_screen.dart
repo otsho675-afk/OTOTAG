@@ -17,23 +17,19 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
 
   bool isLoading = true;
   Map<String, dynamic> profile = {};
-  List historyJobs = [];
   List reviews = [];
   Map<String, dynamic> earnings = {'total_jobs': 0};
   double providerRating = 5.0;
-
-  int _historyPage = 1;
-  final int _itemsPerPage = 5;
 
   final String baseUrl = "https://eliteagency.sbs/api.php";
   late AnimationController _pulseController;
   late AnimationController _listAnimController;
 
-  static const Color neonGreen = Color(0xFF10B981); // Emerald green for modern look
+  static const Color neonGreen = Color(0xFF10B981); 
   static const Color darkGreen = Color(0xFF047857);
-  static const Color pureBlack = Color(0xFF020617); // Slate 950
-  static const Color panelBlack = Color(0xFF0F172A); // Slate 900
-  static const Color textGray = Color(0xFF94A3B8); // Slate 400
+  static const Color pureBlack = Color(0xFF020617); 
+  static const Color panelBlack = Color(0xFF0F172A); 
+  static const Color textGray = Color(0xFF94A3B8); 
 
   @override
   void initState() {
@@ -51,42 +47,30 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
     super.dispose();
   }
 
-  int get _totalHistoryPages => (historyJobs.length / _itemsPerPage).ceil();
-
-  List get _paginatedHistory {
-    int start = (_historyPage - 1) * _itemsPerPage;
-    int end = start + _itemsPerPage;
-    if (start >= historyJobs.length) return [];
-    return historyJobs.sublist(start, end > historyJobs.length ? historyJobs.length : end);
-  }
-
   Future<void> _fetchProviderData() async {
     try {
       final responses = await Future.wait([
         _httpClient.get(Uri.parse("$baseUrl?action=get_profile&user_id=${widget.providerId}")),
-        _httpClient.get(Uri.parse("$baseUrl?action=get_history&user_id=${widget.providerId}&user_type=provider")),
         _httpClient.get(Uri.parse("$baseUrl?action=get_earnings&provider_id=${widget.providerId}"))
       ]);
 
-      if (mounted && responses[0].statusCode == 200 && responses[1].statusCode == 200) {
+      if (mounted && responses[0].statusCode == 200) {
         final pData = json.decode(responses[0].body);
-        final hData = json.decode(responses[1].body);
         
-        if (responses[2].statusCode == 200) {
-          final eData = json.decode(responses[2].body);
+        if (responses.length > 1 && responses[1].statusCode == 200) {
+          final eData = json.decode(responses[1].body);
           if (eData['status'] == 'success') {
             earnings = eData['earnings'];
             if(eData['performance'] != null && eData['performance']['rating'] != null) {
                providerRating = double.tryParse(eData['performance']['rating'].toString()) ?? 5.0;
             }
-            reviews = eData['performance']?['reviews'] ?? _generateMockReviews();
+            List rawReviews = eData['performance']?['reviews'] ?? [];
+            reviews = rawReviews.where((r) => r['comment'] != null && r['comment'].toString().trim().isNotEmpty).toList();
           }
         }
 
         setState(() {
           profile = pData['profile'] ?? {};
-          historyJobs = hData['history'] ?? [];
-          _historyPage = 1;
           isLoading = false;
         });
         
@@ -97,14 +81,6 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
     } catch (e) {
       if (mounted) setState(() => isLoading = false);
     }
-  }
-
-  List<Map<String, dynamic>> _generateMockReviews() {
-    return [
-      {"customer_name": "Ahmet Y.", "rating": 5.0, "comment": "Çok hızlı geldi, işini temiz yaptı. Kesinlikle tavsiye ederim.", "date": "2023-10-12"},
-      {"customer_name": "Mehmet K.", "rating": 4.5, "comment": "Fiyatı makul, iletişimi güçlü bir usta. Teşekkürler.", "date": "2023-10-10"},
-      {"customer_name": "Ayşe D.", "rating": 5.0, "comment": "Yolda kalmıştım, 15 dakika içinde ulaştı ve sorunumu çözdü.", "date": "2023-10-05"},
-    ];
   }
 
   void _showReviewsModal() {
@@ -233,55 +209,6 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
     }
   }
 
-  Widget _buildPaginationControls() {
-    if (_totalHistoryPages <= 1) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(top: 16, bottom: 24),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: _historyPage > 1 ? neonGreen.withOpacity(0.15) : Colors.white.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              onPressed: _historyPage > 1 ? () {
-                setState(() => _historyPage--);
-                _listAnimController.forward(from: 0);
-              } : null,
-              icon: Icon(Icons.chevron_left_rounded, color: _historyPage > 1 ? neonGreen : Colors.white30, size: 24),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: panelBlack,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
-            ),
-            child: Text("Sayfa $_historyPage / $_totalHistoryPages", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            decoration: BoxDecoration(
-              color: _historyPage < _totalHistoryPages ? neonGreen.withOpacity(0.15) : Colors.white.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              onPressed: _historyPage < _totalHistoryPages ? () {
-                setState(() => _historyPage++);
-                _listAnimController.forward(from: 0);
-              } : null,
-              icon: Icon(Icons.chevron_right_rounded, color: _historyPage < _totalHistoryPages ? neonGreen : Colors.white30, size: 24),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
@@ -309,8 +236,6 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
           ? Center(child: CircularProgressIndicator(color: neonGreen, strokeWidth: 4, backgroundColor: neonGreen.withOpacity(0.2)))
           : LayoutBuilder(
               builder: (context, constraints) {
-                final paginatedJobs = _paginatedHistory;
-                
                 return Stack(
                   children: [
                     Positioned(
@@ -512,19 +437,30 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
                                   ],
                                 ),
                                 const SizedBox(height: 40),
-          
+
                                 Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Container(width: 5, height: 24, decoration: BoxDecoration(color: neonGreen, borderRadius: BorderRadius.circular(10))),
-                                    const SizedBox(width: 10),
-                                    const Expanded(
-                                      child: Text("Başarıyla Tamamlananlar", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5), overflow: TextOverflow.ellipsis),
+                                    Row(
+                                      children: [
+                                        Container(width: 5, height: 24, decoration: BoxDecoration(color: neonGreen, borderRadius: BorderRadius.circular(10))),
+                                        const SizedBox(width: 10),
+                                        const Text("Son Yorumlar", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
+                                      ],
                                     ),
+                                    TextButton(
+                                      onPressed: _showReviewsModal,
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: neonGreen,
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      ),
+                                      child: const Text("Tümünü Gör", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                                    )
                                   ],
                                 ),
                                 const SizedBox(height: 16),
-          
-                                if (historyJobs.isEmpty)
+                                if (reviews.isEmpty)
                                   Container(
                                     width: double.infinity,
                                     padding: const EdgeInsets.all(24.0),
@@ -533,81 +469,57 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
                                       borderRadius: BorderRadius.circular(24),
                                       border: Border.all(color: Colors.white.withOpacity(0.05)),
                                     ),
-                                    child: Column(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(16),
-                                          decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle),
-                                          child: Icon(Icons.history_toggle_off_rounded, size: 48, color: textGray.withOpacity(0.4)),
-                                        ),
-                                        const SizedBox(height: 16),
-                                        const Text("Henüz iş tamamlanmadı.", style: TextStyle(color: textGray, fontSize: 16, fontWeight: FontWeight.w700)),
-                                      ],
-                                    ),
+                                    child: const Center(child: Text("Henüz yorum yapılmamış.", style: TextStyle(color: textGray, fontSize: 16, fontWeight: FontWeight.w700))),
                                   )
-                                else ...[
+                                else
                                   ListView.separated(
                                     shrinkWrap: true,
                                     physics: const NeverScrollableScrollPhysics(),
-                                    itemCount: paginatedJobs.length,
+                                    itemCount: reviews.length > 3 ? 3 : reviews.length, 
                                     separatorBuilder: (_, __) => const SizedBox(height: 12),
                                     itemBuilder: (context, index) {
-                                      final job = paginatedJobs[index];
-                                      final bool isCompleted = job['status'] == 'completed';
-                                      
-                                      if (!isCompleted) return const SizedBox.shrink();
-          
-                                      return SlideTransition(
-                                        position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero).animate(
-                                          CurvedAnimation(parent: _listAnimController, curve: Interval(index * 0.1, 1.0, curve: Curves.easeOutQuart))
+                                      final review = reviews[index];
+                                      return Container(
+                                        padding: const EdgeInsets.all(16),
+                                        decoration: BoxDecoration(
+                                          color: panelBlack,
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
                                         ),
-                                        child: Container(
-                                          padding: const EdgeInsets.all(16),
-                                          decoration: BoxDecoration(
-                                            color: panelBlack,
-                                            borderRadius: BorderRadius.circular(20),
-                                            border: Border.all(color: neonGreen.withOpacity(0.2), width: 1.5),
-                                            boxShadow: const [BoxShadow(color: pureBlack, blurRadius: 10, offset: Offset(0, 5))],
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              Container(
-                                                padding: const EdgeInsets.all(12),
-                                                decoration: BoxDecoration(
-                                                  gradient: const LinearGradient(colors: [neonGreen, darkGreen]),
-                                                  borderRadius: BorderRadius.circular(16),
-                                                  boxShadow: [BoxShadow(color: neonGreen.withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 3))]
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    review['customer_name'] ?? "Gizli Kullanıcı", 
+                                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15),
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
                                                 ),
-                                                child: const Icon(Icons.verified_rounded, color: pureBlack, size: 24),
-                                              ),
-                                              const SizedBox(width: 16),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      "${_getServiceTypeName(job['service_type']?.toString()).toUpperCase()}", 
-                                                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.5),
-                                                      maxLines: 1,
-                                                      overflow: TextOverflow.ellipsis,
-                                                    ),
-                                                    const SizedBox(height: 4),
-                                                    Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                      decoration: BoxDecoration(color: neonGreen.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
-                                                      child: const Text("Müşteriye Teslim Edildi", style: TextStyle(fontSize: 11, color: neonGreen, fontWeight: FontWeight.w700)),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
-                                          ),
+                                                Row(
+                                                  children: List.generate(5, (starIndex) {
+                                                    double rating = double.tryParse(review['rating'].toString()) ?? 0;
+                                                    return Icon(
+                                                      starIndex < rating.floor() ? Icons.star_rounded : (starIndex < rating ? Icons.star_half_rounded : Icons.star_outline_rounded),
+                                                      color: const Color(0xFFF59E0B),
+                                                      size: 14,
+                                                    );
+                                                  }),
+                                                )
+                                              ],
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(review['comment'] ?? "", style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 13, height: 1.4, fontWeight: FontWeight.w600)),
+                                            const SizedBox(height: 8),
+                                            Text(review['date'] ?? "", style: const TextStyle(color: textGray, fontSize: 11, fontWeight: FontWeight.w700)),
+                                          ],
                                         ),
                                       );
                                     },
                                   ),
-                                  _buildPaginationControls(),
-                                ],
                               ],
                             ),
                           ),

@@ -1,3 +1,4 @@
+// login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -59,12 +60,24 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
     
+    bool isCustomerForm = widget.userType == 'customer';
+    bool looksLikePhone = RegExp(r'^\+?[0-9\s]+$').hasMatch(input);
+
+    if (looksLikePhone) {
+      if (input.length < 10 || input.length > 11) {
+        HapticFeedback.vibrate();
+        _showCustomSnackBar('Lütfen numaranızı 10 veya 11 hane olarak girin.', isError: true);
+        return;
+      }
+      
+      if (input.length == 10 && input.startsWith('5')) {
+        input = '0$input';
+      }
+    }
+    
     setState(() => isLoggingIn = true);
     
     try {
-      bool isCustomerForm = widget.userType == 'customer';
-      bool looksLikePhone = RegExp(r'^\+?[0-9\s]+$').hasMatch(input);
-      
       http.Response response;
       bool wasAdminCall = false;
 
@@ -448,12 +461,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           
                           _buildGlassTextField(
                             controller: _phoneController, 
-                            label: "Telefon Numarası (Örn: 0535...)", 
+                            label: "Telefon Numarası (Örn: 0535... veya 535...)", 
                             icon: Icons.phone_android_rounded, 
                             isPasswordField: false, 
-                            // TextInputType.number ile sayı klavyesinin açılması sağlandı
-                            type: isCustomer ? TextInputType.number : TextInputType.number, 
-                            inputFormatters: [LengthLimitingTextInputFormatter(11)]
+                            type: TextInputType.phone, 
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(11)
+                            ]
                           ),
                           const SizedBox(height: 20),
                           _buildGlassTextField(

@@ -204,7 +204,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTick
           backgroundColor: pureBlack,
           extendBodyBehindAppBar: true,
           appBar: AppBar(
-            title: Text("İş ve Kazanç Raporu", style: TextStyle(fontWeight: FontWeight.w900, fontSize: isSmallScreen ? 18 : 20, color: Colors.white, letterSpacing: -0.5)),
+            title: Text("OPERASYON GEÇMİŞİ", style: TextStyle(fontWeight: FontWeight.w900, fontSize: isSmallScreen ? 18 : 22, color: Colors.white, letterSpacing: 1.5)),
             backgroundColor: Colors.transparent,
             elevation: 0,
             centerTitle: true,
@@ -255,9 +255,9 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTick
                                   child: Icon(Icons.inbox_rounded, size: isSmallScreen ? 48 : 56, color: neonGreen),
                                 ),
                                 SizedBox(height: isSmallScreen ? 20 : 28),
-                                Text("Kayıt Bulunamadı", style: TextStyle(color: Colors.white, fontSize: isSmallScreen ? 20 : 22, fontWeight: FontWeight.w900, letterSpacing: -0.5), textAlign: TextAlign.center),
-                                const SizedBox(height: 10),
-                                Text("Şu an aktif veya geçmiş\nbir işleminiz bulunmuyor.", textAlign: TextAlign.center, style: TextStyle(color: textGray, fontSize: isSmallScreen ? 13 : 15, height: 1.5, fontWeight: FontWeight.w500)),
+                                Text("RADAR TEMİZ", style: TextStyle(color: neonGreen, fontSize: isSmallScreen ? 22 : 26, fontWeight: FontWeight.w900, letterSpacing: 2.0, shadows: [Shadow(color: neonGreen.withOpacity(0.6), blurRadius: 15)]), textAlign: TextAlign.center),
+                                const SizedBox(height: 12),
+                                Text("Operasyon geçmişinde kayıt bulunamadı.\nYeni çağrılar için radarı açık tutun.", textAlign: TextAlign.center, style: TextStyle(color: textGray, fontSize: isSmallScreen ? 14 : 16, height: 1.6, fontWeight: FontWeight.w600)),
                               ],
                             ),
                           ),
@@ -337,15 +337,23 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTick
                                               }
                                             },
                                             borderRadius: BorderRadius.circular(24),
-                                            splashColor: statusColor.withOpacity(0.1),
-                                            highlightColor: statusColor.withOpacity(0.05),
+                                            splashColor: statusColor.withOpacity(0.2),
+                                            highlightColor: statusColor.withOpacity(0.1),
                                             child: Ink(
                                               padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
                                               decoration: BoxDecoration(
-                                                color: panelBlack,
+                                                color: panelBlack.withOpacity(0.85),
                                                 borderRadius: BorderRadius.circular(24),
-                                                border: Border.all(color: statusColor.withOpacity(isCompleted ? 0.4 : 0.2), width: 1.5),
-                                                boxShadow: [BoxShadow(color: isCompleted ? darkGreen.withOpacity(0.08) : pureBlack, blurRadius: 20, offset: const Offset(0, 8))],
+                                                border: Border(
+                                                  left: BorderSide(color: statusColor, width: 5.0), // Timeline Vurgusu
+                                                  top: BorderSide(color: statusColor.withOpacity(0.15), width: 1.0),
+                                                  right: BorderSide(color: statusColor.withOpacity(0.15), width: 1.0),
+                                                  bottom: BorderSide(color: statusColor.withOpacity(0.15), width: 1.0),
+                                                ),
+                                                boxShadow: [
+                                                  BoxShadow(color: pureBlack, blurRadius: 25, offset: const Offset(0, 10)),
+                                                  if (isCompleted) BoxShadow(color: statusColor.withOpacity(0.15), blurRadius: 25, spreadRadius: 2)
+                                                ],
                                               ),
                                               child: Row(
                                                 children: [

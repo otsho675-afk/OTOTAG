@@ -1,7 +1,7 @@
 name: ototag
 description: Oto Eslestirme Sistemi
 publish_to: 'none'
-version: 1.0.0+13
+version: 1.0.0+14
 
 
 environment:
@@ -29,6 +29,7 @@ dependencies:
   onesignal_flutter: ^5.6.8
   in_app_update: ^5.0.0
   shared_preferences: ^2.5.5
+  cached_network_image: ^4.0.0
 
 dev_dependencies:
   flutter_test:

@@ -1,3 +1,4 @@
+// customer_dashboard_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart'; 
 import 'package:http/http.dart' as http;
@@ -777,14 +778,43 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       ));
     }
   }
+
+  Future<void> _performLogout() async {
+    _notifTimer?.cancel();
+    _adScrollTimer?.cancel();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear(); 
+    } catch (e) {
+      debugPrint("Önbellek temizleme hatası: $e");
+    }
+
+    if (!mounted) return;
+
+    try {
+      await Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/login', (route) => false);
+    } catch (e) {
+      try {
+        await Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/', (route) => false);
+      } catch (e2) {
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        } else {
+          _showTopSnackBar("Çıkış yapıldı. Lütfen uygulamayı yeniden başlatın.");
+        }
+      }
+    }
+  }
   
   void _showLogoutDialog() {
     showDialog(
       context: context,
+      barrierDismissible: true,
       builder: (ctx) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: AlertDialog(
-          backgroundColor: const Color(0xFF1E293B).withOpacity(0.95),
+          backgroundColor: const Color(0xFF1E293B),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
             side: BorderSide(color: const Color(0xFF10B981).withOpacity(0.3), width: 1.5)
@@ -806,43 +836,29 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
             "Hesabınızdan güvenli bir şekilde çıkış yapmak istediğinize emin misiniz?",
             style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14, fontWeight: FontWeight.w500, height: 1.4)
           ),
-          actionsPadding: const EdgeInsets.all(16),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           actions: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                    child: const Text("İptal", style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white60, fontSize: 14)),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFEF4444),
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: () async {
-                      Navigator.pop(ctx);
-                      try {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.clear(); 
-                      } catch (e) {
-                        debugPrint("Cache clear error: $e");
-                      }
-                      if (context.mounted) {
-                        Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-                      }
-                    },
-                    child: const Text("Çıkış Yap", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14), overflow: TextOverflow.ellipsis),
-                  ),
-                )
-              ],
-            )
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), 
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+              ),
+              child: const Text("İptal", style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white60, fontSize: 14)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFEF4444),
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                await _performLogout();
+              },
+              child: const Text("Çıkış Yap", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
+            ),
           ],
         ),
       ),
@@ -1639,8 +1655,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
+        leadingWidth: 64,
         iconTheme: const IconThemeData(color: textColor),
         leading: IconButton(
+          tooltip: 'Çıkış Yap',
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
@@ -1694,10 +1712,17 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
             ),
           )
         ],
-        flexibleSpace: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(decoration: BoxDecoration(color: bgColor.withOpacity(0.7), border: Border(bottom: BorderSide(color: const Color(0xFF10B981).withOpacity(0.1))))),
+        flexibleSpace: IgnorePointer(
+          child: ClipRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: bgColor.withOpacity(0.7), 
+                  border: Border(bottom: BorderSide(color: const Color(0xFF10B981).withOpacity(0.1)))
+                ),
+              ),
+            ),
           ),
         ),
       ),

@@ -1,4 +1,4 @@
-/// customer_map_screen.dart
+// customer_map_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -56,12 +56,11 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
   final String baseUrl = "https://eliteagency.sbs/api.php";
   late final String googleApiKey;
 
-  // Modernize edilmiş renk paleti (Daha derin siyahlar ve parlak neon)
-  static const Color neonGreen = Color(0xFF10B981); // Zümrüt Yeşili (Daha modern)
+  static const Color neonGreen = Color(0xFF10B981); 
   static const Color darkGreen = Color(0xFF047857);
-  static const Color pureBlack = Color(0xFF020617); // Slate 950
-  static const Color panelBlack = Color(0xFF0F172A); // Slate 900
-  static const Color textGray = Color(0xFF94A3B8); // Slate 400
+  static const Color pureBlack = Color(0xFF020617); 
+  static const Color panelBlack = Color(0xFF0F172A); 
+  static const Color textGray = Color(0xFF94A3B8); 
 
   static const List<Map<String, dynamic>> services = [
     {'id': 'mechanic', 'name': 'Tamirci', 'icon': Icons.build_rounded},
@@ -74,8 +73,8 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
   void initState() {
     super.initState();
     googleApiKey = dotenv.isInitialized 
-        ? (dotenv.env['GOOGLE_MAPS_API_KEY'] ?? "AIzaSyD_aPCzGMPci2XW5lbJwxpbzuWdZZOf9AI")
-        : "AIzaSyD_aPCzGMPci2XW5lbJwxpbzuWdZZOf9AI";
+        ? (dotenv.env['GOOGLE_MAPS_API_KEY'] ?? "AIzaSyByq7704B7HlIjrvzEe02IH0MVldTXXQWk")
+        : "AIzaSyByq7704B7HlIjrvzEe02IH0MVldTXXQWk";
 
     WidgetsBinding.instance.addObserver(this); 
     selectedService = widget.initialService;
@@ -574,7 +573,6 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                             child: Column(
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
-                                                // Animasyonu BackdropFilter'dan ayırarak performansı artırdık
                                                 AnimatedBuilder(
                                                   animation: _buttonPulseController,
                                                   builder: (context, child) {
@@ -658,7 +656,6 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                         ),
                       ),
 
-                      // Yüzen Üst Navigasyon Menüsü (Dynamic Island Tarzı)
                       Positioned(
                         top: MediaQuery.paddingOf(context).top + 16,
                         left: 16,
@@ -667,7 +664,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 800),
                             child: ClipRRect(
-                              borderRadius: BorderRadius.circular(30), // Daha yuvarlak hatlar
+                              borderRadius: BorderRadius.circular(30), 
                               child: BackdropFilter(
                                 filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
                                 child: Container(
@@ -762,24 +759,16 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                                         angle: -rotation * math.pi / 180,
                                                         child: const Icon(Icons.explore_rounded, color: Colors.redAccent, size: 20),
                                                       ),
-                                                      onPressed: () {
-                                                        mapController.rotate(0);
-                                                      },
+                                                      onPressed: () => mapController.rotate(0),
                                                     ),
                                                     Container(width: 24, height: 1, color: Colors.white.withOpacity(0.1)),
                                                   ],
                                                 );
                                               },
                                             ),
-                                            IconButton(
-                                              icon: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
-                                              onPressed: _zoomIn,
-                                            ),
+                                            IconButton(icon: const Icon(Icons.add_rounded, color: Colors.white, size: 20), onPressed: _zoomIn),
                                             Container(width: 24, height: 1, color: Colors.white.withOpacity(0.1)),
-                                            IconButton(
-                                              icon: const Icon(Icons.remove_rounded, color: Colors.white, size: 20),
-                                              onPressed: _zoomOut,
-                                            ),
+                                            IconButton(icon: const Icon(Icons.remove_rounded, color: Colors.white, size: 20), onPressed: _zoomOut),
                                             Container(width: 24, height: 1, color: Colors.white.withOpacity(0.1)),
                                             IconButton(
                                               icon: const Icon(Icons.my_location_rounded, color: neonGreen, size: 20),
@@ -796,15 +785,20 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                   ),
                                   const SizedBox(height: 16),
                                   
+                                  // --- YENİLENEN SİBERPUNK ALT PANEL ---
                                   Container(
                                     margin: const EdgeInsets.only(bottom: 8),
                                     decoration: BoxDecoration(
-                                      color: panelBlack.withOpacity(0.95),
+                                      color: panelBlack.withOpacity(0.90),
                                       borderRadius: BorderRadius.circular(32),
-                                      border: Border.all(color: neonGreen.withOpacity(0.2), width: 1.0),
+                                      // Hatayı çözen tek tip (uniform) sınır tanımı
+                                      border: Border.all(
+                                        color: neonGreen.withOpacity(0.4),
+                                        width: 1.5,
+                                      ),
                                       boxShadow: [
-                                        const BoxShadow(color: pureBlack, blurRadius: 40, offset: Offset(0, 15)),
-                                        BoxShadow(color: neonGreen.withOpacity(0.05), blurRadius: 20, spreadRadius: -5)
+                                        const BoxShadow(color: pureBlack, blurRadius: 40, offset: Offset(0, 20)),
+                                        BoxShadow(color: neonGreen.withOpacity(0.15), blurRadius: 30, spreadRadius: 2, offset: const Offset(0, -5))
                                       ],
                                     ),
                                     child: ClipRRect(
@@ -818,7 +812,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                           child: SingleChildScrollView(
                                             physics: const BouncingScrollPhysics(),
                                             child: Padding(
-                                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 20), 
+                                              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24), 
                                               child: Column(
                                                 mainAxisSize: MainAxisSize.min, 
                                                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -835,32 +829,39 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                                       }
                                                     },
                                                     onTap: () => setState(() => _isPanelExpanded = !_isPanelExpanded),
-                                                    child: Column(
-                                                      children: [
-                                                        Container(
-                                                          width: 48, height: 5,
-                                                          margin: const EdgeInsets.only(bottom: 16),
-                                                          decoration: BoxDecoration(color: Colors.white.withOpacity(0.25), borderRadius: BorderRadius.circular(10))
-                                                        ),
-                                                      ],
+                                                    child: Center(
+                                                      child: AnimatedBuilder(
+                                                        animation: _buttonPulseController,
+                                                        builder: (context, child) {
+                                                          return Container(
+                                                            width: 50, height: 5,
+                                                            margin: const EdgeInsets.only(bottom: 24),
+                                                            decoration: BoxDecoration(
+                                                              color: neonGreen.withOpacity(0.5 + (_buttonPulseController.value * 0.5)), 
+                                                              borderRadius: BorderRadius.circular(10),
+                                                              boxShadow: [BoxShadow(color: neonGreen.withOpacity(0.5), blurRadius: 8 * _buttonPulseController.value)]
+                                                            )
+                                                          );
+                                                        }
+                                                      ),
                                                     ),
                                                   ),
                                                   
                                                   AnimatedSize(
-                                                    duration: const Duration(milliseconds: 300),
-                                                    curve: Curves.easeOutCubic,
+                                                    duration: const Duration(milliseconds: 400),
+                                                    curve: Curves.easeOutExpo,
                                                     child: _isPanelExpanded
                                                       ? Column(
                                                           mainAxisSize: MainAxisSize.min,
                                                           crossAxisAlignment: CrossAxisAlignment.stretch,
                                                           children: [
                                                             SizedBox(
-                                                              height: 100, 
+                                                              height: 110, 
                                                               child: ListView.separated(
                                                                 scrollDirection: Axis.horizontal,
                                                                 physics: const BouncingScrollPhysics(),
                                                                 itemCount: services.length,
-                                                                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                                                                separatorBuilder: (_, __) => const SizedBox(width: 14),
                                                                 itemBuilder: (context, index) {
                                                                   final service = services[index];
                                                                   final isSelected = selectedService == service['id'];
@@ -873,36 +874,38 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                                                     child: AnimatedContainer(
                                                                       duration: const Duration(milliseconds: 300),
                                                                       curve: Curves.easeOutBack,
-                                                                      width: constraints.maxWidth < 400 ? 85 : 100, 
+                                                                      width: constraints.maxWidth < 400 ? 90 : 105, 
                                                                       decoration: BoxDecoration(
-                                                                        color: isSelected ? neonGreen.withOpacity(0.1) : pureBlack,
+                                                                        gradient: isSelected 
+                                                                            ? const LinearGradient(colors: [neonGreen, darkGreen], begin: Alignment.topLeft, end: Alignment.bottomRight) 
+                                                                            : LinearGradient(colors: [pureBlack, pureBlack.withOpacity(0.8)]),
                                                                         borderRadius: BorderRadius.circular(24),
                                                                         border: Border.all(
-                                                                          color: isSelected ? neonGreen : Colors.white.withOpacity(0.05), 
-                                                                          width: isSelected ? 2.0 : 1.0
+                                                                          color: isSelected ? Colors.transparent : Colors.white.withOpacity(0.08), 
+                                                                          width: 1.5
                                                                         ),
                                                                         boxShadow: isSelected 
-                                                                          ? [BoxShadow(color: neonGreen.withOpacity(0.2), blurRadius: 15, spreadRadius: 1, offset: const Offset(0, 4))] 
-                                                                          : [const BoxShadow(color: pureBlack, blurRadius: 5)],
+                                                                          ? [BoxShadow(color: neonGreen.withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 8))] 
+                                                                          : [const BoxShadow(color: pureBlack, blurRadius: 10)],
                                                                       ),
                                                                       child: Column(
                                                                         mainAxisAlignment: MainAxisAlignment.center,
                                                                         children: [
                                                                           AnimatedScale(
-                                                                            scale: isSelected ? 1.15 : 1.0,
+                                                                            scale: isSelected ? 1.2 : 1.0,
                                                                             duration: const Duration(milliseconds: 300),
-                                                                            child: Icon(service['icon'], color: isSelected ? neonGreen : textGray, size: 28), 
+                                                                            child: Icon(service['icon'], color: isSelected ? pureBlack : textGray, size: 30), 
                                                                           ),
-                                                                          const SizedBox(height: 10),
+                                                                          const SizedBox(height: 12),
                                                                           FittedBox(
                                                                             fit: BoxFit.scaleDown,
                                                                             child: Text(
                                                                               service['name'], 
                                                                               style: TextStyle(
-                                                                                fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600, 
-                                                                                fontSize: 13, 
-                                                                                color: isSelected ? neonGreen : textGray, 
-                                                                                letterSpacing: 0.3
+                                                                                fontWeight: FontWeight.w900, 
+                                                                                fontSize: 14, 
+                                                                                color: isSelected ? pureBlack : textGray, 
+                                                                                letterSpacing: 0.5
                                                                               )
                                                                             ),
                                                                           ), 
@@ -913,11 +916,12 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                                                 },
                                                               ),
                                                             ),
-                                                            const SizedBox(height: 20),
+                                                            const SizedBox(height: 24),
                                                             
                                                             Container(
-                                                              decoration: const BoxDecoration(
-                                                                boxShadow: [BoxShadow(color: pureBlack, blurRadius: 15, offset: Offset(0, 5))]
+                                                              decoration: BoxDecoration(
+                                                                borderRadius: BorderRadius.circular(20),
+                                                                boxShadow: [BoxShadow(color: neonGreen.withOpacity(0.05), blurRadius: 20, spreadRadius: 5)]
                                                               ),
                                                               child: TextField(
                                                                 controller: problemController,
@@ -926,38 +930,38 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                                                 maxLength: 200,
                                                                 minLines: 1, 
                                                                 maxLines: 3, 
-                                                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white), 
+                                                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.5), 
                                                                 decoration: InputDecoration(
-                                                                  labelText: "Aracınızdaki Sorunu Kısaca Anlatın",
-                                                                  labelStyle: const TextStyle(fontSize: 12, color: textGray, fontWeight: FontWeight.w600), 
-                                                                  prefixIcon: const Padding(padding: EdgeInsets.only(bottom: 4, left: 12, right: 8), child: Icon(Icons.handyman_rounded, color: neonGreen, size: 20)),
+                                                                  labelText: "Sistem Raporu / Sorun Açıklaması",
+                                                                  labelStyle: const TextStyle(fontSize: 13, color: textGray, fontWeight: FontWeight.w800, letterSpacing: 0.5), 
+                                                                  prefixIcon: const Padding(padding: EdgeInsets.only(bottom: 4, left: 16, right: 12), child: Icon(Icons.terminal_rounded, color: neonGreen, size: 24)),
                                                                   filled: true,
                                                                   fillColor: pureBlack,
-                                                                  counterStyle: const TextStyle(color: textGray, fontSize: 11, fontWeight: FontWeight.bold),
+                                                                  counterStyle: const TextStyle(color: neonGreen, fontSize: 12, fontWeight: FontWeight.w900),
                                                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-                                                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: Colors.white.withOpacity(0.1), width: 1)),
-                                                                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: neonGreen, width: 1.5)),
-                                                                  contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16), 
+                                                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: Colors.white.withOpacity(0.08), width: 1.5)),
+                                                                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: neonGreen, width: 2.0)),
+                                                                  contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20), 
                                                                 ),
                                                                 onSubmitted: (_) {
                                                                   FocusScope.of(context).unfocus();
                                                                 },
                                                               ),
                                                             ),
-                                                            const SizedBox(height: 16),
+                                                            const SizedBox(height: 24),
                                                           ],
                                                         )
                                                       : Padding(
-                                                          padding: const EdgeInsets.only(bottom: 16.0),
+                                                          padding: const EdgeInsets.only(bottom: 20.0),
                                                           child: Row(
                                                             mainAxisAlignment: MainAxisAlignment.center,
                                                             children: [
-                                                              Icon(selectedServiceData['icon'], color: neonGreen, size: 20),
-                                                              const SizedBox(width: 8),
+                                                              Icon(selectedServiceData['icon'], color: neonGreen, size: 24),
+                                                              const SizedBox(width: 12),
                                                               Flexible(
                                                                 child: Text(
-                                                                  "${selectedServiceData['name']} Seçildi • Düzenlemek için dokun", 
-                                                                  style: const TextStyle(color: neonGreen, fontWeight: FontWeight.w700, fontSize: 13),
+                                                                  "${selectedServiceData['name']} Talebi • Düzenle", 
+                                                                  style: const TextStyle(color: neonGreen, fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 0.5),
                                                                   overflow: TextOverflow.ellipsis,
                                                                 ),
                                                               ),
@@ -975,13 +979,13 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                                           child: Container(
                                                             decoration: BoxDecoration(
                                                               borderRadius: BorderRadius.circular(24),
-                                                              gradient: const LinearGradient(colors: [neonGreen, darkGreen], begin: Alignment.centerLeft, end: Alignment.centerRight),
+                                                              gradient: const LinearGradient(colors: [neonGreen, Color(0xFF059669)], begin: Alignment.centerLeft, end: Alignment.centerRight),
                                                               boxShadow: [
                                                                 BoxShadow(
-                                                                  color: neonGreen.withOpacity(0.4 + (_buttonPulseController.value * 0.3)), 
-                                                                  blurRadius: 20 + (_buttonPulseController.value * 10), 
-                                                                  spreadRadius: 2 + (_buttonPulseController.value * 4),
-                                                                  offset: const Offset(0, 5)
+                                                                  color: neonGreen.withOpacity(0.5 + (_buttonPulseController.value * 0.3)), 
+                                                                  blurRadius: 25 + (_buttonPulseController.value * 15), 
+                                                                  spreadRadius: 2 + (_buttonPulseController.value * 6),
+                                                                  offset: const Offset(0, 8)
                                                                 )
                                                               ],
                                                             ),
@@ -990,18 +994,18 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                                               style: ElevatedButton.styleFrom(
                                                                 backgroundColor: Colors.transparent, 
                                                                 shadowColor: Colors.transparent, 
-                                                                padding: const EdgeInsets.symmetric(vertical: 20), 
+                                                                padding: const EdgeInsets.symmetric(vertical: 22), 
                                                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))
                                                               ),
                                                               child: isCreatingJob
-                                                                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 3.0))
+                                                                  ? const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 3.5))
                                                                   : const FittedBox(
                                                                       child: Row(
                                                                         mainAxisAlignment: MainAxisAlignment.center,
                                                                         children: [
-                                                                          Icon(Icons.radar_rounded, color: pureBlack, size: 24), 
-                                                                          SizedBox(width: 10), 
-                                                                          Text("En Yakın Ustayı Bul", style: TextStyle(fontSize: 18, color: pureBlack, fontWeight: FontWeight.w900, letterSpacing: 0.5)) 
+                                                                          Icon(Icons.radar_rounded, color: pureBlack, size: 28), 
+                                                                          SizedBox(width: 12), 
+                                                                          Text("SİSTEMİ TARA VE USTA BUL", style: TextStyle(fontSize: 18, color: pureBlack, fontWeight: FontWeight.w900, letterSpacing: 1.0)) 
                                                                         ],
                                                                       ),
                                                                     ),

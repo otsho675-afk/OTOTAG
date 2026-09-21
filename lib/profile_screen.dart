@@ -11,7 +11,11 @@ class ProfileScreen extends StatefulWidget {
   final int userId;
   final String userType;
 
-  const ProfileScreen({super.key, required this.userId, required this.userType});
+  const ProfileScreen({
+    super.key, 
+    required this.userId, 
+    required this.userType,
+  });
 
   @override
   _ProfileScreenState createState() => _ProfileScreenState();
@@ -19,11 +23,14 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMixin {
   final http.Client _httpClient = http.Client();
+  final Duration _apiTimeout = const Duration(seconds: 15);
 
   bool isLoading = true;
   bool isSaving = false;
+  bool isDeletingAccount = false;
+  
   Map<String, dynamic> profile = {};
-  List historyJobs = [];
+  List<dynamic> historyJobs = [];
   Map<String, dynamic> earnings = {'monthly': 0, 'yearly': 0, 'total_jobs': 0};
 
   Set<int> selectedJobs = {};
@@ -38,14 +45,31 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   String selectedService = 'mechanic';
 
   final String baseUrl = "https://eliteagency.sbs/api.php";
+  
   late AnimationController _pulseController;
   late AnimationController _listAnimController;
+
+  // Yenilenmiş Tasarım Paleti
+  static const Color _bgColor = Color(0xFF030305);
+  static const Color _cardColor = Color(0xFF111115);
+  static const Color _primaryColor = Color(0xFF00FFA3);
+  static const Color _dangerColor = Color(0xFFFF3366);
+  static const Color _textColor = Colors.white;
+  static const Color _subtitleColor = Colors.white54;
 
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2500))..repeat(reverse: true);
-    _listAnimController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
+    _pulseController = AnimationController(
+      vsync: this, 
+      duration: const Duration(milliseconds: 2500)
+    )..repeat(reverse: true);
+    
+    _listAnimController = AnimationController(
+      vsync: this, 
+      duration: const Duration(milliseconds: 1000)
+    );
+    
     _fetchProfileData();
   }
 
@@ -62,32 +86,41 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   
   int get _totalHistoryPages => (historyJobs.length / _itemsPerPage).ceil();
 
-  List get _paginatedHistory {
+  List<dynamic> _getPaginatedHistory() {
+    if (historyJobs.isEmpty) return [];
+    
+    if (_historyPage > _totalHistoryPages && _totalHistoryPages > 0) {
+      _historyPage = _totalHistoryPages;
+    } else if (_totalHistoryPages == 0) {
+      _historyPage = 1;
+    }
+
     int start = (_historyPage - 1) * _itemsPerPage;
     int end = start + _itemsPerPage;
+    
     if (start >= historyJobs.length) return [];
     return historyJobs.sublist(start, end > historyJobs.length ? historyJobs.length : end);
   }
 
   void _showCustomSnackBar(String message, {bool isError = false, bool isNewAlert = false}) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    if (!mounted) return;
+    
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    scaffoldMessenger.clearSnackBars();
+    scaffoldMessenger.showSnackBar(
+      SnackBar(
         content: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.white.withOpacity(0.3), Colors.white.withOpacity(0.1)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: Colors.white.withOpacity(0.2),
                 shape: BoxShape.circle,
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 6)],
               ),
               child: Icon(
-                isNewAlert ? Icons.notifications_active_rounded : (isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded),
+                isNewAlert 
+                  ? Icons.notifications_active_rounded 
+                  : (isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded),
                 color: Colors.white,
                 size: 20,
               ),
@@ -96,53 +129,77 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             Expanded(
               child: Text(
                 message,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 0.3),
+                style: const TextStyle(
+                  color: Colors.white, 
+                  fontWeight: FontWeight.bold, 
+                  fontSize: 14, 
+                  letterSpacing: 0.3
+                ),
               ),
             ),
           ],
         ),
-        backgroundColor: isNewAlert ? const Color(0xFF10B981) : (isError ? const Color(0xFFEF4444) : const Color(0xFF10B981)),
+        backgroundColor: isNewAlert 
+          ? _primaryColor.withOpacity(0.95) 
+          : (isError ? _dangerColor : _primaryColor.withOpacity(0.95)),
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
+        margin: EdgeInsets.only(
+          bottom: MediaQuery.of(context).size.height * 0.05,
+          left: 16,
+          right: 16
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 20,
         duration: const Duration(seconds: 4),
-      ));
-    }
+      )
+    );
   }
 
   Future<void> _fetchProfileData() async {
     try {
-      final responses = await Future.wait([
-        _httpClient.get(Uri.parse("$baseUrl?action=get_profile&user_id=${widget.userId}")),
-        _httpClient.get(Uri.parse("$baseUrl?action=get_history&user_id=${widget.userId}&user_type=${widget.userType}")),
-        if (widget.userType == 'provider') _httpClient.get(Uri.parse("$baseUrl?action=get_earnings&provider_id=${widget.userId}")),
-      ]);
+      final futures = <Future<http.Response>>[
+        _httpClient.get(Uri.parse("$baseUrl?action=get_profile&user_id=${widget.userId}")).timeout(_apiTimeout),
+        _httpClient.get(Uri.parse("$baseUrl?action=get_history&user_id=${widget.userId}&user_type=${widget.userType}")).timeout(_apiTimeout),
+      ];
 
-      if (mounted && responses[0].statusCode == 200 && responses[1].statusCode == 200) {
+      if (widget.userType == 'provider') {
+        futures.add(_httpClient.get(Uri.parse("$baseUrl?action=get_earnings&provider_id=${widget.userId}")).timeout(_apiTimeout));
+      }
+
+      final responses = await Future.wait(futures);
+
+      if (!mounted) return;
+
+      if (responses[0].statusCode == 200 && responses[1].statusCode == 200) {
         final pData = json.decode(responses[0].body);
         final hData = json.decode(responses[1].body);
 
         if (widget.userType == 'provider' && responses.length > 2 && responses[2].statusCode == 200) {
           final eData = json.decode(responses[2].body);
-          if (eData['status'] == 'success') earnings = eData['earnings'];
+          if (eData['status'] == 'success') earnings = eData['earnings'] ?? earnings;
         }
 
         setState(() {
           profile = pData['profile'] ?? {};
-          _nameController.text = profile['name'] ?? '';
-          _phoneController.text = profile['phone'] ?? '';
-          _ibanController.text = profile['iban'] ?? '';
-          selectedService = profile['service_category'] ?? 'mechanic';
+          _nameController.text = profile['name']?.toString() ?? '';
+          _phoneController.text = profile['phone']?.toString() ?? '';
+          _ibanController.text = profile['iban']?.toString() ?? '';
+          selectedService = profile['service_category']?.toString() ?? 'mechanic';
           historyJobs = hData['history'] ?? [];
           _historyPage = 1;
           isLoading = false;
         });
         
         _listAnimController.forward();
+      } else {
+        setState(() => isLoading = false);
+        _showCustomSnackBar("Veriler sunucudan alınamadı.", isError: true);
       }
     } catch (e) {
-      if (mounted) setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+        _showCustomSnackBar("Bağlantı hatası: İnternet bağlantınızı kontrol edin.", isError: true);
+      }
     }
   }
 
@@ -159,6 +216,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
   Future<void> _deleteSelectedJobs() async {
     if (selectedJobs.isEmpty) return;
+    
+    final List<int> jobsToDelete = selectedJobs.toList();
+    
     try {
       final response = await _httpClient.post(
         Uri.parse("$baseUrl?action=delete_history"),
@@ -166,32 +226,48 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
         body: {
           "user_id": widget.userId.toString(),
           "user_type": widget.userType,
-          "job_ids": json.encode(selectedJobs.toList()),
+          "job_ids": json.encode(jobsToDelete),
         },
-      );
-      final data = json.decode(response.body);
-      if (data['status'] == 'success') {
-        setState(() {
-          historyJobs.removeWhere((job) => selectedJobs.contains(int.parse(job['job_id'].toString())));
-          selectedJobs.clear();
-          isSelectionMode = false;
-          
-          if (_historyPage > _totalHistoryPages && _totalHistoryPages > 0) {
-            _historyPage = _totalHistoryPages;
-          } else if (_totalHistoryPages == 0) {
-            _historyPage = 1;
-          }
-        });
-        _showCustomSnackBar("Seçilen işlemler başarıyla silindi.");
+      ).timeout(_apiTimeout);
+      
+      if (!mounted) return;
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'success') {
+          setState(() {
+            historyJobs.removeWhere((job) {
+              final jobId = int.tryParse(job['job_id']?.toString() ?? '-1') ?? -1;
+              return jobsToDelete.contains(jobId);
+            });
+            selectedJobs.clear();
+            isSelectionMode = false;
+            
+            if (_historyPage > _totalHistoryPages && _totalHistoryPages > 0) {
+              _historyPage = _totalHistoryPages;
+            }
+          });
+          _showCustomSnackBar("Seçilen işlemler başarıyla silindi.");
+        } else {
+           _showCustomSnackBar(data['message'] ?? "Silme işlemi reddedildi.", isError: true);
+        }
+      } else {
+        _showCustomSnackBar("Sunucu hatası oluştu. Lütfen tekrar deneyin.", isError: true);
       }
     } catch (e) {
-      _showCustomSnackBar("Silme işlemi başarısız.", isError: true);
+      if (mounted) _showCustomSnackBar("Bağlantı zaman aşımına uğradı.", isError: true);
     }
   }
 
   Future<void> _updateProfile() async {
+    if (_nameController.text.trim().isEmpty) {
+      _showCustomSnackBar("Lütfen ad ve soyad alanını boş bırakmayın.", isError: true);
+      return;
+    }
+
     setState(() => isSaving = true);
     FocusScope.of(context).unfocus(); 
+
     try {
       final response = await _httpClient.post(
         Uri.parse("$baseUrl?action=update_profile"),
@@ -199,30 +275,36 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
         body: {
           "user_id": widget.userId.toString(),
           "name": _nameController.text.trim(),
-          "phone": _phoneController.text.trim(),
           "service_category": widget.userType == 'provider' ? selectedService : 'none',
           "iban": widget.userType == 'provider' ? _ibanController.text.trim() : '',
         },
-      );
-      final data = json.decode(response.body);
-      if (mounted) {
-        setState(() => isSaving = false);
-        if (response.statusCode == 200 && data['status'] == 'success') {
+      ).timeout(_apiTimeout);
+      
+      if (!mounted) return;
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'success') {
           _showCustomSnackBar("Profiliniz başarıyla güncellendi!");
         } else {
-          _showCustomSnackBar(data['message'] ?? "Güncelleme başarısız.", isError: true);
+          _showCustomSnackBar(data['message'] ?? "Güncelleme tamamlanamadı.", isError: true);
         }
+      } else {
+        _showCustomSnackBar("Sunucu hatası: Güncellenemedi.", isError: true);
       }
     } catch (e) {
-      if (mounted) {
-        setState(() => isSaving = false);
-        _showCustomSnackBar("Bağlantı hatası oluştu.", isError: true);
-      }
+      if (mounted) _showCustomSnackBar("Bağlantı koptu, tekrar deneyin.", isError: true);
+    } finally {
+      if (mounted) setState(() => isSaving = false);
     }
   }
 
   void _showComplaintDialog(int jobId, int? providerId) {
-    if (providerId == null) return;
+    if (providerId == null) {
+      _showCustomSnackBar("Bu işlem için şikayet oluşturulamaz.", isError: true);
+      return;
+    }
+    
     final TextEditingController subjectController = TextEditingController();
     final TextEditingController messageController = TextEditingController();
     bool isSending = false;
@@ -233,104 +315,130 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              return SafeArea(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                  child: Container(
-                    padding: EdgeInsets.only(
-                      bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-                      left: 20, right: 20, top: 20
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B).withOpacity(0.95),
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                      border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5),
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 40, offset: const Offset(0, -10))],
-                    ),
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
-                          const SizedBox(height: 24),
-                          Center(
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)]),
-                                shape: BoxShape.circle,
-                                boxShadow: [BoxShadow(color: const Color(0xFF8B5CF6).withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 5))],
-                              ),
-                              child: const Icon(Icons.support_agent_rounded, color: Colors.white, size: 36),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          const Text("Şikayet Oluştur", textAlign: TextAlign.center, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
-                          const SizedBox(height: 8),
-                          Text("İşlem #$jobId için yaşadığınız problemi yetkililere iletin.", textAlign: TextAlign.center, style: TextStyle(fontSize: 15, color: Colors.grey.shade400, fontWeight: FontWeight.w500)),
-                          const SizedBox(height: 24),
-                          _buildGlassTextField(subjectController, "Konu Başlığı", Icons.subject_rounded, const Color(0xFF8B5CF6), action: TextInputAction.next),
-                          const SizedBox(height: 12),
-                          _buildGlassTextField(messageController, "Detaylı Açıklama", Icons.notes_rounded, const Color(0xFF8B5CF6), maxLines: 4, action: TextInputAction.done, onSubmitted: (_) => FocusScope.of(context).unfocus()),
-                          const SizedBox(height: 24),
-                          Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [BoxShadow(color: const Color(0xFF8B5CF6).withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 5))],
-                            ),
-                            child: ElevatedButton(
-                              onPressed: isSending ? null : () async {
-                                if (subjectController.text.trim().isEmpty || messageController.text.trim().isEmpty) {
-                                  _showCustomSnackBar("Lütfen tüm alanları doldurun.", isError: true);
-                                  return;
-                                }
-                                setModalState(() => isSending = true);
-                                try {
-                                  final response = await _httpClient.post(
-                                    Uri.parse("$baseUrl?action=create_ticket"),
-                                    headers: {"Content-Type": "application/x-www-form-urlencoded"},
-                                    body: {
-                                      "job_id": jobId.toString(),
-                                      "customer_id": widget.userId.toString(),
-                                      "provider_id": providerId.toString(),
-                                      "subject": subjectController.text.trim(),
-                                      "message": messageController.text.trim(),
-                                    }
-                                  );
-                                  if (response.statusCode == 200) {
-                                    Navigator.pop(context);
-                                    _showCustomSnackBar("Şikayetiniz yönetime başarıyla iletildi.");
-                                  } else {
-                                    _showCustomSnackBar("Şikayet gönderilemedi.", isError: true);
-                                  }
-                                } catch (e) {
-                                  _showCustomSnackBar("Bağlantı hatası.", isError: true);
-                                } finally {
-                                  setModalState(() => isSending = false);
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF8B5CF6),
-                                padding: const EdgeInsets.symmetric(vertical: 18),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                elevation: 0,
-                              ),
-                              child: isSending
-                                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                  : const Text("Şikayeti Gönder", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
-                            ),
-                          ),
-                        ],
+          return SafeArea(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+              child: Container(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                  left: 20, right: 20, top: 20
+                ),
+                decoration: BoxDecoration(
+                  color: _cardColor.withOpacity(0.98),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                  border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 40, offset: const Offset(0, -10))
+                  ],
+                ),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 48, height: 6, 
+                          decoration: BoxDecoration(
+                            color: Colors.white24, 
+                            borderRadius: BorderRadius.circular(10)
+                          )
+                        )
                       ),
-                    ),
+                      const SizedBox(height: 24),
+                      Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: _dangerColor.withOpacity(0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.support_agent_rounded, color: _dangerColor, size: 36),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        "Şikayet Oluştur", 
+                        textAlign: TextAlign.center, 
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: -0.5)
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "İşlem #$jobId için yaşadığınız problemi yetkililere iletin.", 
+                        textAlign: TextAlign.center, 
+                        style: TextStyle(fontSize: 15, color: _subtitleColor, fontWeight: FontWeight.w500)
+                      ),
+                      const SizedBox(height: 24),
+                      _buildGlassTextField(
+                        subjectController, "Konu Başlığı", Icons.subject_rounded, _dangerColor, 
+                        action: TextInputAction.next
+                      ),
+                      const SizedBox(height: 12),
+                      _buildGlassTextField(
+                        messageController, "Detaylı Açıklama", Icons.notes_rounded, _dangerColor, 
+                        maxLines: 4, action: TextInputAction.done, 
+                        onSubmitted: (_) => FocusScope.of(context).unfocus()
+                      ),
+                      const SizedBox(height: 24),
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(color: _dangerColor.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 5))
+                          ],
+                        ),
+                        child: ElevatedButton(
+                          onPressed: isSending ? null : () async {
+                            if (subjectController.text.trim().isEmpty || messageController.text.trim().isEmpty) {
+                              _showCustomSnackBar("Lütfen tüm alanları doldurun.", isError: true);
+                              return;
+                            }
+                            setModalState(() => isSending = true);
+                            try {
+                              final response = await _httpClient.post(
+                                Uri.parse("$baseUrl?action=create_ticket"),
+                                headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                                body: {
+                                  "job_id": jobId.toString(),
+                                  "customer_id": widget.userId.toString(),
+                                  "provider_id": providerId.toString(),
+                                  "subject": subjectController.text.trim(),
+                                  "message": messageController.text.trim(),
+                                }
+                              ).timeout(_apiTimeout);
+                              
+                              if (mounted) {
+                                if (response.statusCode == 200) {
+                                  Navigator.pop(context);
+                                  _showCustomSnackBar("Şikayetiniz yönetime başarıyla iletildi.");
+                                } else {
+                                  _showCustomSnackBar("Şikayet gönderilemedi.", isError: true);
+                                }
+                              }
+                            } catch (e) {
+                              if (mounted) _showCustomSnackBar("Bağlantı hatası: İşlem başarısız.", isError: true);
+                            } finally {
+                              if (mounted) setModalState(() => isSending = false);
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _dangerColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            elevation: 0,
+                          ),
+                          child: isSending
+                              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                              : const Text("Şikayeti Gönder", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              );
-            }
+              ),
+            ),
           );
         }
       ),
@@ -350,10 +458,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   void _handleLogout() {
     showDialog(
       context: context,
+      barrierDismissible: true,
       builder: (dialogContext) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: AlertDialog(
-          backgroundColor: const Color(0xFF1E293B).withOpacity(0.95),
+          backgroundColor: _cardColor.withOpacity(0.95),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24), 
             side: BorderSide(color: Colors.white.withOpacity(0.1), width: 1.5)
@@ -363,8 +472,8 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: const Color(0xFFEF4444).withOpacity(0.15), shape: BoxShape.circle),
-                child: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 28),
+                decoration: BoxDecoration(color: _dangerColor.withOpacity(0.15), shape: BoxShape.circle),
+                child: const Icon(Icons.logout_rounded, color: _dangerColor, size: 28),
               ),
               const SizedBox(width: 12),
               const Expanded(
@@ -372,7 +481,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               ),
             ],
           ),
-          content: const Text("Hesabınızdan güvenli bir şekilde çıkış yapmak istediğinize emin misiniz?", style: TextStyle(color: Color(0xFF94A3B8), fontSize: 16, height: 1.5, fontWeight: FontWeight.w500)),
+          content: const Text("Hesabınızdan güvenli bir şekilde çıkış yapmak istediğinize emin misiniz?", style: TextStyle(color: _subtitleColor, fontSize: 16, height: 1.5, fontWeight: FontWeight.w500)),
           actionsPadding: const EdgeInsets.all(20),
           actions: [
             Row(
@@ -388,7 +497,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 Expanded(
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFEF4444), 
+                      backgroundColor: _dangerColor, 
                       elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       padding: const EdgeInsets.symmetric(vertical: 16)
@@ -399,7 +508,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                         final prefs = await SharedPreferences.getInstance();
                         await prefs.clear();
                       } catch (e) {
-                        debugPrint("Çıkış yaparken önbellek temizlenemedi: $e");
+                        debugPrint("Önbellek temizlenemedi: $e");
                       }
                       if (mounted) {
                         Navigator.of(context).pushAndRemoveUntil(
@@ -422,80 +531,86 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   void _handleDeleteAccount() {
     showDialog(
       context: context,
-      builder: (dialogContext) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: AlertDialog(
-          backgroundColor: const Color(0xFF1E293B).withOpacity(0.95),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-            side: BorderSide(color: const Color(0xFFEF4444).withOpacity(0.3), width: 1.5)
-          ),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: const Color(0xFFEF4444).withOpacity(0.15), shape: BoxShape.circle),
-                child: const Icon(Icons.delete_forever_rounded, color: Color(0xFFEF4444), size: 28),
+      barrierDismissible: true,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: AlertDialog(
+              backgroundColor: _cardColor.withOpacity(0.95),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+                side: BorderSide(color: _dangerColor.withOpacity(0.3), width: 1.5)
               ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text("Hesabı Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 22, letterSpacing: -0.5), overflow: TextOverflow.ellipsis),
-              ),
-            ],
-          ),
-          content: const Text("Hesabınız ve tüm verileriniz kalıcı olarak silinecektir. Bu işlem geri alınamaz. Emin misiniz?", style: TextStyle(color: Color(0xFF94A3B8), fontSize: 16, height: 1.5, fontWeight: FontWeight.w500)),
-          actionsPadding: const EdgeInsets.all(20),
-          actions: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(dialogContext),
-                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                    child: const Text("İptal", style: TextStyle(color: Colors.white60, fontWeight: FontWeight.w800, fontSize: 16)),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(color: _dangerColor.withOpacity(0.15), shape: BoxShape.circle),
+                    child: const Icon(Icons.delete_forever_rounded, color: _dangerColor, size: 28),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFEF4444),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      padding: const EdgeInsets.symmetric(vertical: 16)
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text("Hesabı Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 22, letterSpacing: -0.5), overflow: TextOverflow.ellipsis),
+                  ),
+                ],
+              ),
+              content: const Text("Hesabınız ve tüm verileriniz kalıcı olarak silinecektir. Bu işlem geri alınamaz. Emin misiniz?", style: TextStyle(color: _subtitleColor, fontSize: 16, height: 1.5, fontWeight: FontWeight.w500)),
+              actionsPadding: const EdgeInsets.all(20),
+              actions: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: isDeletingAccount ? null : () => Navigator.pop(dialogContext),
+                        style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                        child: const Text("İptal", style: TextStyle(color: Colors.white60, fontWeight: FontWeight.w800, fontSize: 16)),
+                      ),
                     ),
-                    onPressed: () async {
-                      Navigator.pop(dialogContext);
-                      setState(() => isLoading = true);
-                      
-                      try {
-                        await http.post(
-                          Uri.parse("$baseUrl?action=delete_account"),
-                          headers: {"Content-Type": "application/x-www-form-urlencoded"},
-                          body: {"user_id": widget.userId.toString()},
-                        );
-                      } catch (_) {
-                      }
-                      
-                      try {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.clear(); 
-                      } catch (_) {}
-                      
-                      if (mounted) {
-                        Navigator.of(context).pushAndRemoveUntil(
-                          MaterialPageRoute(builder: (context) => const RoleSelectionScreen()),
-                          (Route<dynamic> route) => false,
-                        );
-                      }
-                    },
-                    child: const FittedBox(child: Text("Kalıcı Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
-                  ),
-                ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _dangerColor,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          padding: const EdgeInsets.symmetric(vertical: 16)
+                        ),
+                        onPressed: isDeletingAccount ? null : () async {
+                          setDialogState(() => isDeletingAccount = true);
+                          
+                          try {
+                            await _httpClient.post(
+                              Uri.parse("$baseUrl?action=delete_account"),
+                              headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                              body: {"user_id": widget.userId.toString()},
+                            ).timeout(const Duration(seconds: 10));
+                          } catch (_) {}
+                          
+                          try {
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.clear(); 
+                          } catch (_) {}
+                          
+                          if (mounted) {
+                            Navigator.pop(dialogContext);
+                            Navigator.of(context).pushAndRemoveUntil(
+                              MaterialPageRoute(builder: (context) => const RoleSelectionScreen()),
+                              (Route<dynamic> route) => false,
+                            );
+                          }
+                        },
+                        child: isDeletingAccount 
+                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                            : const FittedBox(child: Text("Kalıcı Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
+                      ),
+                    ),
+                  ],
+                )
               ],
-            )
-          ],
-        ),
+            ),
+          );
+        }
       )
     );
   }
@@ -503,43 +618,39 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   @override
   Widget build(BuildContext context) {
     final isProvider = widget.userType == 'provider';
-    const Color bgColor = Color(0xFF020617);
-    const Color primaryColor = Color(0xFF10B981); 
 
     return DefaultTabController(
       length: isProvider ? 3 : 2,
       child: Scaffold(
-        backgroundColor: bgColor,
+        backgroundColor: _bgColor,
         extendBodyBehindAppBar: true,
         appBar: PreferredSize(
           preferredSize: const Size.fromHeight(110),
           child: ClipRRect(
-            child: RepaintBoundary(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                child: AppBar(
-                  title: const Text(
-                    "Hesabım", 
-                    style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 24, letterSpacing: -0.5)
-                  ),
-                  backgroundColor: bgColor.withOpacity(0.5),
-                  elevation: 0,
-                  centerTitle: true,
-                  iconTheme: const IconThemeData(color: Colors.white),
-                  bottom: TabBar(
-                    labelColor: primaryColor,
-                    unselectedLabelColor: Colors.white.withOpacity(0.4),
-                    indicatorColor: primaryColor,
-                    indicatorWeight: 4,
-                    dividerColor: Colors.white.withOpacity(0.05),
-                    indicatorSize: TabBarIndicatorSize.label,
-                    labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: -0.2),
-                    tabs: [
-                      const Tab(text: "Profil"),
-                      const Tab(text: "Geçmiş"),
-                      if (isProvider) const Tab(text: "Rapor"),
-                    ],
-                  ),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: AppBar(
+                title: const Text(
+                  "Hesabım", 
+                  style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 24, letterSpacing: -0.5)
+                ),
+                backgroundColor: _bgColor.withOpacity(0.65),
+                elevation: 0,
+                centerTitle: true,
+                iconTheme: const IconThemeData(color: Colors.white),
+                bottom: TabBar(
+                  labelColor: _primaryColor,
+                  unselectedLabelColor: Colors.white.withOpacity(0.4),
+                  indicatorColor: _primaryColor,
+                  indicatorWeight: 4,
+                  dividerColor: Colors.white.withOpacity(0.05),
+                  indicatorSize: TabBarIndicatorSize.label,
+                  labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: -0.2),
+                  tabs: [
+                    const Tab(text: "Profil"),
+                    const Tab(text: "Geçmiş"),
+                    if (isProvider) const Tab(text: "Rapor"),
+                  ],
                 ),
               ),
             ),
@@ -558,20 +669,20 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
-                        colors: [primaryColor.withOpacity(0.12), Colors.transparent],
+                        colors: [_primaryColor.withOpacity(0.12), Colors.transparent],
                       ),
                     ),
                   ),
                 ),
                 SafeArea(
                   child: isLoading
-                      ? const Center(child: CircularProgressIndicator(color: primaryColor, strokeWidth: 4))
+                      ? const Center(child: CircularProgressIndicator(color: _primaryColor, strokeWidth: 4))
                       : TabBarView(
                           physics: const BouncingScrollPhysics(),
                           children: [
-                            _buildProfileTab(isProvider, primaryColor, constraints),
-                            _buildHistoryTab(isProvider, primaryColor, constraints),
-                            if (isProvider) _buildDashboardTab(primaryColor, constraints),
+                            _buildProfileTab(isProvider, _primaryColor, constraints),
+                            _buildHistoryTab(isProvider, _primaryColor, constraints),
+                            if (isProvider) _buildDashboardTab(_primaryColor, constraints),
                           ],
                         ),
                 ),
@@ -584,11 +695,10 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   }
 
   Widget _buildProfileTab(bool isProvider, Color primaryColor, BoxConstraints constraints) {
+    double horizontalPadding = constraints.maxWidth > 600 ? constraints.maxWidth * 0.15 : 20;
+    
     return SingleChildScrollView(
-      padding: EdgeInsets.symmetric(
-        horizontal: constraints.maxWidth > 600 ? constraints.maxWidth * 0.2 : 20, 
-        vertical: 32
-      ),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 32),
       physics: const BouncingScrollPhysics(),
       child: Center(
         child: ConstrainedBox(
@@ -607,13 +717,22 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                           return Container(
                             padding: const EdgeInsets.all(28),
                             decoration: BoxDecoration(
-                              gradient: LinearGradient(colors: [primaryColor, primaryColor.withOpacity(0.6)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                              gradient: LinearGradient(
+                                colors: [primaryColor, primaryColor.withOpacity(0.6)], 
+                                begin: Alignment.topLeft, 
+                                end: Alignment.bottomRight
+                              ),
                               shape: BoxShape.circle,
                               boxShadow: [
-                                BoxShadow(color: primaryColor.withOpacity(0.3 + (_pulseController.value * 0.2)), blurRadius: 40, spreadRadius: _pulseController.value * 8, offset: const Offset(0, 10)),
+                                BoxShadow(
+                                  color: primaryColor.withOpacity(0.3 + (_pulseController.value * 0.2)), 
+                                  blurRadius: 40, 
+                                  spreadRadius: _pulseController.value * 8, 
+                                  offset: const Offset(0, 10)
+                                ),
                               ]
                             ),
-                            child: Icon(isProvider ? Icons.engineering_rounded : Icons.person_rounded, size: 56, color: const Color(0xFF020617)),
+                            child: Icon(isProvider ? Icons.engineering_rounded : Icons.person_rounded, size: 56, color: Colors.black),
                           );
                         }
                       ),
@@ -621,7 +740,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1E293B), 
+                        color: _cardColor, 
                         shape: BoxShape.circle, 
                         border: Border.all(color: primaryColor, width: 2),
                         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 15, offset: const Offset(0, 5))]
@@ -636,7 +755,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               _buildGlassTextField(_nameController, "Ad Soyad", Icons.badge_rounded, primaryColor, action: TextInputAction.next),
               const SizedBox(height: 20),
               
-              // TELEFON NUMARASI ALANI READ-ONLY (Değiştirilemez) YAPILDI
               _buildGlassTextField(_phoneController, "Telefon Numarası", Icons.phone_rounded, primaryColor, type: TextInputType.phone, action: TextInputAction.next, readOnly: true),
               const SizedBox(height: 20),
               
@@ -647,7 +765,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E293B).withOpacity(0.6),
+                    color: _cardColor.withOpacity(0.6),
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5),
                     boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10))],
@@ -664,7 +782,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text("Hizmet Kategorisi", style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8), fontWeight: FontWeight.w700)),
+                            const Text("Hizmet Kategorisi", style: TextStyle(fontSize: 14, color: _subtitleColor, fontWeight: FontWeight.w700)),
                             const SizedBox(height: 6),
                             Text(
                               _getServiceTypeName(selectedService),
@@ -702,8 +820,8 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))
                   ),
                   child: isSaving 
-                      ? const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: Color(0xFF020617), strokeWidth: 3.5))
-                      : const Text("Değişiklikleri Kaydet", style: TextStyle(fontSize: 18, color: Color(0xFF020617), fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                      ? const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3.5))
+                      : const Text("Değişiklikleri Kaydet", style: TextStyle(fontSize: 18, color: Colors.black, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
                 ),
               ),
 
@@ -712,12 +830,12 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.4), width: 1.5),
+                  border: Border.all(color: _dangerColor.withOpacity(0.4), width: 1.5),
                 ),
                 child: ElevatedButton(
                   onPressed: _handleLogout,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFEF4444).withOpacity(0.05), 
+                    backgroundColor: _dangerColor.withOpacity(0.05), 
                     elevation: 0,
                     shadowColor: Colors.transparent, 
                     padding: const EdgeInsets.symmetric(vertical: 18), 
@@ -726,9 +844,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.power_settings_new_rounded, color: Color(0xFFEF4444), size: 24),
+                      Icon(Icons.power_settings_new_rounded, color: _dangerColor, size: 24),
                       SizedBox(width: 10),
-                      Text("Güvenli Çıkış", style: TextStyle(fontSize: 17, color: Color(0xFFEF4444), fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                      Text("Güvenli Çıkış", style: TextStyle(fontSize: 17, color: _dangerColor, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
                     ],
                   ),
                 ),
@@ -755,10 +873,16 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                     children: [
                       Icon(Icons.delete_forever_rounded, color: Colors.white54, size: 24),
                       SizedBox(width: 10),
-                      Text("Hesabımı Sil", style: TextStyle(fontSize: 17, color: Colors.white54, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                      Text("Hesabımı ve Verilerimi Sil", style: TextStyle(fontSize: 17, color: Colors.white54, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
                     ],
                   ),
                 ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                "Bu işlem tüm cihazlardan oturumunuzu kapatır, hesap ve\nharici verilerinizi kalıcı olarak siler.", 
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white30, fontSize: 12, fontWeight: FontWeight.w500)
               ),
               const SizedBox(height: 40),
             ],
@@ -768,10 +892,20 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildGlassTextField(TextEditingController controller, String label, IconData icon, Color primaryColor, {TextInputType type = TextInputType.text, int maxLines = 1, TextInputAction? action, Function(String)? onSubmitted, bool readOnly = false}) {
+  Widget _buildGlassTextField(
+    TextEditingController controller, 
+    String label, 
+    IconData icon, 
+    Color primaryColor, 
+    {TextInputType type = TextInputType.text, 
+    int maxLines = 1, 
+    TextInputAction? action, 
+    Function(String)? onSubmitted, 
+    bool readOnly = false}
+  ) {
     return Container(
       decoration: BoxDecoration(
-        color: readOnly ? Colors.white.withOpacity(0.03) : const Color(0xFF1E293B).withOpacity(0.6),
+        color: readOnly ? Colors.white.withOpacity(0.03) : _cardColor.withOpacity(0.6),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5),
         boxShadow: readOnly ? [] : [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10))],
@@ -786,7 +920,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
         style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: readOnly ? Colors.white54 : Colors.white),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w600, fontSize: 15),
+          labelStyle: const TextStyle(color: _subtitleColor, fontWeight: FontWeight.w600, fontSize: 15),
           prefixIcon: Padding(
             padding: const EdgeInsets.only(left: 20, right: 16), 
             child: Icon(icon, color: readOnly ? Colors.white30 : primaryColor, size: 24)
@@ -832,7 +966,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
+              color: _cardColor,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.white.withOpacity(0.1)),
             ),
@@ -871,13 +1005,13 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             const SizedBox(height: 24),
             const Text("İşlem Geçmişi Boş", style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
             const SizedBox(height: 12),
-            const Text("Tamamlanan veya iptal edilen\nişlemleriniz burada görünür.", textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF94A3B8), fontSize: 16, height: 1.5, fontWeight: FontWeight.w500))
+            const Text("Tamamlanan veya iptal edilen\nişlemleriniz burada görünür.", textAlign: TextAlign.center, style: TextStyle(color: _subtitleColor, fontSize: 16, height: 1.5, fontWeight: FontWeight.w500))
           ],
         )
       );
     }
 
-    final paginatedJobs = _paginatedHistory;
+    final paginatedJobs = _getPaginatedHistory();
     double horizontalPadding = constraints.maxWidth > 800 ? constraints.maxWidth * 0.15 : 20.0;
 
     return Column(
@@ -911,27 +1045,27 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 margin: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 16),
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEF4444).withOpacity(0.15), 
+                  color: _dangerColor.withOpacity(0.15), 
                   borderRadius: BorderRadius.circular(20), 
-                  border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.4), width: 1.5)
+                  border: Border.all(color: _dangerColor.withOpacity(0.4), width: 1.5)
                 ),
                 child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: const Color(0xFFEF4444), borderRadius: BorderRadius.circular(10)),
+                      decoration: BoxDecoration(color: _dangerColor, borderRadius: BorderRadius.circular(10)),
                       child: Text("${selectedJobs.length}", style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 16)),
                     ),
                     const SizedBox(width: 12),
-                    const Text("Öğe Seçildi", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFFEF4444))),
+                    const Text("Öğe Seçildi", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _dangerColor)),
                     const Spacer(),
                     ElevatedButton.icon(
                       icon: const Icon(Icons.delete_forever_rounded, color: Colors.white, size: 20),
                       label: const Text("Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFEF4444), 
+                        backgroundColor: _dangerColor, 
                         elevation: 10,
-                        shadowColor: const Color(0xFFEF4444).withOpacity(0.4),
+                        shadowColor: _dangerColor.withOpacity(0.4),
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), 
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
                       ),
@@ -950,9 +1084,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             separatorBuilder: (_, __) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
               final job = paginatedJobs[index];
-              final jobId = int.parse(job['job_id'].toString());
+              final jobId = int.tryParse(job['job_id']?.toString() ?? '-1') ?? -1;
               final bool isCompleted = job['status'] == 'completed';
               final bool isSelected = selectedJobs.contains(jobId);
+              
+              if (jobId == -1) return const SizedBox.shrink(); // Broken data check
               
               return SlideTransition(
                 position: Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
@@ -970,7 +1106,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                       _toggleSelection(jobId);
                     } else {
                       if (isProvider) {
-                        _showCustomSnackBar("Müşteri: ${job['customer_name'] ?? 'Bilinmiyor'}\nTutar: ${job['agreed_price']} ₺", isNewAlert: true);
+                        _showCustomSnackBar("Müşteri: ${job['customer_name'] ?? 'Bilinmiyor'}\nTutar: ${job['agreed_price'] ?? '0'} ₺", isNewAlert: true);
                       }
                     }
                   },
@@ -978,12 +1114,12 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                     duration: const Duration(milliseconds: 300),
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: isSelected ? primaryColor.withOpacity(0.15) : const Color(0xFF1E293B).withOpacity(0.6),
+                      color: isSelected ? primaryColor.withOpacity(0.15) : _cardColor.withOpacity(0.6),
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
                         color: isSelected 
                           ? primaryColor 
-                          : (isCompleted ? primaryColor.withOpacity(0.15) : const Color(0xFFEF4444).withOpacity(0.15)), 
+                          : (isCompleted ? primaryColor.withOpacity(0.15) : _dangerColor.withOpacity(0.15)), 
                         width: isSelected ? 2.0 : 1.5
                       ),
                       boxShadow: [
@@ -1006,11 +1142,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                         Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(colors: isCompleted ? [primaryColor, const Color(0xFF059669)] : [const Color(0xFFEF4444), const Color(0xFFB91C1C)]), 
+                            color: isCompleted ? primaryColor.withOpacity(0.15) : _dangerColor.withOpacity(0.15), 
                             borderRadius: BorderRadius.circular(18),
-                            boxShadow: [BoxShadow(color: isCompleted ? primaryColor.withOpacity(0.4) : const Color(0xFFEF4444).withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 6))]
+                            boxShadow: [BoxShadow(color: isCompleted ? primaryColor.withOpacity(0.4) : _dangerColor.withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 6))]
                           ),
-                          child: Icon(isCompleted ? Icons.verified_rounded : Icons.cancel_rounded, color: Colors.white, size: 28),
+                          child: Icon(isCompleted ? Icons.verified_rounded : Icons.cancel_rounded, color: isCompleted ? primaryColor : _dangerColor, size: 28),
                         ),
                         const SizedBox(width: 20),
                         Expanded(
@@ -1048,21 +1184,28 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                             decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle),
                             child: PopupMenuButton<String>(
                               icon: Icon(Icons.more_vert_rounded, color: Colors.white.withOpacity(0.9), size: 24),
-                              color: const Color(0xFF0F172A),
+                              color: _cardColor,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: Colors.white.withOpacity(0.1))),
                               onSelected: (val) {
-                                if (val == 'profile') {
+                                final pId = int.tryParse(job['provider_id']?.toString() ?? '-1') ?? -1;
+                                if (val == 'profile' && pId != -1) {
                                   Navigator.push(context, PageRouteBuilder(
-                                    pageBuilder: (context, anim1, anim2) => ProviderProfileScreen(providerId: int.parse(job['provider_id'].toString())),
+                                    pageBuilder: (context, anim1, anim2) => ProviderProfileScreen(providerId: pId),
                                     transitionsBuilder: (context, anim1, anim2, child) => FadeTransition(opacity: anim1, child: child)
                                   ));
-                                } else if (val == 'complain') {
-                                  _showComplaintDialog(jobId, int.parse(job['provider_id'].toString()));
+                                } else if (val == 'complain' && pId != -1) {
+                                  _showComplaintDialog(jobId, pId);
                                 }
                               },
                               itemBuilder: (context) => [
-                                const PopupMenuItem(value: 'profile', child: Row(children: [Icon(Icons.person_rounded, color: Colors.white, size: 20), SizedBox(width: 12), Text("Profili Gör", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15))])),
-                                const PopupMenuItem(value: 'complain', child: Row(children: [Icon(Icons.report_problem_rounded, color: Color(0xFF8B5CF6), size: 20), SizedBox(width: 12), Text("Şikayet Et", style: const TextStyle(color: Color(0xFF8B5CF6), fontWeight: FontWeight.bold, fontSize: 15))])),
+                                const PopupMenuItem(
+                                  value: 'profile', 
+                                  child: Row(children: [Icon(Icons.person_rounded, color: Colors.white, size: 20), SizedBox(width: 12), Text("Profili Gör", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15))])
+                                ),
+                                PopupMenuItem(
+                                  value: 'complain', 
+                                  child: Row(children: [Icon(Icons.report_problem_rounded, color: _dangerColor, size: 20), const SizedBox(width: 12), Text("Şikayet Et", style: TextStyle(color: _dangerColor, fontWeight: FontWeight.bold, fontSize: 15))])
+                                ),
                               ],
                             ),
                           )
@@ -1153,7 +1296,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           return Container(
             padding: EdgeInsets.all(isMain ? 28 : 24),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E293B).withOpacity(0.7),
+              color: _cardColor.withOpacity(0.7),
               borderRadius: BorderRadius.circular(28),
               border: Border.all(color: cardColor.withOpacity(isMain ? 0.5 : 0.2), width: isMain ? 2.0 : 1.5),
               boxShadow: [
@@ -1170,18 +1313,18 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 Container(
                   padding: EdgeInsets.all(isMain ? 20 : 14),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [cardColor, cardColor.withOpacity(0.7)]), 
+                    color: cardColor.withOpacity(0.15), 
                     shape: BoxShape.circle,
                     boxShadow: [BoxShadow(color: cardColor.withOpacity(0.6), blurRadius: 15, offset: const Offset(0, 6))]
                   ),
-                  child: Icon(icon, color: Colors.white, size: isMain ? 36 : 28),
+                  child: Icon(icon, color: cardColor, size: isMain ? 36 : 28),
                 ),
                 SizedBox(width: isMain ? 20 : 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title, style: TextStyle(fontSize: isMain ? 16 : 14, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                      Text(title, style: TextStyle(fontSize: isMain ? 16 : 14, color: _subtitleColor, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
                       const SizedBox(height: 6),
                       Text(value, style: TextStyle(fontSize: isMain ? 36 : 28, color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: -1.0), overflow: TextOverflow.ellipsis),
                     ],

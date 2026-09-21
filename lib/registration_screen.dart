@@ -1,13 +1,59 @@
+// registration_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:ui';
+import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'customer_dashboard_screen.dart';
 import 'provider_map_screen.dart';
 import 'login_screen.dart';
+
+// Akıllı IBAN Formatlayıcı
+class SmartIbanFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    var text = newValue.text.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    if (text.isNotEmpty && !text.startsWith('TR')) {
+      text = 'TR' + text.replaceAll('TR', '');
+    } else if (text.isEmpty) {
+      text = 'TR';
+    }
+    if (text.length > 26) text = text.substring(0, 26);
+    
+    var buffer = StringBuffer();
+    for (int i = 0; i < text.length; i++) {
+      buffer.write(text[i]);
+      if ((i + 1) % 4 == 0 && i != text.length - 1) {
+        buffer.write(' ');
+      }
+    }
+    var string = buffer.toString();
+    return newValue.copyWith(text: string, selection: TextSelection.collapsed(offset: string.length));
+  }
+}
+
+// Akıllı Telefon Formatlayıcı (Kayıt ekranı için)
+class SmartPhoneFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    var text = newValue.text.replaceAll(RegExp(r'\D'), '');
+    if (text.isEmpty) return newValue.copyWith(text: '', selection: const TextSelection.collapsed(offset: 0));
+    if (text.length > 11) text = text.substring(0, 11);
+    
+    var buffer = StringBuffer();
+    for (int i = 0; i < text.length; i++) {
+      buffer.write(text[i]);
+      if ((i == 3 || i == 6 || i == 8) && i != text.length - 1) {
+        buffer.write(' ');
+      }
+    }
+    var string = buffer.toString();
+    return newValue.copyWith(text: string, selection: TextSelection.collapsed(offset: string.length));
+  }
+}
 
 class RegistrationScreen extends StatefulWidget {
   final String userType;
@@ -23,10 +69,24 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _ibanController = TextEditingController();
   
+  // Odak Yönetimi İçin FocusNode'lar
+  final FocusNode _nameFocus = FocusNode();
+  final FocusNode _phoneFocus = FocusNode();
+  final FocusNode _passwordFocus = FocusNode();
+  final FocusNode _ibanFocus = FocusNode();
+  
   String _selectedService = 'mechanic';
   String? _selectedCity;
   bool isRegistering = false;
   bool _obscurePassword = true; 
+
+  final Duration _apiTimeout = const Duration(seconds: 25); 
+
+  static const Color neonGreen = Color(0xFF00FFA3);
+  static const Color pureBlack = Color(0xFF030305);
+  static const Color panelBlack = Color(0xFF111115);
+  static const Color textGray = Colors.white54;
+  static const Color alertRed = Color(0xFFFF3366);
 
   final List<String> _cities = [
     "Adana", "Adıyaman", "Afyonkarahisar", "Ağrı", "Amasya", "Ankara", "Antalya", "Artvin", "Aydın", "Balıkesir", "Bilecik", "Bingöl", "Bitlis", "Bolu", "Burdur", "Bursa", "Çanakkale", "Çankırı", "Çorum", "Denizli", "Diyarbakır", "Edirne", "Elazığ", "Erzincan", "Erzurum", "Eskişehir", "Gaziantep", "Giresun", "Gümüşhane", "Hakkari", "Hatay", "Isparta", "Mersin", "İstanbul", "İzmir", "Kars", "Kastamonu", "Kayseri", "Kırklareli", "Kırşehir", "Kocaeli", "Konya", "Kütahya", "Malatya", "Manisa", "Kahramanmaraş", "Mardin", "Muğla", "Muş", "Nevşehir", "Niğde", "Ordu", "Rize", "Sakarya", "Samsun", "Siirt", "Sinop", "Sivas", "Tekirdağ", "Tokat", "Trabzon", "Tunceli", "Şanlıurfa", "Uşak", "Van", "Yozgat", "Zonguldak", "Aksaray", "Bayburt", "Karaman", "Kırıkkale", "Batman", "Şırnak", "Bartın", "Ardahan", "Iğdır", "Yalova", "Karabük", "Kilis", "Osmaniye", "Düzce"
@@ -42,12 +102,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   void initState() {
     super.initState();
     _ibanController.text = 'TR';
-    _ibanController.addListener(() {
-      if (!_ibanController.text.startsWith('TR')) {
-        _ibanController.text = 'TR';
-        _ibanController.selection = TextSelection.fromPosition(const TextPosition(offset: 2));
-      }
-    });
   }
 
   @override
@@ -56,12 +110,19 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     _phoneController.dispose();
     _passwordController.dispose();
     _ibanController.dispose();
+    _nameFocus.dispose();
+    _phoneFocus.dispose();
+    _passwordFocus.dispose();
+    _ibanFocus.dispose();
     super.dispose();
   }
 
   Future<void> _pickImage(String type) async {
     HapticFeedback.selectionClick();
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final pickedFile = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70, 
+    );
     if (pickedFile != null) {
       HapticFeedback.lightImpact();
       setState(() {
@@ -73,6 +134,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     }
   }
 
+  void _clearImage(String type) {
+    HapticFeedback.lightImpact();
+    setState(() {
+      if (type == 'tax_plate') _taxPlate = null;
+      if (type == 'driver_license') _driverLicense = null;
+      if (type == 'vehicle_photo') _vehiclePhoto = null;
+      if (type == 'equipment_photo') _equipmentPhoto = null;
+    });
+  }
+
   void _showCustomSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -81,37 +152,182 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-            child: Icon(isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded, color: Colors.white, size: 24),
+            child: Icon(isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded, color: Colors.white, size: 22),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
             child: Text(
               message,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14, letterSpacing: 0.2)
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13, letterSpacing: 0.2)
             ),
           ),
         ],
       ),
-      backgroundColor: isError ? const Color(0xFFFF3366) : const Color(0xFF00FFA3),
+      backgroundColor: isError ? alertRed : neonGreen.withOpacity(0.95),
       behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.all(24),
+      margin: const EdgeInsets.all(20),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      elevation: 20,
+      elevation: 0,
       duration: const Duration(seconds: 4),
     ));
+  }
+
+  void _showCityPickerModal() {
+    HapticFeedback.selectionClick();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        String searchQuery = "";
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            List<String> filteredCities = _cities
+                .where((city) => city.toLowerCase().contains(searchQuery.toLowerCase()))
+                .toList();
+
+            return BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.75,
+                decoration: BoxDecoration(
+                  color: panelBlack.withOpacity(0.95),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                  border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
+                ),
+                child: SafeArea(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      Center(
+                        child: Container(
+                          width: 48, height: 6,
+                          decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(color: neonGreen.withOpacity(0.1), shape: BoxShape.circle),
+                              child: const Icon(Icons.location_city_rounded, color: neonGreen, size: 20),
+                            ),
+                            const SizedBox(width: 12),
+                            const Text("Şehir Seçiniz", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.04),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.white.withOpacity(0.08)),
+                          ),
+                          child: TextField(
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                            decoration: const InputDecoration(
+                              hintText: "Şehir ara...",
+                              hintStyle: TextStyle(color: textGray, fontSize: 14),
+                              prefixIcon: Icon(Icons.search_rounded, color: neonGreen, size: 20),
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            onChanged: (val) {
+                              setModalState(() {
+                                searchQuery = val;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Expanded(
+                        child: filteredCities.isEmpty
+                            ? const Center(child: Text("Şehir bulunamadı", style: TextStyle(color: textGray)))
+                            : ListView.separated(
+                                physics: const BouncingScrollPhysics(),
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                                itemCount: filteredCities.length,
+                                separatorBuilder: (_, __) => Divider(color: Colors.white.withOpacity(0.04), height: 1),
+                                itemBuilder: (context, index) {
+                                  final city = filteredCities[index];
+                                  final isSelected = _selectedCity == city;
+                                  return Material(
+                                    color: Colors.transparent,
+                                    child: ListTile(
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                      title: Text(
+                                        city,
+                                        style: TextStyle(
+                                          color: isSelected ? neonGreen : Colors.white,
+                                          fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                      trailing: isSelected ? const Icon(Icons.check_circle_rounded, color: neonGreen, size: 20) : null,
+                                      onTap: () {
+                                        HapticFeedback.selectionClick();
+                                        setState(() {
+                                          _selectedCity = city;
+                                        });
+                                        Navigator.pop(context);
+                                      },
+                                    ),
+                                  );
+                                },
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _register() async {
     HapticFeedback.lightImpact();
     FocusScope.of(context).unfocus(); 
+    TextInput.finishAutofillContext(); // Otomatik doldurma verisini kaydet
 
-    if (_nameController.text.trim().isEmpty || _phoneController.text.trim().isEmpty || _passwordController.text.trim().isEmpty) {
+    String rawPhone = _phoneController.text.trim();
+
+    if (_nameController.text.trim().isEmpty || rawPhone.isEmpty || _passwordController.text.trim().isEmpty) {
       HapticFeedback.vibrate();
       _showCustomSnackBar('Lütfen temel bilgileri doldurun.', isError: true);
       return;
     }
+
+    if (_passwordController.text.trim().length < 6) {
+      HapticFeedback.vibrate();
+      _showCustomSnackBar('Şifreniz en az 6 karakter olmalıdır.', isError: true);
+      return;
+    }
+
+    String sanitizedPhone = rawPhone.replaceAll(RegExp(r'\D'), ''); 
+    if (sanitizedPhone.startsWith('90') && sanitizedPhone.length == 12) {
+      sanitizedPhone = sanitizedPhone.substring(2);
+    }
+    if (sanitizedPhone.length == 10 && sanitizedPhone.startsWith('5')) {
+      sanitizedPhone = '0$sanitizedPhone';
+    }
+    if (sanitizedPhone.length != 11 || !sanitizedPhone.startsWith('05')) {
+      HapticFeedback.vibrate();
+      _showCustomSnackBar('Geçerli bir telefon numarası girin (Örn: 05XX...).', isError: true);
+      return;
+    }
+
     if (_selectedCity == null) {
       HapticFeedback.vibrate();
       _showCustomSnackBar('Lütfen bulunduğunuz şehri seçin.', isError: true);
@@ -129,9 +345,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         _showCustomSnackBar('Lütfen vergi levhasını yükleyin.', isError: true);
         return;
       }
-      if (_ibanController.text.length < 24) {
+      
+      String cleanIban = _ibanController.text.replaceAll(' ', '');
+      if (cleanIban.length != 26) {
         HapticFeedback.vibrate();
-        _showCustomSnackBar('IBAN numarası eksik.', isError: true);
+        _showCustomSnackBar('IBAN numarası eksik veya hatalı.', isError: true);
         return;
       }
     }
@@ -142,11 +360,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       if (widget.userType == 'provider') {
         var request = http.MultipartRequest('POST', Uri.parse("$baseUrl?action=register"));
         request.fields['name'] = _nameController.text.trim();
-        request.fields['phone'] = _phoneController.text.trim();
+        request.fields['phone'] = sanitizedPhone;
         request.fields['password'] = _passwordController.text.trim();
         request.fields['user_type'] = widget.userType;
         request.fields['service_category'] = _selectedService;
-        request.fields['iban'] = _ibanController.text.trim();
+        request.fields['iban'] = _ibanController.text.replaceAll(' ', '');
         request.fields['city'] = _selectedCity!;
 
         if (_selectedService == 'wash') {
@@ -157,7 +375,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           request.files.add(http.MultipartFile.fromBytes('tax_plate', await _taxPlate!.readAsBytes(), filename: _taxPlate!.name));
         }
 
-        var streamedResponse = await request.send();
+        var streamedResponse = await request.send().timeout(_apiTimeout);
         var response = await http.Response.fromStream(streamedResponse);
         _handleResponse(response.body, response.statusCode);
       } else {
@@ -166,20 +384,20 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           headers: {"Content-Type": "application/x-www-form-urlencoded"},
           body: {
             "name": _nameController.text.trim(),
-            "phone": _phoneController.text.trim(),
+            "phone": sanitizedPhone,
             "password": _passwordController.text.trim(),
             "user_type": widget.userType,
             "service_category": 'none',
             "iban": '',
             "city": _selectedCity!,
           },
-        );
+        ).timeout(_apiTimeout);
         _handleResponse(response.body, response.statusCode);
       }
     } catch (e) {
       if (mounted) {
         HapticFeedback.vibrate();
-        _showCustomSnackBar('Bağlantı hatası oluştu.', isError: true);
+        _showCustomSnackBar('Bağlantı hatası: Sunucu yanıt vermiyor.', isError: true);
       }
     } finally {
       if (mounted) setState(() => isRegistering = false);
@@ -202,76 +420,71 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               return BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                 child: AlertDialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32), side: BorderSide(color: Colors.white.withOpacity(0.1))),
-                  backgroundColor: const Color(0xFF111115).withOpacity(0.95),
-                  elevation: 24,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: BorderSide(color: Colors.white.withOpacity(0.08))),
+                  backgroundColor: panelBlack.withOpacity(0.98),
+                  elevation: 0,
                   title: Column(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF00FFA3).withOpacity(0.1), 
+                          color: neonGreen.withOpacity(0.1), 
                           shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: const Color(0xFF00FFA3).withOpacity(0.2), blurRadius: 20)]
                         ),
-                        child: const Icon(Icons.check_circle_outline_rounded, color: Color(0xFF00FFA3), size: 36),
+                        child: const Icon(Icons.check_circle_outline_rounded, color: neonGreen, size: 36),
                       ),
                       const SizedBox(height: 20),
-                      const FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text("Kayıt Başarılı", textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 24, letterSpacing: -0.5)),
-                      ),
+                      const Text("Kayıt Başarılı", textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 22, letterSpacing: -0.5)),
                     ],
                   ),
                   content: SingleChildScrollView(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text("Belgeleriniz alındı. Yönetici onayının ardından giriş yapabilirsiniz.", textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withOpacity(0.7), fontWeight: FontWeight.w500, height: 1.4)),
+                        Text("Belgeleriniz alındı. Yönetici onayının ardından giriş yapabilirsiniz.", textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withOpacity(0.7), fontWeight: FontWeight.w500, height: 1.4, fontSize: 14)),
                         const SizedBox(height: 24),
-                        const Text("Başvuru Takip Numaranız", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00FFA3))),
+                        const Text("Başvuru Takip Numaranız", style: TextStyle(fontWeight: FontWeight.w700, color: neonGreen, fontSize: 13)),
                         const SizedBox(height: 8),
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.all(20),
+                          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.05), 
-                            borderRadius: BorderRadius.circular(24), 
-                            border: Border.all(color: const Color(0xFF00FFA3).withOpacity(0.3), width: 1.5)
+                            color: Colors.white.withOpacity(0.03), 
+                            borderRadius: BorderRadius.circular(18), 
+                            border: Border.all(color: neonGreen.withOpacity(0.3), width: 1.5)
                           ),
                           child: Center(
                             child: FittedBox(
                               fit: BoxFit.scaleDown,
                               child: SelectableText(
                                 trackingCode, 
-                                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Color(0xFF00FFA3), letterSpacing: 2)
+                                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: neonGreen, letterSpacing: 2)
                               ),
                             ),
                           )
                         ),
-                        const SizedBox(height: 16),
-                        const Text("Lütfen durumunuzu sorgulamak için bu numarayı not ediniz.", textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w500)),
+                        const SizedBox(height: 14),
+                        const Text("Durumunuzu sorgulamak için bu numarayı kaydedin.", textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: textGray, fontWeight: FontWeight.w500)),
                       ]
                     ),
                   ),
-                  actionsPadding: const EdgeInsets.only(left: 24, right: 24, bottom: 24),
+                  actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                   actions: [
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF00FFA3), 
+                          backgroundColor: neonGreen, 
                           foregroundColor: Colors.black,
-                          padding: const EdgeInsets.symmetric(vertical: 18), 
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), 
-                          elevation: 10,
-                          shadowColor: const Color(0xFF00FFA3).withOpacity(0.5)
+                          padding: const EdgeInsets.symmetric(vertical: 16), 
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), 
+                          elevation: 0,
                         ),
                         onPressed: () {
                           HapticFeedback.selectionClick();
                           Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen(userType: widget.userType)));
                         },
-                        child: const FittedBox(fit: BoxFit.scaleDown, child: Text("Tamam, Anladım", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16))),
+                        child: const Text("Tamam, Anladım", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
                       ),
                     )
                   ],
@@ -294,54 +507,69 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     } catch (e) {
       if (mounted) {
         HapticFeedback.vibrate();
-        _showCustomSnackBar('Sunucu hatası oluştu.', isError: true);
+        _showCustomSnackBar('Sunucu hatası oluştu veya yanıt doğrulanamadı.', isError: true);
       }
     }
   }
 
   Widget _buildGlassTextField({
     required TextEditingController controller,
+    required FocusNode focusNode,
     required String label,
     required IconData icon,
     required bool isPasswordField,
     TextInputType type = TextInputType.text,
     TextCapitalization capitalization = TextCapitalization.none,
     List<TextInputFormatter>? inputFormatters,
+    Iterable<String>? autofillHints,
+    TextInputAction textInputAction = TextInputAction.next,
+    VoidCallback? onEditingComplete,
   }) {
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        color: focusNode.hasFocus ? Colors.white.withOpacity(0.06) : Colors.white.withOpacity(0.03),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: focusNode.hasFocus ? neonGreen : Colors.white.withOpacity(0.05),
+          width: focusNode.hasFocus ? 1.5 : 1.0,
+        ),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: TextField(
             controller: controller,
+            focusNode: focusNode,
             obscureText: isPasswordField ? _obscurePassword : false,
-            textInputAction: isPasswordField ? TextInputAction.done : TextInputAction.next,
+            textInputAction: textInputAction,
             keyboardType: type,
             textCapitalization: capitalization,
             inputFormatters: inputFormatters,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
+            autofillHints: autofillHints,
+            onEditingComplete: onEditingComplete ?? () => FocusScope.of(context).nextFocus(),
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
             decoration: InputDecoration(
               labelText: label,
-              labelStyle: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 14, fontWeight: FontWeight.w500),
+              labelStyle: TextStyle(
+                color: focusNode.hasFocus ? neonGreen : textGray, 
+                fontSize: 13, 
+                fontWeight: FontWeight.w500
+              ),
               prefixIcon: Padding(
-                padding: const EdgeInsets.only(left: 20, right: 16), 
-                child: Icon(icon, color: const Color(0xFF00FFA3), size: 22)
+                padding: const EdgeInsets.only(left: 16, right: 12), 
+                child: Icon(icon, color: focusNode.hasFocus ? neonGreen : neonGreen.withOpacity(0.7), size: 20)
               ),
               suffixIcon: isPasswordField 
                   ? Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: IconButton(
-                        splashRadius: 24,
+                        splashRadius: 20,
                         icon: Icon(
                           _obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
                           color: Colors.white54,
-                          size: 20,
+                          size: 18,
                         ),
                         onPressed: () {
                           HapticFeedback.selectionClick();
@@ -354,12 +582,54 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   : null,
               filled: true,
               fillColor: Colors.transparent,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
               border: InputBorder.none,
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(24), 
-                borderSide: const BorderSide(color: Color(0xFF00FFA3), width: 1.5)
-              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCitySelectorTile() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.03),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: _showCityPickerModal,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            child: Row(
+              children: [
+                const Icon(Icons.location_city_rounded, color: neonGreen, size: 20),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text("Bulunduğunuz Şehir", style: TextStyle(color: textGray, fontSize: 11, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 2),
+                      Text(
+                        _selectedCity ?? "Şehir Seçmek İçin Dokunun",
+                        style: TextStyle(
+                          color: _selectedCity != null ? Colors.white : Colors.white38,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.keyboard_arrow_down_rounded, color: neonGreen, size: 20),
+              ],
             ),
           ),
         ),
@@ -371,28 +641,28 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.03),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: DropdownButtonFormField<String>(
             isExpanded: true,
             value: value,
-            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF00FFA3)),
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
-            dropdownColor: const Color(0xFF111115),
+            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: neonGreen),
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
+            dropdownColor: panelBlack,
             decoration: InputDecoration(
               labelText: label,
-              labelStyle: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 14, fontWeight: FontWeight.w500),
-              prefixIcon: Padding(padding: const EdgeInsets.only(left: 20, right: 16), child: Icon(icon, color: const Color(0xFF00FFA3), size: 22)),
+              labelStyle: const TextStyle(color: textGray, fontSize: 13, fontWeight: FontWeight.w500),
+              prefixIcon: Padding(padding: const EdgeInsets.only(left: 16, right: 12), child: Icon(icon, color: neonGreen, size: 20)),
               filled: true,
               fillColor: Colors.transparent,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
               border: InputBorder.none,
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: Color(0xFF00FFA3), width: 1.5)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: neonGreen, width: 1.5)),
             ),
             items: items,
             onChanged: (val) {
@@ -408,46 +678,93 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   Widget _buildFilePicker(String title, XFile? file, String type) {
     bool isSelected = file != null;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: InkWell(
-        onTap: () => _pickImage(type),
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
-          decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF00FFA3).withOpacity(0.1) : Colors.white.withOpacity(0.03),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: isSelected ? const Color(0xFF00FFA3) : Colors.white.withOpacity(0.05), width: 1.5),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: isSelected ? 0 : 10, sigmaY: isSelected ? 0 : 10),
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isSelected ? neonGreen.withOpacity(0.06) : Colors.white.withOpacity(0.03),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isSelected ? neonGreen.withOpacity(0.4) : Colors.white.withOpacity(0.05), width: 1.5),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _pickImage(type),
+            borderRadius: BorderRadius.circular(20),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
               child: Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFF00FFA3) : Colors.white.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(16)
+                  if (isSelected)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.file(
+                        File(file.path),
+                        width: 44,
+                        height: 44,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          width: 44, height: 44,
+                          color: neonGreen.withOpacity(0.2),
+                          child: const Icon(Icons.image, color: neonGreen, size: 20),
+                        ),
+                      ),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.upload_file_rounded, color: Colors.white70, size: 22),
                     ),
-                    child: Icon(isSelected ? Icons.check_circle_rounded : Icons.upload_file_rounded, color: isSelected ? Colors.black : Colors.white70, size: 24),
-                  ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 14),
                   Expanded(
-                    child: Text(
-                      isSelected ? "Belge Seçildi" : title, 
-                      maxLines: 1, 
-                      overflow: TextOverflow.ellipsis, 
-                      style: TextStyle(color: isSelected ? const Color(0xFF00FFA3) : Colors.white, fontWeight: FontWeight.w700, fontSize: 15)
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title, 
+                          style: TextStyle(color: isSelected ? neonGreen : Colors.white, fontWeight: FontWeight.w800, fontSize: 14),
+                          maxLines: 1, 
+                          overflow: TextOverflow.ellipsis
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          isSelected ? file.name : "Fotoğraf veya Belge Seç",
+                          style: TextStyle(color: isSelected ? Colors.white70 : textGray, fontSize: 12, fontWeight: FontWeight.w500),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
                   ),
+                  if (isSelected)
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: alertRed, size: 20),
+                      onPressed: () => _clearImage(type),
+                      tooltip: "Kaldır",
+                    )
+                  else
+                    const Icon(Icons.add_a_photo_rounded, color: textGray, size: 18),
                 ],
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 12),
+      child: Row(
+        children: [
+          Icon(icon, color: neonGreen, size: 18),
+          const SizedBox(width: 8),
+          Text(title, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.3)),
+        ],
       ),
     );
   }
@@ -458,253 +775,246 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     final isCustomer = widget.userType == 'customer';
     final isTablet = size.width > 600;
     
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Scaffold(
-        backgroundColor: const Color(0xFF030305),
-        extendBodyBehindAppBar: true,
-        appBar: AppBar(
-          leading: IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle),
-              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: Colors.white),
-            ),
-            onPressed: () {
-              HapticFeedback.selectionClick();
-              Navigator.pop(context);
-            },
+    return Scaffold(
+      backgroundColor: pureBlack,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        leading: IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: Colors.white.withOpacity(0.08), shape: BoxShape.circle),
+            child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.white),
           ),
-          title: Image.asset('assets/images/logo.png', height: 32), 
-          backgroundColor: Colors.transparent, 
-          elevation: 0,
-          centerTitle: true,
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            Navigator.pop(context);
+          },
         ),
-        body: Stack(
-          children: [
-            Positioned(
-              top: size.height * 0.05,
-              right: -size.width * 0.4,
-              child: Container(
-                width: size.width * 1.2,
-                height: size.width * 1.2,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [const Color(0xFF00FFA3).withOpacity(0.12), Colors.transparent],
-                    stops: const [0.1, 0.8],
-                  ),
+        title: Image.asset('assets/images/logo.png', height: 28, errorBuilder: (_, __, ___) => const Icon(Icons.car_repair_rounded, color: neonGreen, size: 28)), 
+        backgroundColor: Colors.transparent, 
+        elevation: 0,
+        centerTitle: true,
+        flexibleSpace: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+            child: Container(color: pureBlack.withOpacity(0.4)),
+          ),
+        ),
+      ),
+      body: Stack(
+        children: [
+          Positioned(
+            top: size.height * 0.05,
+            right: -size.width * 0.3,
+            child: Container(
+              width: size.width * 1.1,
+              height: size.width * 1.1,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [neonGreen.withOpacity(0.08), Colors.transparent],
+                  stops: const [0.1, 0.8],
                 ),
               ),
             ),
-            SafeArea(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: isTablet ? 600 : double.infinity),
-                  child: TweenAnimationBuilder<double>(
-                    tween: Tween<double>(begin: 0.0, end: 1.0),
-                    duration: const Duration(milliseconds: 800),
-                    curve: Curves.easeOutCubic,
-                    builder: (context, value, child) {
-                      return Opacity(
-                        opacity: value,
-                        child: Transform.translate(
-                          offset: Offset(0, 20 * (1 - value)),
-                          child: child,
+          ),
+          SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: isTablet ? 550 : double.infinity),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isTablet ? 0.0 : 20.0, 
+                    vertical: 16.0
+                  ),
+                  child: AutofillGroup( // Otomatik doldurma grubu eklendi
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: neonGreen.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: neonGreen.withOpacity(0.25), width: 1.5),
+                          ),
+                          child: Icon(isCustomer ? Icons.person_add_rounded : Icons.handyman_rounded, size: 36, color: neonGreen),
                         ),
-                      );
-                    },
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: EdgeInsets.symmetric(horizontal: size.width * (isTablet ? 0.0 : 0.08), vertical: size.height * 0.02),
-                      child: Column(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF00FFA3).withOpacity(0.1),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: const Color(0xFF00FFA3).withOpacity(0.3), width: 2),
-                              boxShadow: [
-                                BoxShadow(color: const Color(0xFF00FFA3).withOpacity(0.2), blurRadius: 30, spreadRadius: 5, offset: const Offset(0, 10))
-                              ]
-                            ),
-                            child: Icon(isCustomer ? Icons.person_add_rounded : Icons.handyman_rounded, size: 40, color: const Color(0xFF00FFA3)),
+                        const SizedBox(height: 18),
+                        Text(
+                          isCustomer ? "Müşteri Hesabı Oluştur" : "Usta Hesabı Oluştur", 
+                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          "Lütfen bilgilerinizi eksiksiz ve doğru doldurunuz", 
+                          style: TextStyle(fontSize: 13, color: textGray, fontWeight: FontWeight.w500)
+                        ),
+                        const SizedBox(height: 28),
+                    
+                        _buildSectionHeader("Temel Bilgiler", Icons.badge_rounded),
+                        _buildGlassTextField(
+                          controller: _nameController,
+                          focusNode: _nameFocus,
+                          label: "Ad Soyad", 
+                          icon: Icons.person_rounded, 
+                          isPasswordField: false, 
+                          type: TextInputType.name, 
+                          autofillHints: const [AutofillHints.name],
+                          capitalization: TextCapitalization.words,
+                          onEditingComplete: () => FocusScope.of(context).requestFocus(_phoneFocus),
+                        ),
+                        const SizedBox(height: 14),
+                        _buildGlassTextField(
+                          controller: _phoneController, 
+                          focusNode: _phoneFocus,
+                          label: "Telefon Numarası (Örn: 0535...)", 
+                          icon: Icons.phone_android_rounded, 
+                          isPasswordField: false, 
+                          type: TextInputType.phone,
+                          autofillHints: const [AutofillHints.telephoneNumber],
+                          inputFormatters: [
+                            SmartPhoneFormatter(), 
+                            LengthLimitingTextInputFormatter(15), 
+                          ],
+                          onEditingComplete: () => FocusScope.of(context).requestFocus(_passwordFocus),
+                        ),
+                        const SizedBox(height: 14),
+                        _buildGlassTextField(
+                          controller: _passwordController, 
+                          focusNode: _passwordFocus,
+                          label: "Şifre (En az 6 karakter)", 
+                          icon: Icons.lock_outline_rounded, 
+                          isPasswordField: true,
+                          autofillHints: const [AutofillHints.newPassword],
+                          textInputAction: isCustomer ? TextInputAction.done : TextInputAction.next,
+                          onEditingComplete: () {
+                            if (isCustomer) {
+                              FocusScope.of(context).unfocus();
+                              _register();
+                            } else {
+                              FocusScope.of(context).requestFocus(_ibanFocus);
+                            }
+                          },
+                        ),
+                    
+                        const SizedBox(height: 24),
+                        _buildSectionHeader("Bölge & Konum", Icons.map_rounded),
+                        _buildCitySelectorTile(),
+                    
+                        if (!isCustomer) ...[
+                          const SizedBox(height: 24),
+                          _buildSectionHeader("Banka & Uzmanlık", Icons.account_balance_wallet_rounded),
+                          _buildGlassTextField(
+                            controller: _ibanController, 
+                            focusNode: _ibanFocus,
+                            label: "IBAN Numarası", 
+                            icon: Icons.account_balance_rounded, 
+                            isPasswordField: false, 
+                            type: TextInputType.text,
+                            textInputAction: TextInputAction.done,
+                            capitalization: TextCapitalization.characters,
+                            inputFormatters: [
+                              SmartIbanFormatter(), 
+                              LengthLimitingTextInputFormatter(32), 
+                            ],
+                            onEditingComplete: () {
+                              FocusScope.of(context).unfocus();
+                            },
+                          ),
+                          const SizedBox(height: 14),
+                          _buildGlassDropdown(
+                            "Hizmet Kategorisi",
+                            Icons.build_circle_outlined,
+                            _selectedService,
+                            const [
+                              DropdownMenuItem(value: 'mechanic', child: Text("Tamirci", maxLines: 1, overflow: TextOverflow.ellipsis)),
+                              DropdownMenuItem(value: 'tow', child: Text("Çekici", maxLines: 1, overflow: TextOverflow.ellipsis)),
+                              DropdownMenuItem(value: 'tire', child: Text("Lastikçi", maxLines: 1, overflow: TextOverflow.ellipsis)),
+                              DropdownMenuItem(value: 'wash', child: Text("Oto Yıkama", maxLines: 1, overflow: TextOverflow.ellipsis)),
+                            ],
+                            (val) {
+                              setState(() {
+                                _selectedService = val!;
+                                _taxPlate = null; _driverLicense = null; _vehiclePhoto = null; _equipmentPhoto = null;
+                              });
+                            }
                           ),
                           const SizedBox(height: 24),
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(isCustomer ? "Müşteri Hesabı" : "Usta Hesabı", style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
-                          ),
-                          const SizedBox(height: 8),
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text("Lütfen bilgilerinizi eksiksiz doldurun", style: TextStyle(fontSize: 15, color: Colors.white.withOpacity(0.5), fontWeight: FontWeight.w500)),
-                          ),
-                          const SizedBox(height: 32),
-
-                          _buildGlassTextField(
-                            controller: _nameController, 
-                            label: "Ad Soyad", 
-                            icon: Icons.person_rounded, 
-                            isPasswordField: false, 
-                            type: TextInputType.name, 
-                            capitalization: TextCapitalization.words
-                          ),
-                          const SizedBox(height: 16),
-                          _buildGlassTextField(
-                            controller: _phoneController, 
-                            label: "Telefon Numarası", 
-                            icon: Icons.phone_android_rounded, 
-                            isPasswordField: false, 
-                            type: TextInputType.phone,
-                            inputFormatters: [
-                              LengthLimitingTextInputFormatter(11), 
-                              FilteringTextInputFormatter.digitsOnly
-                            ]
-                          ),
-                          const SizedBox(height: 16),
-                          _buildGlassTextField(
-                            controller: _passwordController, 
-                            label: "Şifre", 
-                            icon: Icons.lock_outline_rounded, 
-                            isPasswordField: true
-                          ),
-                          const SizedBox(height: 16),
-
-                          _buildGlassDropdown(
-                            "Bulunduğunuz Şehir",
-                            Icons.location_city_rounded,
-                            _selectedCity,
-                            _cities.map((String city) {
-                              return DropdownMenuItem(
-                                value: city, 
-                                child: Text(city, maxLines: 1, overflow: TextOverflow.ellipsis)
-                              );
-                            }).toList(),
-                            (val) => setState(() => _selectedCity = val)
-                          ),
-
-                          if (!isCustomer) ...[
-                            const SizedBox(height: 16),
-                            _buildGlassTextField(
-                              controller: _ibanController, 
-                              label: "IBAN Numarası", 
-                              icon: Icons.account_balance_rounded, 
-                              isPasswordField: false, 
-                              capitalization: TextCapitalization.characters,
-                              inputFormatters: [LengthLimitingTextInputFormatter(24)]
-                            ),
-                            const SizedBox(height: 16),
-                            
-                            _buildGlassDropdown(
-                              "Hizmet Kategorisi",
-                              Icons.build_circle_outlined,
-                              _selectedService,
-                              const [
-                                DropdownMenuItem(value: 'mechanic', child: Text("Tamirci", maxLines: 1, overflow: TextOverflow.ellipsis)),
-                                DropdownMenuItem(value: 'tow', child: Text("Çekici", maxLines: 1, overflow: TextOverflow.ellipsis)),
-                                DropdownMenuItem(value: 'tire', child: Text("Lastikçi", maxLines: 1, overflow: TextOverflow.ellipsis)),
-                                DropdownMenuItem(value: 'wash', child: Text("Oto Yıkama", maxLines: 1, overflow: TextOverflow.ellipsis)),
-                              ],
-                              (val) {
-                                setState(() {
-                                  _selectedService = val!;
-                                  _taxPlate = null; _driverLicense = null; _vehiclePhoto = null; _equipmentPhoto = null;
-                                });
-                              }
-                            ),
-                            const SizedBox(height: 32),
-                            
-                            const Align(
-                              alignment: Alignment.centerLeft,
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text("Gerekli Belgeler", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            
-                            if (_selectedService == 'wash') ...[
-                              _buildFilePicker("Ehliyet Yükle", _driverLicense, 'driver_license'),
-                              _buildFilePicker("Araç Fotoğrafı Yükle", _vehiclePhoto, 'vehicle_photo'),
-                              _buildFilePicker("Araba İçi Ekipman Yükle", _equipmentPhoto, 'equipment_photo'),
-                            ] else ...[
-                              _buildFilePicker("Vergi Levhası Yükle", _taxPlate, 'tax_plate'),
-                            ]
-                          ],
+                          _buildSectionHeader("Yetki ve Doğrulama Belgeleri", Icons.verified_user_rounded),
                           
-                          const SizedBox(height: 40),
-                          Container(
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [BoxShadow(color: const Color(0xFF00FFA3).withOpacity(0.25), blurRadius: 30, offset: const Offset(0, 10))]
-                            ),
-                            child: ElevatedButton(
-                              onPressed: isRegistering ? null : _register,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF00FFA3), 
-                                foregroundColor: Colors.black,
-                                elevation: 0,
-                                padding: const EdgeInsets.symmetric(vertical: 22),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))
-                              ),
-                              child: isRegistering 
-                                ? const SizedBox(width: 26, height: 26, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3)) 
-                                : const FittedBox(fit: BoxFit.scaleDown, child: Text("Hesabımı Oluştur", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: -0.5))),
-                            ),
-                          ),
-                          const SizedBox(height: 28),
-                          
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: TextButton(
-                              onPressed: () {
-                                HapticFeedback.selectionClick();
-                                Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen(userType: widget.userType)));
-                              },
-                              style: TextButton.styleFrom(
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))
-                              ),
-                              child: RichText(
-                                text: const TextSpan(
-                                  text: "Zaten hesabın var mı? ",
-                                  style: TextStyle(color: Colors.white54, fontSize: 15, fontWeight: FontWeight.w500, fontFamily: 'Inter'),
-                                  children: [
-                                    TextSpan(text: "Giriş Yap", style: TextStyle(color: Color(0xFF00FFA3), fontWeight: FontWeight.w800))
-                                  ]
-                                ),
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 30),
-                          GestureDetector(
-                            onTap: () async {
-                              HapticFeedback.selectionClick();
-                              final url = Uri.parse('https://eliteagency.sbs/gizlilik_politikasi.html');
-                              if (await canLaunchUrl(url)) {
-                                await launchUrl(url);
-                              }
-                            },
-                            child: const Text(
-                              "Gizlilik Politikası",
-                              style: TextStyle(color: Color(0xFF00FFA3), decoration: TextDecoration.underline, fontSize: 13),
-                            ),
-                          ),
-                          const SizedBox(height: 40),
+                          if (_selectedService == 'wash') ...[
+                            _buildFilePicker("Ehliyet Fotoğrafı", _driverLicense, 'driver_license'),
+                            _buildFilePicker("Hizmet Aracı Fotoğrafı", _vehiclePhoto, 'vehicle_photo'),
+                            _buildFilePicker("Mobil Ekipman Fotoğrafı", _equipmentPhoto, 'equipment_photo'),
+                          ] else ...[
+                            _buildFilePicker("Vergi Levhası", _taxPlate, 'tax_plate'),
+                          ]
                         ],
-                      ),
+                        
+                        const SizedBox(height: 32),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: isRegistering ? null : _register,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: neonGreen, 
+                              foregroundColor: Colors.black,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            ),
+                            child: isRegistering 
+                              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3)) 
+                              : const Text("Hesabımı Oluştur", style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, letterSpacing: -0.3)),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        
+                        TextButton(
+                          onPressed: () {
+                            HapticFeedback.selectionClick();
+                            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen(userType: widget.userType)));
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          ),
+                          child: RichText(
+                            text: const TextSpan(
+                              text: "Zaten hesabınız var mı? ",
+                              style: TextStyle(color: textGray, fontSize: 14, fontWeight: FontWeight.w500),
+                              children: [
+                                TextSpan(text: "Giriş Yap", style: TextStyle(color: neonGreen, fontWeight: FontWeight.w800))
+                              ]
+                            ),
+                          ),
+                        ),
+                    
+                        const SizedBox(height: 12),
+                        GestureDetector(
+                          onTap: () async {
+                            HapticFeedback.selectionClick();
+                            final url = Uri.parse('https://eliteagency.sbs/gizlilik_politikasi.html');
+                            if (await canLaunchUrl(url)) {
+                              await launchUrl(url);
+                            }
+                          },
+                          child: const Text(
+                            "Gizlilik Politikası ve Kullanım Koşulları",
+                            style: TextStyle(color: textGray, decoration: TextDecoration.underline, fontSize: 12, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                      ],
                     ),
                   ),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

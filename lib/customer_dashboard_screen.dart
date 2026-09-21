@@ -7,6 +7,7 @@ import 'dart:ui';
 import 'package:intl/intl.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'customer_map_screen.dart';
 import 'customer_bids_screen.dart';
 import 'profile_screen.dart';
@@ -26,7 +27,7 @@ class CustomerDashboardScreen extends StatefulWidget {
 
 class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with TickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _fadeController;
-  final PageController _vehiclePageController = PageController(viewportFraction: 0.88);
+  late PageController _vehiclePageController;
   final PageController _adPageController = PageController(viewportFraction: 1.0);
   
   bool isLoading = true;
@@ -54,16 +55,26 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   final String baseUrl = "https://eliteagency.sbs/api.php";
   final String baseMediaUrl = "https://eliteagency.sbs/";
+  final Duration apiTimeout = const Duration(seconds: 15);
   
   late final InAppPurchase _inAppPurchase;
   StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
   final String _premiumProductId = 'customer_premium_subscription'; 
+  String _premiumPriceDisplay = "Fiyat Hesaplanıyor...";
+
+  // Yenilenmiş Siber Tasarım Paleti
+  static const Color _bgColor = Color(0xFF030305);
+  static const Color _cardColor = Color(0xFF111115);
+  static const Color _primaryColor = Color(0xFF00FFA3);
+  static const Color _dangerColor = Color(0xFFFF3366);
+  static const Color _textColor = Colors.white;
+  static const Color _subtitleColor = Colors.white54;
 
   static const List<Map<String, dynamic>> services = [
-    {'id': 'mechanic', 'name': 'Tamirci', 'icon': Icons.build_rounded, 'color': Color(0xFF10B981), 'gradient': [Color(0xFF1E293B), Color(0xFF0F172A)]},
-    {'id': 'tow', 'name': 'Çekici', 'icon': Icons.car_repair_rounded, 'color': Color(0xFF10B981), 'gradient': [Color(0xFF1E293B), Color(0xFF0F172A)]},
-    {'id': 'tire', 'name': 'Lastikçi', 'icon': Icons.tire_repair_rounded, 'color': Color(0xFF10B981), 'gradient': [Color(0xFF1E293B), Color(0xFF0F172A)]},
-    {'id': 'wash', 'name': 'Yıkama', 'icon': Icons.local_car_wash_rounded, 'color': Color(0xFF10B981), 'gradient': [Color(0xFF1E293B), Color(0xFF0F172A)]},
+    {'id': 'mechanic', 'name': 'Tamirci', 'icon': Icons.build_rounded, 'color': _primaryColor, 'gradient': [_cardColor, _bgColor]},
+    {'id': 'tow', 'name': 'Çekici', 'icon': Icons.car_repair_rounded, 'color': _primaryColor, 'gradient': [_cardColor, _bgColor]},
+    {'id': 'tire', 'name': 'Lastikçi', 'icon': Icons.tire_repair_rounded, 'color': _primaryColor, 'gradient': [_cardColor, _bgColor]},
+    {'id': 'wash', 'name': 'Yıkama', 'icon': Icons.local_car_wash_rounded, 'color': _primaryColor, 'gradient': [_cardColor, _bgColor]},
   ];
 
   @override
@@ -85,7 +96,50 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       }, onError: (error) {
         _showTopSnackBar("Ödeme sistemi hatası: $error", isError: true);
       });
+      _loadPremiumPrice();
     }
+  }
+
+  Future<void> _loadPremiumPrice() async {
+    if (kIsWeb) return;
+    final bool available = await _inAppPurchase.isAvailable();
+    if (!available) return;
+    final ProductDetailsResponse response = await _inAppPurchase.queryProductDetails({_premiumProductId});
+    if (response.productDetails.isNotEmpty && mounted) {
+      setState(() {
+        _premiumPriceDisplay = response.productDetails.first.price;
+      });
+    } else if (mounted) {
+      setState(() {
+        _premiumPriceDisplay = "Satın Al";
+      });
+    }
+  }
+
+  Future<void> _restorePurchases() async {
+    if (kIsWeb) return;
+    try {
+      setState(() => isSaving = true);
+      await _inAppPurchase.restorePurchases();
+      _showTopSnackBar("Satın alımlarınız kontrol ediliyor...");
+      
+      // Bekleme süresi tanıyarak profil verilerini tekrar çekip UI'ı güncelle
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) _fetchProfile();
+      });
+    } catch (e) {
+      _showTopSnackBar("Geri yükleme başarısız: $e", isError: true);
+    } finally {
+      if (mounted) setState(() => isSaving = false);
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    double screenWidth = MediaQuery.sizeOf(context).width;
+    double viewportFraction = screenWidth > 600 ? 0.6 : 0.88;
+    _vehiclePageController = PageController(viewportFraction: viewportFraction);
   }
 
   void _showScrollableDatePicker({
@@ -94,61 +148,63 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     required Function(DateTime) onDateSelected,
   }) {
     final int currentYear = DateTime.now().year;
+    final int minYear = currentYear - 1; 
     DateTime tempPickedDate = initialDate ?? DateTime.now();
     
-    if (tempPickedDate.year < currentYear) {
-      tempPickedDate = DateTime.now();
-    }
+    if (tempPickedDate.year < minYear) tempPickedDate = DateTime.now();
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1E293B),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      backgroundColor: _cardColor,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24)), side: BorderSide(color: Colors.white10)),
       builder: (BuildContext builder) {
         return SafeArea(
-          child: SizedBox(
-            height: 320,
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('İptal', style: TextStyle(color: Colors.white54, fontSize: 16, fontWeight: FontWeight.bold)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: SizedBox(
+              height: MediaQuery.sizeOf(context).height * 0.4,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('İptal', style: TextStyle(color: _subtitleColor, fontSize: 16, fontWeight: FontWeight.bold)),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            onDateSelected(tempPickedDate);
+                            Navigator.pop(context);
+                          },
+                          child: const Text('Onayla', style: TextStyle(color: _primaryColor, fontWeight: FontWeight.w900, fontSize: 16)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1, color: Colors.white12),
+                  Expanded(
+                    child: CupertinoTheme(
+                      data: const CupertinoThemeData(
+                        textTheme: CupertinoTextThemeData(
+                          dateTimePickerTextStyle: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w600),
+                        ),
                       ),
-                      TextButton(
-                        onPressed: () {
-                          onDateSelected(tempPickedDate);
-                          Navigator.pop(context);
+                      child: CupertinoDatePicker(
+                        mode: CupertinoDatePickerMode.date,
+                        initialDateTime: tempPickedDate,
+                        minimumYear: minYear, 
+                        maximumYear: currentYear + 15,
+                        onDateTimeChanged: (DateTime newDate) {
+                          tempPickedDate = newDate;
                         },
-                        child: const Text('Onayla', style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.w900, fontSize: 16)),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1, color: Colors.white12),
-                Expanded(
-                  child: CupertinoTheme(
-                    data: const CupertinoThemeData(
-                      textTheme: CupertinoTextThemeData(
-                        dateTimePickerTextStyle: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w600),
                       ),
                     ),
-                    child: CupertinoDatePicker(
-                      mode: CupertinoDatePickerMode.date,
-                      initialDateTime: tempPickedDate,
-                      minimumYear: currentYear, 
-                      maximumYear: currentYear + 15,
-                      onDateTimeChanged: (DateTime newDate) {
-                        tempPickedDate = newDate;
-                      },
-                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -160,12 +216,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     if (rawUrl == null) return "";
     String url = rawUrl.trim();
     if (url.isEmpty) return "";
-    if (url.startsWith("http://") || url.startsWith("https://")) {
-      return url;
-    }
-    if (url.startsWith("/")) {
-      url = url.substring(1);
-    }
+    if (url.startsWith("http://") || url.startsWith("https://")) return url;
+    if (url.startsWith("/")) url = url.substring(1);
     return "$baseMediaUrl$url";
   }
 
@@ -175,7 +227,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       return SizedBox(
         width: width,
         height: height,
-        child: Center(child: Icon(fallbackIcon, size: 70, color: Colors.white30)),
+        child: Center(child: Icon(fallbackIcon, size: 70, color: Colors.white10)),
       );
     }
     return Image.network(
@@ -190,7 +242,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
             width: 24,
             height: 24,
             child: CircularProgressIndicator(
-              color: const Color(0xFF10B981),
+              color: _primaryColor,
               strokeWidth: 2,
               value: loadingProgress.expectedTotalBytes != null
                   ? loadingProgress.cumulativeBytesLoaded / (loadingProgress.expectedTotalBytes ?? 1)
@@ -203,7 +255,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
         return SizedBox(
           width: width,
           height: height,
-          child: Center(child: Icon(fallbackIcon, size: 70, color: Colors.white30)),
+          child: Center(child: Icon(fallbackIcon, size: 70, color: Colors.white10)),
         );
       },
     );
@@ -233,14 +285,14 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       try {
         await Future.wait([_fetchNotifications(), _checkActiveJob()]);
       } finally {
-        _isPolling = false;
+        if (mounted) _isPolling = false;
       }
     });
   }
 
   void _startAdTimer() {
     _adScrollTimer?.cancel();
-    if (ads.isNotEmpty) {
+    if (ads.length > 1) {
       _adScrollTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
         if (_adPageController.hasClients && mounted) {
           int nextPage = currentAdIndex.value + 1;
@@ -282,7 +334,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   Future<void> _fetchAds() async {
     try {
-      final res = await http.get(Uri.parse("$baseUrl?action=get_ads"));
+      final res = await http.get(Uri.parse("$baseUrl?action=get_ads")).timeout(apiTimeout);
       if (res.statusCode == 200) {
         final data = json.decode(res.body);
         if (data['status'] == 'success' && mounted) {
@@ -301,7 +353,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   Future<void> _fetchProfile() async {
     try {
-      final res = await http.get(Uri.parse("$baseUrl?action=get_profile&user_id=${widget.customerId}"));
+      final res = await http.get(Uri.parse("$baseUrl?action=get_profile&user_id=${widget.customerId}")).timeout(apiTimeout);
       if (res.statusCode == 200) {
         final data = json.decode(res.body);
         if (data['status'] == 'success' && mounted) {
@@ -319,7 +371,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   Future<void> _checkActiveJob() async {
     try {
-      final res = await http.get(Uri.parse("$baseUrl?action=check_active_job&user_id=${widget.customerId}&user_type=customer"));
+      final res = await http.get(Uri.parse("$baseUrl?action=check_active_job&user_id=${widget.customerId}&user_type=customer")).timeout(apiTimeout);
       final data = json.decode(res.body);
       if (data['status'] == 'success' && data['has_active'] == true && mounted) {
         setState(() { 
@@ -334,7 +386,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     }
   }
   
-  void _listenToPurchaseUpdated(List<PurchaseDetails> purchaseDetailsList) {
+  Future<void> _listenToPurchaseUpdated(List<PurchaseDetails> purchaseDetailsList) async {
     for (var purchaseDetails in purchaseDetailsList) {
       if (purchaseDetails.status == PurchaseStatus.pending) {
         if (mounted) setState(() => isSaving = true);
@@ -344,16 +396,27 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
           _showTopSnackBar("Ödeme başarısız veya iptal edildi.", isError: true);
         } else if (purchaseDetails.status == PurchaseStatus.purchased ||
                    purchaseDetails.status == PurchaseStatus.restored) {
-          _activatePremium(purchaseDetails);
-        }
-        if (purchaseDetails.pendingCompletePurchase) {
-          _inAppPurchase.completePurchase(purchaseDetails);
+          
+          bool isActivated = await _activatePremium(purchaseDetails);
+          if (isActivated) {
+            if (purchaseDetails.pendingCompletePurchase) {
+              await _inAppPurchase.completePurchase(purchaseDetails);
+            }
+          } else {
+            if (purchaseDetails.pendingCompletePurchase) {
+              // Store tarafında askıda kalmaması için işlemi mutlaka tamamla
+              await _inAppPurchase.completePurchase(purchaseDetails);
+            }
+            if (mounted) {
+              _showTopSnackBar("Sistem onayı gecikti, lütfen daha sonra tekrar deneyin.", isError: true);
+            }
+          }
         }
       }
     }
   }
 
-  Future<void> _activatePremium(PurchaseDetails purchaseDetails) async {
+  Future<bool> _activatePremium(PurchaseDetails purchaseDetails) async {
     try {
       final response = await http.post(
         Uri.parse("$baseUrl?action=activate_premium"),
@@ -365,16 +428,19 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
           "platform": defaultTargetPlatform == TargetPlatform.iOS ? "apple" : "google",
           "package_name": "com.berdas.otoyardim",
         }
-      );
+      ).timeout(apiTimeout);
+      
       final data = json.decode(response.body);
-      if (data['status'] == 'success' && mounted) {
-        setState(() => isPremium = true);
-        _showTopSnackBar("Premium üyeliğiniz aktif edildi! Artık sınırsız araç ekleyebilirsiniz.");
-      } else {
-        _showTopSnackBar(data['message'] ?? "Doğrulama başarısız.", isError: true);
+      if (data['status'] == 'success') {
+        if (mounted) {
+          setState(() => isPremium = true);
+          _showTopSnackBar("Premium üyeliğiniz aktif edildi! Artık sınırsız araç ekleyebilirsiniz.");
+        }
+        return true;
       }
+      return false;
     } catch (e) {
-      _showTopSnackBar("Sunucu onayı başarısız oldu.", isError: true);
+      return false;
     } finally {
       if (mounted) setState(() => isSaving = false);
     }
@@ -411,7 +477,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   Future<void> _fetchNotifications() async {
     try {
-      final response = await http.get(Uri.parse("$baseUrl?action=get_notifications&user_id=${widget.customerId}"));
+      final response = await http.get(Uri.parse("$baseUrl?action=get_notifications&user_id=${widget.customerId}")).timeout(apiTimeout);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success' && mounted) {
@@ -432,7 +498,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
         Uri.parse("$baseUrl?action=mark_notif_read"),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {"user_id": widget.customerId.toString()}
-      );
+      ).timeout(apiTimeout);
       if (mounted) setState(() => unreadCount = 0);
     } catch (e) {
       debugPrint("Mark notif read error: $e");
@@ -448,7 +514,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
           "notification_id": notificationId.toString(),
           "user_id": widget.customerId.toString()
         }
-      );
+      ).timeout(apiTimeout);
       final data = json.decode(response.body);
       if (data['status'] == 'success' && mounted) {
         setState(() {
@@ -467,7 +533,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
         Uri.parse("$baseUrl?action=clear_all_notifications"),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {"user_id": widget.customerId.toString()}
-      );
+      ).timeout(apiTimeout);
       final data = json.decode(response.body);
       if (data['status'] == 'success' && mounted) {
         setState(() {
@@ -493,239 +559,224 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
-          const sheetBgColor = Color(0xFF0F172A);
-          const sheetCardColor = Color(0xFF1E293B);
-          const sheetTextColor = Colors.white;
-          const sheetSubColor = Color(0xFF94A3B8);
-
           return BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
             child: Container(
-              height: MediaQuery.of(context).size.height * 0.85,
+              height: MediaQuery.sizeOf(context).height * 0.85,
               decoration: BoxDecoration(
-                color: sheetBgColor.withOpacity(0.95),
+                color: _cardColor.withOpacity(0.95),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                border: Border.all(color: const Color(0xFF10B981).withOpacity(0.2), width: 1.5),
+                border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 40, offset: const Offset(0, -10))
+                  BoxShadow(color: Colors.black.withOpacity(0.8), blurRadius: 40, offset: const Offset(0, -10))
                 ],
               ),
               child: SafeArea(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    return Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 600),
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 12),
-                            Center(
-                              child: Container(
-                                width: 48, 
-                                height: 6, 
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 600),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 12),
+                        Center(
+                          child: Container(
+                            width: 48, 
+                            height: 6, 
+                            decoration: BoxDecoration(
+                              color: Colors.white24, 
+                              borderRadius: BorderRadius.circular(10)
+                            )
+                          )
+                        ),
+                        const SizedBox(height: 16),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color: Colors.white24, 
-                                  borderRadius: BorderRadius.circular(10)
-                                )
-                              )
-                            ),
-                            const SizedBox(height: 16),
-                            
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)]),
-                                      borderRadius: BorderRadius.circular(12),
-                                      boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 4))]
-                                    ),
-                                    child: const Icon(Icons.notifications_active_rounded, color: Colors.white, size: 24),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const Text("Bildirimler", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: sheetTextColor, letterSpacing: -0.5), overflow: TextOverflow.ellipsis),
-                                        Text("${notifications.length} yeni duyuru", style: const TextStyle(fontSize: 13, color: sheetSubColor, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
-                                      ],
-                                    ),
-                                  ),
-                                  if (notifications.isNotEmpty)
-                                    TextButton.icon(
-                                      onPressed: () async {
-                                        bool confirm = await showDialog(
-                                          context: context,
-                                          builder: (ctx) => AlertDialog(
-                                            backgroundColor: sheetCardColor,
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: const Color(0xFF10B981).withOpacity(0.3))),
-                                            title: const Text("Tümünü Temizle?", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
-                                            content: const Text("Tüm bildirimler kalıcı olarak silinecektir.", style: TextStyle(fontSize: 14, color: Colors.white70)),
-                                            actions: [
-                                              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("İptal", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white54))),
-                                              ElevatedButton(
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: const Color(0xFFEF4444), 
-                                                  elevation: 0,
-                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10)
-                                                ),
-                                                onPressed: () => Navigator.pop(ctx, true), 
-                                                child: const Text("Tümünü Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
-                                              )
-                                            ],
-                                          )
-                                        ) ?? false;
-
-                                        if (confirm) {
-                                          await _clearAllNotifications();
-                                          setModalState(() {});
-                                        }
-                                      },
-                                      icon: const Icon(Icons.delete_sweep_rounded, color: Color(0xFFEF4444), size: 18),
-                                      label: const Text("Temizle", style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 13)),
-                                      style: TextButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                        backgroundColor: const Color(0xFFEF4444).withOpacity(0.1),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
-                                      ),
-                                    )
-                                ],
+                                  color: _primaryColor.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(Icons.notifications_active_rounded, color: _primaryColor, size: 24),
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                            Divider(height: 1, color: Colors.white.withOpacity(0.1)),
-                            
-                            Expanded(
-                              child: notifications.isEmpty
-                                ? Center(
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(24.0),
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.all(24),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white.withOpacity(0.05),
-                                              shape: BoxShape.circle
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text("Bildirimler", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: -0.5), overflow: TextOverflow.ellipsis),
+                                    Text("${notifications.length} yeni duyuru", style: const TextStyle(fontSize: 13, color: _subtitleColor, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                                  ],
+                                ),
+                              ),
+                              if (notifications.isNotEmpty)
+                                TextButton.icon(
+                                  onPressed: () async {
+                                    bool confirm = await showDialog(
+                                      context: context,
+                                      builder: (ctx) => AlertDialog(
+                                        backgroundColor: _cardColor,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: Colors.white10)),
+                                        title: const Text("Tümünü Temizle?", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
+                                        content: const Text("Tüm bildirimler kalıcı olarak silinecektir.", style: TextStyle(fontSize: 14, color: Colors.white70)),
+                                        actions: [
+                                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("İptal", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white54))),
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: _dangerColor, 
+                                              elevation: 0,
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10)
                                             ),
-                                            child: Icon(Icons.notifications_off_rounded, size: 48, color: sheetSubColor.withOpacity(0.5)),
-                                          ),
-                                          const SizedBox(height: 20),
-                                          const Text("Henüz Bildiriminiz Yok", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: sheetTextColor)),
-                                          const SizedBox(height: 8),
-                                          const Text("Yöneticiden veya işlemlerinizden gelen duyurular burada görüntülenecektir.", textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: sheetSubColor, height: 1.4, fontWeight: FontWeight.w500)),
+                                            onPressed: () => Navigator.pop(ctx, true), 
+                                            child: const Text("Tümünü Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+                                          )
+                                        ],
+                                      )
+                                    ) ?? false;
+
+                                    if (confirm) {
+                                      await _clearAllNotifications();
+                                      setModalState(() {});
+                                    }
+                                  },
+                                  icon: const Icon(Icons.delete_sweep_rounded, color: _dangerColor, size: 18),
+                                  label: const Text("Temizle", style: TextStyle(color: _dangerColor, fontWeight: FontWeight.bold, fontSize: 13)),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                    backgroundColor: _dangerColor.withOpacity(0.1),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+                                  ),
+                                )
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Divider(height: 1, color: Colors.white.withOpacity(0.05)),
+                        Expanded(
+                          child: notifications.isEmpty
+                            ? Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24.0),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(24),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.03),
+                                          shape: BoxShape.circle
+                                        ),
+                                        child: Icon(Icons.notifications_off_rounded, size: 48, color: _subtitleColor.withOpacity(0.3)),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      const Text("Henüz Bildiriminiz Yok", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _textColor)),
+                                      const SizedBox(height: 8),
+                                      const Text("Yöneticiden veya işlemlerinizden gelen duyurular burada görüntülenecektir.", textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: _subtitleColor, height: 1.4, fontWeight: FontWeight.w500)),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            : ListView.separated(
+                                physics: const BouncingScrollPhysics(),
+                                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                                itemCount: notifications.length,
+                                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                                itemBuilder: (context, index) {
+                                  final notif = notifications[index];
+                                  final int notifId = int.tryParse(notif['id']?.toString() ?? '0') ?? 0;
+                                  
+                                  String formattedDate = "Yeni";
+                                  if (notif['created_at'] != null) {
+                                    try {
+                                      final dt = DateTime.tryParse(notif['created_at'].toString());
+                                      if (dt != null) {
+                                        formattedDate = DateFormat('dd.MM.yyyy HH:mm').format(dt);
+                                      }
+                                    } catch (_) {}
+                                  }
+
+                                  return Dismissible(
+                                    key: Key("notif_${notif['id'] ?? index}"),
+                                    direction: DismissDirection.endToStart,
+                                    background: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                                      alignment: Alignment.centerRight,
+                                      decoration: BoxDecoration(
+                                        color: _dangerColor,
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: const Row(
+                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        children: [
+                                          Text("Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
+                                          SizedBox(width: 8),
+                                          Icon(Icons.delete_outline_rounded, color: Colors.white, size: 28),
                                         ],
                                       ),
                                     ),
-                                  )
-                                : ListView.separated(
-                                    physics: const BouncingScrollPhysics(),
-                                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                                    itemCount: notifications.length,
-                                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                                    itemBuilder: (context, index) {
-                                      final notif = notifications[index];
-                                      final int notifId = int.tryParse(notif['id']?.toString() ?? '0') ?? 0;
-                                      
-                                      String formattedDate = "Yeni";
-                                      if (notif['created_at'] != null) {
-                                        try {
-                                          final dt = DateTime.tryParse(notif['created_at'].toString());
-                                          if (dt != null) {
-                                            formattedDate = DateFormat('dd.MM.yyyy HH:mm').format(dt);
-                                          }
-                                        } catch (_) {}
-                                      }
-
-                                      return Dismissible(
-                                        key: Key("notif_${notif['id'] ?? index}"),
-                                        direction: DismissDirection.endToStart,
-                                        background: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                                          alignment: Alignment.centerRight,
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFEF4444),
-                                            borderRadius: BorderRadius.circular(16),
+                                    onDismissed: (_) {
+                                      _deleteNotification(notifId);
+                                      setModalState(() {});
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.02),
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.0),
+                                      ),
+                                      child: Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: _primaryColor.withOpacity(0.1),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(Icons.campaign_rounded, color: _primaryColor, size: 20),
                                           ),
-                                          child: const Row(
-                                            mainAxisAlignment: MainAxisAlignment.end,
-                                            children: [
-                                              Text("Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
-                                              SizedBox(width: 8),
-                                              Icon(Icons.delete_outline_rounded, color: Colors.white, size: 28),
-                                            ],
-                                          ),
-                                        ),
-                                        onDismissed: (_) {
-                                          _deleteNotification(notifId);
-                                          setModalState(() {});
-                                        },
-                                        child: Container(
-                                          padding: const EdgeInsets.all(16),
-                                          decoration: BoxDecoration(
-                                            color: sheetCardColor,
-                                            borderRadius: BorderRadius.circular(16),
-                                            border: Border.all(color: const Color(0xFF10B981).withOpacity(0.15), width: 1.0),
-                                            boxShadow: [
-                                              BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 10, offset: const Offset(0, 5))
-                                            ],
-                                          ),
-                                          child: Row(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Container(
-                                                padding: const EdgeInsets.all(10),
-                                                decoration: BoxDecoration(
-                                                  color: const Color(0xFF10B981).withOpacity(0.15),
-                                                  borderRadius: BorderRadius.circular(12),
-                                                ),
-                                                child: const Icon(Icons.campaign_rounded, color: Color(0xFF10B981), size: 24),
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
+                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                   children: [
-                                                    Row(
-                                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                      children: [
-                                                        Expanded(
-                                                          child: Text(
-                                                            notif['title'] ?? 'Duyuru', 
-                                                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: sheetTextColor, letterSpacing: -0.3),
-                                                            maxLines: 1, 
-                                                            overflow: TextOverflow.ellipsis
-                                                          ),
-                                                        ),
-                                                        const SizedBox(width: 8),
-                                                        Text(formattedDate, style: const TextStyle(fontSize: 11, color: sheetSubColor, fontWeight: FontWeight.w700)),
-                                                      ],
+                                                    Expanded(
+                                                      child: Text(
+                                                        notif['title'] ?? 'Duyuru', 
+                                                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: _textColor, letterSpacing: -0.3),
+                                                        maxLines: 1, 
+                                                        overflow: TextOverflow.ellipsis
+                                                      ),
                                                     ),
-                                                    const SizedBox(height: 6),
-                                                    Text(
-                                                      notif['message'] ?? '', 
-                                                      style: TextStyle(fontSize: 14, color: sheetTextColor.withOpacity(0.85), height: 1.4, fontWeight: FontWeight.w500)
-                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Text(formattedDate, style: const TextStyle(fontSize: 11, color: _subtitleColor, fontWeight: FontWeight.w500)),
                                                   ],
                                                 ),
-                                              ),
-                                            ],
+                                                const SizedBox(height: 6),
+                                                Text(
+                                                  notif['message'] ?? '', 
+                                                  style: TextStyle(fontSize: 14, color: _textColor.withOpacity(0.85), height: 1.4, fontWeight: FontWeight.w400)
+                                                ),
+                                              ],
+                                            ),
                                           ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                            ),
-                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
                         ),
-                      ),
-                    );
-                  }
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -746,13 +797,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.white.withOpacity(0.3), Colors.white.withOpacity(0.1)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: Colors.white.withOpacity(0.2),
                 shape: BoxShape.circle,
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 6)],
               ),
               child: Icon(
                 isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded,
@@ -764,16 +810,16 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
             Expanded(
               child: Text(
                 message,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.3),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14, letterSpacing: 0.2),
               ),
             ),
           ],
         ),
-        backgroundColor: isError ? const Color(0xFFFF3366) : const Color(0xFF10B981),
+        backgroundColor: isError ? _dangerColor : _primaryColor.withOpacity(0.95),
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 20,
+        elevation: 0,
         duration: const Duration(seconds: 4),
       ));
     }
@@ -795,9 +841,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     try {
       await Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/login', (route) => false);
     } catch (e) {
+      if (!mounted) return;
       try {
         await Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/', (route) => false);
       } catch (e2) {
+        if (!mounted) return;
         if (Navigator.of(context).canPop()) {
           Navigator.of(context).popUntil((route) => route.isFirst);
         } else {
@@ -814,17 +862,17 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       builder: (ctx) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: AlertDialog(
-          backgroundColor: const Color(0xFF1E293B),
+          backgroundColor: _cardColor,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
-            side: BorderSide(color: const Color(0xFF10B981).withOpacity(0.3), width: 1.5)
+            side: BorderSide(color: Colors.white.withOpacity(0.1), width: 1.5)
           ),
           title: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: const Color(0xFFEF4444).withOpacity(0.15), shape: BoxShape.circle),
-                child: const Icon(Icons.power_settings_new_rounded, color: Color(0xFFEF4444), size: 24),
+                decoration: BoxDecoration(color: _dangerColor.withOpacity(0.15), shape: BoxShape.circle),
+                child: const Icon(Icons.power_settings_new_rounded, color: _dangerColor, size: 24),
               ),
               const SizedBox(width: 12),
               const Expanded(
@@ -834,7 +882,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
           ),
           content: const Text(
             "Hesabınızdan güvenli bir şekilde çıkış yapmak istediğinize emin misiniz?",
-            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14, fontWeight: FontWeight.w500, height: 1.4)
+            style: TextStyle(color: _subtitleColor, fontSize: 14, fontWeight: FontWeight.w500, height: 1.4)
           ),
           actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           actions: [
@@ -844,11 +892,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), 
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
               ),
-              child: const Text("İptal", style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white60, fontSize: 14)),
+              child: const Text("İptal", style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white54, fontSize: 14)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFEF4444),
+                backgroundColor: _dangerColor,
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -867,7 +915,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   Future<void> _fetchVehicles() async {
     try {
-      final response = await http.get(Uri.parse("$baseUrl?action=get_vehicles&customer_id=${widget.customerId}"));
+      final response = await http.get(Uri.parse("$baseUrl?action=get_vehicles&customer_id=${widget.customerId}")).timeout(apiTimeout);
       final data = json.decode(response.body);
 
       if (response.statusCode == 200 && data['status'] == 'success') {
@@ -903,19 +951,19 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     if (isEditing) body["vehicle_id"] = vehicleId.toString();
 
     try {
-      final response = await http.post(Uri.parse("$baseUrl?action=$action"), headers: {"Content-Type": "application/x-www-form-urlencoded"}, body: body);
+      final response = await http.post(Uri.parse("$baseUrl?action=$action"), headers: {"Content-Type": "application/x-www-form-urlencoded"}, body: body).timeout(apiTimeout);
       final data = json.decode(response.body);
       
-      if (response.statusCode == 403 && data['status'] == 'limit_reached') {
-        _showPremiumModal();
+      if ((response.statusCode == 403 || response.statusCode == 429) && data['status'] == 'limit_reached') {
+        if (mounted) _showPremiumModal();
       } else if (response.statusCode == 200 || response.statusCode == 201) {
-        _showTopSnackBar(isEditing ? "Araç başarıyla güncellendi!" : "Araç başarıyla eklendi!");
+        if (mounted) _showTopSnackBar(isEditing ? "Araç başarıyla güncellendi!" : "Araç başarıyla eklendi!");
         await _fetchVehicles();
       } else {
-        _showTopSnackBar(data['message'] ?? "İşlem başarısız.", isError: true);
+        if (mounted) _showTopSnackBar(data['message'] ?? "İşlem başarısız.", isError: true);
       }
     } catch (e) {
-      _showTopSnackBar("Bağlantı hatası.", isError: true);
+      if (mounted) _showTopSnackBar("Bağlantı hatası.", isError: true);
     } finally {
       if (mounted) setState(() => isSaving = false);
     }
@@ -923,14 +971,14 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   Future<void> _deleteVehicle(int vehicleId) async {
     try {
-      final response = await http.post(Uri.parse("$baseUrl?action=delete_vehicle"), headers: {"Content-Type": "application/x-www-form-urlencoded"}, body: {"vehicle_id": vehicleId.toString(), "customer_id": widget.customerId.toString()});
+      final response = await http.post(Uri.parse("$baseUrl?action=delete_vehicle"), headers: {"Content-Type": "application/x-www-form-urlencoded"}, body: {"vehicle_id": vehicleId.toString(), "customer_id": widget.customerId.toString()}).timeout(apiTimeout);
       final data = json.decode(response.body);
       if (data['status'] == 'success') {
-        _showTopSnackBar("Araç garajınızdan silindi.");
+        if (mounted) _showTopSnackBar("Araç garajınızdan silindi.");
         await _fetchVehicles();
       }
     } catch (e) {
-      _showTopSnackBar("Araç silinemedi.", isError: true);
+      if (mounted) _showTopSnackBar("Araç silinemedi.", isError: true);
     }
   }
 
@@ -941,7 +989,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
         child: Container(
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom + 16, 
@@ -950,10 +998,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
             top: 20
           ),
           decoration: BoxDecoration(
-            color: const Color(0xFF0F172A).withOpacity(0.98),
+            color: _cardColor.withOpacity(0.95),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-            border: Border.all(color: const Color(0xFF10B981).withOpacity(0.2), width: 1.5),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.6), blurRadius: 40, offset: const Offset(0, -10))],
+            border: Border.all(color: Colors.amber.withOpacity(0.3), width: 1.5),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.8), blurRadius: 40, offset: const Offset(0, -10))],
           ),
           child: SafeArea(
             child: Center(
@@ -971,11 +1019,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                         child: Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFD97706)]),
+                            color: Colors.amber.withOpacity(0.1),
                             shape: BoxShape.circle,
-                            boxShadow: [BoxShadow(color: const Color(0xFFF59E0B).withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 8))]
+                            border: Border.all(color: Colors.amber.withOpacity(0.5)),
                           ),
-                          child: const Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 36),
+                          child: const Icon(Icons.workspace_premium_rounded, color: Colors.amber, size: 36),
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -984,30 +1032,30 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                       const Text(
                         "Ücretsiz 3 araç ekleme sınırına ulaştınız. Garajınıza sınırsız araç eklemek ve tüm bakım takiplerini eksiksiz yapmak için kilidi açın.",
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8), height: 1.5, fontWeight: FontWeight.w500),
+                        style: TextStyle(fontSize: 14, color: _subtitleColor, height: 1.5, fontWeight: FontWeight.w500),
                       ),
                       const SizedBox(height: 24),
                       Container(
                         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1E293B).withOpacity(0.7),
+                          color: Colors.white.withOpacity(0.03),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.4), width: 2),
+                          border: Border.all(color: Colors.amber.withOpacity(0.3), width: 1),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Expanded(
+                            const Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text("Premium Garaj Paketi", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Colors.white)),
                                   SizedBox(height: 4),
-                                  Text("Sınırsız Araç ve Hatırlatıcı", style: TextStyle(color: Color(0xFFF59E0B), fontWeight: FontWeight.bold, fontSize: 12)),
+                                  Text("Sınırsız Araç ve Hatırlatıcı", style: TextStyle(color: Colors.amber, fontWeight: FontWeight.w600, fontSize: 12)),
                                 ],
                               ),
                             ),
-                            Text("₺300", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFFF59E0B))),
+                            Text(_premiumPriceDisplay, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.amber)),
                           ],
                         ),
                       ),
@@ -1015,7 +1063,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                       Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
-                          boxShadow: [BoxShadow(color: const Color(0xFFF59E0B).withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 8))],
                         ),
                         child: ElevatedButton(
                           onPressed: isSaving ? null : () async {
@@ -1023,21 +1070,44 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                             await _startPremiumPurchase();
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFF59E0B),
+                            backgroundColor: Colors.amber,
                             padding: const EdgeInsets.symmetric(vertical: 18),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                             elevation: 0,
                           ),
                           child: isSaving 
-                              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
-                              : const Text("300 TL ile Kilidi Aç", textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
+                              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3))
+                              : Text("$_premiumPriceDisplay ile Kilidi Aç", textAlign: TextAlign.center, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
                         ),
                       ),
                       const SizedBox(height: 12),
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _restorePurchases();
+                            },
+                            child: const Text("Satın Alımları Geri Yükle", style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.w600)),
+                          ),
+                          const Text(" • ", style: TextStyle(color: Colors.white24)),
+                          TextButton(
+                            onPressed: () => launchUrl(Uri.parse("https://eliteagency.sbs/terms.html")),
+                            child: const Text("Kullanım Koşulları", style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.w600)),
+                          ),
+                          const Text(" • ", style: TextStyle(color: Colors.white24)),
+                          TextButton(
+                            onPressed: () => launchUrl(Uri.parse("https://eliteagency.sbs/privacy.html")),
+                            child: const Text("Gizlilik Politikası", style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.w600)),
+                          ),
+                        ],
+                      ),
                       TextButton(
                         onPressed: () => Navigator.pop(context),
                         style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
-                        child: const Text("Daha Sonra Belki", style: TextStyle(color: Colors.white60, fontWeight: FontWeight.w800, fontSize: 14)),
+                        child: const Text("Daha Sonra Belki", style: TextStyle(color: Colors.white38, fontWeight: FontWeight.w800, fontSize: 14)),
                       )
                     ],
                   ),
@@ -1066,153 +1136,170 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          return BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24, 
-                left: 20, 
-                right: 20, 
-                top: 20
-              ),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0F172A).withOpacity(0.95),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                border: Border.all(color: const Color(0xFF10B981).withOpacity(0.2), width: 1.5),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.6), blurRadius: 40, offset: const Offset(0, -10))],
-              ),
-              child: SafeArea(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 600),
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+      elevation: 0,
+      builder: (context) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(context).bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: _cardColor.withOpacity(0.95),
+                  borderRadius: BorderRadius.circular(32),
+                  border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.6), blurRadius: 40, offset: const Offset(0, 10))
+                  ]
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
-                          const SizedBox(height: 20),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(isEditing ? Icons.edit_rounded : Icons.add_circle_rounded, color: const Color(0xFF10B981), size: 28),
-                              const SizedBox(width: 12),
-                              Text(isEditing ? "Aracı Düzenle" : "Yeni Araç Ekle", textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
-                            ],
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: _primaryColor.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Icon(isEditing ? Icons.edit_rounded : Icons.add_circle_rounded, color: _primaryColor, size: 24),
                           ),
-                          const SizedBox(height: 24),
-                          
-                          Row(
-                            children: [
-                              Expanded(child: _buildInputField(plateCtrl, "Plaka", Icons.pin_rounded, isCapital: true)),
-                              const SizedBox(width: 12),
-                              Expanded(child: _buildInputField(brandCtrl, "Marka & Model", Icons.directions_car_rounded)),
-                            ],
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Text(
+                              isEditing ? "Aracı Düzenle" : "Yeni Araç Ekle", 
+                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: -0.5),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          const SizedBox(height: 12),
-                          
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildCompactDatePicker("Sigorta Tarihi", tempIns, Icons.shield_rounded, const Color(0xFF10B981), () {
-                                  _showScrollableDatePicker(
-                                    context: context,
-                                    initialDate: tempIns,
-                                    onDateSelected: (date) {
-                                      setModalState(() => tempIns = date);
-                                    },
-                                  );
-                                }),
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(20),
+                              onTap: () => Navigator.pop(context),
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle),
+                                child: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _buildCompactDatePicker("Muayene Tarihi", tempInsp, Icons.fact_check_rounded, const Color(0xFF10B981), () {
-                                  _showScrollableDatePicker(
-                                    context: context,
-                                    initialDate: tempInsp,
-                                    onDateSelected: (date) {
-                                      setModalState(() => tempInsp = date);
-                                    },
-                                  );
-                                }),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          
-                          Row(
-                            children: [
-                              Expanded(child: _buildInputField(cKmCtrl, "Güncel KM", Icons.speed_rounded, isNumber: true)),
-                              const SizedBox(width: 12),
-                              Expanded(child: _buildInputField(mKmCtrl, "Bakım KM", Icons.build_circle_rounded, isNumber: true)),
-                            ],
-                          ),
-                          const SizedBox(height: 32),
-                          
-                          Row(
-                            children: [
-                              if (isEditing) ...[
-                                Container(
-                                  decoration: BoxDecoration(border: Border.all(color: const Color(0xFFEF4444), width: 2), borderRadius: BorderRadius.circular(16)),
-                                  child: IconButton(
-                                    icon: const Icon(Icons.delete_rounded, color: Color(0xFFEF4444), size: 24),
-                                    padding: const EdgeInsets.all(16),
-                                    onPressed: () { 
-                                      Navigator.pop(context); 
-                                      _deleteVehicle(int.tryParse(vehicleToEdit['id']?.toString() ?? '0') ?? 0); 
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                              ],
-                              Expanded(
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(16),
-                                    gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)]),
-                                    boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 5))],
-                                  ),
-                                  child: ElevatedButton(
-                                    onPressed: isSaving ? null : () async {
-                                      if (plateCtrl.text.trim().isEmpty || brandCtrl.text.trim().isEmpty) {
-                                        return _showTopSnackBar("Plaka ve model bilgisi zorunludur.", isError: true);
-                                      }
-                                      
-                                      Navigator.pop(context);
-                                      
-                                      await _saveVehicle(
-                                        vehicleId: isEditing ? int.tryParse(vehicleToEdit['id']?.toString() ?? '') : null,
-                                        plate: plateCtrl.text.trim(), 
-                                        brandModel: brandCtrl.text.trim(),
-                                        insDate: tempIns, 
-                                        inspDate: tempInsp,
-                                        cKm: int.tryParse(cKmCtrl.text.trim()) ?? 0, 
-                                        mKm: int.tryParse(mKmCtrl.text.trim()) ?? 10000,
-                                      );
-                                    },
-                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 20), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                                    child: isSaving 
-                                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
-                                        : FittedBox(child: Text(isEditing ? "Değişiklikleri Kaydet" : "Aracı Garaja Ekle", style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: 0.5))),
-                                  ),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                         ],
                       ),
-                    ),
+                      const SizedBox(height: 24),
+                      
+                      Row(
+                        children: [
+                          Expanded(child: _buildInputField(plateCtrl, "Plaka", Icons.pin_rounded, isCapital: true)),
+                          const SizedBox(width: 12),
+                          Expanded(child: _buildInputField(brandCtrl, "Marka & Model", Icons.directions_car_rounded)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildCompactDatePicker("Sigorta Tarihi", tempIns, Icons.shield_rounded, _primaryColor, () {
+                              _showScrollableDatePicker(
+                                context: context,
+                                initialDate: tempIns,
+                                onDateSelected: (date) {
+                                  setState(() => tempIns = date); 
+                                },
+                              );
+                            }),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildCompactDatePicker("Muayene Tarihi", tempInsp, Icons.fact_check_rounded, _primaryColor, () {
+                              _showScrollableDatePicker(
+                                context: context,
+                                initialDate: tempInsp,
+                                onDateSelected: (date) {
+                                  setState(() => tempInsp = date); 
+                                },
+                              );
+                            }),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(child: _buildInputField(cKmCtrl, "Güncel KM", Icons.speed_rounded, isNumber: true)),
+                          const SizedBox(width: 12),
+                          Expanded(child: _buildInputField(mKmCtrl, "Bakım KM", Icons.build_circle_rounded, isNumber: true)),
+                        ],
+                      ),
+                      const SizedBox(height: 32),
+                      
+                      Row(
+                        children: [
+                          if (isEditing) ...[
+                            Container(
+                              decoration: BoxDecoration(border: Border.all(color: _dangerColor.withOpacity(0.5), width: 1.5), borderRadius: BorderRadius.circular(16)),
+                              child: IconButton(
+                                icon: const Icon(Icons.delete_outline_rounded, color: _dangerColor, size: 22),
+                                padding: const EdgeInsets.all(14),
+                                onPressed: () { 
+                                  Navigator.pop(context); 
+                                  _deleteVehicle(int.tryParse(vehicleToEdit['id']?.toString() ?? '0') ?? 0); 
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                          ],
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: isSaving ? null : () async {
+                                if (plateCtrl.text.trim().isEmpty || brandCtrl.text.trim().isEmpty) {
+                                  return _showTopSnackBar("Plaka ve model bilgisi zorunludur.", isError: true);
+                                }
+                                Navigator.pop(context);
+                                await _saveVehicle(
+                                  vehicleId: isEditing ? int.tryParse(vehicleToEdit['id']?.toString() ?? '') : null,
+                                  plate: plateCtrl.text.trim(), 
+                                  brandModel: brandCtrl.text.trim(),
+                                  insDate: tempIns, 
+                                  inspDate: tempInsp,
+                                  cKm: int.tryParse(cKmCtrl.text.trim()) ?? 0, 
+                                  mKm: int.tryParse(mKmCtrl.text.trim()) ?? 10000,
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _primaryColor,
+                                foregroundColor: Colors.black,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(vertical: 18),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              ),
+                              child: isSaving 
+                                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2.5))
+                                  : Text(isEditing ? "Değişiklikleri Kaydet" : "Aracı Garaja Ekle", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                            ),
+                          ),
+                        ],
+                      )
+                    ],
                   ),
                 ),
               ),
-            ),
-          );
-        }
+            ],
+          ),
+        ),
       ),
     ).whenComplete(() {
       _isVehicleModalOpen = false;
@@ -1225,30 +1312,29 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 6),
-          child: Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13, fontWeight: FontWeight.w700)),
+          child: Text(label, style: const TextStyle(color: _subtitleColor, fontSize: 13, fontWeight: FontWeight.w600)),
         ),
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xFF1E293B).withOpacity(0.9),
+            color: Colors.white.withOpacity(0.03),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3), width: 1.5),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))],
+            border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5),
           ),
           child: TextField(
             controller: controller,
             keyboardType: isNumber ? TextInputType.number : TextInputType.text,
             textCapitalization: isCapital ? TextCapitalization.characters : TextCapitalization.none,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15),
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
             decoration: InputDecoration(
               prefixIcon: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12), 
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withOpacity(0.15),
+                    color: _primaryColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10)
                   ),
-                  child: Icon(icon, color: const Color(0xFF10B981), size: 20)
+                  child: Icon(icon, color: _primaryColor, size: 20)
                 )
               ),
               prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 40),
@@ -1256,7 +1342,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
               fillColor: Colors.transparent,
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF10B981), width: 2.0)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: _primaryColor, width: 1.5)),
             ),
           ),
         ),
@@ -1270,14 +1356,13 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 6),
-          child: Text(title, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13, fontWeight: FontWeight.w700)),
+          child: Text(title, style: const TextStyle(color: _subtitleColor, fontSize: 13, fontWeight: FontWeight.w600)),
         ),
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xFF1E293B).withOpacity(0.9),
+            color: Colors.white.withOpacity(0.03),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3), width: 1.5),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))],
+            border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5),
           ),
           child: Material(
             color: Colors.transparent,
@@ -1291,7 +1376,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                   children: [
                     Container(
                       padding: const EdgeInsets.all(10), 
-                      decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(12)), 
+                      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)), 
                       child: Icon(icon, color: color, size: 20)
                     ),
                     const SizedBox(width: 12),
@@ -1300,7 +1385,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                         date != null ? DateFormat('dd.MM.yyyy').format(date) : "Tarih Seç", 
                         style: TextStyle(
                           fontSize: 14, 
-                          fontWeight: FontWeight.w800, 
+                          fontWeight: FontWeight.w600, 
                           color: date != null ? Colors.white : Colors.white54
                         )
                       ),
@@ -1318,10 +1403,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   Widget _buildSparePartsBanner(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: _cardColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFF10B981).withOpacity(0.4), width: 1.5),
-        boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.15), blurRadius: 15, offset: const Offset(0, 5))]
+        border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 5))]
       ),
       child: Material(
         color: Colors.transparent,
@@ -1341,11 +1426,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withOpacity(0.15), 
+                    color: _primaryColor.withOpacity(0.1), 
                     shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFF10B981).withOpacity(0.4))
                   ),
-                  child: const Icon(Icons.storefront_rounded, color: Color(0xFF10B981), size: 32),
+                  child: const Icon(Icons.storefront_rounded, color: _primaryColor, size: 32),
                 ),
                 const SizedBox(width: 16),
                 const Expanded(
@@ -1354,11 +1438,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                     children: [
                       Text("Yedek Parça Pazarı", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
                       SizedBox(height: 4),
-                      Text("Şehrinizdeki çıkma/yeni yedek parçaları bulun veya ilan verin.", style: TextStyle(color: Colors.white60, fontSize: 13, fontWeight: FontWeight.w500, height: 1.3)),
+                      Text("Şehrinizdeki çıkma/yeni yedek parçaları bulun veya ilan verin.", style: TextStyle(color: Colors.white54, fontSize: 13, fontWeight: FontWeight.w500, height: 1.3)),
                     ],
                   ),
                 ),
-                const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF10B981), size: 18),
+                const Icon(Icons.arrow_forward_ios_rounded, color: _primaryColor, size: 18),
               ],
             ),
           ),
@@ -1372,76 +1456,124 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      elevation: 0,
       builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1E293B),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-            border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.4), width: 1.5),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 40, offset: const Offset(0, -10))
-            ]
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(context).bottom,
           ),
-          child: SafeArea(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 48,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: Colors.white24,
-                        borderRadius: BorderRadius.circular(10)
-                      )
-                    )
-                  ),
-                  const SizedBox(height: 12),
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: Container(
-                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.08), shape: BoxShape.circle),
-                      child: IconButton(
-                        icon: const Icon(Icons.close_rounded, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: _cardColor.withOpacity(0.95),
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.6), blurRadius: 30, offset: const Offset(0, 10))
+                  ]
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: _primaryColor.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Icon(Icons.campaign_rounded, color: _primaryColor, size: 24),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  ad['title'] ?? 'Kampanya', 
+                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: -0.5),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Text("Sponsorlu İçerik", style: TextStyle(fontSize: 12, color: _primaryColor.withOpacity(0.8), fontWeight: FontWeight.w700)),
+                              ],
+                            ),
+                          ),
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(20),
+                              onTap: () => Navigator.pop(context),
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle),
+                                child: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
+                      const SizedBox(height: 20),
+                      
+                      if (ad['image_url'] != null && ad['image_url'].toString().isNotEmpty) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            height: 160,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: _bgColor,
+                              border: Border.all(color: Colors.white.withOpacity(0.05)),
+                            ),
+                            child: _buildSafeNetworkImage(ad['image_url'], width: double.infinity, fit: BoxFit.cover),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                      
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.sizeOf(context).height * 0.25, 
+                        ),
+                        child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          child: Text(
+                            ad['description'] ?? 'Detaylı bilgi için iletişim kurun.',
+                            style: TextStyle(fontSize: 14, color: _textColor.withOpacity(0.85), height: 1.5, fontWeight: FontWeight.w500)
+                          ),
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _primaryColor,
+                          foregroundColor: Colors.black,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: const Text("Fırsatı Değerlendir", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                      )
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      height: 180,
-                      color: const Color(0xFF0F172A),
-                      child: _buildSafeNetworkImage(ad['image_url'], height: 180, width: double.infinity),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(ad['title'] ?? 'Kampanya', textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white)),
-                  const SizedBox(height: 12),
-                  Text(
-                    ad['description'] ?? 'Detaylı bilgi için iletişim kurun.',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 14, color: Colors.white70, height: 1.5)
-                  ),
-                  const SizedBox(height: 32),
-                  ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFF59E0B),
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                    child: const Text("Fırsatı Değerlendir", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                  )
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -1450,11 +1582,13 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   Widget _buildTopSection() {
     final int totalItems = ads.length + 1;
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final screenWidth = MediaQuery.sizeOf(context).width;
 
     return Column(
       children: [
         SizedBox(
-          height: 130,
+          height: screenHeight * 0.16 < 140 ? 140 : (screenWidth > 800 ? 180 : screenHeight * 0.16),
           child: PageView.builder(
             controller: _adPageController,
             physics: const BouncingScrollPhysics(),
@@ -1490,7 +1624,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                     width: selectedIdx == index ? 24 : 8,
                     height: 6,
                     decoration: BoxDecoration(
-                      color: selectedIdx == index ? const Color(0xFF10B981) : Colors.white.withOpacity(0.2),
+                      color: selectedIdx == index ? _primaryColor : Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -1507,9 +1641,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: _cardColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFF10B981).withOpacity(0.2), width: 1.5),
+        border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 8))],
       ),
       child: Row(
@@ -1517,11 +1651,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+              color: _primaryColor.withOpacity(0.1),
               shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 5))]
             ),
-            child: const Icon(Icons.bolt_rounded, color: Colors.white, size: 32),
+            child: const Icon(Icons.bolt_rounded, color: _primaryColor, size: 32),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -1531,7 +1664,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
               children: [
                 Text("Oto Yardım Yanınızda", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white.withOpacity(0.95), letterSpacing: -0.5)),
                 const SizedBox(height: 6),
-                Text("Araçlarınızı güvenle takip edin, yolda kaldığınızda tek tıkla en yakın ustayı çağırın.", style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.7), height: 1.4, fontWeight: FontWeight.w600)),
+                Text("Araçlarınızı güvenle takip edin, yolda kaldığınızda tek tıkla en yakın ustayı çağırın.", style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.6), height: 1.4, fontWeight: FontWeight.w500)),
               ],
             ),
           )
@@ -1548,9 +1681,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       onTap: () => _showAdDetailsModal(context, ad),
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF1E293B),
+          color: _cardColor,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.4), width: 1.5),
+          border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5),
           boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 8))],
         ),
         clipBehavior: Clip.antiAlias,
@@ -1567,7 +1700,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                     gradient: LinearGradient(
                       colors: [
                         Colors.black.withOpacity(0.95), 
-                        Colors.black.withOpacity(0.6),
+                        Colors.black.withOpacity(0.8),
                         Colors.transparent,             
                       ],
                       begin: Alignment.centerLeft,
@@ -1583,11 +1716,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFD97706)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                      color: _primaryColor.withOpacity(0.1),
                       shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: const Color(0xFFF59E0B).withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 4))]
                     ),
-                    child: const Icon(Icons.campaign_rounded, color: Colors.white, size: 24),
+                    child: const Icon(Icons.campaign_rounded, color: _primaryColor, size: 24),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -1597,8 +1729,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(color: const Color(0xFFF59E0B), borderRadius: BorderRadius.circular(4)),
-                          child: const Text("SPONSORLU", style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                          decoration: BoxDecoration(color: _primaryColor, borderRadius: BorderRadius.circular(4)),
+                          child: const Text("SPONSORLU", style: TextStyle(color: Colors.black, fontSize: 9, fontWeight: FontWeight.bold)),
                         ),
                         const SizedBox(height: 6),
                         Text(
@@ -1620,8 +1752,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                             fontSize: 12, 
                             color: Colors.white.withOpacity(0.85), 
                             height: 1.3, 
-                            fontWeight: FontWeight.w600,
-                            shadows: const [Shadow(color: Colors.black, blurRadius: 2)],
+                            fontWeight: FontWeight.w500,
+                            shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
                           ), 
                           maxLines: 2, 
                           overflow: TextOverflow.ellipsis
@@ -1642,13 +1774,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   
   @override
   Widget build(BuildContext context) {
-    const Color bgColor = Color(0xFF0F172A);
-    const Color cardColor = Color(0xFF1E293B);
-    const Color textColor = Colors.white;
-    const Color subtitleColor = Color(0xFF94A3B8);
+    final Size size = MediaQuery.sizeOf(context);
+    final double horizontalPadding = size.width > 600 ? 32.0 : 16.0;
 
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: _bgColor,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: Image.asset('assets/images/logo.png', height: 28, fit: BoxFit.contain), 
@@ -1656,16 +1786,16 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
         elevation: 0,
         centerTitle: true,
         leadingWidth: 64,
-        iconTheme: const IconThemeData(color: textColor),
+        iconTheme: const IconThemeData(color: _textColor),
         leading: IconButton(
           tooltip: 'Çıkış Yap',
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFFEF4444).withOpacity(0.15),
+              color: _dangerColor.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.power_settings_new_rounded, color: Color(0xFFEF4444), size: 20),
+            child: const Icon(Icons.power_settings_new_rounded, color: _dangerColor, size: 20),
           ),
           onPressed: _showLogoutDialog,
         ),
@@ -1674,7 +1804,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
             alignment: Alignment.center,
             children: [
               IconButton(
-                icon: Icon(Icons.notifications_rounded, color: unreadCount > 0 ? const Color(0xFF10B981) : textColor, size: 26),
+                icon: Icon(Icons.notifications_rounded, color: unreadCount > 0 ? _primaryColor : _textColor, size: 26),
                 onPressed: _showNotificationsDialog,
               ),
               if (unreadCount > 0)
@@ -1684,9 +1814,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                   child: Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEF4444), 
+                      color: _dangerColor, 
                       shape: BoxShape.circle,
-                      border: Border.all(color: cardColor, width: 2)
+                      border: Border.all(color: _bgColor, width: 2)
                     ),
                     child: Text(
                       unreadCount > 9 ? "9+" : unreadCount.toString(), 
@@ -1703,159 +1833,161 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)]), 
+                  color: _primaryColor.withOpacity(0.1), 
                   shape: BoxShape.circle, 
-                  boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 4))]
                 ),
-                child: const Icon(Icons.person_rounded, color: Colors.white, size: 20),
+                child: const Icon(Icons.person_rounded, color: _primaryColor, size: 20),
               ),
             ),
           )
         ],
-        flexibleSpace: IgnorePointer(
-          child: ClipRect(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: bgColor.withOpacity(0.7), 
-                  border: Border(bottom: BorderSide(color: const Color(0xFF10B981).withOpacity(0.1)))
-                ),
-              ),
-            ),
+        flexibleSpace: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+            child: Container(color: Colors.transparent),
           ),
         ),
       ),
       body: isLoading 
-        ? Center(child: CircularProgressIndicator(color: const Color(0xFF10B981), strokeWidth: 4, backgroundColor: const Color(0xFF10B981).withOpacity(0.2)))
-        : Container(
-            decoration: BoxDecoration(
-              gradient: RadialGradient(
-                center: Alignment.topRight,
-                radius: 1.5,
-                colors: [
-                  const Color(0xFF10B981).withOpacity(0.1),
-                  bgColor,
-                ],
-              )
-            ),
-            child: SafeArea(
-              child: FadeTransition(
-                opacity: _fadeController,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    return RefreshIndicator(
-                      color: const Color(0xFF10B981),
-                      onRefresh: _fetchAllDataConcurrently,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
-                        child: Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 800),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                _buildTopSection(),
-                                const SizedBox(height: 24),
-                                _buildSparePartsBanner(context), 
-                                const SizedBox(height: 32),
-                                if (activeJobId != null) ...[
-                                  Container(
-                                    margin: const EdgeInsets.only(bottom: 24),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(20),
-                                      gradient: const LinearGradient(colors: [Color(0xFFEF4444), Color(0xFFB91C1C)]),
-                                      boxShadow: [BoxShadow(color: const Color(0xFFEF4444).withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 5))]
-                                    ),
-                                    child: ListTile(
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                      leading: const Icon(Icons.warning_rounded, color: Colors.white, size: 32),
-                                      title: const Text("Devam Eden İşleminiz Var", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: -0.3)),
-                                      subtitle: const Padding(
-                                        padding: EdgeInsets.only(top: 4.0),
-                                        child: Text("Mevcut işlemi tamamlamadan yeni talep oluşturamazsınız.", style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600, fontSize: 13)),
-                                      ),
-                                      trailing: Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-                                        child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16)
-                                      ),
-                                      onTap: () {
-                                        if (activeJobStatus == 'searching') {
-                                          Navigator.push(context, MaterialPageRoute(builder: (_) => CustomerBidsScreen(jobId: activeJobId!, customerId: widget.customerId))).then((_) => _checkActiveJob());
-                                        } else {
-                                          Navigator.push(context, MaterialPageRoute(builder: (_) => JobTrackingScreen(jobId: activeJobId!, userType: 'customer', userId: widget.customerId))).then((_) => _checkActiveJob());
-                                        }
-                                      },
-                                    ),
-                                  ),
-                                ],
-                                Row(
-                                  children: [
-                                    Container(width: 5, height: 24, decoration: BoxDecoration(color: const Color(0xFF10B981), borderRadius: BorderRadius.circular(10))),
-                                    const SizedBox(width: 12),
-                                    const Text("Hızlı Hizmet Çağır", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: textColor, letterSpacing: -0.5)),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                _buildServiceCards(context, constraints),
-                                const SizedBox(height: 32),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Container(width: 5, height: 24, decoration: BoxDecoration(color: const Color(0xFF10B981), borderRadius: BorderRadius.circular(10))),
-                                        const SizedBox(width: 12),
-                                        const Text("Garajım", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: textColor, letterSpacing: -0.5)),
-                                      ],
-                                    ),
+        ? const Center(child: CircularProgressIndicator(color: _primaryColor, strokeWidth: 3))
+        : Stack(
+            children: [
+              Positioned(
+                top: MediaQuery.of(context).size.height * 0.1,
+                right: -MediaQuery.of(context).size.width * 0.2,
+                child: Container(
+                  width: MediaQuery.of(context).size.width,
+                  height: MediaQuery.of(context).size.width,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [_primaryColor.withOpacity(0.05), Colors.transparent],
+                    ),
+                  ),
+                ),
+              ),
+              SafeArea(
+                child: FadeTransition(
+                  opacity: _fadeController,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return RefreshIndicator(
+                        color: _primaryColor,
+                        backgroundColor: _cardColor,
+                        onRefresh: _fetchAllDataConcurrently,
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 24.0),
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 900),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _buildTopSection(),
+                                  const SizedBox(height: 24),
+                                  _buildSparePartsBanner(context), 
+                                  const SizedBox(height: 32),
+                                  if (activeJobId != null) ...[
                                     Container(
+                                      margin: const EdgeInsets.only(bottom: 24),
                                       decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(12),
-                                        gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)]),
-                                        boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 4))],
+                                        borderRadius: BorderRadius.circular(20),
+                                        color: _dangerColor.withOpacity(0.1),
+                                        border: Border.all(color: _dangerColor.withOpacity(0.3))
                                       ),
-                                      child: ElevatedButton.icon(
-                                        onPressed: () {
-                                          if (vehicles.length >= 3 && !isPremium) {
-                                            _showPremiumModal();
-                                          } else {
-                                            _showVehicleDialog();
-                                          }
-                                        },
-                                        icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
-                                        label: const Text("Araç Ekle", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
-                                        style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: ListTile(
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                          leading: const Icon(Icons.warning_rounded, color: _dangerColor, size: 32),
+                                          title: const Text("Devam Eden İşleminiz Var", style: TextStyle(color: _dangerColor, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: -0.3)),
+                                          subtitle: const Padding(
+                                            padding: EdgeInsets.only(top: 4.0),
+                                            child: Text("Mevcut işlemi tamamlamadan yeni talep oluşturamazsınız.", style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w500, fontSize: 13)),
+                                          ),
+                                          trailing: Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(color: _dangerColor.withOpacity(0.1), shape: BoxShape.circle),
+                                            child: const Icon(Icons.arrow_forward_ios_rounded, color: _dangerColor, size: 16)
+                                          ),
+                                          onTap: () {
+                                            if (activeJobStatus == 'searching') {
+                                              Navigator.push(context, MaterialPageRoute(builder: (_) => CustomerBidsScreen(jobId: activeJobId!, customerId: widget.customerId))).then((_) => _checkActiveJob());
+                                            } else {
+                                              Navigator.push(context, MaterialPageRoute(builder: (_) => JobTrackingScreen(jobId: activeJobId!, userType: 'customer', userId: widget.customerId))).then((_) => _checkActiveJob());
+                                            }
+                                          },
+                                        ),
                                       ),
                                     ),
                                   ],
-                                ),
-                                const SizedBox(height: 16),
-                                if (vehicles.isEmpty)
-                                  _buildEmptyVehiclesCard(cardColor, textColor, subtitleColor)
-                                else ...[
-                                  SlideTransition(
-                                    position: Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
-                                      CurvedAnimation(parent: _fadeController, curve: Curves.easeOutBack)
-                                    ),
-                                    child: _buildVehicleCarousel(cardColor, textColor, subtitleColor),
+                                  Row(
+                                    children: [
+                                      Container(width: 5, height: 24, decoration: BoxDecoration(color: _primaryColor, borderRadius: BorderRadius.circular(10))),
+                                      const SizedBox(width: 12),
+                                      const Text("Hızlı Hizmet Çağır", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: -0.5)),
+                                    ],
                                   ),
                                   const SizedBox(height: 16),
-                                  _buildCarouselIndicators(),
+                                  _buildServiceCards(context, constraints),
+                                  const SizedBox(height: 32),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Container(width: 5, height: 24, decoration: BoxDecoration(color: _primaryColor, borderRadius: BorderRadius.circular(10))),
+                                          const SizedBox(width: 12),
+                                          const Text("Garajım", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: -0.5)),
+                                        ],
+                                      ),
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(12),
+                                          color: Colors.white.withOpacity(0.05),
+                                          border: Border.all(color: Colors.white.withOpacity(0.1))
+                                        ),
+                                        child: ElevatedButton.icon(
+                                          onPressed: () {
+                                            if (vehicles.length >= 3 && !isPremium) {
+                                              _showPremiumModal();
+                                            } else {
+                                              _showVehicleDialog();
+                                            }
+                                          },
+                                          icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+                                          label: const Text("Araç Ekle", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+                                          style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  if (vehicles.isEmpty)
+                                    _buildEmptyVehiclesCard(_cardColor, _textColor, _subtitleColor)
+                                  else ...[
+                                    SlideTransition(
+                                      position: Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+                                        CurvedAnimation(parent: _fadeController, curve: Curves.easeOutBack)
+                                      ),
+                                      child: _buildVehicleCarousel(context, _cardColor, _textColor, _subtitleColor),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    _buildCarouselIndicators(),
+                                  ],
+                                  const SizedBox(height: 32),
                                 ],
-                                const SizedBox(height: 32),
-                              ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    );
-                  }
+                      );
+                    }
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
     );
   }
@@ -1902,16 +2034,16 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: cardColor.withOpacity(0.6), 
+        color: cardColor, 
         borderRadius: BorderRadius.circular(24), 
-        border: Border.all(color: const Color(0xFF10B981).withOpacity(0.2), width: 1.0),
+        border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.0),
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(color: const Color(0xFF10B981).withOpacity(0.05), shape: BoxShape.circle),
-            child: Icon(Icons.directions_car_rounded, size: 48, color: const Color(0xFF10B981).withOpacity(0.7))
+            decoration: BoxDecoration(color: Colors.white.withOpacity(0.03), shape: BoxShape.circle),
+            child: Icon(Icons.directions_car_rounded, size: 48, color: subtitleColor.withOpacity(0.5))
           ),
           const SizedBox(height: 16),
           Text("Garajınız Şu An Boş", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: textColor)),
@@ -1922,9 +2054,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     );
   }
 
-  Widget _buildVehicleCarousel(Color cardColor, Color textColor, Color subtitleColor) {
+  Widget _buildVehicleCarousel(BuildContext context, Color cardColor, Color textColor, Color subtitleColor) {
+    final screenHeight = MediaQuery.sizeOf(context).height;
     return SizedBox(
-      height: 310, 
+      height: screenHeight * 0.4 < 310 ? 310 : screenHeight * 0.4, 
       child: PageView.builder(
         controller: _vehiclePageController,
         physics: const BouncingScrollPhysics(),
@@ -1963,9 +2096,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: isSelected ? const Color(0xFF10B981).withOpacity(0.4) : Colors.white.withOpacity(0.05), width: isSelected ? 2 : 1.0),
+        border: Border.all(color: isSelected ? _primaryColor.withOpacity(0.5) : Colors.white.withOpacity(0.05), width: isSelected ? 2 : 1.0),
         boxShadow: [
-          if (isSelected) BoxShadow(color: const Color(0xFF10B981).withOpacity(0.15), blurRadius: 20, spreadRadius: 2, offset: const Offset(0, 5))
+          if (isSelected) BoxShadow(color: _primaryColor.withOpacity(0.1), blurRadius: 20, spreadRadius: -5, offset: const Offset(0, 5))
           else BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 5))
         ],
       ),
@@ -1979,7 +2112,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
               height: 140,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF10B981).withOpacity(0.05),
+                color: _primaryColor.withOpacity(0.03),
               ),
             )
           ),
@@ -2018,7 +2151,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Text(vehicle['brand_model'] ?? '', style: TextStyle(fontSize: 14, color: subtitleColor, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          Text(vehicle['brand_model'] ?? '', style: TextStyle(fontSize: 14, color: subtitleColor, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
                         ],
                       ),
                     ),
@@ -2028,8 +2161,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
                         padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(color: const Color(0xFF10B981).withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
-                        child: const Icon(Icons.settings_rounded, color: Color(0xFF10B981), size: 20),
+                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(12)),
+                        child: const Icon(Icons.settings_rounded, color: Colors.white70, size: 20),
                       ),
                     )
                   ],
@@ -2040,11 +2173,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withOpacity(0.08),
+                        color: _primaryColor.withOpacity(0.05),
                         shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.15), blurRadius: 20)],
                       ),
-                      child: const Icon(Icons.directions_car_rounded, size: 52, color: Color(0xFF10B981)),
+                      child: const Icon(Icons.directions_car_rounded, size: 52, color: _primaryColor),
                     ),
                   ),
                 ),
@@ -2052,7 +2184,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0F172A).withOpacity(0.5),
+                    color: Colors.white.withOpacity(0.02),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: Colors.white.withOpacity(0.05))
                   ),
@@ -2076,8 +2208,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                 Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
-                    gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)]),
-                    boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 4))]
+                    color: _primaryColor,
                   ),
                   child: ElevatedButton(
                     onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => VehiclePanelScreen(vehicle: vehicle, customerId: widget.customerId))).then((_) => _fetchVehicles()),
@@ -2087,7 +2218,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                       padding: const EdgeInsets.symmetric(vertical: 12), 
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
                     ),
-                    child: const Text("Detaylı Yönetim Paneli", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.5)),
+                    child: const Text("Yönetim Paneli", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.5)),
                   ),
                 )
               ],
@@ -2104,16 +2235,16 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
     if (isDate) {
       if (date == null) {
-        statusColor = const Color(0xFF64748B);
+        statusColor = Colors.white38;
         valueText = "Yok";
       } else {
         int daysLeft = date.difference(DateTime.now()).inDays;
-        statusColor = daysLeft <= 15 ? const Color(0xFFEF4444) : (daysLeft <= 30 ? const Color(0xFFF59E0B) : const Color(0xFF10B981));
+        statusColor = daysLeft <= 15 ? _dangerColor : (daysLeft <= 30 ? Colors.amber : _primaryColor);
         valueText = daysLeft < 0 ? "${daysLeft.abs()}G Geçti" : "${daysLeft}G";
       }
     } else {
       int remainingKm = targetKm - currentKm;
-      statusColor = remainingKm <= 1000 ? const Color(0xFFEF4444) : const Color(0xFF10B981);
+      statusColor = remainingKm <= 1000 ? _dangerColor : _primaryColor;
       valueText = remainingKm < 0 ? "${remainingKm.abs()}KM Geçti" : "${remainingKm}KM";
     }
 
@@ -2124,7 +2255,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
           children: [
             Icon(icon, color: statusColor, size: 14),
             const SizedBox(width: 4),
-            Text(title, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.w700)),
+            Text(title, style: const TextStyle(color: _subtitleColor, fontSize: 11, fontWeight: FontWeight.w600)),
           ],
         ),
         const SizedBox(height: 6),
@@ -2147,9 +2278,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
               width: selectedIdx == index ? 24 : 8,
               height: 8,
               decoration: BoxDecoration(
-                color: selectedIdx == index ? const Color(0xFF10B981) : Colors.white.withOpacity(0.2),
+                color: selectedIdx == index ? _primaryColor : Colors.white.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(4),
-                boxShadow: selectedIdx == index ? [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.5), blurRadius: 6)] : []
               ),
             ),
           ),
@@ -2220,10 +2350,10 @@ class __AnimatedServiceCardState extends State<_AnimatedServiceCard> with Ticker
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: widget.service['color'].withOpacity(0.3), width: 1.0),
+                    border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.0),
                     boxShadow: [
                       BoxShadow(
-                        color: widget.service['color'].withOpacity(0.15 + (_floatController.value * 0.15)),
+                        color: Colors.black.withOpacity(0.15 + (_floatController.value * 0.1)),
                         blurRadius: 15 + (_floatController.value * 5),
                         offset: const Offset(0, 5),
                       ),
@@ -2239,7 +2369,7 @@ class __AnimatedServiceCardState extends State<_AnimatedServiceCard> with Ticker
                           child: Container(
                             width: 80,
                             height: 80,
-                            decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.05)),
+                            decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.02)),
                           ),
                         ),
                         Column(
@@ -2250,10 +2380,9 @@ class __AnimatedServiceCardState extends State<_AnimatedServiceCard> with Ticker
                               child: Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF0F172A),
+                                  color: Colors.white.withOpacity(0.02),
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: widget.service['color'].withOpacity(0.4), width: 1.5),
-                                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 5))]
+                                  border: Border.all(color: widget.service['color'].withOpacity(0.2), width: 1.5),
                                 ),
                                 child: Icon(widget.service['icon'], color: widget.service['color'], size: 36),
                               ),

@@ -1,5 +1,6 @@
+// chat_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Haptic feedback için eklendi
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
@@ -24,31 +25,27 @@ class ChatScreen extends StatefulWidget {
   });
 
   @override
-  _ChatScreenState createState() => _ChatScreenState();
+  State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   final String baseUrl = "https://eliteagency.sbs/api.php";
   final TextEditingController _msgController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
   
+  // Mesajları ters sırada tutacağız (reverse: true için)
   List messages = [];
   Timer? _timer;
   bool isUploading = false;
   bool _isFetching = false;
-  bool _isTyping = false; // Dinamik buton için state
+  bool _isTyping = false; 
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _fetchMessages();
-    
-    // Timer polling (İleride Socket.io'ya geçirilebilir)
-    _timer = Timer.periodic(const Duration(seconds: 3), (_) {
-      if (!_isFetching) _fetchMessages();
-    });
+    _startPolling();
 
-    // Yazma durumunu dinleme
     _msgController.addListener(() {
       setState(() {
         _isTyping = _msgController.text.trim().isNotEmpty;
@@ -56,16 +53,36 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  void _startPolling() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (!_isFetching && mounted) {
+        _fetchMessages();
+      }
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _timer?.cancel();
+    } else if (state == AppLifecycleState.resumed) {
+      _startPolling();
+    }
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _msgController.dispose();
-    _scrollController.dispose();
     super.dispose();
   }
 
   Future<void> _fetchMessages() async {
+    if (_isFetching) return;
     _isFetching = true;
+    
     try {
       final response = await http.get(Uri.parse(
           "$baseUrl?action=get_messages&job_id=${widget.jobId}&user_id=${widget.currentUserId}&receiver_id=${widget.receiverId}"));
@@ -73,12 +90,15 @@ class _ChatScreenState extends State<ChatScreen> {
       if (response.statusCode == 200 && mounted) {
         final data = json.decode(response.body);
         if (data['status'] == 'success') {
-          final newMessages = data['messages'] ?? [];
-          if (newMessages.length > messages.length || _hasReadStatusChanged(newMessages)) {
+          final List newMessages = data['messages'] ?? [];
+          
+          // reverse: true kullanacağımız için listeyi ters çevirerek state'e atıyoruz.
+          final reversedNewMessages = newMessages.reversed.toList();
+          
+          if (reversedNewMessages.length != messages.length || _hasReadStatusChanged(reversedNewMessages)) {
             setState(() {
-              messages = newMessages;
+              messages = reversedNewMessages;
             });
-            _scrollToBottom();
           }
           _markAsRead();
         }
@@ -90,10 +110,10 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  bool _hasReadStatusChanged(List newMessages) {
-    if (messages.length != newMessages.length) return true;
+  bool _hasReadStatusChanged(List reversedNewMessages) {
+    if (messages.length != reversedNewMessages.length) return true;
     for (int i = 0; i < messages.length; i++) {
-      if (messages[i]['is_read'] != newMessages[i]['is_read']) {
+      if (messages[i]['is_read'] != reversedNewMessages[i]['is_read']) {
         return true;
       }
     }
@@ -115,23 +135,10 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void _scrollToBottom() {
-    if (_scrollController.hasClients && messages.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      });
-    }
-  }
-
   Future<void> _sendMessage({File? mediaFile, String mediaType = 'text'}) async {
     final text = _msgController.text.trim();
     if (text.isEmpty && mediaFile == null) return;
     
-    // Gönderim sırasında hafif titreşim
     HapticFeedback.lightImpact();
 
     final previousText = text;
@@ -154,17 +161,28 @@ class _ChatScreenState extends State<ChatScreen> {
       }
 
       final streamedResponse = await request.send();
-      if (streamedResponse.statusCode == 200 || streamedResponse.statusCode == 201) {
-        await _fetchMessages();
-        _scrollToBottom();
+      final response = await http.Response.fromStream(streamedResponse);
+      
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = json.decode(response.body);
+        if (responseData['status'] == 'success') {
+          await _fetchMessages();
+        } else {
+          throw Exception(responseData['message'] ?? 'API Hatası');
+        }
       } else {
-        throw Exception('API Hatası');
+        throw Exception('Bağlantı Hatası: ${response.statusCode}');
       }
     } catch (e) {
       if (mounted) {
         _msgController.text = previousText; 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Mesaj gönderilemedi."), backgroundColor: Color(0xFFFF3366)),
+          SnackBar(
+            content: const Text("Mesaj gönderilemedi, bağlantınızı kontrol edin.", style: TextStyle(color: Colors.white)), 
+            backgroundColor: const Color(0xFFFF3366).withOpacity(0.9),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
         );
       }
     } finally {
@@ -195,26 +213,29 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     const Color bgColor = Color(0xFF030305);
     const Color primaryColor = Color(0xFF00FFA3);
-    final topPadding = MediaQuery.of(context).padding.top;
 
     return Scaffold(
       backgroundColor: bgColor,
       extendBodyBehindAppBar: true,
-      resizeToAvoidBottomInset: true,
       appBar: _buildAppBar(primaryColor),
       body: Stack(
         children: [
           _buildBackgroundGlow(),
           SafeArea(
             bottom: false,
-            top: false, 
             child: Column(
               children: [
+                if (isUploading)
+                  LinearProgressIndicator(
+                    color: primaryColor, 
+                    backgroundColor: Colors.transparent,
+                    minHeight: 2,
+                  ),
                 Expanded(
                   child: ListView.builder(
-                    controller: _scrollController,
-                    padding: EdgeInsets.only(
-                      top: topPadding + kToolbarHeight + 20, 
+                    reverse: true, // Listeyi ters çevirir. Klavye açıldığında kusursuz çalışır.
+                    padding: const EdgeInsets.only(
+                      top: 20, 
                       bottom: 20, 
                       left: 16, 
                       right: 16
@@ -228,8 +249,6 @@ class _ChatScreenState extends State<ChatScreen> {
                     },
                   ),
                 ),
-                if (isUploading)
-                  LinearProgressIndicator(color: primaryColor, backgroundColor: Colors.white.withOpacity(0.1)),
                 _buildInputArea(primaryColor),
               ],
             ),
@@ -240,56 +259,54 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   PreferredSizeWidget _buildAppBar(Color primaryColor) {
-    return PreferredSize(
-      preferredSize: const Size.fromHeight(kToolbarHeight),
-      child: ClipRect(
+    return AppBar(
+      backgroundColor: Colors.black.withOpacity(0.5),
+      elevation: 0,
+      flexibleSpace: ClipRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-          child: AppBar(
-            backgroundColor: Colors.white.withOpacity(0.02),
-            elevation: 0,
-            leading: IconButton(
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle),
-                child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: Colors.white),
-              ),
-              onPressed: () => Navigator.pop(context),
-            ),
-            title: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: primaryColor.withOpacity(0.15), shape: BoxShape.circle),
-                  child: Icon(Icons.person, color: primaryColor),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    widget.receiverName,
-                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Colors.white, letterSpacing: -0.5),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+          child: Container(color: Colors.transparent),
+        ),
+      ),
+      leading: IconButton(
+        icon: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), shape: BoxShape.circle),
+          child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: Colors.white),
+        ),
+        onPressed: () => Navigator.pop(context),
+      ),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: primaryColor.withOpacity(0.2), shape: BoxShape.circle),
+            child: Icon(Icons.person, color: primaryColor, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              widget.receiverName,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: Colors.white, letterSpacing: -0.3),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
   Widget _buildBackgroundGlow() {
     return Positioned(
-      top: MediaQuery.of(context).size.height * 0.2,
-      left: -MediaQuery.of(context).size.width * 0.2,
+      top: MediaQuery.of(context).size.height * 0.1,
+      left: -MediaQuery.of(context).size.width * 0.3,
       child: Container(
-        width: MediaQuery.of(context).size.width,
-        height: MediaQuery.of(context).size.width,
+        width: MediaQuery.of(context).size.width * 1.5,
+        height: MediaQuery.of(context).size.width * 1.5,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: RadialGradient(
-            colors: [const Color(0xFF00FFA3).withOpacity(0.05), Colors.transparent],
+            colors: [const Color(0xFF00FFA3).withOpacity(0.04), Colors.transparent],
           ),
         ),
       ),
@@ -300,17 +317,19 @@ class _ChatScreenState extends State<ChatScreen> {
     final hasMedia = msg['media_url'] != null && msg['media_url'].toString().isNotEmpty;
     final isRead = msg['is_read'] == 1 || msg['is_read'] == '1' || msg['is_read'] == true;
     
-    // Saat verisi formatlama (Eğer API 'created_at' dönmüyorsa varsayılan gösterim)
     String timeString = "Şimdi";
-    if (msg['created_at'] != null && msg['created_at'].toString().length >= 16) {
-      timeString = msg['created_at'].toString().substring(11, 16);
+    if (msg['created_at'] != null) {
+      final DateTime? date = DateTime.tryParse(msg['created_at'].toString())?.toLocal();
+      if (date != null) {
+        timeString = "${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}";
+      }
     }
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
         decoration: BoxDecoration(
           color: isMe ? primaryColor : const Color(0xFF1E1E24), 
           borderRadius: BorderRadius.only(
@@ -320,8 +339,10 @@ class _ChatScreenState extends State<ChatScreen> {
             bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(20),
           ),
           boxShadow: isMe ? [
-            BoxShadow(color: primaryColor.withOpacity(0.15), blurRadius: 8, offset: const Offset(0, 3))
-          ] : [],
+            BoxShadow(color: primaryColor.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))
+          ] : [
+            BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 5, offset: const Offset(0, 2))
+          ],
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -330,46 +351,59 @@ class _ChatScreenState extends State<ChatScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (hasMedia && msg['media_type'] == 'image')
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 250),
-                    child: Image.network(
-                      "https://eliteagency.sbs/${msg['media_url']}",
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.white54, size: 50),
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return const SizedBox(
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6.0),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 250),
+                      child: Image.network(
+                        "https://eliteagency.sbs/${msg['media_url']}",
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
                           height: 100,
-                          child: Center(child: CircularProgressIndicator(color: Colors.white54)),
-                        );
-                      },
+                          color: Colors.white10,
+                          child: const Center(child: Icon(Icons.broken_image, color: Colors.white54, size: 40)),
+                        ),
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            height: 150,
+                            color: Colors.white10,
+                            child: const Center(child: CircularProgressIndicator(color: Colors.white54, strokeWidth: 2)),
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
               if (hasMedia && msg['media_type'] == 'video')
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(12)),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 24),
-                      SizedBox(width: 8),
-                      Flexible(child: Text("Video Eki", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis))
-                    ],
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6.0),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: Colors.black38, borderRadius: BorderRadius.circular(12)),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 28),
+                        SizedBox(width: 8),
+                        Flexible(child: Text("Video Eki", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis))
+                      ],
+                    ),
                   ),
                 ),
               if (msg['message_text'] != null && msg['message_text'].toString().trim().isNotEmpty)
-                Padding(
-                  padding: EdgeInsets.only(top: hasMedia ? 8.0 : 0.0),
-                  child: Text(
-                    msg['message_text'],
-                    style: TextStyle(color: isMe ? Colors.black87 : Colors.white, fontSize: 15, fontWeight: FontWeight.w500, height: 1.3),
+                Text(
+                  msg['message_text'],
+                  style: TextStyle(
+                    color: isMe ? const Color(0xFF0A2B1D) : Colors.white, 
+                    fontSize: 15, 
+                    fontWeight: FontWeight.w500, 
+                    height: 1.3
                   ),
                 ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -377,7 +411,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   Text(
                     timeString,
                     style: TextStyle(
-                      color: isMe ? Colors.black54 : Colors.white54,
+                      color: isMe ? const Color(0xFF0A2B1D).withOpacity(0.6) : Colors.white54,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                     ),
@@ -386,8 +420,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     const SizedBox(width: 4),
                     Icon(
                       isRead ? Icons.done_all_rounded : Icons.check_rounded, 
-                      size: 15,
-                      color: isRead ? Colors.black87 : Colors.black45, 
+                      size: 14,
+                      color: isRead ? const Color(0xFF0A2B1D) : const Color(0xFF0A2B1D).withOpacity(0.5), 
                     ),
                   ]
                 ],
@@ -400,78 +434,82 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildInputArea(Color primaryColor) {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-        child: Container(
-          padding: EdgeInsets.only(
-            left: 12, 
-            right: 12, 
-            top: 10, 
-            bottom: MediaQuery.of(context).padding.bottom + 10
-          ),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.04),
-            border: Border(top: BorderSide(color: Colors.white.withOpacity(0.05))),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4.0),
-                child: GestureDetector(
-                  onTap: () => _showMediaBottomSheet(primaryColor),
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle),
-                    child: const Icon(Icons.add_a_photo_rounded, color: Colors.white, size: 22),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: TextField(
-                    controller: _msgController,
-                    minLines: 1,
-                    maxLines: 4,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 15),
-                    textCapitalization: TextCapitalization.sentences,
-                    onTap: _scrollToBottom,
-                    decoration: const InputDecoration(
-                      hintText: "Mesajınızı yazın...",
-                      hintStyle: TextStyle(color: Colors.white54, fontWeight: FontWeight.w400),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      border: InputBorder.none,
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF030305).withOpacity(0.85),
+        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.05))),
+      ),
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4.0),
+                    child: GestureDetector(
+                      onTap: () => _showMediaBottomSheet(primaryColor),
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), shape: BoxShape.circle),
+                        child: const Icon(Icons.add_rounded, color: Colors.white, size: 24),
+                      ),
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4.0),
-                child: GestureDetector(
-                  onTap: _isTyping ? _sendMessage : null, // Metin yoksa buton tıklanmasın
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: _isTyping ? primaryColor : Colors.white.withOpacity(0.1), 
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.send_rounded, 
-                      color: _isTyping ? Colors.black : Colors.white54, 
-                      size: 20
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.07),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: Colors.white.withOpacity(0.1)),
+                      ),
+                      child: TextField(
+                        controller: _msgController,
+                        minLines: 1,
+                        maxLines: 5, // Daha uzun metinler için esneklik artırıldı
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 15),
+                        textCapitalization: TextCapitalization.sentences,
+                        decoration: const InputDecoration(
+                          hintText: "Mesaj gönder...",
+                          hintStyle: TextStyle(color: Colors.white54, fontWeight: FontWeight.w400),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                          border: InputBorder.none,
+                          isDense: true,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4.0),
+                    child: GestureDetector(
+                      onTap: _isTyping ? _sendMessage : null, 
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: _isTyping ? primaryColor : Colors.white.withOpacity(0.1), 
+                          shape: BoxShape.circle,
+                          boxShadow: _isTyping ? [
+                            BoxShadow(color: primaryColor.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 2))
+                          ] : [],
+                        ),
+                        child: Icon(
+                          Icons.send_rounded, 
+                          color: _isTyping ? const Color(0xFF0A2B1D) : Colors.white54, 
+                          size: 22
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -482,6 +520,7 @@ class _ChatScreenState extends State<ChatScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
@@ -503,21 +542,33 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
                 ListTile(
-                  leading: Icon(Icons.camera_alt, color: primaryColor),
-                  title: const Text("Fotoğraf Çek", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: primaryColor.withOpacity(0.1), shape: BoxShape.circle),
+                    child: Icon(Icons.camera_alt_rounded, color: primaryColor),
+                  ),
+                  title: const Text("Fotoğraf Çek", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                   onTap: () { Navigator.pop(context); _pickMedia(ImageSource.camera, 'image'); },
                 ),
                 ListTile(
-                  leading: Icon(Icons.image, color: primaryColor),
-                  title: const Text("Galeriden Seç", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: primaryColor.withOpacity(0.1), shape: BoxShape.circle),
+                    child: Icon(Icons.image_rounded, color: primaryColor),
+                  ),
+                  title: const Text("Galeriden Seç", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                   onTap: () { Navigator.pop(context); _pickMedia(ImageSource.gallery, 'image'); },
                 ),
                 ListTile(
-                  leading: Icon(Icons.videocam, color: primaryColor),
-                  title: const Text("Video Çek", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: primaryColor.withOpacity(0.1), shape: BoxShape.circle),
+                    child: Icon(Icons.videocam_rounded, color: primaryColor),
+                  ),
+                  title: const Text("Video Çek", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                   onTap: () { Navigator.pop(context); _pickMedia(ImageSource.camera, 'video'); },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
               ],
             ),
           ),

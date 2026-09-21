@@ -16,18 +16,18 @@ android {
 
     defaultConfig {
         applicationId = "com.oto.tag"
-        minSdk = flutter.minSdkVersion
+        minSdk = 21
         targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        versionCode = 15
+        versionName = "1.0.0"
     }
 
     signingConfigs {
         create("release") {
             keyAlias = "upload"
-            keyPassword = "troo4556" // new-upload-keystore.jks oluştururken belirlediğiniz şifre
+            keyPassword = "troo4556"
             storeFile = file("new-upload-keystore.jks")
-            storePassword = "troo4556" // new-upload-keystore.jks oluştururken belirlediğiniz şifre
+            storePassword = "troo4556"
         }
     }
 

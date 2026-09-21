@@ -1,8 +1,7 @@
 name: ototag
 description: Oto Eslestirme Sistemi
 publish_to: 'none'
-version: 1.0.0+14
-
+version: 1.0.0+15
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -16,20 +15,22 @@ dependencies:
   timezone: ^0.9.4
   http: ^1.2.0
   geolocator: ^11.0.0
-  flutter_map: ^7.0.2
-  latlong2: ^0.9.1
   url_launcher: ^6.3.0
   image_picker: ^1.2.3
   file_picker: ^8.1.2
   flutter_local_notifications: ^17.2.3
   in_app_purchase: ^3.1.5
   geocoding: ^5.0.0
-  flutter_map_marker_cluster: ^1.4.0
   flutter_dotenv: ^6.0.1
   onesignal_flutter: ^5.6.8
   in_app_update: ^5.0.0
   shared_preferences: ^2.5.5
   cached_network_image: ^4.0.0
+  flutter_tts: ^4.0.2
+  flutter_compass: ^0.8.1
+  google_maps_flutter: ^2.18.1
+  flutter_map: ^8.3.2
+  latlong2: ^0.10.1
 
 dev_dependencies:
   flutter_test:
@@ -46,5 +47,5 @@ flutter_launcher_icons:
 flutter:
   uses-material-design: true
   assets:
-    - assets/images/logo.png
+    - assets/images/
     - config.env

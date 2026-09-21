@@ -47,3 +47,4 @@ app.*.map.json
 /build/
 /android/app/build/
 .dart_tool/
+config.env

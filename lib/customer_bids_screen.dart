@@ -1,4 +1,4 @@
-/// Dosya: customer_bids_screen.dart
+// customer_bids_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; 
 import 'package:http/http.dart' as http;
@@ -17,23 +17,29 @@ class CustomerBidsScreen extends StatefulWidget {
   const CustomerBidsScreen({super.key, required this.jobId, required this.customerId});
 
   @override
-  _CustomerBidsScreenState createState() => _CustomerBidsScreenState();
+  State<CustomerBidsScreen> createState() => _CustomerBidsScreenState();
 }
 
-class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProviderStateMixin {
+class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProviderStateMixin, WidgetsBindingObserver {
   List bids = [];
   Timer? _timer;
   Timer? _radiusTimer;
   Timer? _blipTimer;
   int currentRadius = 10;
+  int _maxRadiusWaitCycles = 0; 
+  
+  int _bestMatchIndex = -1;
+  int _cheapestIndex = -1;
+  double _marketAverage = 0.0;
   
   bool isProcessing = false;
   bool isCancelling = false;
   bool _isDialogActive = false;
   bool _isFetching = false;
+  bool _isNavigating = false; // CRITICAL FIX: Tanımsız değişken (Undefined name) hatasını çözer
   
   final String baseUrl = "https://eliteagency.sbs/api.php";
-  int _pollInterval = 3;
+  int _pollInterval = 3; 
 
   late final AnimationController _radarController;
   late final AnimationController _rippleController;
@@ -43,9 +49,15 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
   final ValueNotifier<List<Offset>> _blips = ValueNotifier<List<Offset>>([]);
   final math.Random _random = math.Random();
 
+  // Tasarım renk paleti
+  final Color _bgColor = const Color(0xFF030305);
+  final Color _primaryColor = const Color(0xFF00FFA3);
+  final Color _cardColor = const Color(0xFF111115);
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     
     _radarController = AnimationController(vsync: this, duration: const Duration(milliseconds: 3000))..repeat();
     _rippleController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2500))..repeat();
@@ -53,14 +65,28 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     _listAnimController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
 
     _fetchBids();
-    _startPolling();
+    _startTimers();
+  }
 
+  void _startTimers() {
+    _startPolling();
+    _radiusTimer?.cancel();
     _radiusTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (bids.isEmpty && currentRadius < 50) {
-        _expandSearchRadius();
+      if (bids.isEmpty) {
+        if (currentRadius < 50) {
+          _expandSearchRadius();
+        } else {
+                    _maxRadiusWaitCycles++;
+                    if (_maxRadiusWaitCycles >= 1) { 
+                      _handleNoProvidersFound();
+                    }
+                  }
+      } else {
+        _maxRadiusWaitCycles = 0; 
       }
     });
 
+    _blipTimer?.cancel();
     _blipTimer = Timer.periodic(const Duration(milliseconds: 600), (_) {
       if (bids.isEmpty && mounted) {
         List<Offset> currentBlips = List.from(_blips.value);
@@ -73,6 +99,56 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     });
   }
 
+  Future<void> _handleNoProvidersFound() async {
+    if (_isNavigating) return; // CRITICAL FIX: Çifte tetiklenmeyi engelle
+    _isNavigating = true;
+    _cleanupTimers();
+    if (mounted) setState(() => isCancelling = true);
+    bool cancelSuccess = false;
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl?action=cancel_job"),
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: {"job_id": widget.jobId.toString()},
+      ).timeout(const Duration(seconds: 5));
+      if (response.statusCode == 200) cancelSuccess = true;
+    } catch (e) {
+      debugPrint("Timeout cancel error: $e");
+    }
+    
+    if (!mounted) return;
+    
+    if (cancelSuccess) {
+      _showTopSnackBar("Çevrenizde uygun usta bulunamadı. Lütfen daha sonra tekrar deneyin.", isError: true);
+    } else {
+      _showTopSnackBar("Bağlantı zayıf, talep sonlandırılıyor...", isError: true);
+    }
+    
+    Navigator.pushAndRemoveUntil(
+      context, 
+      MaterialPageRoute(builder: (_) => CustomerDashboardScreen(customerId: widget.customerId)), 
+      (route) => false
+    );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _cleanupTimers();
+      _radarController.stop();
+      _rippleController.stop();
+      _pulseController.stop();
+      _listAnimController.stop(); 
+    } else if (state == AppLifecycleState.resumed) {
+      _startTimers();
+      if (mounted) {
+        _radarController.repeat();
+        _rippleController.repeat();
+        _pulseController.repeat(reverse: true);
+      }
+    }
+  }
+
   void _cleanupTimers() {
     _timer?.cancel();
     _radiusTimer?.cancel();
@@ -81,6 +157,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _cleanupTimers();
     _radarController.dispose();
     _rippleController.dispose();
@@ -116,44 +193,50 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
   void _showTopSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).clearSnackBars();
+    
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.25), 
+              color: Colors.white.withOpacity(0.2), 
               shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)]
             ),
             child: Icon(isError ? Icons.error_outline_rounded : Icons.radar_rounded, color: Colors.white, size: 20),
           ),
           const SizedBox(width: 14),
-          Expanded(child: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14, letterSpacing: 0.2))),
+          Expanded(child: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14))),
         ],
       ),
-      backgroundColor: isError ? const Color(0xFFE11D48) : const Color(0xFF059669),
+      backgroundColor: isError ? const Color(0xFFFF3366) : _primaryColor.withValues(alpha: 0.9),
       behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.only(top: 16, left: 20, right: 20, bottom: 24),
+      margin: EdgeInsets.only(
+        left: 20, 
+        right: 20, 
+        bottom: MediaQuery.paddingOf(context).bottom + 20
+      ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      elevation: 10,
+      elevation: 0,
       duration: const Duration(seconds: 4),
     ));
   }
 
   Future<void> _fetchBids() async {
-    if (!mounted || _isFetching) return;
+    if (!mounted || _isFetching || _isDialogActive) return;
     _isFetching = true;
 
     try {
-      final statusRes = await http.get(Uri.parse("$baseUrl?action=get_job_status&job_id=${widget.jobId}"));
+      final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+      final statusRes = await http.get(Uri.parse("$baseUrl?action=get_job_status&job_id=${widget.jobId}&_t=$timestamp"));
       if (statusRes.statusCode == 200) {
         final statusData = json.decode(statusRes.body);
         final String currentStatus = statusData['status']?.toString().toLowerCase() ?? '';
 
         if (['matched', 'in_progress', 'completed', 'customer_paid'].contains(currentStatus)) {
           _cleanupTimers();
-          if (mounted) {
+          if (mounted && !_isNavigating) { // Çoklu ekran açılışını kilitler
+            _isNavigating = true; 
             HapticFeedback.mediumImpact();
             Navigator.pushReplacement(
               context,
@@ -174,21 +257,81 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
         }
       }
 
-      final response = await http.get(Uri.parse("$baseUrl?action=get_bids&job_id=${widget.jobId}"));
+      final response = await http.get(Uri.parse("$baseUrl?action=get_bids&job_id=${widget.jobId}&_t=$timestamp")).timeout(const Duration(seconds: 10));
+      
+      if (!mounted) return;
+      
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success' && mounted) {
-          final newBids = data['bids'] ?? [];
-          if (bids.length != newBids.length) {
-            if (newBids.length > bids.length) HapticFeedback.heavyImpact();
-            _listAnimController.forward(from: 0.0);
-            _pollInterval = 3;
-            _startPolling();
-          } else if (_pollInterval < 10) {
-            _pollInterval += 2;
-            _startPolling();
+          final List newBidsList = List.from(data['bids'] ?? []);
+          
+          if (newBidsList.isNotEmpty) {
+            double minPrice = double.infinity;
+            double maxScore = -double.infinity;
+            int bestIdx = -1;
+            int cheapIdx = -1;
+            double totalPrices = 0;
+            int validBidCount = 0;
+
+            for (var b in newBidsList) {
+              double p = double.tryParse(b['amount'].toString()) ?? 0.0;
+              if (p > 0) {
+                totalPrices += p;
+                validBidCount++;
+              }
+            }
+            _marketAverage = validBidCount > 0 ? (totalPrices / validBidCount) : 0.0;
+
+            for (int i = 0; i < newBidsList.length; i++) {
+              var b = newBidsList[i];
+              double p = double.tryParse(b['amount'].toString()) ?? 0.0;
+              double r = double.tryParse(b['average_rating']?.toString() ?? '5.0') ?? 5.0;
+              int negCount = int.tryParse(b['negotiation_count']?.toString() ?? '0') ?? 0;
+              int estimatedTime = int.tryParse(b['estimated_time']?.toString() ?? '30') ?? 30;
+
+              if (p > 0 && p < minPrice) {
+                minPrice = p;
+                cheapIdx = i;
+              }
+
+              double priceMultiplier = _marketAverage > 0 ? (_marketAverage / p) : 1.0;
+              double timeMultiplier = 30.0 / (estimatedTime > 0 ? estimatedTime : 1.0);
+              double score = (r * 1000) * priceMultiplier * timeMultiplier - (negCount * 100);
+              
+              if (score > maxScore && p > 0) {
+                maxScore = score;
+                bestIdx = i;
+              }
+            }
+
+            if (bestIdx != -1 && bestIdx != 0) {
+              var bestBid = newBidsList.removeAt(bestIdx);
+              newBidsList.insert(0, bestBid);
+              _bestMatchIndex = 0;
+              
+              if (cheapIdx != -1) {
+                for (int i = 1; i < newBidsList.length; i++) {
+                  if ((double.tryParse(newBidsList[i]['amount'].toString()) ?? 0.0) == minPrice) {
+                    _cheapestIndex = i;
+                    break;
+                  }
+                }
+              }
+            } else {
+              _bestMatchIndex = bestIdx;
+              _cheapestIndex = cheapIdx != bestIdx ? cheapIdx : -1;
+            }
           }
-          setState(() => bids = newBids);
+
+          // Teklif sayısında veya içeriğinde (fiyat vb.) değişiklik varsa animasyonu tetikle
+          bool isUpdated = jsonEncode(bids) != jsonEncode(newBidsList);
+          
+          if (isUpdated) {
+            if (newBidsList.length > bids.length) HapticFeedback.heavyImpact();
+            _listAnimController.forward(from: 0.0);
+            setState(() => bids = newBidsList);
+          }
         }
       }
     } catch (e) {
@@ -223,64 +366,129 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     }
   }
 
-  void _showCounterBidDialog(int bidId, String currentAmount) {
+  void _showCounterBidDialog(int bidId, String currentAmountStr) {
     if (_isDialogActive) return;
     _isDialogActive = true;
     HapticFeedback.lightImpact();
-    final TextEditingController counterController = TextEditingController();
     
+    final TextEditingController counterController = TextEditingController();
+    double currentAmount = double.tryParse(currentAmountStr.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0.0;
+    
+    double suggestedOffer = 0.0;
+    if (currentAmount > 0) {
+      double safeAverage = _marketAverage;
+      // Outlier (Fahiş fiyat) koruması: Ortalama, tekliften aşırı düşükse (trol teklifleri önlemek için)
+      if (currentAmount > safeAverage * 3 && safeAverage > 0) {
+         suggestedOffer = (safeAverage * 1.2).roundToDouble();
+      } else if (currentAmount > safeAverage && safeAverage > 0) {
+         suggestedOffer = safeAverage.roundToDouble();
+      } else {
+         suggestedOffer = (currentAmount * 0.88).roundToDouble();
+      }
+      
+      if (suggestedOffer < 300 && currentAmount >= 300) {
+         suggestedOffer = 300;
+      }
+    }
+
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.75),
+      barrierColor: Colors.black.withOpacity(0.85),
       builder: (context) => LayoutBuilder(
         builder: (context, constraints) {
+          final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+          double dialogWidth = constraints.maxWidth > 500 ? 450 : constraints.maxWidth * 0.9;
+          
           return BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-            child: AlertDialog(
-              backgroundColor: const Color(0xFF1E293B),
-              elevation: 24,
+            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+            child: Dialog(
+              backgroundColor: _cardColor,
+              elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(28), 
-                side: BorderSide(color: const Color(0xFF10B981).withOpacity(0.4), width: 1.5)
+                side: BorderSide(color: Colors.white.withOpacity(0.05), width: 1)
               ),
-              insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-              contentPadding: const EdgeInsets.all(24),
-              content: SingleChildScrollView(
+              insetPadding: EdgeInsets.only(
+                left: 16, 
+                right: 16, 
+                top: 24, 
+                bottom: bottomInset > 0 ? bottomInset + 20 : 24
+              ),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
                 child: SizedBox(
-                  width: math.min(constraints.maxWidth, 400),
+                  width: dialogWidth,
                   child: Padding(
-                    padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+                    padding: const EdgeInsets.only(left: 20, right: 20, top: 28, bottom: 24),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
                           padding: const EdgeInsets.all(18),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF10B981).withOpacity(0.1), 
+                            color: _primaryColor.withOpacity(0.1), 
                             shape: BoxShape.circle,
-                            boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.2), blurRadius: 24)]
+                            boxShadow: [BoxShadow(color: _primaryColor.withOpacity(0.2), blurRadius: 24)]
                           ),
-                          child: const Icon(Icons.handshake_rounded, color: Color(0xFF10B981), size: 36),
+                          child: Icon(Icons.handshake_rounded, color: _primaryColor, size: 36),
                         ),
-                        const SizedBox(height: 16),
-                        const Text("Karşı Teklif", textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 24, letterSpacing: -0.5)),
                         const SizedBox(height: 20),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF0F172A), 
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFF10B981).withOpacity(0.2))
-                          ),
-                          child: Column(
-                            children: [
-                              const Text("Ustanın Teklifi", style: TextStyle(fontSize: 12, color: Colors.white54, fontWeight: FontWeight.w600)),
-                              const SizedBox(height: 4),
-                              Text(currentAmount, style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF10B981), fontSize: 20), textAlign: TextAlign.center),
-                            ],
-                          ),
+                        const Text("Akıllı Karşı Teklif", textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 22, letterSpacing: -0.5)),
+                        const SizedBox(height: 24),
+                        
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.03), 
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: Colors.white.withOpacity(0.05))
+                                ),
+                                child: Column(
+                                  children: [
+                                    const Text("Ustanın Teklifi", style: TextStyle(fontSize: 11, color: Colors.white54, fontWeight: FontWeight.w600)),
+                                    const SizedBox(height: 4),
+                                    FittedBox(fit: BoxFit.scaleDown, child: Text(currentAmountStr, style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 18))),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  counterController.text = suggestedOffer.toStringAsFixed(0);
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                                  decoration: BoxDecoration(
+                                    color: _primaryColor.withOpacity(0.08), 
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: _primaryColor.withOpacity(0.3))
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.auto_awesome_rounded, color: _primaryColor, size: 12),
+                                          const SizedBox(width: 4),
+                                          Text("Akıllı Öneri", style: TextStyle(fontSize: 11, color: _primaryColor, fontWeight: FontWeight.w800)),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+                                      FittedBox(fit: BoxFit.scaleDown, child: Text("${suggestedOffer.toStringAsFixed(0)} ₺", style: TextStyle(fontWeight: FontWeight.w900, color: _primaryColor, fontSize: 18))),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
+                        
                         const SizedBox(height: 24),
                         TextField(
                           controller: counterController,
@@ -289,11 +497,11 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                           textAlign: TextAlign.center,
                           decoration: InputDecoration(
                             labelText: "Sizin Teklifiniz (TL)",
-                            labelStyle: const TextStyle(fontSize: 14, color: Colors.white54, fontWeight: FontWeight.w600),
+                            labelStyle: const TextStyle(fontSize: 14, color: Colors.white54, fontWeight: FontWeight.w500),
                             filled: true,
-                            fillColor: const Color(0xFF0F172A),
+                            fillColor: Colors.white.withOpacity(0.03),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF10B981), width: 2)),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: _primaryColor, width: 2)),
                             contentPadding: const EdgeInsets.symmetric(vertical: 20),
                           ),
                         ),
@@ -317,10 +525,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                               flex: 2,
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF10B981),
-                                  foregroundColor: Colors.white,
-                                  elevation: 8,
-                                  shadowColor: const Color(0xFF10B981).withOpacity(0.5),
+                                  backgroundColor: _primaryColor,
+                                  foregroundColor: Colors.black,
+                                  elevation: 0,
                                   padding: const EdgeInsets.symmetric(vertical: 16),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
                                 ),
@@ -378,17 +585,17 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
   }
 
   Future<void> _cancelJob() async {
-    if (_isDialogActive) return;
+    if (_isDialogActive || _isNavigating) return; // CRITICAL FIX: İptal edilirken tekrar basılmasını engelle
     _isDialogActive = true;
     HapticFeedback.lightImpact();
 
     bool confirm = await showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.8),
+      barrierColor: Colors.black.withOpacity(0.85),
       builder: (ctx) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: AlertDialog(
-          backgroundColor: const Color(0xFF1E293B),
+          backgroundColor: _cardColor,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: BorderSide(color: Colors.white.withOpacity(0.05))),
           title: const Text("Aramayı İptal Et", style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 20)),
           content: const Text("Hizmet talebini iptal etmek istediğinize emin misiniz?", style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.4)),
@@ -407,8 +614,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                 Expanded(
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE11D48), 
+                      backgroundColor: const Color(0xFFFF3366), 
                       foregroundColor: Colors.white,
+                      elevation: 0,
                       padding: const EdgeInsets.symmetric(vertical: 14), 
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))
                     ),
@@ -431,20 +639,23 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
         Uri.parse("$baseUrl?action=cancel_job"),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {"job_id": widget.jobId.toString()},
-      );
+      ).timeout(const Duration(seconds: 8));
+      
+      if (!mounted) return; // FIX: Arka planda işleme düşmeyi önler
       final data = json.decode(response.body);
       if (data['status'] == 'success' && mounted) {
+        _isNavigating = true; // State kilitlendi
         _cleanupTimers();
         HapticFeedback.mediumImpact();
         _showTopSnackBar("Talebiniz iptal edildi.");
         Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => CustomerDashboardScreen(customerId: widget.customerId)), (route) => false);
       } else {
-        _showTopSnackBar("İptal işlemi başarısız.", isError: true);
+        if (mounted) _showTopSnackBar("İptal işlemi başarısız.", isError: true);
       }
     } catch (e) {
-      _showTopSnackBar("Bağlantı hatası oluştu.", isError: true);
+      if (mounted) _showTopSnackBar("Bağlantı hatası oluştu.", isError: true);
     } finally {
-      if (mounted) setState(() => isCancelling = false);
+      if (mounted && !_isNavigating) setState(() => isCancelling = false);
     }
   }
 
@@ -456,69 +667,92 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
         if (!didPop) _cancelJob();
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: _bgColor,
+        extendBodyBehindAppBar: true,
         appBar: AppBar(
-          title: Image.asset('assets/images/logo.png', height: 28, fit: BoxFit.contain), 
-          backgroundColor: const Color(0xFF0F172A).withOpacity(0.9),
+          title: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text("Ustalar Aranıyor", style: TextStyle(color: _primaryColor, fontWeight: FontWeight.w800, fontSize: 18)),
+          ),
+          backgroundColor: Colors.black.withOpacity(0.5),
           flexibleSpace: ClipRect(
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
               child: Container(color: Colors.transparent),
             ),
           ),
           elevation: 0,
-          centerTitle: true,
+          centerTitle: false,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white), 
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), shape: BoxShape.circle),
+              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.white),
+            ), 
             onPressed: _cancelJob,
-            splashRadius: 24,
           ),
           actions: [
             if (isCancelling)
               const Padding(
                 padding: EdgeInsets.all(16.0), 
-                child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFE11D48)))
+                child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFF3366)))
               )
             else
               IconButton(
-                icon: const Icon(Icons.close_rounded, color: Color(0xFFE11D48)), 
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: const Color(0xFFFF3366).withOpacity(0.15), shape: BoxShape.circle),
+                  child: const Icon(Icons.close_rounded, size: 18, color: Color(0xFFFF3366)),
+                ), 
                 onPressed: _cancelJob,
-                splashRadius: 24,
               )
           ],
         ),
-        body: Container(
-          decoration: const BoxDecoration(
-            gradient: RadialGradient(
-              center: Alignment.topCenter,
-              radius: 1.5,
-              colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
-            ),
-          ),
-          child: SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 800),
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 600),
-                      switchInCurve: Curves.easeOutCubic,
-                      switchOutCurve: Curves.easeInCubic,
-                      child: bids.isEmpty ? _buildAdvancedRadar(constraints) : _buildBidsList(),
-                    ),
+        body: Stack(
+          children: [
+            // Arkaplan Glow Efekti
+            Positioned(
+              top: MediaQuery.of(context).size.height * 0.2,
+              left: -MediaQuery.of(context).size.width * 0.2,
+              child: Container(
+                width: MediaQuery.of(context).size.width * 1.5,
+                height: MediaQuery.of(context).size.width * 1.5,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [_primaryColor.withOpacity(0.05), Colors.transparent],
                   ),
-                );
-              }
+                ),
+              ),
             ),
-          ),
+            SafeArea(
+              bottom: false,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1200),
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 600),
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeInCubic,
+                        child: bids.isEmpty ? _buildAdvancedRadar(constraints) : _buildBidsList(constraints),
+                      ),
+                    ),
+                  );
+                }
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildAdvancedRadar(BoxConstraints constraints) {
-    double radarSize = math.min(constraints.maxWidth * 0.85, constraints.maxHeight * 0.45);
+    // Radar boyutunu kısıtlayarak overflow hatalarını kesin olarak önlüyoruz
+    double maxPossibleSize = math.min(constraints.maxWidth * 0.85, constraints.maxHeight * 0.5);
+    double radarSize = maxPossibleSize > 400 ? 400 : maxPossibleSize;
 
     return Column(
       key: const ValueKey('radar'),
@@ -531,17 +765,17 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
             child: Stack(
               alignment: Alignment.center,
               children: [
-                CustomPaint(size: Size(radarSize, radarSize), painter: RadarGridPainter(const Color(0xFF10B981).withOpacity(0.1))),
+                CustomPaint(size: Size(radarSize, radarSize), painter: RadarGridPainter(_primaryColor.withOpacity(0.15))),
                 
                 AnimatedBuilder(
                   animation: _rippleController,
-                  builder: (context, child) => CustomPaint(painter: RipplePainter(_rippleController.value, const Color(0xFF10B981)), size: Size(radarSize, radarSize)),
+                  builder: (context, child) => CustomPaint(painter: RipplePainter(_rippleController.value, _primaryColor), size: Size(radarSize, radarSize)),
                 ),
                 
                 ValueListenableBuilder<List<Offset>>(
                   valueListenable: _blips,
                   builder: (context, blipsValue, child) {
-                    return CustomPaint(size: Size(radarSize, radarSize), painter: BlipPainter(blipsValue, const Color(0xFF10B981)));
+                    return CustomPaint(size: Size(radarSize, radarSize), painter: BlipPainter(blipsValue, _primaryColor));
                   },
                 ),
                 
@@ -556,9 +790,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                           gradient: SweepGradient(
                             colors: [
                               Colors.transparent, 
-                              const Color(0xFF10B981).withOpacity(0.05), 
-                              const Color(0xFF10B981).withOpacity(0.4), 
-                              const Color(0xFF10B981).withOpacity(0.9), 
+                              _primaryColor.withOpacity(0.05), 
+                              _primaryColor.withOpacity(0.3), 
+                              _primaryColor.withOpacity(0.8), 
                               Colors.transparent
                             ],
                             stops: const [0.0, 0.5, 0.85, 0.99, 1.0],
@@ -570,8 +804,8 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                         child: Container(
                           width: radarSize / 2,
                           height: 2,
-                          decoration: const BoxDecoration(
-                            boxShadow: [BoxShadow(color: Color(0xFF10B981), blurRadius: 10, spreadRadius: 2)],
+                          decoration: BoxDecoration(
+                            boxShadow: [BoxShadow(color: _primaryColor, blurRadius: 12, spreadRadius: 2)],
                             color: Colors.white,
                           ),
                         ),
@@ -584,22 +818,22 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                   animation: _pulseController,
                   builder: (context, child) {
                     return Container(
-                      padding: const EdgeInsets.all(24),
+                      padding: EdgeInsets.all(radarSize * 0.08),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0F172A), 
+                        color: _bgColor, 
                         shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFF10B981), width: 2.0),
+                        border: Border.all(color: _primaryColor, width: 2.0),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF10B981).withOpacity(0.4 + (_pulseController.value * 0.6)), 
-                            blurRadius: 30 + (_pulseController.value * 30), 
-                            spreadRadius: 5 + (_pulseController.value * 15)
+                            color: _primaryColor.withOpacity(0.4 + (_pulseController.value * 0.4)), 
+                            blurRadius: 20 + (_pulseController.value * 20), 
+                            spreadRadius: 2 + (_pulseController.value * 10)
                           )
                         ],
                       ),
                       child: Transform.scale(
-                        scale: 1.0 + (_pulseController.value * 0.15),
-                        child: const Icon(Icons.satellite_alt_rounded, size: 44, color: Color(0xFF10B981)),
+                        scale: 1.0 + (_pulseController.value * 0.1),
+                        child: Icon(Icons.satellite_alt_rounded, size: radarSize * 0.15, color: _primaryColor),
                       ),
                     );
                   },
@@ -616,14 +850,14 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
             return ShaderMask(
               shaderCallback: (bounds) {
                 return LinearGradient(
-                  colors: [Colors.white.withOpacity(0.5), Colors.white, const Color(0xFF10B981), Colors.white, Colors.white.withOpacity(0.5)],
+                  colors: [Colors.white.withOpacity(0.3), Colors.white, _primaryColor, Colors.white, Colors.white.withOpacity(0.3)],
                   stops: [0.0, _radarController.value - 0.2, _radarController.value, _radarController.value + 0.2, 1.0],
                   begin: const Alignment(-1.0, -0.5),
                   end: const Alignment(1.0, 0.5),
                   tileMode: TileMode.clamp,
                 ).createShader(bounds);
               },
-              child: const Text("USTALAR TARANIYOR...", style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 2.0)),
+              child: const Text("Taranıyor...", textAlign: TextAlign.center, style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 2.0)),
             );
           }
         ),
@@ -631,18 +865,18 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           decoration: BoxDecoration(
-            color: const Color(0xFF10B981).withOpacity(0.1),
+            color: _primaryColor.withOpacity(0.1),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3))
+            border: Border.all(color: _primaryColor.withOpacity(0.2))
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Color(0xFF10B981), strokeWidth: 2)),
+              SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: _primaryColor, strokeWidth: 2)),
               const SizedBox(width: 12),
               Text(
                 "Menzil: $currentRadius KM", 
-                style: const TextStyle(fontSize: 14, color: Color(0xFF10B981), fontWeight: FontWeight.w800, letterSpacing: 1.0)
+                style: TextStyle(fontSize: 14, color: _primaryColor, fontWeight: FontWeight.w800, letterSpacing: 1.0)
               ),
             ],
           ),
@@ -651,32 +885,35 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     );
   }
 
-  Widget _buildBidsList() {
+  Widget _buildBidsList(BoxConstraints constraints) {
+    bool isWideScreen = constraints.maxWidth > 800; 
+    bool isSmallScreen = constraints.maxWidth < 400;
+
     return Column(
       key: const ValueKey('list'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          padding: EdgeInsets.fromLTRB(isSmallScreen ? 16 : 20, 16, isSmallScreen ? 16 : 20, 8),
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withOpacity(0.15), 
+                  color: _primaryColor.withOpacity(0.15), 
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3))
+                  border: Border.all(color: _primaryColor.withOpacity(0.3))
                 ),
-                child: const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 24),
+                child: Icon(Icons.check_circle_rounded, color: _primaryColor, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text("Teklifler Geldi", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5), overflow: TextOverflow.ellipsis),
+                    Text("Teklifler Geldi", style: TextStyle(fontSize: isSmallScreen ? 18 : 22, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5), overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 2),
-                    Text("${bids.length} usta teklif verdi", style: const TextStyle(fontSize: 14, color: Colors.white60, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                    Text("${bids.length} usta teklif verdi", style: TextStyle(fontSize: isSmallScreen ? 13 : 14, color: Colors.white60, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),
@@ -684,36 +921,54 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
           ),
         ),
         Expanded(
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16), 
-            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-            itemCount: bids.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 16),
-            itemBuilder: (context, index) {
-              return _buildBidCard(bids[index], index);
-            },
-          ),
+          child: isWideScreen
+              ? GridView.builder(
+                  padding: EdgeInsets.only(
+                    left: 20, right: 20, top: 16,
+                    bottom: MediaQuery.of(context).padding.bottom + 20
+                  ),
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 500,
+                    mainAxisExtent: 280, 
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                  ),
+                  itemCount: bids.length,
+                  itemBuilder: (context, index) => _buildBidCard(bids[index], index, isSmallScreen),
+                )
+              : ListView.separated(
+                  padding: EdgeInsets.only(
+                    left: isSmallScreen ? 16 : 20, 
+                    right: isSmallScreen ? 16 : 20, 
+                    top: 16, 
+                    bottom: MediaQuery.of(context).padding.bottom + 20
+                  ), 
+                  physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                  itemCount: bids.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 16),
+                  itemBuilder: (context, index) => _buildBidCard(bids[index], index, isSmallScreen),
+                ),
         ),
       ],
     );
   }
 
-  Widget _buildBidCard(Map bid, int index) {
-    final int bidId = int.parse(bid['bid_id'].toString());
-    final int providerId = int.parse(bid['provider_id'].toString());
-    final double priceVal = double.tryParse(bid['amount'].toString()) ?? 0;
-    final String displayPrice = priceVal > 0 ? "${priceVal.toStringAsFixed(0)} ₺" : "Belirtilmedi";
-    final String providerName = bid['provider_name'] ?? 'Bilinmeyen Usta';
-    final String rating = bid['average_rating']?.toString() ?? '5.0';
-    final String note = bid['provider_note']?.toString() ?? '';
+  Widget _buildBidCard(Map bid, int index, bool isSmallScreen) {
+        final int bidId = int.parse(bid['bid_id'].toString());
+        final int providerId = int.parse(bid['provider_id'].toString());
+        final double priceVal = double.tryParse(bid['amount'].toString()) ?? 0;
+        final String displayPrice = priceVal > 0 ? "${priceVal.toStringAsFixed(0)} ₺" : "Belirtilmedi";
+        final String providerName = bid['provider_name'] ?? 'Bilinmeyen Usta';
+        final String rating = bid['average_rating']?.toString() ?? '5.0';
+        final String estimatedTime = bid['estimated_time']?.toString() ?? '30';
+        final String note = bid['provider_note']?.toString() ?? '';
     final int negCount = int.tryParse(bid['negotiation_count']?.toString() ?? '0') ?? 0;
     final String lastBidder = bid['last_bidder']?.toString() ?? 'provider';
     final bool canNegotiate = negCount < 2 && lastBidder == 'provider';
     final bool isWaitingProvider = lastBidder == 'customer';
 
-    // Akıllı Rozet Algoritması: Puanı yüksek, fiyat veren ve listede üstte olanı "EN İYİ" seç
-    final double ratingVal = double.tryParse(rating) ?? 0.0;
-    final bool isBestMatch = ratingVal >= 4.5 && priceVal > 0 && index == 0;
+    final bool isBestMatch = index == _bestMatchIndex;
+    final bool isCheapest = index == _cheapestIndex;
 
     double startAnim = (index * 0.1).clamp(0.0, 1.0);
     double endAnim = (startAnim + 0.35).clamp(0.0, 1.0);
@@ -723,17 +978,18 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
         CurvedAnimation(parent: _listAnimController, curve: Interval(startAnim, endAnim, curve: Curves.easeOutBack))
       ),
       child: Container(
-        padding: const EdgeInsets.all(20), 
+        padding: EdgeInsets.all(isSmallScreen ? 16 : 20), 
         decoration: BoxDecoration(
-          color: const Color(0xFF1E293B),
+          color: Colors.white.withOpacity(0.03),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: index == 0 ? const Color(0xFF10B981).withOpacity(0.6) : Colors.white.withOpacity(0.05), 
-            width: index == 0 ? 2 : 1
+            color: isBestMatch ? const Color(0xFFF59E0B).withOpacity(0.5) : (isCheapest ? const Color(0xFF3B82F6).withOpacity(0.5) : Colors.white.withOpacity(0.05)), 
+            width: (isBestMatch || isCheapest) ? 2 : 1
           ),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 15, offset: const Offset(0, 8)),
-            if (index == 0) BoxShadow(color: const Color(0xFF10B981).withOpacity(0.15), blurRadius: 25, spreadRadius: 2),
+            BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 8)),
+            if (isBestMatch) BoxShadow(color: const Color(0xFFF59E0B).withOpacity(0.1), blurRadius: 30, spreadRadius: -5),
+            if (isCheapest) BoxShadow(color: const Color(0xFF3B82F6).withOpacity(0.1), blurRadius: 30, spreadRadius: -5),
           ],
         ),
         child: Column(
@@ -746,42 +1002,63 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                     Navigator.push(context, MaterialPageRoute(builder: (_) => ProviderProfileScreen(providerId: providerId)));
                   },
                   child: Container(
-                    padding: const EdgeInsets.all(14),
+                    padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                      color: Colors.white.withOpacity(0.05),
                       shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))],
+                      border: Border.all(color: isBestMatch ? const Color(0xFFF59E0B) : (isCheapest ? const Color(0xFF3B82F6) : Colors.white.withOpacity(0.1))),
                     ),
-                    child: const Icon(Icons.person_rounded, color: Colors.white, size: 26),
+                    child: Icon(Icons.person_rounded, color: Colors.white, size: isSmallScreen ? 22 : 26),
                   ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: isSmallScreen ? 12 : 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(providerName, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      Text(providerName, style: TextStyle(fontSize: isSmallScreen ? 15 : 17, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.3), maxLines: 1, overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF59E0B).withOpacity(0.15), 
-                          borderRadius: BorderRadius.circular(8), 
-                          border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.3))
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 14),
-                            const SizedBox(width: 4),
-                            Text(rating, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: Color(0xFFF59E0B))),
-                          ],
-                        ),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF59E0B).withOpacity(0.15), 
+                              borderRadius: BorderRadius.circular(8), 
+                              border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.3))
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 14),
+                                const SizedBox(width: 4),
+                                Text(rating, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: Color(0xFFF59E0B))),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF3B82F6).withOpacity(0.15), 
+                              borderRadius: BorderRadius.circular(8), 
+                              border: Border.all(color: const Color(0xFF3B82F6).withOpacity(0.3))
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.timer_rounded, color: Color(0xFF3B82F6), size: 14),
+                                const SizedBox(width: 4),
+                                Text("$estimatedTime Dk", style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: Color(0xFF3B82F6))),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -793,7 +1070,6 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                           color: const Color(0xFFF59E0B).withOpacity(0.15),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.5)),
-                          boxShadow: [BoxShadow(color: const Color(0xFFF59E0B).withOpacity(0.3), blurRadius: 8)],
                         ),
                         child: const Row(
                           children: [
@@ -802,19 +1078,35 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                             Text("EN İYİ", style: TextStyle(color: Color(0xFFF59E0B), fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
                           ],
                         ),
+                      )
+                    else if (isCheapest)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF3B82F6).withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF3B82F6).withOpacity(0.5)),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.savings_rounded, color: Color(0xFF3B82F6), size: 12),
+                            SizedBox(width: 4),
+                            Text("EN UCUZ", style: TextStyle(color: Color(0xFF3B82F6), fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                          ],
+                        ),
                       ),
-                    const Text("Teklif", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white54)),
+                    const Text("Teklif", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white54)),
                     const SizedBox(height: 2),
                     FittedBox(
                       fit: BoxFit.scaleDown, 
                       child: Text(
                         displayPrice, 
                         style: TextStyle(
-                          fontSize: priceVal > 0 ? (isBestMatch ? 26 : 22) : 16, 
+                          fontSize: priceVal > 0 ? ((isBestMatch || isCheapest) ? 24 : 22) : 16, 
                           fontWeight: FontWeight.w900, 
-                          color: isBestMatch ? const Color(0xFFF59E0B) : const Color(0xFF10B981), 
-                          letterSpacing: -1.0, 
-                          shadows: isBestMatch ? [const Shadow(color: Color(0xFFF59E0B), blurRadius: 15)] : []
+                          color: isBestMatch ? const Color(0xFFF59E0B) : (isCheapest ? const Color(0xFF3B82F6) : Colors.white), 
+                          letterSpacing: -1.0,
                         )
                       ),
                     ),
@@ -823,26 +1115,26 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
               ],
             ),
             if (note.isNotEmpty) ...[
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0F172A).withOpacity(0.7), 
+                  color: Colors.white.withOpacity(0.02), 
                   borderRadius: BorderRadius.circular(16), 
                   border: Border.all(color: Colors.white.withOpacity(0.05))
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.format_quote_rounded, size: 20, color: Color(0xFF10B981)),
+                    Icon(Icons.format_quote_rounded, size: 20, color: _primaryColor.withOpacity(0.7)),
                     const SizedBox(width: 12),
-                    Expanded(child: Text(note, style: const TextStyle(color: Colors.white70, fontSize: 13, fontStyle: FontStyle.italic, height: 1.5, fontWeight: FontWeight.w500))),
+                    Expanded(child: Text(note, style: const TextStyle(color: Colors.white70, fontSize: 13, fontStyle: FontStyle.italic, height: 1.5, fontWeight: FontWeight.w400), maxLines: 2, overflow: TextOverflow.ellipsis)),
                   ],
                 ),
               ),
             ],
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             if (isWaitingProvider)
               Container(
                 width: double.infinity,
@@ -850,7 +1142,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                 decoration: BoxDecoration(
                   color: const Color(0xFFF59E0B).withOpacity(0.1), 
                   borderRadius: BorderRadius.circular(16), 
-                  border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.3), width: 1.5)
+                  border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.3), width: 1)
                 ),
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -866,7 +1158,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      icon: Icon(canNegotiate ? Icons.handshake_rounded : Icons.person_search_rounded, size: 20),
+                      icon: Icon(canNegotiate ? Icons.handshake_rounded : Icons.person_search_rounded, size: 18),
                       onPressed: canNegotiate 
                           ? () => _showCounterBidDialog(bidId, displayPrice) 
                           : () {
@@ -874,36 +1166,30 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                               Navigator.push(context, MaterialPageRoute(builder: (_) => ProviderProfileScreen(providerId: providerId)));
                             },
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-                        side: BorderSide(color: canNegotiate ? const Color(0xFF10B981) : Colors.white24, width: 1.5),
+                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+                        side: BorderSide(color: canNegotiate ? _primaryColor : Colors.white24, width: 1.5),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        foregroundColor: canNegotiate ? const Color(0xFF10B981) : Colors.white70,
+                        foregroundColor: canNegotiate ? _primaryColor : Colors.white70,
                       ),
-                      label: FittedBox(child: Text(canNegotiate ? "Pazarlık Yap" : "Profili İncele", style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14))),
+                      label: FittedBox(child: Text(canNegotiate ? "Pazarlık" : "Profili İncele", style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13))),
                     ),
                   ),
                   if (priceVal > 0) ...[
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)]),
-                          boxShadow: [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.4), blurRadius: 16, offset: const Offset(0, 6))],
+                      child: ElevatedButton.icon(
+                        icon: isProcessing ? const SizedBox.shrink() : const Icon(Icons.verified_rounded, color: Colors.black, size: 18),
+                        onPressed: isProcessing ? null : () => _acceptBid(bidId, providerId, bid['amount'].toString()),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _primaryColor,
+                          foregroundColor: Colors.black,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
-                        child: ElevatedButton.icon(
-                          icon: isProcessing ? const SizedBox.shrink() : const Icon(Icons.verified_rounded, color: Colors.white, size: 20),
-                          onPressed: isProcessing ? null : () => _acceptBid(bidId, providerId, bid['amount'].toString()),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          ),
-                          label: isProcessing
-                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                              : const FittedBox(child: Text("Kabul Et", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14))),
-                        ),
+                        label: isProcessing
+                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2.5))
+                            : const FittedBox(child: Text("Kabul Et", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 13))),
                       ),
                     ),
                   ],
@@ -922,7 +1208,7 @@ class RadarGridPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 1.5;
+    final Paint paint = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 1.0;
     final center = Offset(size.width / 2, size.height / 2);
     final maxRadius = size.width / 2;
 
@@ -945,14 +1231,14 @@ class RipplePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()..style = PaintingStyle.stroke..strokeWidth = 2.0; 
+    final Paint paint = Paint()..style = PaintingStyle.stroke..strokeWidth = 1.5; 
     final center = Offset(size.width / 2, size.height / 2);
     final maxRadius = size.width / 2;
 
     for (int i = 0; i < 3; i++) {
       double circleProgress = (progress + (i * 0.33)) % 1.0;
       double radius = maxRadius * circleProgress;
-      paint.color = color.withOpacity((1.0 - circleProgress) * 0.8);
+      paint.color = color.withOpacity((1.0 - circleProgress) * 0.6);
       canvas.drawCircle(center, radius, paint);
     }
   }
@@ -969,13 +1255,13 @@ class BlipPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final Paint paint = Paint()..color = color..style = PaintingStyle.fill;
-    final Paint glowPaint = Paint()..color = color.withOpacity(0.5)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    final Paint glowPaint = Paint()..color = color.withOpacity(0.6)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
     final center = Offset(size.width / 2, size.height / 2);
 
     for (var blip in blips) {
       final position = center + blip;
-      canvas.drawCircle(position, 6, glowPaint);
-      canvas.drawCircle(position, 3, paint);
+      canvas.drawCircle(position, 5, glowPaint);
+      canvas.drawCircle(position, 2.5, paint);
     }
   }
 

@@ -6,7 +6,7 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleDisplayName</key>
-    <string>Oto Sistem</string>
+    <string>OTOTAG</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
@@ -14,7 +14,7 @@
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>oto_sistem</string>
+    <string>OTOTAG</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -57,17 +57,19 @@
     
     <!-- Konum İzinleri -->
     <key>NSLocationWhenInUseUsageDescription</key>
-    <string>Haritada size en yakın işleri göstermek için konumunuza ihtiyacımız var.</string>
+    <string>Yol yardım talebinizi en yakın çekici ve ustalara iletmek için konumunuza ihtiyaç duyarız.</string>
     <key>NSLocationAlwaysUsageDescription</key>
-    <string>Arka plandayken de konum bazlı iş teklifleri alabilmeniz için gereklidir.</string>
+    <string>İşlem devam ederken ustanın size ulaşabilmesi ve yeni iş bildirimleri alabilmeniz için konumunuz arka planda güncellenir.</string>
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>Hem arka planda hem de uygulamayı kullanırken konumunuz eşleşme ve iş takibi için gereklidir.</string>
+    <string>İşlem devam ederken ustanın size ulaşabilmesi ve yeni iş bildirimleri alabilmeniz için konumunuz arka planda güncellenir.</string>
     
-    <!-- Kamera ve Galeri İzinleri -->
+    <!-- Kamera, Galeri ve Mikrofon İzinleri -->
     <key>NSCameraUsageDescription</key>
-    <string>Usta ve müşteri arıza fotoğraflarını çekmek için kameraya erişim gereklidir.</string>
+    <string>Aracınızın arıza durumunu veya yedek parça fotoğraflarını çekmek için kamera izni gereklidir.</string>
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>Galeriden araç veya hasar fotoğrafı yükleyebilmek için galeri erişimi gereklidir.</string>
+    <string>Garajınıza araç ruhsatı ve hasar fotoğrafları yükleyebilmek için galeri erişimi gereklidir.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Sohbet ekranında sorunla ilgili video çekip gönderebilmeniz için mikrofon erişimi gereklidir.</string>
 
     <!-- URL Launcher Şemaları -->
     <key>LSApplicationQueriesSchemes</key>

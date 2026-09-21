@@ -303,11 +303,24 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           };
         }
       }
+      throw Exception("Google API Hata");
     } catch (e) {
-      debugPrint("Arka plan rota hesaplama hatası: $e");
+      try {
+        final String osrmUrl = 'https://router.project-osrm.org/route/v1/driving/$pLng,$pLat;$cLng,$cLat?overview=full&geometries=polyline';
+        final osrmRes = await _httpClient.get(Uri.parse(osrmUrl)).timeout(const Duration(seconds: 5));
+        final osrmData = json.decode(osrmRes.body);
+        if (osrmData['code'] == 'Ok') {
+          return {
+            'duration': osrmData['routes'][0]['duration'],
+            'duration_text': "${(osrmData['routes'][0]['duration'] / 60).ceil()} Dk",
+            'polyline': osrmData['routes'][0]['geometry']
+          };
+        }
+      } catch (e2) {
+        debugPrint("Arka plan OSRM rota hesaplama hatası: $e2");
+      }
       return null;
     }
-    return null;
   }
 
   Future<void> _loadMapSdkAndInit() async {
@@ -473,13 +486,35 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
             }
           }
         } else {
-          _drawFallbackRoute();
+          throw Exception("Google API Hatasi");
         }
       } else {
-        _drawFallbackRoute();
+        throw Exception("API Baglanti Hatasi");
       }
     } catch (e) {
-      _drawFallbackRoute();
+      try {
+        final String osrmUrl = 'https://router.project-osrm.org/route/v1/driving/$providerLng,$providerLat;$customerLng,$customerLat?overview=full&geometries=polyline';
+        final osrmRes = await _httpClient.get(Uri.parse(osrmUrl)).timeout(const Duration(seconds: 5));
+        final osrmData = json.decode(osrmRes.body);
+        if (osrmData['code'] == 'Ok') {
+          final String encoded = osrmData['routes'][0]['geometry'];
+          final decoded = _decodePolyline(encoded);
+          final num durationSec = osrmData['routes'][0]['duration'];
+          
+          if (mounted) {
+            setState(() {
+              _routePoints = decoded;
+              _polylineColor = neonGreen;
+              _etaString = "${(durationSec / 60).ceil()} Dk";
+            });
+            if (_autoFollowBounds && !_isUserPanning) _fitMapBounds();
+          }
+        } else {
+          _drawFallbackRoute();
+        }
+      } catch (e2) {
+        _drawFallbackRoute();
+      }
     } finally {
       if (mounted) {
         setState(() { _isFetchingRoute = false; });

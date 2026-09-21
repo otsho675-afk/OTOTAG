@@ -82,6 +82,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   late AnimationController _buttonPulseController;
   AnimationController? _mapMoveController;
   bool _isProgrammaticCameraMove = false;
+  bool _isUserPanning = false;
   int _mapMoveId = 0;
 
   Map<String, dynamic> earningsData = {};
@@ -413,12 +414,15 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         builder: (context, setDialogState) {
           return Dialog(
             backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                return BackdropFilter(
-                  filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                  child: Container(
-                    padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 28, left: 28, right: 28, top: 28),
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(32),
+                  child: BackdropFilter(
+                    filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                    child: Container(
+                      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 28, left: 28, right: 28, top: 28),
                     constraints: BoxConstraints(
                       maxWidth: 420,
                       maxHeight: MediaQuery.of(context).size.height * 0.85
@@ -571,7 +575,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                       ),
                     ),
                   ),
-                );
+                )); // BackdropFilter // ClipRRect
               }
             ),
           );
@@ -1023,6 +1027,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                 }
               });
       setState(() {}); 
+    } else if (mounted && !_isUserPanning) {
+      _animatedMapMove(newPos, _mapController.camera.zoom);
+    } else if (mounted && !_isUserPanning) {
+      _animatedMapMove(newPos, _mapController.camera.zoom);
     }
   }
 
@@ -2217,6 +2225,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                             if (hasGesture) {
                               _mapMoveController?.stop();
                               _isProgrammaticCameraMove = false;
+                              _isUserPanning = true;
                             }
                           },
                           onMapEvent: (event) {
@@ -2224,6 +2233,13 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                               if (_isProgrammaticCameraMove || event.source == MapEventSource.mapController) return;
                               _mapMoveController?.stop();
                               FocusManager.instance.primaryFocus?.unfocus(); 
+                              _isUserPanning = true;
+                            } else if (event is MapEventMoveEnd) {
+                              if (_isUserPanning) {
+                                Future.delayed(const Duration(seconds: 4), () {
+                                  if (mounted) setState(() => _isUserPanning = false);
+                                });
+                              }
                             }
                           },
                           onTap: (_, __) {
@@ -2511,6 +2527,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                         HapticFeedback.selectionClick();
                                         if (currentPosition != null) {
                                           double speed = currentPosition!.speed * 3.6;
+                                          setState(() => _isUserPanning = false);
                                           _mapController.move(
                                             LatLng(currentPosition!.latitude, currentPosition!.longitude), 
                                             speed > 40 ? 14.5 : 16.0
@@ -2530,10 +2547,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                       AnimatedPositioned(
                         duration: const Duration(milliseconds: 500),
                         curve: Curves.easeOutExpo,
-                        bottom: (isOnline && jobList.isNotEmpty && _showJobCard && !_isModalOpen) ? (isSmallScreen ? 16 : 24) : -250,
+                        bottom: (isOnline && jobList.isNotEmpty && _showJobCard && !_isModalOpen) ? (isSmallScreen ? 16 : 24) : -300,
                         left: 0,
                         right: 0,
-                        height: isSmallScreen ? 160 : 190, 
+                        height: isSmallScreen ? 190 : 210, 
                         child: SafeArea(
                           child: PageView.builder(
                             controller: _pageController,

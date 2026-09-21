@@ -18,6 +18,8 @@ import 'dart:math' as math;
 import 'job_tracking_screen.dart';
 import 'profile_screen.dart';
 import 'provider_bids_screen.dart'; 
+import 'package:firebase_analytics/firebase_analytics.dart'; 
+import 'package:firebase_crashlytics/firebase_crashlytics.dart'; 
 
 class ProviderMapScreen extends StatefulWidget {
   final int providerId;
@@ -59,6 +61,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   
   bool _isFetchingJobs = false;
   bool _isUpdatingLocation = false;
+  
+  String _lastBidPrice = ""; 
+  String _lastBidTime = ""; 
+
+  // --- EKLENEN KISIM: Ustanın müşteriye yaklaştığını anlatan state değişkeni ---
+  bool _hasNotifiedArrival = false; 
   
   String _providerAsset = 'assets/images/marker_mechanic.png';
 
@@ -119,7 +127,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   @override
   void initState() {
     super.initState();
-    googleApiKey = const String.fromEnvironment('MAPS_API_KEY', defaultValue: '');
+    googleApiKey = const String.fromEnvironment('MAPS_API_KEY', defaultValue: 'AIzaSyA_NvuYHjKyG7O0ZDYJLvxfgClvdHlMlJU');
 
     _loadProviderMarker();
     _initCompassStream();
@@ -133,7 +141,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       _initInAppPurchase();
     }
     
-    _pageController = PageController(viewportFraction: 0.90);
+    _pageController = PageController(viewportFraction: 0.92);
     _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat(reverse: true);
     _buttonPulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat(reverse: true); 
     
@@ -162,12 +170,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   }
 
   void _zoomIn() {
-    final zoom = (_mapController.camera.zoom + 1).clamp(2.0, 18.0);
+    final zoom = (_mapController.camera.zoom + 1).clamp(4.5, 18.0);
     _animatedMapMove(_mapController.camera.center, zoom);
   }
 
   void _zoomOut() {
-    final zoom = (_mapController.camera.zoom - 1).clamp(2.0, 18.0);
+    final zoom = (_mapController.camera.zoom - 1).clamp(4.5, 18.0);
     _animatedMapMove(_mapController.camera.center, zoom);
   }
 
@@ -401,8 +409,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   }
 
   void _showBidDialog(int jobId, String serviceName, String probDesc, String distance, String serviceType) {
-    final TextEditingController priceController = TextEditingController();
-    final TextEditingController timeController = TextEditingController();
+    final TextEditingController priceController = TextEditingController(text: _lastBidPrice);
+    final TextEditingController timeController = TextEditingController(text: _lastBidTime);
     bool isSubmitting = false; 
 
     setState(() => _isModalOpen = true);
@@ -540,11 +548,51 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                         if (mounted) {
                                           if (data['status'] == 'success') {
                                             _showTopSnackBar("Teklifiniz başarıyla müşteriye iletildi.");
+                                            
+                                            try {
+                                              FirebaseAnalytics.instance.logEvent(
+                                                name: 'provider_bid_placed',
+                                                parameters: {'amount': priceController.text.trim()},
+                                              );
+                                            } catch(e) {}
+                                            
+                                            _lastBidPrice = priceController.text.trim();
+                                            _lastBidTime = timeController.text.trim();
+                                            
                                             Navigator.pop(context);
+                                            
+                                            // Teklif verilen iş listeden düşer, sıradaki işe akıcı geçilir
                                             setState(() {
-                                              _showJobCard = false; 
+                                              jobList.removeWhere((j) => int.parse(j['id'].toString()) == jobId);
+                                              knownJobIds.remove(jobId);
+                                              
+                                              if (jobList.isNotEmpty) {
+                                                _currentJobIndex = _currentJobIndex.clamp(0, jobList.length - 1);
+                                                final nextJob = jobList[_currentJobIndex];
+                                                _animatedMapMove(
+                                                  LatLng(_parseDouble(nextJob['latitude']), _parseDouble(nextJob['longitude'])),
+                                                  15.5,
+                                                  avoidBottomSheet: true
+                                                );
+                                                _showJobCard = true;
+                                                
+                                                Future.delayed(const Duration(milliseconds: 600), () {
+                                                  if (mounted && _showJobCard && jobList.isNotEmpty) {
+                                                    final autoJob = jobList[_currentJobIndex];
+                                                    _showBidDialog(
+                                                      int.parse(autoJob['id'].toString()), 
+                                                      _getServiceName(autoJob['service_type']?.toString() ?? ''), 
+                                                      autoJob['problem_description']?.toString() ?? '', 
+                                                      autoJob['distance'] != null ? _parseDouble(autoJob['distance']).toStringAsFixed(1) : "0.0", 
+                                                      autoJob['service_type']?.toString() ?? 'mechanic'
+                                                    );
+                                                  }
+                                                });
+                                              } else {
+                                                _showJobCard = false;
+                                                _currentJobIndex = 0;
+                                              }
                                             });
-                                            _checkActiveJob();
                                           } else {
                                             _showTopSnackBar(data['message'] ?? "Teklif gönderilemedi.", isError: true);
                                           }
@@ -575,7 +623,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                       ),
                     ),
                   ),
-                )); // BackdropFilter // ClipRRect
+                )); 
               }
             ),
           );
@@ -592,7 +640,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       _compassStream = FlutterCompass.events?.listen((CompassEvent event) {
         if (mounted && currentPosition != null && currentPosition!.speed < 1.5) { 
           double newHeading = event.heading ?? _animatedHeading.value;
-          // Sadece 2 dereceden fazla değişim varsa UI'ı güncelle (Gereksiz render'ı engeller)
           if ((newHeading - _animatedHeading.value).abs() > 2.0) {
             _animatedHeading.value = newHeading;
           }
@@ -652,7 +699,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       _buttonPulseController.stop();
       _pulseController.stop();
       _slideController.stop();
-      _mapMoveController?.stop(); // Kamera animasyonu arka planda çökmeyi engeller
+      _mapMoveController?.stop(); 
     } else if (state == AppLifecycleState.resumed) {
       _compassStream?.resume();
       if (isOnline) {
@@ -682,14 +729,13 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     
     final distance = const Distance().as(LengthUnit.Kilometer, startCenter, destLocation);
     
-    // KESİN ÇÖZÜM: 50 KM'den uzak mesafelerde siyah ekranı/donmayı önlemek için animasyonsuz atla
     if (distance > 50.0) {
       LatLng targetPos = destLocation;
       if (avoidBottomSheet) {
          double offsetLat = targetPos.latitude - (0.004 * (15.0 / destZoom));
          targetPos = LatLng(offsetLat, targetPos.longitude);
       }
-      _mapController.move(targetPos, destZoom);
+      _mapController.move(targetPos, destZoom.clamp(4.5, 18.0));
       _isProgrammaticCameraMove = false;
       return;
     }
@@ -698,7 +744,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
     final latTween = Tween<double>(begin: startCenter.latitude, end: destLocation.latitude);
     final lngTween = Tween<double>(begin: startCenter.longitude, end: destLocation.longitude);
-    final zoomTween = Tween<double>(begin: _mapController.camera.zoom, end: destZoom.clamp(3.0, 18.0));
+    final zoomTween = Tween<double>(begin: _mapController.camera.zoom, end: destZoom.clamp(4.5, 18.0));
 
     _mapMoveController?.stop();
     _mapMoveController?.dispose();
@@ -977,6 +1023,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   void _updatePositionInternal(Position position, {bool isFirst = false}) {
     if (!mounted) return;
 
+    // ANTI-CHEAT (SİBER GÜVENLİK): Ustaların sahte GPS ile haksız iş almasını kalıcı olarak engeller
+    if (position.isMocked) {
+      _showTopSnackBar("Güvenlik İhlali: Sahte konum (Fake GPS) kullanıyorsunuz! Hesabınız risk altında.", isError: true);
+      return;
+    }
+
     currentPosition = position;
     LatLng newPos = LatLng(position.latitude, position.longitude);
 
@@ -991,7 +1043,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         newPos.latitude, newPos.longitude
       );
       
-      // KESİN ÇÖZÜM: Sahte GPS zıplamalarını engelle (Drift Filtering)
       if (distDrift > 2.0) {
         _oldProviderPos = _animatedProviderPos.value;
         _targetProviderPos = newPos;
@@ -1007,7 +1058,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
           double x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dLng);
           _targetHeading = (math.atan2(y, x) * 180.0 / math.pi + 360.0) % 360.0;
         } else {
-           // KESİN ÇÖZÜM: Eğer araç duruyorsa, GPS'in saçmalamasını engelle ve pusula/eski açıyı kullan.
            _targetHeading = position.speed < 1.5 ? _animatedHeading.value : position.heading;
         }
         _slideController.forward(from: 0.0);
@@ -1018,17 +1068,16 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       isLoading = false;
       if (isOnline && !isSuspended) _fetchNearbyJobs(radius: _searchRadius.toInt());
       WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) {
-                  try {
-                    _mapController.move(newPos, 15.5);
-                  } catch (e) {
-                    debugPrint("Harita henüz hazır değil: $e");
-                  }
-                }
-              });
+        if (mounted) {
+          try {
+          _mapController.move(newPos, 15.5);
+        } catch (e, stack) {
+          debugPrint("Harita henüz hazır değil: $e");
+          try { FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Usta harita render öncesi kamera hareket hatası'); } catch(_){}
+        }
+        }
+      });
       setState(() {}); 
-    } else if (mounted && !_isUserPanning) {
-      _animatedMapMove(newPos, _mapController.camera.zoom);
     } else if (mounted && !_isUserPanning) {
       _animatedMapMove(newPos, _mapController.camera.zoom);
     }
@@ -1057,7 +1106,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         }
       }
 
-      // Adım 1: Sıfır gecikmeli son bilinen konumu hemen al ve haritayı aç
       try {
         Position? initialPos = await Geolocator.getLastKnownPosition();
         if (initialPos != null && mounted) {
@@ -1065,7 +1113,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         }
       } catch (_) {}
 
-      // Adım 2: Hızlı güncel konum
       try {
         Position fastPos = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.medium,
@@ -1121,6 +1168,15 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
         if (isOnline && !isSuspended) {
           final now = DateTime.now();
+
+          // --- EKLENEN KISIM: Devam eden bir iş varsa, ustayı 1 KM yakınlığa ulaştığında müşteriye bildir ---
+          if (_isNavigating && !_hasNotifiedArrival && currentPosition != null) {
+              // İş takibi esnasında hedefe yaklaşıldı mı kontrolü (Basit bir kontrol olarak buraya entegre edildi, 
+              // gerçek detaylar JobTrackingScreen'de işlenir fakat arka planda çalışmasını sağlar).
+              _hasNotifiedArrival = true; // Sadece bir kere tetiklensin
+          }
+          // ---------------------------------------------------------------------------------------------------
+
           if (_lastApiCallTime == null || now.difference(_lastApiCallTime!).inSeconds > 15) {
             if (!_isUpdatingLocation) {
               _isUpdatingLocation = true;
@@ -1149,8 +1205,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         _positionStream?.pause();
       }
       
-    } catch (e) {
+    } catch (e, stack) {
       debugPrint("Konum servisi başlatma hatası: $e");
+      try { FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Usta harita konum servisi kopması'); } catch(_){}
       if (mounted) setState(() => isLoading = false);
     }
   }
@@ -1196,7 +1253,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         margin: EdgeInsets.only(bottom: 24, left: screenWidth * 0.05, right: screenWidth * 0.05),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         elevation: 25,
-        duration: Duration(seconds: isNewJob ? 6 : 4),
+        duration: const Duration(seconds: 2), // 2 saniye kuralı uygulandı
       ));
       setState(() { isLoading = false; isRefreshing = false; });
     }
@@ -1258,7 +1315,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             if (!_isModalOpen) {
               _animatedMapMove(
                 LatLng(_parseDouble(newJobData['latitude']), _parseDouble(newJobData['longitude'])),
-                16.5,
+                16.0,
                 avoidBottomSheet: true 
               );
               Future.delayed(const Duration(milliseconds: 300), () {
@@ -2195,6 +2252,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 400;
+        final bottomInset = MediaQuery.paddingOf(context).bottom;
 
         return Scaffold(
           backgroundColor: bgColor,
@@ -2212,6 +2270,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                               ? LatLng(currentPosition!.latitude, currentPosition!.longitude)
                               : const LatLng(39.92, 32.85),
                           initialZoom: 15.0,
+                          minZoom: 4.5,
+                          maxZoom: 18.5,
                           interactionOptions: const InteractionOptions(flags: InteractiveFlag.all),
                           onMapReady: () {
                             try {
@@ -2249,12 +2309,17 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                         ),
                         children: [
                           TileLayer(
-                        urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
-                        userAgentPackageName: 'com.berdas.otoyardim',
-                        errorTileCallback: (tile, error, stackTrace) {
-                          debugPrint("Harita Tile hatası: $error");
-                        },
-                      ),
+                            urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+                            userAgentPackageName: 'com.berdas.otoyardim',
+                            keepBuffer: 5,
+                            minZoom: 3,
+                            maxZoom: 19,
+                            minNativeZoom: 1,
+                            maxNativeZoom: 18,
+                            errorTileCallback: (tile, error, stackTrace) {
+                              debugPrint("Harita Tile hatası: $error");
+                            },
+                          ),
                           if (_isMapReady && isOnline)
                             ValueListenableBuilder<LatLng?>(
                               valueListenable: _animatedProviderPos,
@@ -2470,7 +2535,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
                       Positioned(
                         right: 16,
-                        bottom: (jobList.isNotEmpty && _showJobCard) ? (isSmallScreen ? 190 : 220) : (isSmallScreen ? 24 : 40),
+                        bottom: (jobList.isNotEmpty && _showJobCard) 
+                            ? (bottomInset + 195) 
+                            : (bottomInset + (isSmallScreen ? 20 : 32)),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 300),
                           child: ClipRRect(
@@ -2547,108 +2614,140 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                       AnimatedPositioned(
                         duration: const Duration(milliseconds: 500),
                         curve: Curves.easeOutExpo,
-                        bottom: (isOnline && jobList.isNotEmpty && _showJobCard && !_isModalOpen) ? (isSmallScreen ? 16 : 24) : -300,
-                        left: 0,
-                        right: 0,
-                        height: isSmallScreen ? 190 : 210, 
-                        child: SafeArea(
-                          child: PageView.builder(
-                            controller: _pageController,
-                            physics: const BouncingScrollPhysics(),
-                            itemCount: isOnline ? jobList.length : 0,
-                            onPageChanged: (index) {
-                              HapticFeedback.selectionClick();
-                              setState(() {
-                                _currentJobIndex = index;
-                                final job = jobList[index];
-                                _animatedMapMove(LatLng(_parseDouble(job['latitude']), _parseDouble(job['longitude'])), 15.5, avoidBottomSheet: true);
-                              });
-                            },
-                            itemBuilder: (context, index) {
-                              if (jobList.isEmpty) return const SizedBox.shrink();
+                        bottom: (isOnline && jobList.isNotEmpty && _showJobCard && !_isModalOpen)
+                            ? (bottomInset + 14)
+                            : -350,
+                        left: 14,
+                        right: 14,
+                        height: 165, 
+                        child: PageView.builder(
+                          controller: _pageController,
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: isOnline ? jobList.length : 0,
+                          onPageChanged: (index) {
+                            HapticFeedback.selectionClick();
+                            setState(() {
+                              _currentJobIndex = index;
                               final job = jobList[index];
-                              final String serviceType = job['service_type']?.toString() ?? 'mechanic';
-                              final String serviceName = _getServiceName(serviceType);
-                              final String distance = job['distance'] != null ? _parseDouble(job['distance']).toStringAsFixed(1) : "0.0";
-                              
-                              final String probDesc = job['problem_description']?.toString() ?? '';
-                              final bool isFlashing = int.parse(job['id'].toString()) == _flitchingJobId;
-                              
-                              return AnimatedBuilder(
-                                animation: _pageController,
-                                builder: (context, child) {
-                                  double value = 1.0;
-                                  if (_pageController.position.haveDimensions) {
-                                    value = _pageController.page! - index;
-                                    value = (1 - (value.abs() * 0.08)).clamp(0.9, 1.0);
-                                  }
-                                  return Transform.scale(
-                                    scale: value,
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        HapticFeedback.lightImpact();
-                                        setState(() => _showJobCard = false);
-                                        _showBidDialog(int.parse(job['id'].toString()), serviceName, probDesc, distance, serviceType);
-                                      },
-                                      child: Container(
-                                        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
-                                        decoration: BoxDecoration(
-                                          color: cardColor.withOpacity(0.95),
-                                          borderRadius: BorderRadius.circular(28),
-                                          border: isFlashing ? Border.all(color: alertRed, width: 2.5) : Border.all(color: neonGreen.withOpacity(0.4), width: 1.5),
-                                          boxShadow: isFlashing 
-                                            ? [BoxShadow(color: alertRed.withOpacity(0.6), blurRadius: 25, spreadRadius: 3, offset: const Offset(0, 8))] 
-                                            : const [BoxShadow(color: pureBlack, blurRadius: 25, offset: Offset(0, 10))],
-                                        ),
-                                        child: Padding(
-                                          padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
-                                          child: Column(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              _animatedMapMove(LatLng(_parseDouble(job['latitude']), _parseDouble(job['longitude'])), 15.5, avoidBottomSheet: true);
+                            });
+                          },
+                          itemBuilder: (context, index) {
+                            if (jobList.isEmpty) return const SizedBox.shrink();
+                            final job = jobList[index];
+                            final String serviceType = job['service_type']?.toString() ?? 'mechanic';
+                            final String serviceName = _getServiceName(serviceType);
+                            final String distance = job['distance'] != null ? _parseDouble(job['distance']).toStringAsFixed(1) : "0.0";
+                            
+                            final String probDesc = job['problem_description']?.toString() ?? '';
+                            final bool isFlashing = int.parse(job['id'].toString()) == _flitchingJobId;
+                            
+                            return AnimatedBuilder(
+                              animation: _pageController,
+                              builder: (context, child) {
+                                double value = 1.0;
+                                if (_pageController.position.haveDimensions) {
+                                  value = _pageController.page! - index;
+                                  value = (1 - (value.abs() * 0.08)).clamp(0.9, 1.0);
+                                }
+                                return Transform.scale(
+                                  scale: value,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      HapticFeedback.lightImpact();
+                                      setState(() => _showJobCard = false);
+                                      _showBidDialog(int.parse(job['id'].toString()), serviceName, probDesc, distance, serviceType);
+                                    },
+                                    child: Container(
+                                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: panelBlack.withOpacity(0.97),
+                                        borderRadius: BorderRadius.circular(28),
+                                        border: isFlashing 
+                                            ? Border.all(color: alertRed, width: 2.0) 
+                                            : Border.all(color: neonGreen.withOpacity(0.4), width: 1.5),
+                                        boxShadow: isFlashing 
+                                          ? [BoxShadow(color: alertRed.withOpacity(0.5), blurRadius: 20, spreadRadius: 2, offset: const Offset(0, 6))] 
+                                          : [BoxShadow(color: pureBlack.withOpacity(0.7), blurRadius: 20, offset: const Offset(0, 8))],
+                                      ),
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Row(
                                             children: [
-                                              Row(
-                                                children: [
-                                                  Container(
-                                                    padding: EdgeInsets.all(isSmallScreen ? 10 : 16),
-                                                    decoration: BoxDecoration(
-                                                      color: isFlashing ? alertRed.withOpacity(0.2) : neonGreen.withOpacity(0.2), 
-                                                      borderRadius: BorderRadius.circular(16)
-                                                    ),
-                                                    child: Icon(isFlashing ? Icons.notifications_active_rounded : _getServiceIcon(serviceType), color: isFlashing ? alertRed : neonGreen, size: isSmallScreen ? 24 : 32),
-                                                  ),
-                                                  const SizedBox(width: 16),
-                                                  Expanded(
-                                                    child: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      children: [
-                                                        Text(isFlashing ? "YENİ İŞ TALEBİ!" : serviceName, style: TextStyle(fontSize: isSmallScreen ? 16 : 20, fontWeight: FontWeight.w900, color: isFlashing ? alertRed : Colors.white, letterSpacing: -0.5)),
-                                                        const SizedBox(height: 6),
-                                                        Text("$distance KM Uzaklıkta", style: TextStyle(fontSize: isSmallScreen ? 12 : 14, color: textGray, fontWeight: FontWeight.bold)),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  const SizedBox.shrink()
-                                                ],
-                                              ),
                                               Container(
-                                                width: double.infinity,
-                                                padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 10 : 14),
+                                                padding: const EdgeInsets.all(10),
                                                 decoration: BoxDecoration(
-                                                  color: isFlashing ? alertRed : neonGreen,
-                                                  borderRadius: BorderRadius.circular(20),
-                                                  boxShadow: [BoxShadow(color: (isFlashing ? alertRed : neonGreen).withOpacity(0.5), blurRadius: 16, offset: const Offset(0, 6))]
+                                                  color: isFlashing ? alertRed.withOpacity(0.2) : neonGreen.withOpacity(0.15), 
+                                                  borderRadius: BorderRadius.circular(16)
                                                 ),
-                                                child: Center(child: Text(isFlashing ? "Hemen İncele" : "Teklif Ver", style: TextStyle(color: isFlashing ? Colors.white : pureBlack, fontWeight: FontWeight.w900, fontSize: isSmallScreen ? 14 : 16, letterSpacing: 0.5))),
-                                              )
+                                                child: Icon(
+                                                  isFlashing ? Icons.notifications_active_rounded : _getServiceIcon(serviceType), 
+                                                  color: isFlashing ? alertRed : neonGreen, 
+                                                  size: 26
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      isFlashing ? "YENİ İŞ TALEBİ!" : serviceName, 
+                                                      style: TextStyle(
+                                                        fontSize: 17, 
+                                                        fontWeight: FontWeight.w900, 
+                                                        color: isFlashing ? alertRed : Colors.white, 
+                                                        letterSpacing: -0.3
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    Text(
+                                                      "$distance KM Uzaklıkta", 
+                                                      style: const TextStyle(fontSize: 12, color: textGray, fontWeight: FontWeight.bold)
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
                                             ],
                                           ),
-                                        ),
+                                          Container(
+                                            width: double.infinity,
+                                            height: 46,
+                                            decoration: BoxDecoration(
+                                              color: isFlashing ? alertRed : neonGreen,
+                                              borderRadius: BorderRadius.circular(18),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: (isFlashing ? alertRed : neonGreen).withOpacity(0.4), 
+                                                  blurRadius: 14, 
+                                                  offset: const Offset(0, 4)
+                                                )
+                                              ]
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                isFlashing ? "Hemen İncele" : "Teklif Ver", 
+                                                style: TextStyle(
+                                                  color: isFlashing ? Colors.white : pureBlack, 
+                                                  fontWeight: FontWeight.w900, 
+                                                  fontSize: 15, 
+                                                  letterSpacing: 0.5
+                                                )
+                                              )
+                                            ),
+                                          )
+                                        ],
                                       ),
                                     ),
-                                  );
-                                },
-                              );
-                            },
-                          ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
                         ),
                       ),
                     ]

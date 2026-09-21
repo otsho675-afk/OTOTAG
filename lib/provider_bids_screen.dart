@@ -155,7 +155,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTick
         margin: const EdgeInsets.only(bottom: 24, left: 20, right: 20),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         elevation: 0,
-        duration: const Duration(seconds: 4),
+        duration: const Duration(seconds: 2),
       ));
     }
   }

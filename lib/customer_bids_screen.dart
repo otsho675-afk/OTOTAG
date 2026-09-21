@@ -9,6 +9,7 @@ import 'dart:math' as math;
 import 'job_tracking_screen.dart';
 import 'provider_profile_screen.dart';
 import 'customer_dashboard_screen.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 
 class CustomerBidsScreen extends StatefulWidget {
   final int jobId;
@@ -39,7 +40,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
   bool _isNavigating = false; // CRITICAL FIX: Tanımsız değişken (Undefined name) hatasını çözer
   
   final String baseUrl = "https://eliteagency.sbs/api.php";
-  int _pollInterval = 3; 
+  int _pollInterval = 1; // SÜPER HIZLI EŞLEŞME: Usta teklif verdiği milisaniyede ekrana düşer 
 
   late final AnimationController _radarController;
   late final AnimationController _rippleController;
@@ -190,7 +191,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     }
   }
 
-  void _showTopSnackBar(String message, {bool isError = false}) {
+  void _showTopSnackBar(String message, {bool isError = false, bool isNewJob = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).clearSnackBars();
     
@@ -200,16 +201,16 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2), 
+              color: isNewJob ? Colors.black.withOpacity(0.15) : Colors.white.withOpacity(0.2), 
               shape: BoxShape.circle,
             ),
-            child: Icon(isError ? Icons.error_outline_rounded : Icons.radar_rounded, color: Colors.white, size: 20),
+            child: Icon(isError ? Icons.error_outline_rounded : Icons.radar_rounded, color: isNewJob ? _bgColor : Colors.white, size: 20),
           ),
           const SizedBox(width: 14),
-          Expanded(child: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14))),
+          Expanded(child: Text(message, style: TextStyle(color: isNewJob ? _bgColor : Colors.white, fontWeight: FontWeight.w800, fontSize: 14))),
         ],
       ),
-      backgroundColor: isError ? const Color(0xFFFF3366) : _primaryColor.withValues(alpha: 0.9),
+      backgroundColor: isError ? const Color(0xFFFF3366) : (isNewJob ? _primaryColor : _primaryColor.withValues(alpha: 0.9)),
       behavior: SnackBarBehavior.floating,
       margin: EdgeInsets.only(
         left: 20, 
@@ -217,8 +218,8 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
         bottom: MediaQuery.paddingOf(context).bottom + 20
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      elevation: 0,
-      duration: const Duration(seconds: 4),
+      elevation: isNewJob ? 10 : 0,
+      duration: const Duration(seconds: 2),
     ));
   }
 
@@ -257,7 +258,11 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
         }
       }
 
-      final response = await http.get(Uri.parse("$baseUrl?action=get_bids&job_id=${widget.jobId}&_t=$timestamp")).timeout(const Duration(seconds: 10));
+      // ANTI-DDOS KORUMASI: Saniyede 1 atılan hızlı isteklerin sunucuyu yormaması için "keep-alive" bağlantısı kullanıldı
+      final response = await http.get(
+        Uri.parse("$baseUrl?action=get_bids&job_id=${widget.jobId}&_t=$timestamp"),
+        headers: {"Connection": "keep-alive", "Cache-Control": "no-cache"}
+      ).timeout(const Duration(seconds: 2));
       
       if (!mounted) return;
       
@@ -353,7 +358,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
       );
       final data = json.decode(response.body);
       if (data['status'] == 'success') {
-        _showTopSnackBar("Karşı teklifiniz ustaya iletildi.");
+        _showTopSnackBar("Karşı teklifiniz ustaya iletildi.", isNewJob: true); // FIX: Yeşil uyarı ile çıkar
         _pollInterval = 3;
         _fetchBids();
       } else {
@@ -567,6 +572,13 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
       
       final data = json.decode(response.body);
       if (data['status'] == 'success' && mounted) {
+        try {
+          FirebaseAnalytics.instance.logEvent(
+            name: 'customer_accepted_bid',
+            parameters: {'amount': amount},
+          );
+        } catch(e) {}
+        
         _cleanupTimers();
         HapticFeedback.heavyImpact();
         Navigator.pushReplacement(context, PageRouteBuilder(

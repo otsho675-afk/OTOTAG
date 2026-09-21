@@ -1,4 +1,4 @@
-// job_tracking_screen.dart
+// Dosya: job_tracking_screen.dart
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -15,6 +15,8 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'provider_map_screen.dart'; 
 import 'customer_dashboard_screen.dart';
 import 'chat_screen.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 class JobTrackingScreen extends StatefulWidget {
   final int jobId;
@@ -71,6 +73,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   bool _isCheckingMessages = false; 
   bool _isFetchingRoute = false; 
   bool _isNavigating = false; 
+  bool _isRatingModalOpen = false; // Çifte modal açılmasını engelleyen kilit
   Map<String, dynamic>? activeBid;
 
   bool _isPanelExpanded = true;
@@ -163,13 +166,13 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   }
 
   void _zoomIn() {
-    final zoom = (_mapController.camera.zoom + 1).clamp(2.0, 18.0);
+    final zoom = (_mapController.camera.zoom + 1).clamp(4.5, 18.0);
     _animatedMapMove(_mapController.camera.center, zoom);
     setState(() => _autoFollowBounds = false);
   }
 
   void _zoomOut() {
-    final zoom = (_mapController.camera.zoom - 1).clamp(2.0, 18.0);
+    final zoom = (_mapController.camera.zoom - 1).clamp(4.5, 18.0);
     _animatedMapMove(_mapController.camera.center, zoom);
     setState(() => _autoFollowBounds = false);
   }
@@ -187,7 +190,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     final distance = const Distance().as(LengthUnit.Kilometer, startCenter, destLocation);
 
     if (distance > 50.0) {
-      _mapController.move(destLocation, destZoom);
+      _mapController.move(destLocation, destZoom.clamp(4.5, 18.0));
+      _isProgrammaticCameraMove = false; // Programatik bayrak temizlendi
       return;
     }
 
@@ -199,7 +203,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
     final latTween = Tween<double>(begin: startCenter.latitude, end: destLocation.latitude);
     final lngTween = Tween<double>(begin: startCenter.longitude, end: destLocation.longitude);
-    final zoomTween = Tween<double>(begin: _mapController.camera.zoom, end: destZoom.clamp(3.0, 18.0));
+    final zoomTween = Tween<double>(begin: _mapController.camera.zoom, end: destZoom.clamp(4.5, 18.0));
 
     _mapMoveController?.stop(); 
     _mapMoveController?.dispose();
@@ -320,8 +324,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           'polyline': route['geometry']
         };
       }
-    } catch (e2) {
+    } catch (e2, stack) {
       debugPrint("OSRM fallback error: $e2");
+      try { FirebaseCrashlytics.instance.recordError(e2, stack, reason: 'Rota hesaplama hatası (OSRM Fallback)'); } catch(_){}
     }
 
     return null;
@@ -373,7 +378,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   }
 
   void _updateRouteProgress(LatLng currentPos) {
-    if (_routePoints.isEmpty) return;
+    if (_routePoints.length <= 1) return;
     
     int closestIndex = _findClosestRoutePointIndex(currentPos);
     if (closestIndex != -1) {
@@ -502,8 +507,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
         points.add(LatLng(lat / 1E5, lng / 1E5));
       }
-    } catch (e) {
+    } catch (e, stack) {
       debugPrint("Polyline decode hatası: $e");
+      try { FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Harita rota (polyline) çizim hatası'); } catch(_){}
     }
     return points;
   }
@@ -596,6 +602,13 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           "lng": _myPosition?.longitude.toString() ?? "0.0",
         }
       ).timeout(_apiTimeout);
+      
+      try {
+        FirebaseAnalytics.instance.logEvent(
+          name: 'sos_triggered', 
+          parameters: {'user_type': widget.userType}
+        );
+      } catch(e) {}
       
       _showTopSnackBar("SOS sinyali iletildi.", isError: true);
       
@@ -707,6 +720,12 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   }
 
   void _processNewPosition(Position position, {bool isInitial = false}) {
+    // GÜVENLİK DUVARI: İş takibi sırasında hileli konum (Mock Location) sinyallerini engeller
+    if (position.isMocked) {
+      _showTopSnackBar("Güvenlik Uyarısı: Sistem sahte GPS sinyali engelledi!", isError: true);
+      return;
+    }
+
     if (!isInitial && position.accuracy > 80.0) return;
 
     _myPosition = position; 
@@ -730,7 +749,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         if (customerLat != 0.0 && providerLat != 0.0) {
           distanceInKm = Geolocator.distanceBetween(customerLat, customerLng, providerLat, providerLng) / 1000;
           
-          if (_routePoints.isEmpty) {
+          if (_routePoints.length <= 1) {
             _fetchRoute();
           } else {
             _updateRouteProgress(LatLng(providerLat, providerLng));
@@ -886,7 +905,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       );
       
       final cameraFit = CameraFit.bounds(bounds: bounds, padding: edgePadding).fit(_mapController.camera);
-      _animatedMapMove(cameraFit.center, cameraFit.zoom.clamp(4.0, 16.5));
+      _animatedMapMove(cameraFit.center, cameraFit.zoom.clamp(4.5, 16.5));
     } catch (e) {
       debugPrint("Map bound error: $e");
     }
@@ -963,7 +982,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     ScaffoldMessenger.of(context).clearSnackBars();
     
     final double screenHeight = MediaQuery.sizeOf(context).height;
-    double bottomMargin = screenHeight - 120; 
+    double bottomMargin = screenHeight - (MediaQuery.paddingOf(context).top + 110); 
     if (bottomMargin < 20) bottomMargin = 20;
 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -987,7 +1006,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       margin: EdgeInsets.only(bottom: bottomMargin, left: 16, right: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 0,
-      duration: const Duration(seconds: 4),
+      duration: const Duration(seconds: 2), // 2 saniye kuralı
     ));
   }
 
@@ -1156,7 +1175,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
             double distMeters = Geolocator.distanceBetween(customerLat, customerLng, providerLat, providerLng);
             distanceInKm = distMeters / 1000;
             
-            if (_routePoints.isEmpty) {
+            if (_routePoints.length <= 1) {
               if (_lastRouteFetch == null || DateTime.now().difference(_lastRouteFetch!).inSeconds > 6) {
                 _fetchRoute(); 
               }
@@ -1177,7 +1196,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
             } catch(e){ debugPrint(e.toString()); }
           }
 
-          if (jobStatus == 'completed' && widget.userType == 'customer' && !isRated) {
+          if (jobStatus == 'completed' && widget.userType == 'customer' && !isRated && !_isRatingModalOpen) {
              _timer?.cancel(); 
              _positionStream?.cancel(); 
              _showRatingDialog();
@@ -1502,7 +1521,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       if (mounted && (response.statusCode == 201 || response.statusCode == 200)) {
          Navigator.pop(context); 
          _showTopSnackBar("Değerlendirme için teşekkürler!");
-         setState(() => isRated = true);
+         setState(() {
+           isRated = true;
+           _isRatingModalOpen = false;
+         });
       }
     } catch (e) {
       if (mounted) _showTopSnackBar("Bağlantı hatası.", isError: true);
@@ -1664,6 +1686,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   }
 
   void _showRatingDialog() {
+    _isRatingModalOpen = true;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1766,6 +1789,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                          onPressed: () {
                            FocusScope.of(context).unfocus();
                            Navigator.pop(context);
+                           _isRatingModalOpen = false;
                            if (!_isNavigating) {
                              _isNavigating = true;
                              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => CustomerDashboardScreen(customerId: widget.userId ?? customerId ?? 0)));
@@ -1781,7 +1805,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           );
         }
       ),
-    );
+    ).whenComplete(() => _isRatingModalOpen = false);
   }
 
   Future<void> _openExternalMap() async {
@@ -1874,37 +1898,41 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       title += " • $_etaString";
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: panelBlack.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: alertColor.withValues(alpha: 0.5), 
-          width: 1.5
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: alertColor.withValues(alpha: 0.25),
-            blurRadius: 10,
-            spreadRadius: 1
-          )
-        ]
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(alertIcon, color: alertColor, size: 20),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              title, 
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: 0.3),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            ),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 340),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: panelBlack.withValues(alpha: 0.95),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: alertColor.withValues(alpha: 0.5), 
+            width: 1.5
           ),
-        ],
+          boxShadow: [
+            BoxShadow(
+              color: alertColor.withValues(alpha: 0.25),
+              blurRadius: 10,
+              spreadRadius: 1
+            )
+          ]
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(alertIcon, color: alertColor, size: 20),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                title, 
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: 0.3),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1965,6 +1993,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         backgroundColor: const Color(0xFF030305),
         initialCenter: customerLat != 0.0 ? LatLng(customerLat, customerLng) : const LatLng(39.92, 32.85),
         initialZoom: 14.5,
+        minZoom: 4.5,
+        maxZoom: 18.5,
         interactionOptions: const InteractionOptions(flags: InteractiveFlag.all),
         onMapReady: () {
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -2023,7 +2053,11 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         TileLayer(
           urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
           userAgentPackageName: 'com.berdas.otoyardim',
-          keepBuffer: 3,
+          keepBuffer: 5,
+          minZoom: 3,
+          maxZoom: 19,
+          minNativeZoom: 1,
+          maxNativeZoom: 18,
         ),
         CircleLayer(circles: mapCircles),
         PolylineLayer(polylines: mapPolylines),
@@ -2161,7 +2195,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           }
         ),
 
-        // Mavi navigasyon noktası sadece müşteri ekranındaysa çizilir; ustanın kendi ekranında çift ikon oluşturması engellenir
         ValueListenableBuilder<Position?>(
           valueListenable: _myPositionNotifier,
           builder: (context, pos, child) {
@@ -2332,12 +2365,11 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                 )
               ),
 
-              // Üst Mesafe Banner'ı (Genişliği responsive hale getirildi ve çakışma önlendi)
               if (distanceInKm > 0 && jobStatus != 'completed')
                 Positioned(
                   top: MediaQuery.paddingOf(context).top + 60,
-                  left: 72, 
-                  right: 72, 
+                  left: 70, 
+                  right: 70, 
                   child: Center(
                     child: _buildDistanceWarningBanner(),
                   ),

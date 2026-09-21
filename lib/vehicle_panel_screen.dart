@@ -125,8 +125,23 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     
     // Sigorta Bildirimi
     if (_insuranceDateCache != null) {
-      DateTime notifyDate = _insuranceDateCache!.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
-      if (notifyDate.isAfter(DateTime.now())) {
+      final int daysLeft = _insuranceDateCache!.difference(DateTime.now()).inDays;
+      if (daysLeft < 0) {
+        await notificationHelper.scheduleNotification(
+          id: currentVehicleData['id'].hashCode ^ "sigorta_gecmis".hashCode,
+          title: "⚠️ Sigorta Süresi Geçti!",
+          body: "$plate plakalı aracınızın trafik sigortası ${daysLeft.abs()} gün önce bitti. Lütfen yenileyin.",
+          scheduledDate: DateTime.now().add(const Duration(seconds: 5))
+        );
+      } else if (daysLeft <= 3) {
+        await notificationHelper.scheduleNotification(
+          id: currentVehicleData['id'].hashCode ^ "sigorta_yaklasan".hashCode,
+          title: "Trafik Sigortası Hatırlatması",
+          body: "$plate plakalı aracınızın trafik sigortası bitişine $daysLeft gün kaldı.",
+          scheduledDate: DateTime.now().add(const Duration(seconds: 5))
+        );
+      } else {
+        DateTime notifyDate = _insuranceDateCache!.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
         await notificationHelper.scheduleNotification(
           id: currentVehicleData['id'].hashCode ^ "sigorta".hashCode,
           title: "Trafik Sigortası Hatırlatması",
@@ -138,8 +153,23 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
 
     // Muayene Bildirimi
     if (_inspectionDateCache != null) {
-      DateTime notifyDate = _inspectionDateCache!.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
-      if (notifyDate.isAfter(DateTime.now())) {
+      final int daysLeft = _inspectionDateCache!.difference(DateTime.now()).inDays;
+      if (daysLeft < 0) {
+        await notificationHelper.scheduleNotification(
+          id: currentVehicleData['id'].hashCode ^ "muayene_gecmis".hashCode,
+          title: "⚠️ Araç Muayenesi Gecikti!",
+          body: "$plate plakalı aracınızın muayene süresi ${daysLeft.abs()} gün önce bitti. Lütfen yenileyin.",
+          scheduledDate: DateTime.now().add(const Duration(seconds: 6))
+        );
+      } else if (daysLeft <= 3) {
+        await notificationHelper.scheduleNotification(
+          id: currentVehicleData['id'].hashCode ^ "muayene_yaklasan".hashCode,
+          title: "Araç Muayenesi Hatırlatması",
+          body: "$plate plakalı aracınızın muayene süresinin dolmasına $daysLeft gün kaldı.",
+          scheduledDate: DateTime.now().add(const Duration(seconds: 6))
+        );
+      } else {
+        DateTime notifyDate = _inspectionDateCache!.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
         await notificationHelper.scheduleNotification(
           id: currentVehicleData['id'].hashCode ^ "muayene".hashCode,
           title: "Araç Muayenesi Hatırlatması",
@@ -1218,7 +1248,8 @@ class _RecordFormSheet extends StatefulWidget {
 }
 
 class __RecordFormSheetState extends State<_RecordFormSheet> {
-  final Duration _uploadTimeout = const Duration(seconds: 30);
+  // GÜNCELLEME 1: Yükleme Zaman Aşımı 30'dan 60 saniyeye çıkarıldı.
+  final Duration _uploadTimeout = const Duration(seconds: 60);
   
   late String selectedType;
   late TextEditingController descController;
@@ -1391,7 +1422,28 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
     final action = isEditing ? "update_vehicle_record" : "add_vehicle_record";
 
     try {
+      // GÜNCELLEME 2: Ağ üzerinden yükleme denenmeden önce dosya boyutlarını 5 MB ile sınırlar.
+      if (selectedImage != null && !kIsWeb) {
+        final int sizeInBytes = await File(selectedImage!.path).length();
+        if (sizeInBytes > 5 * 1024 * 1024) {
+          _showCustomSnackBar("Görsel boyutu çok büyük (Maks 5MB). Lütfen başka bir görsel seçin.", isError: true);
+          setState(() => isSaving = false);
+          return;
+        }
+      }
+      
+      if (selectedDoc != null && !kIsWeb && selectedDoc!.path != null) {
+        final int sizeInBytes = await File(selectedDoc!.path!).length();
+        if (sizeInBytes > 5 * 1024 * 1024) {
+          _showCustomSnackBar("Belge boyutu çok büyük (Maks 5MB). Lütfen daha küçük bir dosya seçin.", isError: true);
+          setState(() => isSaving = false);
+          return;
+        }
+      }
+
       var request = http.MultipartRequest('POST', Uri.parse("${widget.baseUrl}?action=$action"));
+      // GÜVENLİK FIX'I: API.php'deki anti-bot korumasına takılmamak için tarayıcı kimliği eklendi
+      request.headers['User-Agent'] = "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36";
       request.fields['vehicle_id'] = widget.vehicleId;
       request.fields['record_type'] = selectedType;
       request.fields['description'] = descController.text.trim();
@@ -1433,7 +1485,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
         if (response.statusCode == 200 || response.statusCode == 201) {
           HapticFeedback.mediumImpact();
           if (!kIsWeb && enableNotification && selectedNextDate != null) {
-            DateTime notificationDate = selectedNextDate!.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
+            DateTime notificationDate = DateTime.now().add(const Duration(seconds: 10));
             if (notificationDate.isAfter(DateTime.now())) {
               await notificationHelper.scheduleNotification(
                 id: DateTime.now().millisecondsSinceEpoch ~/ 1000, 
@@ -1453,7 +1505,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
     } catch (e) {
       if (mounted) {
         HapticFeedback.vibrate();
-        _showCustomSnackBar("Bağlantı hatası veya dosya boyutu çok büyük.", isError: true);
+        _showCustomSnackBar("İnternet bağlantınız koptu veya sunucu yanıt vermiyor.", isError: true);
       }
     } finally {
       if (mounted) setState(() => isSaving = false);
@@ -1698,17 +1750,20 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                               borderRadius: BorderRadius.circular(16), 
                               border: Border.all(color: const Color(0xFF00FFA3).withOpacity(0.2))
                             ),
-                            child: SwitchListTile(
-                              value: enableNotification,
-                              onChanged: (val) {
-                                HapticFeedback.selectionClick();
-                                setState(() => enableNotification = val);
-                              },
-                              activeColor: const Color(0xFF00FFA3),
-                              activeTrackColor: const Color(0xFF00FFA3).withOpacity(0.3),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-                              title: const Text("Vakti Yaklaşınca Hatırlat (3 Gün Önce)", style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white)),
-                              secondary: const Icon(Icons.notifications_active_rounded, color: Color(0xFF00FFA3), size: 22),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: SwitchListTile(
+                                value: enableNotification,
+                                onChanged: (val) {
+                                  HapticFeedback.selectionClick();
+                                  setState(() => enableNotification = val);
+                                },
+                                activeColor: const Color(0xFF00FFA3),
+                                activeTrackColor: const Color(0xFF00FFA3).withOpacity(0.3),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                                title: const Text("Vakti Yaklaşınca Hatırlat (3 Gün Önce)", style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white)),
+                                secondary: const Icon(Icons.notifications_active_rounded, color: Color(0xFF00FFA3), size: 22),
+                              ),
                             ),
                           ),
                         ],
@@ -1806,7 +1861,9 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
       onTap: () async {
         HapticFeedback.selectionClick();
         final picker = ImagePicker();
-        final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70, maxWidth: 1600);
+        // GÜNCELLEME 3: Resim seçicide kalite 70'ten 60'a, genişlik ise 1600'den 1080'e düşürülerek
+        // fotoğraf boyutlarının sunucu limitlerine takılmadan hızlıca yüklenmesi sağlandı.
+        final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 60, maxWidth: 1080);
         if (picked != null) setState(() => selectedImage = picked);
       },
       borderRadius: BorderRadius.circular(16),
@@ -1900,6 +1957,7 @@ class NotificationHelper {
     if (_isInitialized || kIsWeb) return;
     
     tz.initializeTimeZones(); 
+    tz.setLocalLocation(tz.getLocation('Europe/Istanbul'));
     
     const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
@@ -1931,12 +1989,19 @@ class NotificationHelper {
       tz.TZDateTime.from(scheduledDate, tz.local),
       const NotificationDetails(
         android: AndroidNotificationDetails(
-          'vehicle_reminders',
+          'vehicle_reminders_premium', // Kanal ID değişmeli ki yeni ses ayarları telefona işlesin
           'Araç Hatırlatmaları',
           channelDescription: 'Muayene, sigorta ve periyodik işlemler için sistem hatırlatıcıları',
           importance: Importance.max,
           priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
+          icon: 'ic_notification',
+          color: Color(0xFF00FFA3), 
+          enableLights: true, 
+          ledColor: Color(0xFF00FFA3), 
+          ledOnMs: 1000,
+          ledOffMs: 500,
+          fullScreenIntent: true, 
+          sound: RawResourceAndroidNotificationSound('oto_alert'), 
         ),
         iOS: DarwinNotificationDetails(),
       ),

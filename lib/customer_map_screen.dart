@@ -13,6 +13,8 @@ import 'dart:ui';
 import 'dart:async'; 
 import 'dart:math' as math; 
 import 'customer_bids_screen.dart';
+import 'package:firebase_analytics/firebase_analytics.dart'; // FİREBASE ANALYTICS EKLENDİ
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 class CustomerMapScreen extends StatefulWidget {
   final int customerId;
@@ -90,7 +92,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
   @override
   void initState() {
     super.initState();
-    googleApiKey = const String.fromEnvironment('MAPS_API_KEY');
+    googleApiKey = const String.fromEnvironment('MAPS_API_KEY', defaultValue: 'AIzaSyA_NvuYHjKyG7O0ZDYJLvxfgClvdHlMlJU');
     WidgetsBinding.instance.addObserver(this); 
     selectedService = widget.initialService;
     _generateSmartSuggestion();
@@ -124,9 +126,8 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     
     final distance = const Distance().as(LengthUnit.Kilometer, startCenter, destLocation);
     
-    // KESİN ÇÖZÜM: 50 KM'den uzak mesafelerde siyah ekranı/donmayı önlemek için animasyonsuz atla
     if (distance > 50.0) {
-      mapController.move(destLocation, destZoom);
+      mapController.move(destLocation, destZoom.clamp(4.5, 18.0));
       _isProgrammaticCameraMove = false;
       return;
     }
@@ -135,7 +136,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
 
     final latTween = Tween<double>(begin: startCenter.latitude, end: destLocation.latitude);
     final lngTween = Tween<double>(begin: startCenter.longitude, end: destLocation.longitude);
-    final zoomTween = Tween<double>(begin: mapController.camera.zoom, end: destZoom.clamp(3.0, 18.0));
+    final zoomTween = Tween<double>(begin: mapController.camera.zoom, end: destZoom.clamp(4.5, 18.0));
 
     _mapMoveController?.stop(); 
     _mapMoveController?.dispose();
@@ -488,22 +489,37 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
       } catch (_) {}
 
       try {
+        // HIZLI ODAKLANMA: Cihazın GPS'ini beklemeden saniyesinde son bilinen konumu yansıtır
+        Position? fastPos = await Geolocator.getLastKnownPosition();
+        if (fastPos != null && mounted) {
+          _applyInitialPosition(fastPos, isInitial: currentPositionNotifier.value == null);
+        }
+        
         Position current = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.medium,
-          timeLimit: const Duration(seconds: 10),
+          desiredAccuracy: LocationAccuracy.low, // SÜPER HIZLI: Beklemeyi sıfırlamak için ilk tetiği hızlı alır
+          timeLimit: const Duration(seconds: 2), 
         );
         if (mounted) {
           _applyInitialPosition(current, isInitial: currentPositionNotifier.value == null);
         }
-      } catch (_) {}
+      } catch (e, stack) {
+        try { FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Müşteri harita ilk konum bulma zaman aşımı'); } catch(_){}
+      }
 
       LocationSettings locationSettings = kIsWeb 
           ? const LocationSettings(accuracy: LocationAccuracy.low, distanceFilter: 5)
-          : const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 3);
+          : const LocationSettings(accuracy: LocationAccuracy.bestForNavigation, distanceFilter: 1); // ANLIK TAKİP: Hassasiyet artırıldı, filtre 1 metreye düşürüldü
 
       _positionStream?.cancel();
       _positionStream = Geolocator.getPositionStream(locationSettings: locationSettings).listen((Position position) {
         if (!mounted) return;
+        
+        // ANTI-CHEAT (HİLE KORUMASI): Sahte GPS uygulamalarını anında tespit edip engeller
+        if (position.isMocked) {
+          _showTopSnackBar("Güvenlik İhlali: Cihazınızda sahte konum (Fake GPS) tespit edildi!", isError: true);
+          return;
+        }
+
         bool isFirstLoad = currentPositionNotifier.value == null;
         
         if (!isFirstLoad && position.accuracy > 80.0) return;
@@ -514,8 +530,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
           _applyInitialPosition(position, isInitial: true);
         }
       });
-    } catch (e) {
+    } catch (e, stack) {
       debugPrint("Konum başlatma hatası: $e");
+      try { FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Müşteri harita GPS/Konum başlatma hatası'); } catch(_){}
     }
   }
 
@@ -566,7 +583,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
       margin: const EdgeInsets.all(16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 0,
-      duration: const Duration(seconds: 4),
+      duration: const Duration(seconds: 2),
     ));
   }
 
@@ -618,9 +635,24 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
       try {
         final data = json.decode(response.body);
         if ((response.statusCode == 200 || response.statusCode == 201) && data['status'] == 'success') {
-          if (!mounted) return; // FIX: Asenkron işlem sonrası mounted kontrolü eklendi
+          if (!mounted) return;
           _isNavigating = true; 
           int newJobId = int.parse(data['job_id'].toString());
+          
+          // --- FİREBASE ANALYTICS: BAŞARILI TALEPLERİ KAYDET ---
+          try {
+            FirebaseAnalytics.instance.logEvent(
+              name: 'job_created',
+              parameters: {
+                'service_type': selectedService,
+                'city': customerCity,
+              },
+            );
+          } catch(e) {
+            debugPrint("Analytics Hatası: $e");
+          }
+          // ---------------------------------------------------
+
           Navigator.pushReplacement(context, PageRouteBuilder(
             pageBuilder: (context, animation, secondaryAnimation) => CustomerBidsScreen(jobId: newJobId, customerId: widget.customerId),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -645,7 +677,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
   void _zoomIn() {
     HapticFeedback.lightImpact();
     setState(() {
-      _currentZoom = (_currentZoom + 1).clamp(2.0, 18.0);
+      _currentZoom = (_currentZoom + 1).clamp(4.5, 18.0);
       final center = mapController.camera.center;
       _animatedMapMove(center, _currentZoom);
     });
@@ -654,7 +686,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
   void _zoomOut() {
     HapticFeedback.lightImpact();
     setState(() {
-      _currentZoom = (_currentZoom - 1).clamp(2.0, 18.0);
+      _currentZoom = (_currentZoom - 1).clamp(4.5, 18.0);
       final center = mapController.camera.center;
       _animatedMapMove(center, _currentZoom);
     });
@@ -761,6 +793,8 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                     backgroundColor: const Color(0xFF030305),
                     initialCenter: _pinLocationNotifier.value ?? const LatLng(39.92, 32.85),
                     initialZoom: _currentZoom,
+                    minZoom: 4.5,
+                    maxZoom: 18.5,
                     interactionOptions: const InteractionOptions(
                       flags: InteractiveFlag.all,
                     ),
@@ -817,7 +851,11 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                     TileLayer(
                       urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
                       userAgentPackageName: 'com.berdas.otoyardim',
-                      keepBuffer: 3, // Panning yaparken kenarlardaki beyazlığı engeller
+                      keepBuffer: 5,
+                      minZoom: 3,
+                      maxZoom: 19,
+                      minNativeZoom: 1,
+                      maxNativeZoom: 18,
                       errorTileCallback: (tile, error, stackTrace) {
                         debugPrint("Harita Tile yüklenemedi: $error");
                       },
@@ -1151,7 +1189,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                             filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40), 
                             child: ConstrainedBox(
                               constraints: BoxConstraints(
-                                maxHeight: math.max(250.0, constraints.maxHeight * 0.72 - viewInsetsBottom), 
+                                maxHeight: viewInsetsBottom > 0 
+                                    ? math.max(180.0, constraints.maxHeight * 0.40) 
+                                    : math.max(250.0, constraints.maxHeight * 0.65), 
                               ),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min, 
@@ -1411,7 +1451,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                                         letterSpacing: 0.5
                                                       ),
                                                       maxLines: 1, 
-                                                      overflow: TextOverflow.visible, 
+                                                      overflow: TextOverflow.ellipsis, 
                                                     ),
                                                   ),
                                                   const SizedBox(width: 8),

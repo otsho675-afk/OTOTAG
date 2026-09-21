@@ -30,7 +30,6 @@ class CustomHttpOverrides extends HttpOverrides {
 class SmartPhoneFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
-    // İçinde harf varsa (yönetici girişi gibi durumlarda) olduğu gibi bırak
     if (RegExp(r'[a-zA-Z]').hasMatch(newValue.text)) {
       return newValue;
     }
@@ -90,7 +89,6 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // Akıllı Hafıza: Kayıtlı numarayı getir
   Future<void> _loadSavedPhone() async {
     final prefs = await SharedPreferences.getInstance();
     String? savedPhone = prefs.getString('saved_phone_${widget.userType}');
@@ -112,7 +110,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // Akıllı Hafıza: Numarayı kaydet
   Future<void> _savePhone(String phone) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('saved_phone_${widget.userType}', phone);
@@ -128,95 +125,6 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       debugPrint("Güncelleme kontrolü iptal edildi veya başarısız: $e");
     }
-  }
-
-  // Hatanın tüm teknik ayrıntılarını ekranda gösteren ve panoya kopyalayan pencere
-  void _showDetailedErrorDialog(String title, String details) {
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: AlertDialog(
-          backgroundColor: const Color(0xFF16161E),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24), 
-            side: const BorderSide(color: Color(0xFFFF3366), width: 1.5)
-          ),
-          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: const Color(0xFFFF3366).withOpacity(0.2), shape: BoxShape.circle),
-                child: const Icon(Icons.bug_report_rounded, color: Color(0xFFFF3366), size: 24),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  title, 
-                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)
-                ),
-              ),
-            ],
-          ),
-          content: Container(
-            constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.45),
-            width: double.maxFinite,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.4),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white10),
-            ),
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: SelectableText(
-                details,
-                style: const TextStyle(color: Colors.white70, fontSize: 12, fontFamily: 'monospace', height: 1.4),
-              ),
-            ),
-          ),
-          actionsPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-          actions: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton.icon(
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      backgroundColor: Colors.white.withOpacity(0.05),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                    onPressed: () {
-                      Clipboard.setData(ClipboardData(text: details));
-                      Navigator.pop(ctx);
-                      _showCustomSnackBar('Hata ayrıntıları panoya kopyalandı.');
-                    },
-                    icon: const Icon(Icons.copy_rounded, size: 16, color: Color(0xFF00FFA3)),
-                    label: const Text("Kopyala", style: TextStyle(color: Color(0xFF00FFA3), fontWeight: FontWeight.bold)),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      backgroundColor: const Color(0xFFFF3366),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text("Kapat", style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Future<void> _login() async {
@@ -255,7 +163,7 @@ class _LoginScreenState extends State<LoginScreen> {
         }
         if (sanitizedInput.length != 11 || !sanitizedInput.startsWith('05')) {
           if (!kIsWeb) HapticFeedback.vibrate();
-          _showCustomSnackBar('Lütfen numaranızı eksiksiz girin (Örn: 05XX...).', isError: true);
+          _showCustomSnackBar('Lütfen telefon numaranızı kontrol ediniz.', isError: true);
           setState(() => isLoggingIn = false);
           return;
         }
@@ -297,13 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!isJsonValid) {
         if (!kIsWeb) HapticFeedback.vibrate();
-        _showDetailedErrorDialog(
-          "Geçersiz Sunucu Yanıtı",
-          "HTTP Kodu: ${response.statusCode}\n\n"
-          "Hedef URL:\n$targetUrl\n\n"
-          "Gönderilen Veri:\n${requestBody.toString()}\n\n"
-          "Sunucudan Gelen Ham Yanıt:\n${response.body.isEmpty ? '(Boş Yanıt Döndü)' : response.body}"
-        );
+        _showCustomSnackBar('Sunucu ile bağlantı kurulamadı. Lütfen tekrar deneyiniz.', isError: true);
         return;
       }
 
@@ -333,28 +235,14 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       } else {
         if (!kIsWeb) HapticFeedback.vibrate();
-        _showDetailedErrorDialog(
-          "Giriş Başarısız (API Reddi)",
-          "HTTP Kodu: ${response.statusCode}\n"
-          "Durum: ${data['status']}\n"
-          "Sunucu Mesajı: ${data['message'] ?? 'Bilinmeyen Hata'}\n\n"
-          "Gönderilen Telefon: $sanitizedInput\n"
-          "Kullanıcı Tipi: ${widget.userType}\n\n"
-          "Sunucu Tam Çıktısı:\n${response.body}"
-        );
+        String errorMsg = data['message'] ?? 'Giriş yapılamadı. Bilgilerinizi kontrol ediniz.';
+        _showCustomSnackBar(errorMsg, isError: true);
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       debugPrint("Giriş İstek Hatası: $e");
       if (!mounted) return;
       if (!kIsWeb) HapticFeedback.vibrate();
-      _showDetailedErrorDialog(
-        "Ağ / Bağlantı Hatası",
-        "Hata Tipi: ${e.runtimeType}\n\n"
-        "Hata Detayı:\n$e\n\n"
-        "Hedef URL:\n$targetUrl\n\n"
-        "Gönderilmek İstenen Veri:\n${requestBody.toString()}\n\n"
-        "Stack İzleme:\n${stackTrace.toString().split('\n').take(6).join('\n')}"
-      );
+      _showCustomSnackBar('İnternet bağlantınızı kontrol edip tekrar deneyiniz.', isError: true);
     } finally {
       if (mounted) setState(() => isLoggingIn = false);
     }
@@ -450,6 +338,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showCustomSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Row(
@@ -472,10 +361,14 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       backgroundColor: isError ? const Color(0xFFFF3366) : const Color(0xFF00FFA3),
       behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.all(24),
+      margin: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        bottom: MediaQuery.paddingOf(context).bottom + 20,
+      ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 20,
-      duration: const Duration(seconds: 4),
+      duration: const Duration(seconds: 2), // 2 saniye kuralı uygulandı
     ));
   }
 
@@ -584,7 +477,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               }
                             } catch (e) {
                               if (!mounted) return;
-                              _showCustomSnackBar("Bağlantı hatası: $e", isError: true);
+                              _showCustomSnackBar("Bağlantı hatası oluştu.", isError: true);
                             } finally {
                               if (mounted) setStateDialog(() => isChecking = false);
                             }
@@ -688,7 +581,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final isCustomer = widget.userType == 'customer';
     
     return GestureDetector(
-      behavior: HitTestBehavior.translucent, // Kök widget dokunmalarının alt öğelerin odaklanmasını engellememesi için eklendi.
+      behavior: HitTestBehavior.translucent,
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         backgroundColor: const Color(0xFF030305),
@@ -800,7 +693,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 label: isCustomer ? "Telefon No " : "Telefon Numarası", 
                                 icon: isCustomer ? Icons.person_outline_rounded : Icons.phone_android_rounded, 
                                 isPasswordField: false, 
-                                type: const TextInputType.numberWithOptions(decimal: false, signed: false), // Sadece rakamları tetikleyen yapıya çevrildi
+                                type: const TextInputType.numberWithOptions(decimal: false, signed: false),
                                 inputFormatters: [
                                   SmartPhoneFormatter(), 
                                   LengthLimitingTextInputFormatter(15)

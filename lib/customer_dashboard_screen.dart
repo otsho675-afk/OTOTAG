@@ -16,6 +16,7 @@ import 'job_tracking_screen.dart';
 import 'spare_parts_market.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 
 class CustomerDashboardScreen extends StatefulWidget {
   final int customerId;
@@ -820,7 +821,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
         margin: const EdgeInsets.all(16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 0,
-        duration: const Duration(seconds: 4),
+        duration: const Duration(seconds: 2),
       ));
     }
   }
@@ -919,12 +920,87 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       final data = json.decode(response.body);
 
       if (response.statusCode == 200 && data['status'] == 'success') {
+        final fetchedVehicles = List<Map<String, dynamic>>.from(data['vehicles'] ?? []);
+        
         if (mounted) {
           setState(() {
-            vehicles = List<Map<String, dynamic>>.from(data['vehicles'] ?? []);
+            vehicles = fetchedVehicles;
             if (selectedVehicleIndex.value >= vehicles.length) selectedVehicleIndex.value = 0;
           });
         }
+
+        // --- EKLENEN KISIM: Ana ekrana girildiğinde tüm araçların tarihlerini kontrol et ve bildirim kur ---
+        if (!kIsWeb) {
+          DateTime now = DateTime.now();
+          for (var v in fetchedVehicles) {
+            final plate = v['plate']?.toString().toUpperCase() ?? 'ARAÇ';
+            final int vId = int.tryParse(v['id']?.toString() ?? '0') ?? 0;
+            
+            final insDate = DateTime.tryParse(v['insurance_date']?.toString() ?? '');
+            final inspDate = DateTime.tryParse(v['inspection_date']?.toString() ?? '');
+
+            // Sigorta Kontrolü
+            if (insDate != null) {
+              final int daysLeft = insDate.difference(now).inDays;
+              if (daysLeft < 0) {
+                await notificationHelper.scheduleNotification(
+                  id: vId.hashCode ^ "sigorta_gecmis".hashCode,
+                  title: "⚠️ Sigorta Süresi Geçti!",
+                  body: "$plate plakalı aracınızın trafik sigortası ${daysLeft.abs()} gün önce bitti. Lütfen yenileyin.",
+                  scheduledDate: now.add(const Duration(seconds: 4))
+                );
+              } else if (daysLeft <= 15) {
+                await notificationHelper.scheduleNotification(
+                  id: vId.hashCode ^ "sigorta_yaklasan".hashCode,
+                  title: "Trafik Sigortası Hatırlatması",
+                  body: "$plate plakalı aracınızın trafik sigortası bitişine $daysLeft gün kaldı.",
+                  scheduledDate: now.add(const Duration(seconds: 4))
+                );
+              } else {
+                DateTime notifyDate = insDate.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
+                if (notifyDate.isAfter(now)) {
+                  await notificationHelper.scheduleNotification(
+                    id: vId.hashCode ^ "sigorta".hashCode,
+                    title: "Trafik Sigortası Hatırlatması",
+                    body: "$plate plakalı aracınızın trafik sigortası bitişine 3 gün kaldı.",
+                    scheduledDate: notifyDate
+                  );
+                }
+              }
+            }
+
+            // Muayene Kontrolü
+            if (inspDate != null) {
+              final int daysLeft = inspDate.difference(now).inDays;
+              if (daysLeft < 0) {
+                await notificationHelper.scheduleNotification(
+                  id: vId.hashCode ^ "muayene_gecmis".hashCode,
+                  title: "⚠️ Araç Muayenesi Gecikti!",
+                  body: "$plate plakalı aracınızın muayene süresi ${daysLeft.abs()} gün önce bitti. Lütfen yenileyin.",
+                  scheduledDate: now.add(const Duration(seconds: 5))
+                );
+              } else if (daysLeft <= 15) {
+                await notificationHelper.scheduleNotification(
+                  id: vId.hashCode ^ "muayene_yaklasan".hashCode,
+                  title: "Araç Muayenesi Hatırlatması",
+                  body: "$plate plakalı aracınızın muayene süresinin dolmasına $daysLeft gün kaldı.",
+                  scheduledDate: now.add(const Duration(seconds: 5))
+                );
+              } else {
+                DateTime notifyDate = inspDate.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
+                if (notifyDate.isAfter(now)) {
+                  await notificationHelper.scheduleNotification(
+                    id: vId.hashCode ^ "muayene".hashCode,
+                    title: "Araç Muayenesi Hatırlatması",
+                    body: "$plate plakalı aracınızın muayene süresinin dolmasına 3 gün kaldı.",
+                    scheduledDate: notifyDate
+                  );
+                }
+              }
+            }
+          }
+        }
+        // ---------------------------------------------------------------------------------------------
       }
     } catch (e) {
       if (mounted) {
@@ -958,6 +1034,42 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
         if (mounted) _showPremiumModal();
       } else if (response.statusCode == 200 || response.statusCode == 201) {
         if (mounted) _showTopSnackBar(isEditing ? "Araç başarıyla güncellendi!" : "Araç başarıyla eklendi!");
+        try {
+          if (!isEditing) {
+            FirebaseAnalytics.instance.logEvent(
+              name: 'vehicle_added', 
+              parameters: {'brand_model': brandModel}
+            );
+          }
+        } catch(e) {}
+        
+        // --- EKLENEN KISIM: Araç Eklendiğinde Süresi Geçenleri Anında Hatırlat ---
+        if (!kIsWeb) {
+          if (insDate != null) {
+            final int insDays = insDate.difference(DateTime.now()).inDays;
+            if (insDays < 0) {
+              await notificationHelper.scheduleNotification(
+                id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+                title: "⚠️ Sigorta Süresi Geçti!",
+                body: "${plate.toUpperCase()} plakalı aracınızın trafik sigortası ${insDays.abs()} gün önce bitti. Lütfen yenileyin.",
+                scheduledDate: DateTime.now().add(const Duration(seconds: 4))
+              );
+            }
+          }
+          if (inspDate != null) {
+            final int inspDays = inspDate.difference(DateTime.now()).inDays;
+            if (inspDays < 0) {
+              await notificationHelper.scheduleNotification(
+                id: (DateTime.now().millisecondsSinceEpoch ~/ 1000) + 1,
+                title: "⚠️ Araç Muayenesi Gecikti!",
+                body: "${plate.toUpperCase()} plakalı aracınızın muayene süresi ${inspDays.abs()} gün önce bitti. Lütfen yenileyin.",
+                scheduledDate: DateTime.now().add(const Duration(seconds: 5))
+              );
+            }
+          }
+        }
+        // -------------------------------------------------------------------------
+        
         await _fetchVehicles();
       } else {
         if (mounted) _showTopSnackBar(data['message'] ?? "İşlem başarısız.", isError: true);

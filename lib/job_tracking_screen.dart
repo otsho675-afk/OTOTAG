@@ -726,7 +726,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       return;
     }
 
-    if (!isInitial && position.accuracy > 80.0) return;
+    if (!isInitial && position.accuracy > 200.0) return;
 
     _myPosition = position; 
     _myPositionNotifier.value = position;
@@ -1017,6 +1017,14 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     try {
       final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
       final response = await _httpClient.get(Uri.parse("$_baseUrl?action=get_job_status&job_id=${widget.jobId}&_t=$timestamp")).timeout(_apiTimeout);
+      
+      if (response.statusCode == 401) {
+        _timer?.cancel();
+        _positionStream?.cancel();
+        _showTopSnackBar("Oturum süresi doldu veya yetkisiz erişim. Lütfen giriş yapın.", isError: true);
+        return;
+      }
+      
       final data = json.decode(response.body);
       
       if (!mounted) return;
@@ -2039,12 +2047,14 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           } else if (event is MapEventMoveEnd) {
             if (_isUserPanning) {
               _resumeTrackingTimer?.cancel();
+              /* UX Düzeltmesi: Kullanıcı haritayı incelerken kamera zorla geri atlamamalı.
               _resumeTrackingTimer = Timer(const Duration(seconds: 5), () {
                 if (mounted) {
                   setState(() { _isUserPanning = false; _autoFollowBounds = true; });
                   _fitMapBounds();
                 }
               });
+              */
             }
           }
         }

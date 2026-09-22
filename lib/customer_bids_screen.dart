@@ -40,7 +40,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
   bool _isNavigating = false; // CRITICAL FIX: Tanımsız değişken (Undefined name) hatasını çözer
   
   final String baseUrl = "https://eliteagency.sbs/api.php";
-  int _pollInterval = 1; // SÜPER HIZLI EŞLEŞME: Usta teklif verdiği milisaniyede ekrana düşer 
+  int _pollInterval = 3; // SÜPER HIZLI EŞLEŞME: Sunucu ve MySQL çökmesini önlemek için 3 saniye yapıldı.
 
   late final AnimationController _radarController;
   late final AnimationController _rippleController;

@@ -137,6 +137,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     _checkActiveJob();
     if (!kIsWeb) {
       OneSignal.login(widget.providerId.toString());
+      // iOS için zorunlu bildirim izni talebi eklendi
+      OneSignal.Notifications.requestPermission(true);
+      
       flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
       _initNotifications();
       _inAppPurchase = InAppPurchase.instance;
@@ -422,9 +425,11 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       barrierDismissible: false,
       builder: (context) => StatefulBuilder( 
         builder: (context, setDialogState) {
-          return Dialog(
-            backgroundColor: Colors.transparent,
-            insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          return PopScope(
+            canPop: !isSubmitting,
+            child: Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 return ClipRRect(
@@ -2298,9 +2303,11 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                               _isUserPanning = true;
                             } else if (event is MapEventMoveEnd) {
                               if (_isUserPanning) {
+                                /* UX Düzeltmesi: Kullanıcı haritayı incelerken kamera zorla geri atlamamalı.
                                 Future.delayed(const Duration(seconds: 4), () {
                                   if (mounted) setState(() => _isUserPanning = false);
                                 });
+                                */
                               }
                             }
                           },

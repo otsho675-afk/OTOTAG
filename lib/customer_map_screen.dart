@@ -450,7 +450,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
 
   void _applyInitialPosition(Position position, {bool isInitial = false}) {
     if (!mounted) return;
-    if (!isInitial && position.accuracy > 80.0) return;
+    if (!isInitial && position.accuracy > 200.0) return;
     
     currentPositionNotifier.value = position;
     final loc = LatLng(position.latitude, position.longitude);
@@ -524,7 +524,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
 
         bool isFirstLoad = currentPositionNotifier.value == null;
         
-        if (!isFirstLoad && position.accuracy > 80.0) return;
+        if (!isFirstLoad && position.accuracy > 200.0) return;
         
         currentPositionNotifier.value = position;
         
@@ -840,11 +840,13 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                         if (_isUserPanning) {
                           // _debouncedFetchAddress(mapController.camera.center); // İPTAL EDİLDİ: Sadece ilk konumun veya GPS konumunun adresi kalır.
                           _resumeTrackingTimer?.cancel();
+                          /* UX Düzeltmesi: Kullanıcı haritayı incelerken kamera zorla geri atlamamalı.
                           _resumeTrackingTimer = Timer(const Duration(seconds: 5), () {
                             if (mounted) {
                               setState(() => _isUserPanning = false);
                             }
                           });
+                          */
                         }
                       }
                     }

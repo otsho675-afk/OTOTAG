@@ -90,6 +90,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     
     if (!kIsWeb) {
       OneSignal.login(widget.customerId.toString());
+      // iOS için zorunlu bildirim izni talebi eklendi
+      OneSignal.Notifications.requestPermission(true);
+      
       _inAppPurchase = InAppPurchase.instance;
       final Stream<List<PurchaseDetails>> purchaseUpdated = _inAppPurchase.purchaseStream;
       _purchaseSubscription = purchaseUpdated.listen((purchaseDetailsList) {

@@ -960,7 +960,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           _showTopSnackBar("İşlem iptal edildi.");
           Navigator.pushAndRemoveUntil(
             context, 
-            MaterialPageRoute(builder: (context) => widget.userType == 'customer' ? CustomerDashboardScreen(customerId: widget.userId ?? customerId ?? 0) : ProviderMapScreen(providerId: widget.userId ?? providerId ?? 0)),
+            MaterialPageRoute(builder: (context) => widget.userType == 'customer' ? CustomerDashboardScreen(customerId: widget.userId ?? customerId ?? 0) : ProviderMapScreen(providerId: widget.userId ?? providerId ?? 0, initialOnline: true)),
             (route) => false
           );
         }
@@ -1051,7 +1051,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
             _isNavigating = true;
             if (widget.userType == 'provider') {
               _showTopSnackBar("Müşteri talebi iptal etti.", isError: true);
-              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ProviderMapScreen(providerId: widget.userId ?? providerId ?? 0))); 
+              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ProviderMapScreen(providerId: widget.userId ?? providerId ?? 0, initialOnline: true))); 
             } else {
               _showTopSnackBar("İşlem iptal edildi.", isError: true);
               Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => CustomerDashboardScreen(customerId: widget.userId ?? customerId ?? 0)));
@@ -1317,7 +1317,13 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       final response = await _httpClient.post(
         Uri.parse("$_baseUrl?action=accept_bid"),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
-        body: {"job_id": widget.jobId.toString(), "bid_id": bidId, "provider_id": widget.userId.toString(), "amount": amount},
+        body: {
+          "job_id": widget.jobId.toString(), 
+          "bid_id": bidId, 
+          "provider_id": widget.userId.toString(), 
+          "amount": amount,
+          "user_type": widget.userType
+        },
       ).timeout(_apiTimeout);
       final data = json.decode(response.body);
       if (mounted) {

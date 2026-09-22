@@ -24,7 +24,8 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 class ProviderMapScreen extends StatefulWidget {
   final int providerId;
-  const ProviderMapScreen({super.key, required this.providerId});
+  final bool initialOnline;
+  const ProviderMapScreen({super.key, required this.providerId, this.initialOnline = true});
 
   @override
   _ProviderMapScreenState createState() => _ProviderMapScreenState();
@@ -49,7 +50,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
   bool isLoading = true;
   bool isRefreshing = false;
-  bool isOnline = false; 
+  late bool isOnline; 
   bool _showJobCard = false; 
   bool _isModalOpen = false; 
   bool _isMapReady = false; 
@@ -131,6 +132,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   @override
   void initState() {
     super.initState();
+    isOnline = widget.initialOnline;
     googleApiKey = const String.fromEnvironment('MAPS_API_KEY', defaultValue: 'AIzaSyA_NvuYHjKyG7O0ZDYJLvxfgClvdHlMlJU');
 
     _loadProviderMarker();
@@ -1031,6 +1033,17 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             if (data['performance']?['profile_image'] != null) {
               profileImageUrl = data['performance']['profile_image'];
             }
+            if (data['performance']?['lat'] != null && data['performance']?['lng'] != null) {
+              double dbLat = _parseDouble(data['performance']['lat']);
+              double dbLng = _parseDouble(data['performance']['lng']);
+              if (dbLat != 0.0 && dbLng != 0.0 && _animatedProviderPos.value == null) {
+                _animatedProviderPos.value = LatLng(dbLat, dbLng);
+                _targetProviderPos = LatLng(dbLat, dbLng);
+                if (_isMapReady) {
+                  _mapController.move(LatLng(dbLat, dbLng), 15.5);
+                }
+              }
+            }
             if (data['performance']?['service_type'] != null) {
               providerServiceType = data['performance']['service_type'].toString();
               _loadProviderMarker();
@@ -1055,6 +1068,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
     currentPosition = position;
     LatLng newPos = LatLng(position.latitude, position.longitude);
+    
+    // İş iptallerinde veya ekran geçişlerinde marker'ın kaybolmasını önlemek için doğrudan güncelleyin
+    _animatedProviderPos.value = newPos;
+    _animatedHeading.value = position.heading;
 
     if (_animatedProviderPos.value == null) {
       _animatedProviderPos.value = newPos;
@@ -1769,7 +1786,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     List<Marker> markers = [];
 
     LatLng? actualProviderPos = providerPos ?? 
-    (currentPosition != null ? LatLng(currentPosition!.latitude, currentPosition!.longitude) : null);
+        _targetProviderPos ?? 
+        _oldProviderPos ?? 
+        (currentPosition != null ? LatLng(currentPosition!.latitude, currentPosition!.longitude) : null);
 
     if (isOnline && actualProviderPos != null) {
       markers.add(

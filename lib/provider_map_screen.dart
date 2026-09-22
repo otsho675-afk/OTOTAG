@@ -633,7 +633,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                 )); 
               }
             ),
-          );
+          ),
+        );
         }
       )
     ).then((_) {

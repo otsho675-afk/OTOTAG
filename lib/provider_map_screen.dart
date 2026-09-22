@@ -108,7 +108,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
   InAppPurchase? _inAppPurchase;
   StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
-  final String _subscriptionProductId = 'provider_monthly_subscription';
+  final String _subscriptionProductId = 'ototag_provider_monthly';
 
   static const Color neonGreen = Color(0xFF00FFA3);
   static const Color darkGreen = Color(0xFF0A2B1D);

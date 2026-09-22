@@ -108,7 +108,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
   InAppPurchase? _inAppPurchase;
   StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
-  final String _subscriptionProductId = 'ototag_provider_monthly';
+  final String _subscriptionProductId = defaultTargetPlatform == TargetPlatform.iOS 
+      ? 'ototag_provider_monthly' 
+      : 'provider_monthly_subscription';
+  String _subscriptionPriceDisplay = "Fiyat Hesaplanıyor...";
 
   static const Color neonGreen = Color(0xFF00FFA3);
   static const Color darkGreen = Color(0xFF0A2B1D);
@@ -144,6 +147,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       _initNotifications();
       _inAppPurchase = InAppPurchase.instance;
       _initInAppPurchase();
+      _loadSubscriptionPrice();
     }
     
     _pageController = PageController(viewportFraction: 0.92);
@@ -372,7 +376,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                   ),
                   child: isCheckingSubscription
                       ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 3))
-                      : const Text("Aboneliği Yenile", style: TextStyle(color: pureBlack, fontSize: 16, fontWeight: FontWeight.w900)),
+                      : Text("Aboneliği Başlat ($_subscriptionPriceDisplay)", style: const TextStyle(color: pureBlack, fontSize: 16, fontWeight: FontWeight.w900)),
                 ),
               ),
               const SizedBox(height: 16),
@@ -915,6 +919,22 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     }
   }
 
+  Future<void> _loadSubscriptionPrice() async {
+    if (kIsWeb || _inAppPurchase == null) return;
+    final bool available = await _inAppPurchase!.isAvailable();
+    if (!available) return;
+    final ProductDetailsResponse response = await _inAppPurchase!.queryProductDetails({_subscriptionProductId});
+    if (response.productDetails.isNotEmpty && mounted) {
+      setState(() {
+        _subscriptionPriceDisplay = "${response.productDetails.first.price} / Ay"; 
+      });
+    } else if (mounted) {
+      setState(() {
+        _subscriptionPriceDisplay = "Abone Ol";
+      });
+    }
+  }
+
   Future<void> _startSubscriptionPurchase() async {
     if (kIsWeb || _inAppPurchase == null) {
       _showTopSnackBar("Web platformunda uygulama içi ödeme desteklenmiyor.", isError: true);
@@ -935,7 +955,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     }
     final ProductDetails productDetails = response.productDetails.first;
     final PurchaseParam purchaseParam = PurchaseParam(productDetails: productDetails);
-    _inAppPurchase!.buyNonConsumable(purchaseParam: purchaseParam);
+    
+    try {
+      _inAppPurchase!.buyNonConsumable(purchaseParam: purchaseParam);
+    } catch(e) {
+      debugPrint("Ödeme hatası (abonelik): $e");
+    }
   }
 
   Future<void> _restorePurchases() async {

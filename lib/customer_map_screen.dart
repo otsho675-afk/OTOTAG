@@ -238,13 +238,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     super.dispose();
   }
 
-  void _debouncedFetchAddress(LatLng pos) {
-    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
-    
-    _debounceTimer = Timer(const Duration(milliseconds: 600), () {
-      _fetchAddressForPin(pos);
-    });
-  }
+  
 
   Future<void> _fetchAddressForPin(LatLng pos) async {
     if (!mounted) return;
@@ -527,6 +521,18 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
         if (!isFirstLoad && position.accuracy > 200.0) return;
         
         currentPositionNotifier.value = position;
+        final LatLng currentLatLng = LatLng(position.latitude, position.longitude);
+        
+        // Eğer kullanıcı haritayı manuel kaydırmıyorsa, marker sürekli müşteriyi takip etsin
+        if (!_isUserPanning) {
+          _pinLocationNotifier.value = currentLatLng; // Marker'ı yeni GPS konumuna taşı
+          _fetchAddressForPin(currentLatLng); // O anki yeni konumun adresini getir
+          
+          // Harita kamerasını da o konuma yavaşça kaydır
+          if (_isMapReady && mounted) {
+             _animatedMapMove(currentLatLng, _currentZoom);
+          }
+        }
         
         if (isFirstLoad) {
           _applyInitialPosition(position, isInitial: true);

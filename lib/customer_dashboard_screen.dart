@@ -61,7 +61,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   
   late final InAppPurchase _inAppPurchase;
   StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
-  final String _premiumProductId = 'customer_premium_subscription'; 
+  final String _premiumProductId = defaultTargetPlatform == TargetPlatform.iOS 
+      ? 'ototag_premium_monthly' 
+      : 'customer_premium_monthly'; 
   String _premiumPriceDisplay = "Fiyat Hesaplanıyor...";
 
   // Yenilenmiş Siber Tasarım Paleti
@@ -478,7 +480,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     final ProductDetails productDetails = response.productDetails.first;
     final PurchaseParam purchaseParam = PurchaseParam(productDetails: productDetails);
     
-    _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
+    try {
+      _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
+    } catch(e) {
+      debugPrint("Ödeme hatası (abonelik): $e");
+    }
   }
 
   Future<void> _fetchNotifications() async {

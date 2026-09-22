@@ -503,7 +503,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
           _applyInitialPosition(current, isInitial: currentPositionNotifier.value == null);
         }
       } catch (e, stack) {
-        try { FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Müşteri harita ilk konum bulma zaman aşımı'); } catch(_){}
+        if (!kIsWeb) {
+          try { FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Müşteri harita ilk konum bulma zaman aşımı'); } catch(_){}
+        }
       }
 
       LocationSettings locationSettings = kIsWeb 
@@ -532,7 +534,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
       });
     } catch (e, stack) {
       debugPrint("Konum başlatma hatası: $e");
-      try { FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Müşteri harita GPS/Konum başlatma hatası'); } catch(_){}
+      if (!kIsWeb) {
+        try { FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Müşteri harita GPS/Konum başlatma hatası'); } catch(_){}
+      }
     }
   }
 
@@ -806,9 +810,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                     },
                     onTap: (tapPosition, point) {
                       FocusScope.of(context).unfocus();
-                      _animatedMapMove(point, _currentZoom);
-                      _pinLocationNotifier.value = point;
-                      _debouncedFetchAddress(point);
+                      // Müşterinin konumu manuel değiştirmesi engellendi. Sadece haritada gezinebilir.
                     },
                     onPositionChanged: (cameraPosition, hasGesture) {
                       _currentZoom = cameraPosition.zoom;
@@ -816,7 +818,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                       if (hasGesture) {
                         _mapMoveController?.stop();
                         _isProgrammaticCameraMove = false;
-                        _pinLocationNotifier.value = cameraPosition.center;
+                        // _pinLocationNotifier.value = cameraPosition.center; // İPTAL EDİLDİ: Pin merkeze kilitlenmez, yerinde sabit kalır.
                         if (!_isUserPanning) {
                           setState(() => _isUserPanning = true);
                         }
@@ -836,7 +838,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                       } else if (event is MapEventMoveEnd) {
                         _isMapMovingNotifier.value = false;
                         if (_isUserPanning) {
-                          _debouncedFetchAddress(mapController.camera.center);
+                          // _debouncedFetchAddress(mapController.camera.center); // İPTAL EDİLDİ: Sadece ilk konumun veya GPS konumunun adresi kalır.
                           _resumeTrackingTimer?.cancel();
                           _resumeTrackingTimer = Timer(const Duration(seconds: 5), () {
                             if (mounted) {

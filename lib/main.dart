@@ -15,6 +15,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'firebase_options.dart'; 
 
+import 'package:shared_preferences/shared_preferences.dart';
+import 'customer_dashboard_screen.dart';
+import 'provider_map_screen.dart';
 import 'login_screen.dart' show LoginScreen;
 
 // Android SSL El Sıkışma & Ara Sertifika Uyumlayıcı
@@ -135,10 +138,12 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  Widget? _nextScreen; // Oturum durumuna göre gidilecek ekran
 
   @override
   void initState() {
     super.initState();
+    _checkLoginStatus(); // Uygulama açılırken oturumu kontrol et
     
     _animationController = AnimationController(
       vsync: this,
@@ -170,13 +175,36 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         Navigator.pushReplacement(
           context,
           PageRouteBuilder(
-            pageBuilder: (_, __, ___) => const RoleSelectionScreen(),
+            // Eğer _nextScreen doluysa direkt içeri al, boşsa Role Seçimine at
+            pageBuilder: (_, __, ___) => _nextScreen ?? const RoleSelectionScreen(),
             transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
             transitionDuration: const Duration(milliseconds: 400),
           ),
         );
       }
     });
+  }
+
+  // Cihaz hafızasındaki oturumu kontrol eden fonksiyon
+  Future<void> _checkLoginStatus() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final int? userId = prefs.getInt('logged_in_user_id');
+      final String? userType = prefs.getString('logged_in_user_type');
+      
+      if (userId != null && userType != null) {
+        if (!kIsWeb) {
+          OneSignal.login(userId.toString()); // Bildirim bağlantısını tazele
+        }
+        if (userType == 'customer') {
+          _nextScreen = CustomerDashboardScreen(customerId: userId);
+        } else if (userType == 'provider') {
+          _nextScreen = ProviderMapScreen(providerId: userId);
+        }
+      }
+    } catch (e) {
+      debugPrint("Oturum kontrol hatası: $e");
+    }
   }
 
   @override

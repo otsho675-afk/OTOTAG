@@ -7,6 +7,7 @@ import 'dart:ui';
 import 'package:intl/intl.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'customer_map_screen.dart';
 import 'customer_bids_screen.dart';
@@ -88,6 +89,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     _startTimers();
     
     if (!kIsWeb) {
+      OneSignal.login(widget.customerId.toString());
       _inAppPurchase = InAppPurchase.instance;
       final Stream<List<PurchaseDetails>> purchaseUpdated = _inAppPurchase.purchaseStream;
       _purchaseSubscription = purchaseUpdated.listen((purchaseDetailsList) {
@@ -829,6 +831,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   Future<void> _performLogout() async {
     _notifTimer?.cancel();
     _adScrollTimer?.cancel();
+
+    if (!kIsWeb) {
+      OneSignal.logout();
+    }
 
     try {
       final prefs = await SharedPreferences.getInstance();

@@ -4,8 +4,10 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:ui';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'provider_profile_screen.dart';
 import 'main.dart'; 
+import 'package:flutter/foundation.dart'; 
 
 class ProfileScreen extends StatefulWidget {
   final int userId;
@@ -266,7 +268,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     }
 
     setState(() => isSaving = true);
-    FocusScope.of(context).unfocus(); 
+    Future.delayed(const Duration(milliseconds: 50), () {
+      if (mounted) FocusScope.of(context).unfocus();
+    });
 
     try {
       final response = await _httpClient.post(
@@ -504,6 +508,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                     ),
                     onPressed: () async {
                       Navigator.pop(dialogContext);
+                      
+                      if (!kIsWeb) {
+                        OneSignal.logout();
+                      }
+                      
                       try {
                         final prefs = await SharedPreferences.getInstance();
                         await prefs.clear();
@@ -579,6 +588,10 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                         onPressed: isDeletingAccount ? null : () async {
                           setDialogState(() => isDeletingAccount = true);
                           
+                          if (!kIsWeb) {
+                            OneSignal.logout();
+                          }
+                          
                           try {
                             await _httpClient.post(
                               Uri.parse("$baseUrl?action=delete_account"),
@@ -624,6 +637,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       child: Scaffold(
         backgroundColor: _bgColor,
         extendBodyBehindAppBar: true,
+        resizeToAvoidBottomInset: false, // KLAVYE HATASINI ÖNLEMEK İÇİN EKLENDİ
         appBar: PreferredSize(
           preferredSize: const Size.fromHeight(110),
           child: ClipRRect(

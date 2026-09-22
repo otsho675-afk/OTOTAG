@@ -131,8 +131,12 @@ class _LoginScreenState extends State<LoginScreen> {
     if (isLoggingIn) return;
 
     if (!kIsWeb) HapticFeedback.lightImpact(); 
-    FocusScope.of(context).unfocus(); 
-    TextInput.finishAutofillContext();
+    Future.delayed(const Duration(milliseconds: 50), () {
+      if (mounted) {
+        FocusScope.of(context).unfocus();
+        TextInput.finishAutofillContext();
+      }
+    });
     
     String rawInput = _phoneController.text.trim();
     String pass = _passwordController.text.trim();
@@ -224,6 +228,11 @@ class _LoginScreenState extends State<LoginScreen> {
           if (!kIsWeb) {
             OneSignal.login(userId.toString());
           }
+
+          // KULLANICI OTURUMUNU CİHAZ HAFIZASINA KAYDET (Beni Hatırla)
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setInt('logged_in_user_id', userId);
+          await prefs.setString('logged_in_user_type', data['user_type']);
 
           if (data['user_type'] == 'customer') {
             Navigator.pushReplacement(context, MaterialPageRoute(
@@ -586,6 +595,7 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Scaffold(
         backgroundColor: const Color(0xFF030305),
         extendBodyBehindAppBar: true,
+        resizeToAvoidBottomInset: false, // KLAVYE HATASINI ÖNLEMEK İÇİN EKLENDİ
         appBar: AppBar(
           leading: IconButton(
             icon: Container(

@@ -9,6 +9,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'dart:convert';
@@ -135,6 +136,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     WidgetsBinding.instance.addObserver(this); 
     _checkActiveJob();
     if (!kIsWeb) {
+      OneSignal.login(widget.providerId.toString());
       flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
       _initNotifications();
       _inAppPurchase = InAppPurchase.instance;

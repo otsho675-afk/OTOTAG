@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'dart:ui';
 import 'dart:async';
 import 'dart:typed_data';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'login_screen.dart';
 
@@ -47,7 +48,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   List<Map<String, dynamic>> allAds = [];
   List<dynamic> allPartListings = [];
 
-  // --- YENİ EKLENEN: Satın alım ve premium takip listeleri ---
   List<dynamic> allPurchases = [];
   Map<String, dynamic> purchaseStats = {};
 
@@ -84,14 +84,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       _fetchTickets(),
       _fetchAds(),
       _fetchPartListings(),
-      _fetchPurchases(), // --- YENİ EKLENEN ---
+      _fetchPurchases(),
     ]);
     if (mounted) {
       setState(() => isLoading = false);
     }
   }
 
-  // --- YENİ EKLENEN: Satın alımları çeken fonksiyon ---
   Future<void> _fetchPurchases() async {
     try {
       final response = await http.get(Uri.parse("$baseUrl?action=admin_get_purchases"));
@@ -111,7 +110,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Future<void> _fetchPartListings() async {
     try {
-      final res = await http.get(Uri.parse("$baseUrl?action=get_part_listings&user_id=0"));
+      final res = await http.get(Uri.parse("$baseUrl?action=get_part_listings"));
       if (res.statusCode == 200) {
         final data = json.decode(res.body);
         if (data['status'] == 'success' && mounted) {
@@ -626,6 +625,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           child: TextField(
             controller: passwordController,
             obscureText: true,
+            enableSuggestions: false,
+            autocorrect: false,
             decoration: InputDecoration(
               labelText: "Yeni Şifre",
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
@@ -768,7 +769,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       );
       if (response.statusCode == 200) {
         await _fetchAllData();
-        if(mounted){
+        if (mounted) {
            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(action == 'approve_provider' ? "Usta başarıyla onaylandı." : "İşlem başarılı."),
             backgroundColor: action == 'approve_provider' ? Colors.green : Colors.blue,
@@ -777,7 +778,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         }
       }
     } catch (e) {
-      if(mounted){
+      if (mounted) {
          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("İşlem sırasında bir hata oluştu.")));
       }
     }
@@ -889,16 +890,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       
       if (response.statusCode == 200) {
         await _fetchAllData();
-        if(mounted) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data?['message']?.toString() ?? "Cezai işlem uygulandı."), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
         }
       } else {
-        if(mounted) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data?['message']?.toString() ?? "İşlem başarısız oldu."), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating));
         }
       }
     } catch (e) {
-      if(mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Bağlantı hatası."), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating));
       }
     }
@@ -940,12 +941,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       );
       if (response.statusCode == 200) {
         await _fetchAllData();
-        if(mounted) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Kullanıcı başarıyla silindi."), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
         }
       }
     } catch (e) {
-      if(mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Silme işlemi başarısız."), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating));
       }
     }
@@ -987,12 +988,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       );
       if (response.statusCode == 200) {
         await _fetchAllData();
-        if(mounted) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("İşlem başarıyla silindi."), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
         }
       }
     } catch (e) {
-      if(mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Silme işlemi başarısız."), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating));
       }
     }
@@ -1108,114 +1109,116 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E293B) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 30, offset: const Offset(0, -5))]
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Center(child: Container(width: 50, height: 5, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10)))),
-              const SizedBox(height: 24),
-              Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      CircleAvatar(
-                        radius: 45,
-                        backgroundColor: isBanned ? Colors.red.withOpacity(0.1) : Colors.blue.withOpacity(0.1),
-                        child: Icon(isBanned ? Icons.block : (isCustomer ? Icons.person : Icons.engineering), size: 45, color: isBanned ? Colors.red : Colors.blue),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(user['name']?.toString() ?? 'Bilinmeyen Kullanıcı', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: isBanned ? Colors.red : (isDark ? Colors.white : Colors.black87), decoration: isBanned ? TextDecoration.lineThrough : null)),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(color: isCustomer ? Colors.blue.withOpacity(0.1) : Colors.purple.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-                            child: Text(isCustomer ? "Müşteri Hesabı" : "Usta (${_translateServiceType(user['service_category']?.toString())})", style: TextStyle(color: isCustomer ? Colors.blue : Colors.purple, fontWeight: FontWeight.bold, fontSize: 12)),
-                          ),
-                          if (isPremium)
+        child: SafeArea(
+          child: Container(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 30, offset: const Offset(0, -5))]
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(child: Container(width: 50, height: 5, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10)))),
+                const SizedBox(height: 24),
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        CircleAvatar(
+                          radius: 45,
+                          backgroundColor: isBanned ? Colors.red.withOpacity(0.1) : Colors.blue.withOpacity(0.1),
+                          child: Icon(isBanned ? Icons.block : (isCustomer ? Icons.person : Icons.engineering), size: 45, color: isBanned ? Colors.red : Colors.blue),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(user['name']?.toString() ?? 'Bilinmeyen Kullanıcı', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: isBanned ? Colors.red : (isDark ? Colors.white : Colors.black87), decoration: isBanned ? TextDecoration.lineThrough : null)),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          children: [
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-                              child: const Text("Premium Üye", style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12)),
+                              decoration: BoxDecoration(color: isCustomer ? Colors.blue.withOpacity(0.1) : Colors.purple.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                              child: Text(isCustomer ? "Müşteri Hesabı" : "Usta (${_translateServiceType(user['service_category']?.toString())})", style: TextStyle(color: isCustomer ? Colors.blue : Colors.purple, fontWeight: FontWeight.bold, fontSize: 12)),
                             ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(color: isDark ? Colors.white10 : Colors.grey.shade50, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.grey.withOpacity(0.2))),
-                        child: Column(
-                          children: [
-                            _detailRow("Telefon", user['phone']?.toString() ?? '-', isDark),
-                            const Divider(),
-                            _detailRow("Şehir", user['city']?.toString() ?? 'Belirtilmedi', isDark),
-                            const Divider(),
-                            _detailRow("Kayıt Tarihi", _formatDate(user['created_at']?.toString()), isDark),
-                            if (!isCustomer) ...[
-                              const Divider(),
-                              _detailRow("IBAN", user['iban']?.toString().isNotEmpty == true ? user['iban'] : 'Eklenmedi', isDark),
-                            ]
+                            if (isPremium)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                                child: const Text("Premium Üye", style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12)),
+                              ),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        alignment: WrapAlignment.center,
-                        children: [
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                            icon: const Icon(Icons.call, color: Colors.white, size: 20),
-                            label: const Text("Ara", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                            onPressed: () => _launchURL("tel:${user['phone']}"),
+                        const SizedBox(height: 24),
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(color: isDark ? Colors.white10 : Colors.grey.shade50, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.grey.withOpacity(0.2))),
+                          child: Column(
+                            children: [
+                              _detailRow("Telefon", user['phone']?.toString() ?? '-', isDark),
+                              const Divider(),
+                              _detailRow("Şehir", user['city']?.toString() ?? 'Belirtilmedi', isDark),
+                              const Divider(),
+                              _detailRow("Kayıt Tarihi", _formatDate(user['created_at']?.toString()), isDark),
+                              if (!isCustomer) ...[
+                                const Divider(),
+                                _detailRow("IBAN", user['iban']?.toString().isNotEmpty == true ? user['iban'] : 'Eklenmedi', isDark),
+                              ]
+                            ],
                           ),
-                          if (!isCustomer)
+                        ),
+                        const SizedBox(height: 24),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          alignment: WrapAlignment.center,
+                          children: [
                             ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                              icon: const Icon(Icons.folder_shared, color: Colors.white, size: 20),
-                              label: const Text("Belgeler", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                              onPressed: () => _showUserDocumentsDialog(user),
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.green, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                              icon: const Icon(Icons.call, color: Colors.white, size: 20),
+                              label: const Text("Ara", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              onPressed: () => _launchURL("tel:${user['phone']}"),
                             ),
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                            icon: const Icon(Icons.gavel_rounded, color: Colors.white, size: 20),
-                            label: const Text("Ceza", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                            onPressed: () {
-                              Navigator.pop(context);
-                              _showPunishmentDialog(userId, user['name']?.toString() ?? '', !isCustomer);
-                            },
-                          ),
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                            icon: const Icon(Icons.delete_forever, color: Colors.white, size: 20),
-                            label: const Text("Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                            onPressed: () {
-                              Navigator.pop(context);
-                              _deleteUser(userId, user['name']?.toString() ?? '');
-                            },
-                          )
-                        ],
-                      )
-                    ],
+                            if (!isCustomer)
+                              ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                                icon: const Icon(Icons.folder_shared, color: Colors.white, size: 20),
+                                label: const Text("Belgeler", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                onPressed: () => _showUserDocumentsDialog(user),
+                              ),
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                              icon: const Icon(Icons.gavel_rounded, color: Colors.white, size: 20),
+                              label: const Text("Ceza", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _showPunishmentDialog(userId, user['name']?.toString() ?? '', !isCustomer);
+                              },
+                            ),
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.red, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                              icon: const Icon(Icons.delete_forever, color: Colors.white, size: 20),
+                              label: const Text("Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _deleteUser(userId, user['name']?.toString() ?? '');
+                              },
+                            )
+                          ],
+                        )
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      )
+      ),
     );
   }
 
@@ -1502,18 +1505,39 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _detailRow(String title, String value, bool isDark, {bool isHighlight = false, Color? statusColor}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(flex: 2, child: Text(title, style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade600, fontWeight: FontWeight.w600))),
-          Expanded(flex: 3, child: Text(value, textAlign: TextAlign.right, style: TextStyle(
-            fontWeight: isHighlight ? FontWeight.w900 : FontWeight.bold, 
-            color: statusColor ?? (isHighlight ? Colors.green : (isDark ? Colors.white : Colors.black87)),
-            fontSize: isHighlight ? 18 : 14
-          ))),
-        ],
+    return InkWell(
+      onTap: () {
+        Clipboard.setData(ClipboardData(text: value));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text("$title kopyalandı: $value", style: const TextStyle(fontWeight: FontWeight.bold)), 
+          duration: const Duration(seconds: 1),
+          backgroundColor: Colors.blueGrey,
+        ));
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 12.0),
+        decoration: BoxDecoration(
+          color: isHighlight ? (statusColor ?? Colors.green).withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(flex: 2, child: Row(
+              children: [
+                Icon(Icons.copy_all_rounded, size: 14, color: isDark ? Colors.grey.shade600 : Colors.grey.shade400),
+                const SizedBox(width: 6),
+                Expanded(child: Text(title, style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade600, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+              ],
+            )),
+            Expanded(flex: 3, child: Text(value, textAlign: TextAlign.right, style: TextStyle(
+              fontWeight: isHighlight ? FontWeight.w900 : FontWeight.bold, 
+              color: statusColor ?? (isHighlight ? Colors.green : (isDark ? Colors.white : Colors.black87)),
+              fontSize: isHighlight ? 18 : 14
+            ))),
+          ],
+        ),
       ),
     );
   }
@@ -1580,21 +1604,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
-  // --- YENİ EKLENEN: Satın Alım ve Premium Takip Paneli (Modalı) ---
   void _showPurchasesModal(BuildContext context, bool isDark) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      backgroundColor: Colors.transparent,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
             final int premiumCount = int.tryParse(purchaseStats['premium_count']?.toString() ?? '0') ?? 0;
             final int subscriptionCount = int.tryParse(purchaseStats['subscriptions_count']?.toString() ?? '0') ?? 0;
 
-            return SizedBox(
-              height: MediaQuery.of(context).size.height * 0.90,
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.90, 
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+              ),
               child: Column(
                 children: [
                   const SizedBox(height: 12),
@@ -1693,13 +1719,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      backgroundColor: Colors.transparent,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return SizedBox(
+            return Container(
               height: MediaQuery.of(context).size.height * 0.85,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+              ),
               child: Column(
                 children: [
                   const SizedBox(height: 12),
@@ -2355,20 +2384,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ),
       body: SafeArea(
         child: isLoading 
-            ? const Center(child: CircularProgressIndicator())
-            : RefreshIndicator(
-                onRefresh: _fetchAllData,
-                child: IndexedStack(
-                  index: _selectedIndex,
-                  children: [
-                    _buildOverviewTab(cardColor, isDark),
-                    _buildPendingTab(cardColor),
-                    _buildUsersTab(cardColor, isDark),
-                    _buildHistoryAndListingsTab(cardColor, isDark),
-                    _buildTicketsTab(cardColor, isDark),
-                    _buildSettingsTab(cardColor, isDark),
-                  ],
-                ),
+            ? const Center(child: CircularProgressIndicator(color: Colors.blueAccent))
+            : IndexedStack(
+                index: _selectedIndex,
+                children: [
+                  _buildOverviewTab(cardColor, isDark),
+                  _buildPendingTab(cardColor),
+                  _buildUsersTab(cardColor, isDark),
+                  _buildHistoryAndListingsTab(cardColor, isDark),
+                  _buildTicketsTab(cardColor, isDark),
+                  _buildSettingsTab(cardColor, isDark),
+                ],
               ),
       ),
       bottomNavigationBar: NavigationBar(
@@ -2388,6 +2414,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         },
         backgroundColor: cardColor,
         indicatorColor: Colors.blue.withOpacity(0.2),
+        labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+        animationDuration: const Duration(milliseconds: 400),
         destinations: [
           const NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard_rounded, color: Colors.blue), label: "Genel"),
           NavigationDestination(
@@ -2508,9 +2536,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             childAspectRatio: childRatio,
             children: [
               _buildGradientCard("Ciro", "${totalRevenue.toStringAsFixed(2)} ₺", Icons.account_balance_wallet_rounded, const [Color(0xFF11998e), Color(0xFF38ef7d)]),
-              _buildGradientCard("Toplam İşlem", totalJobs.toString(), Icons.handshake_rounded, const [Color(0xFF2193b0), Color(0xFF6dd5ed)]),
-              _buildGradientCard("Müşteriler", totalCustomers.toString(), Icons.person_rounded, const [Color(0xFFf12711), Color(0xFFf5af19)]),
-              _buildGradientCard("Kayıtlı Ustalar", totalProviders.toString(), Icons.engineering_rounded, const [Color(0xFF8E2DE2), Color(0xFF4A00E0)]),
+              _buildGradientCard("Toplam İşlem", totalJobs.toString(), Icons.handshake_rounded, const [Color(0xFF2193b0), Color(0xFF6dd5ed)], onTap: () => setState(() => _selectedIndex = 3)),
+              _buildGradientCard("Müşteriler", totalCustomers.toString(), Icons.person_rounded, const [Color(0xFFf12711), Color(0xFFf5af19)], onTap: () => setState(() { _selectedIndex = 2; userFilter = 'customer'; })),
+              _buildGradientCard("Kayıtlı Ustalar", totalProviders.toString(), Icons.engineering_rounded, const [Color(0xFF8E2DE2), Color(0xFF4A00E0)], onTap: () => setState(() { _selectedIndex = 2; userFilter = 'provider'; })),
             ],
           ),
           _buildLowPerformanceAlerts(cardColor), 
@@ -2682,11 +2710,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       
       final matchesSearch = name.contains(search) || phone.contains(search);
       
-      // --- GÜNCELLENDİ: Premium filtresi desteği ---
-      final matchesType = userFilter == 'all' || 
-          (userFilter == 'premium' 
-              ? (user['is_premium'] == 1 || user['is_premium'] == '1') 
-              : user['user_type'] == userFilter);
+      bool matchesType = false;
+      if (userFilter == 'all') {
+        matchesType = true;
+      } else if (userFilter == 'premium') {
+        matchesType = (user['is_premium'] == 1 || user['is_premium'] == '1');
+      } else if (userFilter == 'banned') {
+        matchesType = user['status'] == 'banned';
+      } else if (userFilter == 'suspended') {
+        matchesType = user['is_suspended'] == 1 || user['is_suspended'] == '1' || user['is_suspended'] == true;
+      } else {
+        matchesType = user['user_type'] == userFilter;
+      }
       
       return matchesSearch && matchesType;
     }).toList();
@@ -2752,6 +2787,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         TextButton(
+                          onPressed: () {
+                            setState(() {
+                              if (selectedUsers.length == filteredUsers.length) {
+                                selectedUsers.clear();
+                              } else {
+                                selectedUsers.addAll(filteredUsers.map((u) => int.tryParse(u['id']?.toString() ?? '0') ?? 0));
+                              }
+                            });
+                          },
+                          child: Text(selectedUsers.length == filteredUsers.length ? "Seçimi Kaldır" : "Tümünü Seç", style: const TextStyle(fontSize: 13, color: Colors.blue)),
+                        ),
+                        TextButton(
                           onPressed: () => _hideSelectedItems('users'),
                           child: const Text("Gizle", style: TextStyle(fontSize: 13)),
                         ),
@@ -2768,7 +2815,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             : const SizedBox.shrink(),
         ),
 
-        // --- GÜNCELLENDİ: Premium filtresi çipi eklendi ---
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -2781,6 +2827,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               _buildFilterChip("Ustalar", "provider", userFilter, (val) => setState(() => userFilter = val)),
               const SizedBox(width: 8),
               _buildFilterChip("Premium", "premium", userFilter, (val) => setState(() => userFilter = val)),
+              const SizedBox(width: 8),
+              _buildFilterChip("Askıdakiler", "suspended", userFilter, (val) => setState(() => userFilter = val)),
+              const SizedBox(width: 8),
+              _buildFilterChip("Engellenenler", "banned", userFilter, (val) => setState(() => userFilter = val)),
             ],
           ),
         ),
@@ -2790,6 +2840,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             : ListView.separated(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                cacheExtent: 2000,
                 itemCount: filteredUsers.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
@@ -2929,9 +2980,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                     _fetchAndShowProviderReviews(userId, user['name']?.toString() ?? 'Usta');
                                   }
                                 },
-                                itemBuilder: (context) => [
+                                itemBuilder: (context) => <PopupMenuEntry<String>>[
                                   if (!isCustomer)
-                                    const PopupMenuItem(
+                                    const PopupMenuItem<String>(
                                       value: 'reviews',
                                       child: Row(
                                         children: [
@@ -2941,17 +2992,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                         ],
                                       ),
                                     ),
-                                  const PopupMenuItem(
+                                  const PopupMenuItem<String>(
                                     value: 'punish',
                                     child: Row(
                                       children: [
-                                        Icon(Icons.gavel_rounded, color: Colors.orange, size: 20),
+                                        Icon(Icons.gavel_rounded, color: Colors.orange, size: 14),
                                         SizedBox(width: 8),
                                         Text("Ceza / Ban", style: TextStyle(fontSize: 14)),
                                       ],
                                     ),
                                   ),
-                                  const PopupMenuItem(
+                                  const PopupMenuItem<String>(
                                     value: 'delete',
                                     child: Row(
                                       children: [
@@ -3188,6 +3239,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         TextButton(
+                          onPressed: () {
+                            setState(() {
+                              if (selectedJobs.length == filteredJobs.length) {
+                                selectedJobs.clear();
+                              } else {
+                                selectedJobs.addAll(filteredJobs.map((j) => int.tryParse(j['id']?.toString() ?? '0') ?? 0));
+                              }
+                            });
+                          },
+                          child: Text(selectedJobs.length == filteredJobs.length ? "Seçimi Kaldır" : "Tümünü Seç", style: const TextStyle(fontSize: 13, color: Colors.blue)),
+                        ),
+                        TextButton(
                           onPressed: () => _hideSelectedItems('jobs'),
                           child: const Text("Gizle", style: TextStyle(fontSize: 13)),
                         ),
@@ -3225,6 +3288,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             : ListView.separated(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                cacheExtent: 2000,
                 itemCount: filteredJobs.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
@@ -3407,6 +3471,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         TextButton(
+                          onPressed: () {
+                            setState(() {
+                              if (selectedTickets.length == filteredTickets.length) {
+                                selectedTickets.clear();
+                              } else {
+                                selectedTickets.addAll(filteredTickets.map((t) => int.tryParse(t['id']?.toString() ?? '0') ?? 0));
+                              }
+                            });
+                          },
+                          child: Text(selectedTickets.length == filteredTickets.length ? "Seçimi Kaldır" : "Tümünü Seç", style: const TextStyle(fontSize: 13, color: Colors.blue)),
+                        ),
+                        TextButton(
                           onPressed: () => _hideSelectedItems('tickets'),
                           child: const Text("Gizle", style: TextStyle(fontSize: 13)),
                         ),
@@ -3442,6 +3518,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             : ListView.separated(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                cacheExtent: 2000,
                 itemCount: filteredTickets.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
@@ -3515,6 +3592,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               ),
                               const SizedBox(height: 8),
                               Text(ticketDate, style: const TextStyle(color: Colors.grey, fontSize: 9)),
+                              if (!isTicketSelectionMode && status == 'open') ...[
+                                const SizedBox(height: 8),
+                                InkWell(
+                                  onTap: () {
+                                    if (ticket['customer_phone'] != null) {
+                                      _launchURL("tel:${ticket['customer_phone']}");
+                                    }
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(color: Colors.green.withOpacity(0.15), shape: BoxShape.circle),
+                                    child: const Icon(Icons.call, color: Colors.green, size: 16),
+                                  ),
+                                )
+                              ]
                             ],
                           ),
                         ],
@@ -3585,7 +3677,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
                 ),
                 const Divider(height: 1),
-                // --- YENİ EKLENEN: Satın alım takip butonu ---
                 ListTile(
                   onTap: () => _showPurchasesModal(context, isDark),
                   leading: const Icon(Icons.workspace_premium_rounded, color: Colors.orange),
@@ -3695,33 +3786,38 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildGradientCard(String title, String value, IconData icon, List<Color> gradientColors) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(colors: gradientColors, begin: Alignment.topLeft, end: Alignment.bottomRight),
-        boxShadow: [BoxShadow(color: gradientColors.last.withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 6))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Icon(icon, color: Colors.white.withOpacity(0.9), size: 28),
-              Icon(Icons.auto_graph_rounded, color: Colors.white.withOpacity(0.3), size: 20),
-            ],
-          ),
-          const Spacer(),
-          Text(title, style: const TextStyle(fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 4),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white)),
-          ),
-        ],
+  Widget _buildGradientCard(String title, String value, IconData icon, List<Color> gradientColors, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: LinearGradient(colors: gradientColors, begin: Alignment.topLeft, end: Alignment.bottomRight),
+          boxShadow: [BoxShadow(color: gradientColors.last.withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 6))],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(icon, color: Colors.white.withOpacity(0.9), size: 28),
+                Icon(Icons.auto_graph_rounded, color: Colors.white.withOpacity(0.3), size: 20),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(title, style: const TextStyle(fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 4),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white)),
+            ),
+          ],
+        ),
       ),
     );
   }

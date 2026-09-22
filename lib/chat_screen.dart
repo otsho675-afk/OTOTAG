@@ -360,6 +360,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       child: Image.network(
                         "https://eliteagency.sbs/${msg['media_url']}",
                         fit: BoxFit.cover,
+                        cacheWidth: 800, // EKLENDİ: OOM (Out of Memory) çökmesini kesin olarak önler
                         errorBuilder: (context, error, stackTrace) => Container(
                           height: 100,
                           color: Colors.white10,

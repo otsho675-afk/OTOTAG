@@ -238,19 +238,19 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
     if (distKm <= 5.0 && distKm > 1.0 && !_notified5km) {
       _notified5km = true;
-      _sendPushNotificationToCustomer("Usta Yola Çıktı!", "Ustanız 5 km yakında.");
+      Future.delayed(const Duration(seconds: 1), () => _sendPushNotificationToCustomer("Usta Yola Çıktı!", "Ustanız 5 km yakında."));
       _speak("Müşteriye 5 kilometre mesafedesiniz.");
     } else if (distKm <= 1.0 && distKm > 0.5 && !_notified1km) {
       _notified1km = true;
-      _sendPushNotificationToCustomer("Usta Çok Yaklaştı!", "Ustanız 1 KM içerisinde!");
+      Future.delayed(const Duration(seconds: 1), () => _sendPushNotificationToCustomer("Usta Çok Yaklaştı!", "Ustanız 1 KM içerisinde!"));
       _speak("Hedefe 1 kilometre kaldı, lütfen hazırlanın.");
     } else if (distKm <= 0.5 && distKm > 0.1 && !_notified500m) {
       _notified500m = true;
-      _sendPushNotificationToCustomer("Usta Bölgeye Girdi! 🚨", "Lütfen aracınızın yanında hazır bulunun.");
+      Future.delayed(const Duration(seconds: 1), () => _sendPushNotificationToCustomer("Usta Bölgeye Girdi! 🚨", "Lütfen aracınızın yanında hazır bulunun."));
       _speak("Müşteri konumuna 500 metre kaldı.");
     } else if (distKm <= 0.1 && !_notifiedArrived) {
       _notifiedArrived = true;
-      _sendPushNotificationToCustomer("Usta Geldi!", "Ustanız şu an konumunuza ulaştı.");
+      Future.delayed(const Duration(seconds: 1), () => _sendPushNotificationToCustomer("Usta Geldi!", "Ustanız şu an konumunuza ulaştı."));
       _speak("Hedefe ulaştınız.");
     }
   }
@@ -410,10 +410,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           _fetchRoute();          
       } else if (closestIndex > 0) {
           final newRoute = List<LatLng>.from(_routePoints);
+          // Sadece geçilen noktaları siliyoruz, diziyi bozmuyoruz.
+          // Güncel konum harita çizilirken (render anında) eklenecek.
           newRoute.removeRange(0, closestIndex);
-          if (newRoute.isNotEmpty) {
-            newRoute[0] = currentPos;
-          }
           
           if (mounted) {
             setState(() {
@@ -1025,7 +1024,13 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         return;
       }
       
-      final data = json.decode(response.body);
+      Map<String, dynamic> data = {};
+      try {
+        data = json.decode(response.body);
+      } catch (e) {
+        if (mounted) setState(() => _isFetchingStatus = false);
+        return;
+      }
       
       if (!mounted) return;
 
@@ -1963,14 +1968,18 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     }
 
     List<Polyline> mapPolylines = [];
-    if (_routePoints.isNotEmpty && _routePoints.length > 1) {
+    if (_routePoints.isNotEmpty) {
+      // Çizginin doğrudan araçtan başlaması için anlık konumu render anında en başa ekliyoruz
+      List<LatLng> polylinePoints = [LatLng(providerLat, providerLng)];
+      polylinePoints.addAll(_routePoints);
+
       mapPolylines.add(Polyline(
-        points: List<LatLng>.from(_routePoints),
+        points: polylinePoints,
         color: _polylineColor.withValues(alpha: 0.25),
         strokeWidth: 8, strokeJoin: StrokeJoin.round, strokeCap: StrokeCap.round,
       ));
       mapPolylines.add(Polyline(
-        points: List<LatLng>.from(_routePoints),
+        points: polylinePoints,
         color: distanceInKm <= 0.05 && jobStatus != 'completed' ? Colors.grey.withValues(alpha: 0.6) : _polylineColor,
         strokeWidth: 4.5, strokeJoin: StrokeJoin.round, strokeCap: StrokeCap.round,
       ));

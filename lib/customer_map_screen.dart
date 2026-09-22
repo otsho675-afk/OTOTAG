@@ -452,9 +452,13 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     _pinLocationNotifier.value = loc;
     _fetchAddressForPin(loc);
     
-    if (_isMapReady && mounted) {
-       mapController.move(loc, _currentZoom);
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_isMapReady && mounted) {
+         try {
+           mapController.move(loc, _currentZoom);
+         } catch(e) {}
+      }
+    });
   }
 
   Future<void> _initLocationStream() async {
@@ -483,23 +487,20 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
       } catch (_) {}
 
       try {
-        // HIZLI ODAKLANMA: Cihazın GPS'ini beklemeden saniyesinde son bilinen konumu yansıtır
         Position? fastPos = await Geolocator.getLastKnownPosition();
         if (fastPos != null && mounted) {
           _applyInitialPosition(fastPos, isInitial: currentPositionNotifier.value == null);
         }
         
         Position current = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.low, // SÜPER HIZLI: Beklemeyi sıfırlamak için ilk tetiği hızlı alır
-          timeLimit: const Duration(seconds: 2), 
+          desiredAccuracy: kIsWeb ? LocationAccuracy.medium : LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 10), 
         );
         if (mounted) {
-          _applyInitialPosition(current, isInitial: currentPositionNotifier.value == null);
+          _applyInitialPosition(current, isInitial: true);
         }
-      } catch (e, stack) {
-        if (!kIsWeb) {
-          try { FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Müşteri harita ilk konum bulma zaman aşımı'); } catch(_){}
-        }
+      } catch (e) {
+        debugPrint("İlk konum alma hatası: $e");
       }
 
       LocationSettings locationSettings = kIsWeb 

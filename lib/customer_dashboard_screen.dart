@@ -12,12 +12,13 @@ import 'package:url_launcher/url_launcher.dart';
 import 'customer_map_screen.dart';
 import 'customer_bids_screen.dart';
 import 'profile_screen.dart';
-import 'vehicle_panel_screen.dart';
+import 'vehicle_panel_screen.dart' hide notificationHelper;
 import 'job_tracking_screen.dart';
 import 'spare_parts_market.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
+import 'notification_helper.dart'; // CRITICAL FIX: Eksik bildirim sınıfı eklendi
 
 class CustomerDashboardScreen extends StatefulWidget {
   final int customerId;

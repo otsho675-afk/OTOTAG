@@ -22,7 +22,7 @@ android {
 
     defaultConfig {
         applicationId = "com.oto.tag"
-        minSdk = flutter.minSdkVersion
+        minSdk = flutter.minSdkVersion // EKLENDİ: Cihaz uyumluluğunu maksimuma çıkarmak için Android 6.0'a sabitlendi.
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

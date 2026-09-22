@@ -674,19 +674,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   }
 
   Future<void> _loadMapSdkAndInit() async {
-    if (kIsWeb) {
-      try {
-        if (mounted) {
-          setState(() {
-            _isMapSdkLoaded = true;
-            _isMapReady = true; 
-          });
-        }
-      } catch (e) {
-        debugPrint("Map SDK Yüklenemedi: $e");
-      }
-    } else {
-       if (mounted) setState(() => _isMapReady = true);
+    if (mounted) {
+      setState(() {
+        _isMapSdkLoaded = true;
+      });
     }
   }
 
@@ -1100,17 +1091,17 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     if (isFirst || isLoading) {
       isLoading = false;
       if (isOnline && !isSuspended) _fetchNearbyJobs(radius: _searchRadius.toInt());
+      setState(() {}); // Önce build tetiklensin
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
+        if (mounted && _isMapReady) { // EKLENDİ: _isMapReady kontrolü eklendi
           try {
-          _mapController.move(newPos, 15.5);
-        } catch (e, stack) {
-          debugPrint("Harita henüz hazır değil: $e");
-          try { FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Usta harita render öncesi kamera hareket hatası'); } catch(_){}
-        }
+            _mapController.move(newPos, 15.5);
+          } catch (e, stack) {
+            debugPrint("Harita henüz hazır değil: $e");
+            try { FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Usta harita render öncesi kamera hareket hatası'); } catch(_){}
+          }
         }
       });
-      setState(() {}); 
     } else if (mounted && !_isUserPanning) {
       _animatedMapMove(newPos, _mapController.camera.zoom);
     }
@@ -1174,7 +1165,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
           forceLocationManager: false,
           intervalDuration: const Duration(seconds: 2),
           foregroundNotificationConfig: const ForegroundNotificationConfig(
-            notificationText: "Uygulama arka planda iş arıyor.",
+            notificationText: "Uygulama arka planda çağrıları dinliyor.",
             notificationTitle: "Oto TAG Aktif",
             enableWakeLock: true,
           ),
@@ -2307,6 +2298,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                           maxZoom: 18.5,
                           interactionOptions: const InteractionOptions(flags: InteractiveFlag.all),
                           onMapReady: () {
+                            _isMapReady = true;
                             try {
                               if (currentPosition != null) {
                                 _mapController.move(LatLng(currentPosition!.latitude, currentPosition!.longitude), 15.5);
@@ -2470,7 +2462,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                                       Text("Çevrimiçi", style: TextStyle(color: textColor, fontWeight: FontWeight.w900, fontSize: isSmallScreen ? 12 : 14)),
                                                     ],
                                                   ),
-                                                  Text("Tarama: ${_searchRadius.toInt()} KM", style: TextStyle(color: textGray, fontSize: isSmallScreen ? 11 : 12, fontWeight: FontWeight.bold, overflow: TextOverflow.ellipsis)),
+                                                  Text("Hizmet Menzili: ${_searchRadius.toInt()} KM", style: TextStyle(color: textGray, fontSize: isSmallScreen ? 11 : 12, fontWeight: FontWeight.bold, overflow: TextOverflow.ellipsis)),
                                                 ],
                                               ),
                                             )
@@ -2549,7 +2541,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                             Future.delayed(const Duration(milliseconds: 500), () {
                                               if (mounted && isOnline) {
                                                 _fetchNearbyJobs(radius: val.toInt());
-                                                _showTopSnackBar("Arama yarıçapı ${val.toInt()} KM olarak güncellendi.");
+                                                _showTopSnackBar("Hizmet menzili ${val.toInt()} KM olarak güncellendi.");
                                                 _startJobRefreshTimer();
                                               }
                                             });

@@ -1,12 +1,14 @@
 // chat_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 import 'package:image_picker/image_picker.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 
 class ChatScreen extends StatefulWidget {
   final int jobId;
@@ -43,6 +45,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    // Chat ekranındayken arka plana atıldığında push bildirimlerin gelmesi için OneSignal kaydını garantile
+    if (!kIsWeb) {
+      OneSignal.login(widget.currentUserId.toString());
+      OneSignal.Notifications.requestPermission(true);
+    }
+
     _fetchMessages();
     _startPolling();
 

@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' hide Path;
@@ -137,6 +138,12 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this); 
+
+    // Takip ekranı arka plana alındığında bildirimlerin düşmesi için OneSignal oturumunu garantile
+    if (!kIsWeb && widget.userId != null) {
+      OneSignal.login(widget.userId.toString());
+      OneSignal.Notifications.requestPermission(true);
+    }
     
     googleApiKey = const String.fromEnvironment('MAPS_API_KEY', defaultValue: 'AIzaSyA_NvuYHjKyG7O0ZDYJLvxfgClvdHlMlJU');
     
@@ -528,13 +535,14 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   }
 
   Future<void> _sendPushNotificationToCustomer(String title, String message) async {
-    if (customerId == null || customerId == 0) return;
     try {
+      final targetId = (customerId != null && customerId != 0) ? customerId.toString() : "";
       await _httpClient.post(
         Uri.parse("$_baseUrl?action=send_notification"),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {
-          "target": customerId.toString(),
+          "target": targetId,
+          "job_id": widget.jobId.toString(),
           "title": title,
           "message": message,
         }

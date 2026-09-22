@@ -1,11 +1,13 @@
 // customer_bids_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 import 'dart:ui';
 import 'dart:math' as math;
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'job_tracking_screen.dart';
 import 'provider_profile_screen.dart';
 import 'customer_dashboard_screen.dart';
@@ -59,6 +61,12 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    // Müşteri ekranı arka plana geçtiğinde push bildirimlerin düşmesi için OneSignal oturumunu garantile
+    if (!kIsWeb) {
+      OneSignal.login(widget.customerId.toString());
+      OneSignal.Notifications.requestPermission(true);
+    }
     
     _radarController = AnimationController(vsync: this, duration: const Duration(milliseconds: 3000))..repeat();
     _rippleController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2500))..repeat();

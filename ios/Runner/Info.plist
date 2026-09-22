@@ -49,9 +49,10 @@
     <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
     
-    <!-- iOS Arka Plan Konum Akışı İçin Zorunlu -->
+    <!-- iOS Arka Plan Bildirim & Konum Akışı İçin Zorunlu -->
     <key>UIBackgroundModes</key>
     <array>
+        <string>fetch</string>
         <string>location</string>
         <string>remote-notification</string>
     </array>

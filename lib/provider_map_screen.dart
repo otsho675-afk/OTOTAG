@@ -1060,23 +1060,24 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   void _updatePositionInternal(Position position, {bool isFirst = false}) {
     if (!mounted) return;
 
-    // ANTI-CHEAT (SİBER GÜVENLİK): Ustaların sahte GPS ile haksız iş almasını kalıcı olarak engeller
-    if (position.isMocked) {
-      _showTopSnackBar("Güvenlik İhlali: Sahte konum (Fake GPS) kullanıyorsunuz! Hesabınız risk altında.", isError: true);
-      return;
+    if (!kIsWeb) {
+      try {
+        if (position.isMocked) {
+          _showTopSnackBar("Güvenlik İhlali: Sahte konum (Fake GPS) kullanıyorsunuz! Hesabınız risk altında.", isError: true);
+          return;
+        }
+      } catch (_) {}
     }
 
     currentPosition = position;
     LatLng newPos = LatLng(position.latitude, position.longitude);
-    
-    // İş iptallerinde veya ekran geçişlerinde marker'ın kaybolmasını önlemek için doğrudan güncelleyin
-    _animatedProviderPos.value = newPos;
-    _animatedHeading.value = position.heading;
 
-    if (_animatedProviderPos.value == null) {
+    if (_targetProviderPos == null || _animatedProviderPos.value == null) {
       _animatedProviderPos.value = newPos;
       _targetProviderPos = newPos;
+      _oldProviderPos = newPos;
       _animatedHeading.value = position.heading;
+      _oldHeading = position.heading;
       _targetHeading = position.heading;
     } else if (_targetProviderPos != newPos) {
       double distDrift = Geolocator.distanceBetween(
@@ -1085,7 +1086,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       );
       
       if (distDrift > 2.0) {
-        _oldProviderPos = _animatedProviderPos.value;
+        _oldProviderPos = _animatedProviderPos.value ?? newPos;
         _targetProviderPos = newPos;
         _oldHeading = _animatedHeading.value;
         
@@ -1103,19 +1104,24 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         }
         _slideController.forward(from: 0.0);
       }
+    } else {
+      _animatedProviderPos.value = newPos;
+      _animatedHeading.value = position.heading;
     }
 
     if (isFirst || isLoading) {
       isLoading = false;
       if (isOnline && !isSuspended) _fetchNearbyJobs(radius: _searchRadius.toInt());
-      setState(() {}); // Önce build tetiklensin
+      setState(() {});
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _isMapReady) { // EKLENDİ: _isMapReady kontrolü eklendi
+        if (mounted && _isMapReady) {
           try {
             _mapController.move(newPos, 15.5);
           } catch (e, stack) {
             debugPrint("Harita henüz hazır değil: $e");
-            try { FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Usta harita render öncesi kamera hareket hatası'); } catch(_){}
+            if (!kIsWeb) {
+              try { FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Usta harita render öncesi kamera hareket hatası'); } catch(_){}
+            }
           }
         }
       });
@@ -1156,8 +1162,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
       try {
         Position fastPos = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.medium,
-          timeLimit: const Duration(seconds: 4),
+          desiredAccuracy: kIsWeb ? LocationAccuracy.low : LocationAccuracy.medium,
+          timeLimit: const Duration(seconds: 10),
         );
         if (mounted) {
           _updatePositionInternal(fastPos, isFirst: currentPosition == null);
@@ -1175,7 +1181,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       }
 
       late LocationSettings locationSettings;
-      if (defaultTargetPlatform == TargetPlatform.android) {
+      if (kIsWeb) {
+        locationSettings = const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+          distanceFilter: 2,
+        );
+      } else if (defaultTargetPlatform == TargetPlatform.android) {
         locationSettings = AndroidSettings(
           accuracy: LocationAccuracy.high,
           distanceFilter: 2,

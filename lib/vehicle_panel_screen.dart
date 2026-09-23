@@ -46,41 +46,10 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
   DateTime? _inspectionDateCache;
 
   DateTime? get _effectiveInsuranceDate {
-    if (_insuranceDateCache == null) return null;
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final insOnlyDate = DateTime(_insuranceDateCache!.year, _insuranceDateCache!.month, _insuranceDateCache!.day);
-
-    if (insOnlyDate.isBefore(today) || insOnlyDate.isAtSameMomentAs(today)) {
-      return DateTime(_insuranceDateCache!.year + 1, _insuranceDateCache!.month, _insuranceDateCache!.day);
-    }
     return _insuranceDateCache;
   }
 
   DateTime? get _effectiveInspectionDate {
-    if (_inspectionDateCache == null) return null;
-    final model = (currentVehicleData['brand_model'] ?? '').toString().toLowerCase();
-    final bool isCommercial = model.contains('doblo') ||
-        model.contains('fiorino') ||
-        model.contains('caddy') ||
-        model.contains('courier') ||
-        model.contains('connect') ||
-        model.contains('kangoo') ||
-        model.contains('partner') ||
-        model.contains('berlingo') ||
-        model.contains('transporter') ||
-        model.contains('kamyon') ||
-        model.contains('ticari') ||
-        model.contains('transit');
-    
-    final int validityYears = isCommercial ? 1 : 2;
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final inspOnlyDate = DateTime(_inspectionDateCache!.year, _inspectionDateCache!.month, _inspectionDateCache!.day);
-
-    if (inspOnlyDate.isBefore(today) || inspOnlyDate.isAtSameMomentAs(today)) {
-      return DateTime(_inspectionDateCache!.year + validityYears, _inspectionDateCache!.month, _inspectionDateCache!.day);
-    }
     return _inspectionDateCache;
   }
 
@@ -199,36 +168,37 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
       }
     }
 
-    // Muayene Bildirimi
+    // Muayene Bildirimi (Doğrudan girilen tarihi baz alır)
     if (_effectiveInspectionDate != null) {
       final int daysLeft = _effectiveInspectionDate!.difference(nowNormalized).inDays;
+      final int notifBaseId = (vId.hashCode & 0x7FFFFFFF);
+      
       if (daysLeft < 0) {
-        await notificationHelper.cancelNotification(vId ^ "muayene_yaklasan".hashCode);
-        await notificationHelper.cancelNotification(vId ^ "muayene".hashCode);
+        await notificationHelper.cancelNotification(notifBaseId ^ 101);
+        await notificationHelper.cancelNotification(notifBaseId ^ 102);
         await notificationHelper.scheduleNotification(
-          id: vId ^ "muayene_gecmis".hashCode,
+          id: notifBaseId ^ 100,
           title: "⚠️ Araç Muayenesi Gecikti!",
           body: "$plate plakalı aracınızın muayene süresi ${daysLeft.abs()} gün önce bitti. Lütfen yenileyin.",
-          scheduledDate: DateTime.now().add(const Duration(seconds: 5))
+          scheduledDate: DateTime.now().add(const Duration(seconds: 3))
         );
       } else if (daysLeft <= 15) {
-        await notificationHelper.cancelNotification(vId ^ "muayene_gecmis".hashCode);
-        await notificationHelper.cancelNotification(vId ^ "muayene".hashCode);
+        await notificationHelper.cancelNotification(notifBaseId ^ 100);
+        await notificationHelper.cancelNotification(notifBaseId ^ 102);
         await notificationHelper.scheduleNotification(
-          id: vId ^ "muayene_yaklasan".hashCode,
+          id: notifBaseId ^ 101,
           title: "Araç Muayenesi Hatırlatması",
           body: "$plate plakalı aracınızın muayene süresinin dolmasına $daysLeft gün kaldı.",
-          scheduledDate: DateTime.now().add(const Duration(seconds: 5))
+          scheduledDate: DateTime.now().add(const Duration(seconds: 3))
         );
       } else {
-        // Tarih ileri bir tarihe güncellendiyse eski uyarıları anında iptal et
-        await notificationHelper.cancelNotification(vId ^ "muayene_gecmis".hashCode);
-        await notificationHelper.cancelNotification(vId ^ "muayene_yaklasan".hashCode);
+        await notificationHelper.cancelNotification(notifBaseId ^ 100);
+        await notificationHelper.cancelNotification(notifBaseId ^ 101);
 
         DateTime notifyDate = _effectiveInspectionDate!.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
         if (notifyDate.isAfter(DateTime.now())) {
           await notificationHelper.scheduleNotification(
-            id: vId ^ "muayene".hashCode,
+            id: notifBaseId ^ 102,
             title: "Araç Muayenesi Hatırlatması",
             body: "$plate plakalı aracınızın muayene süresinin dolmasına 3 gün kaldı.",
             scheduledDate: notifyDate

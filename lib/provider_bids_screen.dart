@@ -405,125 +405,126 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTick
           child: InkWell(
             onTap: () {
               HapticFeedback.selectionClick();
-            if (!isCompleted && !isCancelled) {
-              Navigator.push(context, PageRouteBuilder(
-                pageBuilder: (context, animation, secondaryAnimation) => JobTrackingScreen(jobId: int.parse(job['job_id'].toString()), userType: 'provider', userId: widget.providerId),
-                transitionsBuilder: (context, animation, secondaryAnimation, child) => FadeTransition(opacity: animation, child: child),
-              ));
-            } else {
-              HapticFeedback.vibrate();
-              _showTopSnackBar("Bu işlem sonlandırılmış.", isError: true);
-            }
-          },
-          borderRadius: BorderRadius.circular(24),
-          splashColor: statusColor.withOpacity(0.2),
-          highlightColor: statusColor.withOpacity(0.1),
-          child: Ink(
-            padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
-            decoration: BoxDecoration(
-              color: panelBlack,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: isPeakEarning ? statusColor.withOpacity(0.5) : Colors.white.withOpacity(0.05), 
-                width: 1.5,
+              if (!isCompleted && !isCancelled) {
+                Navigator.push(context, PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) => JobTrackingScreen(jobId: int.parse(job['job_id'].toString()), userType: 'provider', userId: widget.providerId),
+                  transitionsBuilder: (context, animation, secondaryAnimation, child) => FadeTransition(opacity: animation, child: child),
+                ));
+              } else {
+                HapticFeedback.vibrate();
+                _showTopSnackBar("Bu işlem sonlandırılmış.", isError: true);
+              }
+            },
+            borderRadius: BorderRadius.circular(24),
+            splashColor: statusColor.withOpacity(0.2),
+            highlightColor: statusColor.withOpacity(0.1),
+            child: Ink(
+              padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+              decoration: BoxDecoration(
+                color: panelBlack,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: isPeakEarning ? statusColor.withOpacity(0.5) : Colors.white.withOpacity(0.05), 
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(color: pureBlack.withOpacity(0.6), blurRadius: 15, offset: const Offset(0, 8)),
+                  if (isPeakEarning) BoxShadow(color: statusColor.withOpacity(0.15), blurRadius: 30, spreadRadius: -5)
+                ],
               ),
-              boxShadow: [
-                BoxShadow(color: pureBlack.withOpacity(0.6), blurRadius: 15, offset: const Offset(0, 8)),
-                if (isPeakEarning) BoxShadow(color: statusColor.withOpacity(0.15), blurRadius: 30, spreadRadius: -5)
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (isPeakEarning)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: goldAccent.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: goldAccent.withOpacity(0.3)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.local_fire_department_rounded, color: goldAccent, size: isSmallScreen ? 14 : 16),
-                        const SizedBox(width: 6),
-                        Text("ZİRVE KAZANÇ", style: TextStyle(color: goldAccent, fontSize: isSmallScreen ? 10 : 11, fontWeight: FontWeight.w900, letterSpacing: 1.0)),
-                      ],
-                    ),
-                  ),
-                Row(
-                  children: [
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (isPeakEarning)
                     Container(
-                      padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: statusColor.withOpacity(0.3)),
+                        color: goldAccent.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: goldAccent.withOpacity(0.3)),
                       ),
-                      child: Icon(statusIcon, color: statusColor, size: isSmallScreen ? 22 : 26),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text("İşlem #${job['job_id']}", style: TextStyle(fontSize: isSmallScreen ? 15 : 17, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.3), overflow: TextOverflow.ellipsis),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              const Icon(Icons.build_circle_rounded, color: textGray, size: 16),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  job['service_type'].toString().toUpperCase(), 
-                                  style: TextStyle(fontSize: isSmallScreen ? 11 : 13, color: textGray, fontWeight: FontWeight.w700, letterSpacing: 0.3),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 8 : 12, vertical: isSmallScreen ? 4 : 6),
-                            decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.1), 
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: statusColor.withOpacity(0.2))
-                            ),
-                            child: Text(
-                              isCompleted ? "Tamamlandı" : (isCancelled ? "İptal Edildi" : "Devam Ediyor"), 
-                              style: TextStyle(color: statusColor, fontWeight: FontWeight.w800, fontSize: isSmallScreen ? 10 : 12),
-                            ),
-                          )
+                          Icon(Icons.local_fire_department_rounded, color: goldAccent, size: isSmallScreen ? 14 : 16),
+                          const SizedBox(width: 6),
+                          Text("ZİRVE KAZANÇ", style: TextStyle(color: goldAccent, fontSize: isSmallScreen ? 10 : 11, fontWeight: FontWeight.w900, letterSpacing: 1.0)),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text("Kazanç", style: TextStyle(fontSize: isSmallScreen ? 11 : 13, color: statusColor.withOpacity(0.8), fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 4),
-                        SizedBox(
-                          width: isSmallScreen ? 70 : 85,
-                          child: FittedBox(
-                             fit: BoxFit.scaleDown,
-                             alignment: Alignment.centerRight,
-                             child: Text("${job['agreed_price'] ?? '0'} ₺", style: TextStyle(fontSize: isSmallScreen ? 20 : 26, fontWeight: FontWeight.w900, color: statusColor, letterSpacing: -0.5)),
-                          ),
+                  Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: statusColor.withOpacity(0.3)),
                         ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
+                        child: Icon(statusIcon, color: statusColor, size: isSmallScreen ? 22 : 26),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("İşlem #${job['job_id']}", style: TextStyle(fontSize: isSmallScreen ? 15 : 17, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.3), overflow: TextOverflow.ellipsis),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                const Icon(Icons.build_circle_rounded, color: textGray, size: 16),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    job['service_type'].toString().toUpperCase(), 
+                                    style: TextStyle(fontSize: isSmallScreen ? 11 : 13, color: textGray, fontWeight: FontWeight.w700, letterSpacing: 0.3),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 8 : 12, vertical: isSmallScreen ? 4 : 6),
+                              decoration: BoxDecoration(
+                                color: statusColor.withOpacity(0.1), 
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: statusColor.withOpacity(0.2))
+                              ),
+                              child: Text(
+                                isCompleted ? "Tamamlandı" : (isCancelled ? "İptal Edildi" : "Devam Ediyor"), 
+                                style: TextStyle(color: statusColor, fontWeight: FontWeight.w800, fontSize: isSmallScreen ? 10 : 12),
+                              ),
+                            )
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text("Kazanç", style: TextStyle(fontSize: isSmallScreen ? 11 : 13, color: statusColor.withOpacity(0.8), fontWeight: FontWeight.w700)),
+                          const SizedBox(height: 4),
+                          SizedBox(
+                            width: isSmallScreen ? 70 : 85,
+                            child: FittedBox(
+                               fit: BoxFit.scaleDown,
+                               alignment: Alignment.centerRight,
+                               child: Text("${job['agreed_price'] ?? '0'} ₺", style: TextStyle(fontSize: isSmallScreen ? 20 : 26, fontWeight: FontWeight.w900, color: statusColor, letterSpacing: -0.5)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-      ),
+      ), // CRITICAL FIX: RepaintBoundary için eksik kapanış parantezi eklendi
     );
   }
 

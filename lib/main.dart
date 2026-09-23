@@ -1,4 +1,4 @@
-// Dosya: main.dart
+// main.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; 
@@ -68,14 +68,33 @@ void main() async {
     debugPrint("Env dosyası yüklenemedi: $e");
   }
 
-  // --- ONESIGNAL ÇÖKME FIX'I ---
-  // Env dosyası okunamasa bile uygulama çökmeyecek şekilde yedek ID eklendi.
+  // --- ONESIGNAL GÜNCEL YAPILANDIRMASI ---
   if (!kIsWeb) {
     String oneSignalAppId = dotenv.env['ONESIGNAL_APP_ID'] ?? "c12cca1e-ad0b-4d18-8746-661dc4cbdad9";
     
     if (oneSignalAppId.isNotEmpty) {
+      // 1. Loglama ayarını açın (Test ortamı için faydalı, canlıda kapatabilirsiniz)
+      OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
+
+      // 2. Uygulama ID'sini tanımlayın
       OneSignal.initialize(oneSignalAppId);
+
+      // 3. Kullanıcı iznini isteyin
       OneSignal.Notifications.requestPermission(true);
+      
+      // 4. Gelen bildirime tıklandığında ne olacağını belirler
+      OneSignal.Notifications.addClickListener((event) {
+        debugPrint('BİLDİRİME TIKLANDI: \${event.notification.title}');
+        // Yönlendirme mantığını buraya ekleyebilirsiniz
+      });
+
+      // Arka plan bildirim yetkisi - Extension dosyalarınız tam ise OS bu hook'u kullanır.
+      OneSignal.Notifications.addForegroundWillDisplayListener((event) {
+        // Ön plandayken bildirimlerin görünmesine izin ver
+        event.preventDefault(); 
+        event.notification.display();
+      });
+
     } else {
       debugPrint("Uyarı: OneSignal APP ID bulunamadı.");
     }

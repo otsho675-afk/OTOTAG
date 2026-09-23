@@ -159,29 +159,38 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     if (kIsWeb) return;
     final String plate = currentVehicleData['plate']?.toString() ?? 'Aracınız';
     final DateTime nowNormalized = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final int vId = int.tryParse(currentVehicleData['id']?.toString() ?? '0') ?? 0;
     
     // Sigorta Bildirimi
     if (_effectiveInsuranceDate != null) {
       final int daysLeft = _effectiveInsuranceDate!.difference(nowNormalized).inDays;
       if (daysLeft < 0) {
+        await notificationHelper.cancelNotification(vId ^ "sigorta_yaklasan".hashCode);
+        await notificationHelper.cancelNotification(vId ^ "sigorta".hashCode);
         await notificationHelper.scheduleNotification(
-          id: currentVehicleData['id'].hashCode ^ "sigorta_gecmis".hashCode,
+          id: vId ^ "sigorta_gecmis".hashCode,
           title: "⚠️ Sigorta Süresi Geçti!",
           body: "$plate plakalı aracınızın trafik sigortası ${daysLeft.abs()} gün önce bitti. Lütfen yenileyin.",
-          scheduledDate: DateTime.now().add(const Duration(seconds: 5))
+          scheduledDate: DateTime.now().add(const Duration(seconds: 4))
         );
-      } else if (daysLeft <= 3) {
+      } else if (daysLeft <= 15) {
+        await notificationHelper.cancelNotification(vId ^ "sigorta_gecmis".hashCode);
+        await notificationHelper.cancelNotification(vId ^ "sigorta".hashCode);
         await notificationHelper.scheduleNotification(
-          id: currentVehicleData['id'].hashCode ^ "sigorta_yaklasan".hashCode,
+          id: vId ^ "sigorta_yaklasan".hashCode,
           title: "Trafik Sigortası Hatırlatması",
           body: "$plate plakalı aracınızın trafik sigortası bitişine $daysLeft gün kaldı.",
-          scheduledDate: DateTime.now().add(const Duration(seconds: 5))
+          scheduledDate: DateTime.now().add(const Duration(seconds: 4))
         );
       } else {
+        // Tarih ileri bir tarihe güncellendiyse eski uyarıları anında iptal et
+        await notificationHelper.cancelNotification(vId ^ "sigorta_gecmis".hashCode);
+        await notificationHelper.cancelNotification(vId ^ "sigorta_yaklasan".hashCode);
+        
         DateTime notifyDate = _effectiveInsuranceDate!.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
         if (notifyDate.isAfter(DateTime.now())) {
           await notificationHelper.scheduleNotification(
-            id: currentVehicleData['id'].hashCode ^ "sigorta".hashCode,
+            id: vId ^ "sigorta".hashCode,
             title: "Trafik Sigortası Hatırlatması",
             body: "$plate plakalı aracınızın trafik sigortası bitişine 3 gün kaldı.",
             scheduledDate: notifyDate
@@ -194,24 +203,32 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     if (_effectiveInspectionDate != null) {
       final int daysLeft = _effectiveInspectionDate!.difference(nowNormalized).inDays;
       if (daysLeft < 0) {
+        await notificationHelper.cancelNotification(vId ^ "muayene_yaklasan".hashCode);
+        await notificationHelper.cancelNotification(vId ^ "muayene".hashCode);
         await notificationHelper.scheduleNotification(
-          id: currentVehicleData['id'].hashCode ^ "muayene_gecmis".hashCode,
+          id: vId ^ "muayene_gecmis".hashCode,
           title: "⚠️ Araç Muayenesi Gecikti!",
           body: "$plate plakalı aracınızın muayene süresi ${daysLeft.abs()} gün önce bitti. Lütfen yenileyin.",
-          scheduledDate: DateTime.now().add(const Duration(seconds: 6))
+          scheduledDate: DateTime.now().add(const Duration(seconds: 5))
         );
-      } else if (daysLeft <= 3) {
+      } else if (daysLeft <= 15) {
+        await notificationHelper.cancelNotification(vId ^ "muayene_gecmis".hashCode);
+        await notificationHelper.cancelNotification(vId ^ "muayene".hashCode);
         await notificationHelper.scheduleNotification(
-          id: currentVehicleData['id'].hashCode ^ "muayene_yaklasan".hashCode,
+          id: vId ^ "muayene_yaklasan".hashCode,
           title: "Araç Muayenesi Hatırlatması",
           body: "$plate plakalı aracınızın muayene süresinin dolmasına $daysLeft gün kaldı.",
-          scheduledDate: DateTime.now().add(const Duration(seconds: 6))
+          scheduledDate: DateTime.now().add(const Duration(seconds: 5))
         );
       } else {
-        DateTime notifyDate = _inspectionDateCache!.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
+        // Tarih ileri bir tarihe güncellendiyse eski uyarıları anında iptal et
+        await notificationHelper.cancelNotification(vId ^ "muayene_gecmis".hashCode);
+        await notificationHelper.cancelNotification(vId ^ "muayene_yaklasan".hashCode);
+
+        DateTime notifyDate = _effectiveInspectionDate!.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
         if (notifyDate.isAfter(DateTime.now())) {
           await notificationHelper.scheduleNotification(
-            id: currentVehicleData['id'].hashCode ^ "muayene".hashCode,
+            id: vId ^ "muayene".hashCode,
             title: "Araç Muayenesi Hatırlatması",
             body: "$plate plakalı aracınızın muayene süresinin dolmasına 3 gün kaldı.",
             scheduledDate: notifyDate
@@ -1522,15 +1539,17 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
         if (response.statusCode == 200 || response.statusCode == 201) {
           HapticFeedback.mediumImpact();
           if (!kIsWeb && enableNotification && selectedNextDate != null) {
-            DateTime notificationDate = DateTime.now().add(const Duration(seconds: 10));
-            if (notificationDate.isAfter(DateTime.now())) {
-              await notificationHelper.scheduleNotification(
-                id: DateTime.now().millisecondsSinceEpoch ~/ 1000, 
-                title: "Yaklaşan $selectedType", 
-                body: "${widget.vehiclePlate} plakalı aracınızın $selectedType süresi ${DateFormat('dd.MM.yyyy').format(selectedNextDate!)} tarihinde doluyor.", 
-                scheduledDate: notificationDate
-              );
-            }
+            DateTime notifyTarget = selectedNextDate!.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
+            DateTime notificationDate = notifyTarget.isAfter(DateTime.now()) 
+                ? notifyTarget 
+                : DateTime.now().add(const Duration(seconds: 10));
+
+            await notificationHelper.scheduleNotification(
+              id: DateTime.now().millisecondsSinceEpoch ~/ 1000, 
+              title: "Yaklaşan $selectedType", 
+              body: "${widget.vehiclePlate} plakalı aracınızın $selectedType süresi ${DateFormat('dd.MM.yyyy').format(selectedNextDate!)} tarihinde doluyor.", 
+              scheduledDate: notificationDate
+            );
           }
           _showCustomSnackBar(isEditing ? "İşlem başarıyla güncellendi!" : "İşlem başarıyla kaydedildi!");
           widget.onSaved();
@@ -2001,6 +2020,13 @@ class NotificationHelper {
     _notificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
     
     _isInitialized = true;
+  }
+
+  Future<void> cancelNotification(int id) async {
+    if (kIsWeb) return;
+    try {
+      await _notificationsPlugin.cancel(id);
+    } catch (_) {}
   }
 
   Future<void> scheduleNotification({

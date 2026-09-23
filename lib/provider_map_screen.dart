@@ -3,8 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
+import 'package:apple_maps_flutter/apple_maps_flutter.dart' as amaps;
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -35,7 +36,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   final http.Client _httpClient = http.Client();
   final Duration _apiTimeout = const Duration(seconds: 15);
 
-  final MapController _mapController = MapController();
+  gmaps.GoogleMapController? _googleMapController;
+  amaps.AppleMapController? _appleMapController;
   late PageController _pageController;
   FlutterLocalNotificationsPlugin? flutterLocalNotificationsPlugin;
   
@@ -70,8 +72,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   // --- EKLENEN KISIM: Ustanın müşteriye yaklaştığını anlatan state değişkeni ---
   bool _hasNotifiedArrival = false; 
   
-  String _providerAsset = 'assets/images/marker_mechanic.png';
-
   final ValueNotifier<double> _mapRotationNotifier = ValueNotifier(0.0);
   final ValueNotifier<LatLng?> _animatedProviderPos = ValueNotifier(null);
   final ValueNotifier<double> _animatedHeading = ValueNotifier(0.0);
@@ -91,9 +91,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   late AnimationController _pulseController;
   late AnimationController _buttonPulseController;
   AnimationController? _mapMoveController;
-  bool _isProgrammaticCameraMove = false;
   bool _isUserPanning = false;
-  int _mapMoveId = 0;
 
   Map<String, dynamic> earningsData = {};
   bool isEarningsLoading = true;
@@ -135,7 +133,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     isOnline = widget.initialOnline;
     googleApiKey = const String.fromEnvironment('MAPS_API_KEY', defaultValue: 'AIzaSyA_NvuYHjKyG7O0ZDYJLvxfgClvdHlMlJU');
 
-    _loadProviderMarker();
     _initCompassStream();
 
     WidgetsBinding.instance.addObserver(this); 
@@ -181,13 +178,13 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   }
 
   void _zoomIn() {
-    final zoom = (_mapController.camera.zoom + 1).clamp(4.5, 18.0);
-    _animatedMapMove(_mapController.camera.center, zoom);
+    final pos = _animatedProviderPos.value ?? (currentPosition != null ? LatLng(currentPosition!.latitude, currentPosition!.longitude) : const LatLng(39.92, 32.85));
+    _animatedMapMove(pos, 16.5);
   }
 
   void _zoomOut() {
-    final zoom = (_mapController.camera.zoom - 1).clamp(4.5, 18.0);
-    _animatedMapMove(_mapController.camera.center, zoom);
+    final pos = _animatedProviderPos.value ?? (currentPosition != null ? LatLng(currentPosition!.latitude, currentPosition!.longitude) : const LatLng(39.92, 32.85));
+    _animatedMapMove(pos, 14.0);
   }
 
   String _getServiceName(String type) {
@@ -250,8 +247,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       ),
     );
   }
-
-  
 
   void _showSuspensionSheet() {
     setState(() => _isModalOpen = true);
@@ -641,15 +636,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     }
   }
 
-  void _loadProviderMarker() {
-    if (providerServiceType == 'tow') _providerAsset = 'assets/images/marker_tow.png';
-    else if (providerServiceType == 'tire') _providerAsset = 'assets/images/marker_tire.png';
-    else if (providerServiceType == 'wash') _providerAsset = 'assets/images/marker_wash.png';
-    else _providerAsset = 'assets/images/marker_mechanic.png';
-    
-    if (mounted) setState(() {});
-  }
-
   Future<void> _loadMapSdkAndInit() async {
     if (mounted) {
       setState(() {
@@ -697,65 +683,32 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
   void _animatedMapMove(LatLng destLocation, double destZoom, {bool avoidBottomSheet = false}) {
     if (!_isMapReady || !mounted || !destLocation.latitude.isFinite || !destLocation.longitude.isFinite || !destZoom.isFinite) return;
+    if (destLocation.latitude < -90 || destLocation.latitude > 90 || destLocation.longitude < -180 || destLocation.longitude > 180) return;
 
-    final startCenter = _mapController.camera.center;
-    final latDiff = (startCenter.latitude - destLocation.latitude).abs();
-    final lngDiff = (startCenter.longitude - destLocation.longitude).abs();
-    final zoomDiff = (_mapController.camera.zoom - destZoom).abs();
-    
-    if (latDiff < 0.00015 && lngDiff < 0.00015 && zoomDiff < 0.1) return;
-
-    _mapMoveId++;
-    final int currentMoveId = _mapMoveId;
-    _isProgrammaticCameraMove = true;
-    
-    final distance = const Distance().as(LengthUnit.Kilometer, startCenter, destLocation);
-    
-    if (distance > 50.0) {
-      LatLng targetPos = destLocation;
-      if (avoidBottomSheet) {
-         double offsetLat = targetPos.latitude - (0.004 * (15.0 / destZoom));
-         targetPos = LatLng(offsetLat, targetPos.longitude);
-      }
-      _mapController.move(targetPos, destZoom.clamp(4.5, 18.0));
-      _isProgrammaticCameraMove = false;
-      return;
+    double targetLat = destLocation.latitude;
+    if (avoidBottomSheet) {
+      targetLat -= (0.004 * (15.0 / destZoom));
     }
 
-    int animDuration = distance > 5.0 ? 1400 : (distance > 1.0 ? 1000 : 650);
-
-    final latTween = Tween<double>(begin: startCenter.latitude, end: destLocation.latitude);
-    final lngTween = Tween<double>(begin: startCenter.longitude, end: destLocation.longitude);
-    final zoomTween = Tween<double>(begin: _mapController.camera.zoom, end: destZoom.clamp(4.5, 18.0));
-
-    _mapMoveController?.stop();
-    _mapMoveController?.dispose();
-    
-    _mapMoveController = AnimationController(duration: Duration(milliseconds: animDuration), vsync: this);
-    final Animation<double> animation = CurvedAnimation(parent: _mapMoveController!, curve: Curves.easeInOutCubic);
-
-    _mapMoveController!.addListener(() {
-      if (mounted && _mapMoveId == currentMoveId && _isMapReady) {
-        LatLng targetPos = LatLng(latTween.evaluate(animation), lngTween.evaluate(animation));
-        if (avoidBottomSheet) {
-           double offsetLat = targetPos.latitude - (0.004 * (15.0 / zoomTween.evaluate(animation)));
-           targetPos = LatLng(offsetLat, targetPos.longitude);
-        }
-        try {
-          _mapController.move(targetPos, zoomTween.evaluate(animation));
-        } catch (e) {}
-      }
-    });
-
-    _mapMoveController!.addStatusListener((status) {
-      if (status == AnimationStatus.completed || status == AnimationStatus.dismissed) {
-        if (mounted && _mapMoveId == currentMoveId) {
-          _isProgrammaticCameraMove = false;
-        }
-      }
-    });
-
-    _mapMoveController!.forward();
+    if (defaultTargetPlatform == TargetPlatform.iOS && _appleMapController != null) {
+      _appleMapController!.animateCamera(
+        amaps.CameraUpdate.newCameraPosition(
+          amaps.CameraPosition(
+            target: amaps.LatLng(targetLat, destLocation.longitude),
+            zoom: destZoom,
+          ),
+        ),
+      );
+    } else if (_googleMapController != null) {
+      _googleMapController!.animateCamera(
+        gmaps.CameraUpdate.newCameraPosition(
+          gmaps.CameraPosition(
+            target: gmaps.LatLng(targetLat, destLocation.longitude),
+            zoom: destZoom,
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _checkActiveJob() async {
@@ -987,7 +940,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     _animatedProviderPos.dispose();
     _animatedHeading.dispose();
     _mapRotationNotifier.dispose();
-    _mapController.dispose();
+    _googleMapController?.dispose();
+    _appleMapController = null;
     super.dispose();
   }
 
@@ -1017,13 +971,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                 _animatedProviderPos.value = LatLng(dbLat, dbLng);
                 _targetProviderPos = LatLng(dbLat, dbLng);
                 if (_isMapReady) {
-                  _mapController.move(LatLng(dbLat, dbLng), 15.5);
+                  _animatedMapMove(LatLng(dbLat, dbLng), 15.5);
                 }
               }
             }
             if (data['performance']?['service_type'] != null) {
               providerServiceType = data['performance']['service_type'].toString();
-              _loadProviderMarker();
             }
             isEarningsLoading = false;
           });
@@ -1092,18 +1045,11 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       setState(() {});
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _isMapReady) {
-          try {
-            _mapController.move(newPos, 15.5);
-          } catch (e, stack) {
-            debugPrint("Harita henüz hazır değil: $e");
-            if (!kIsWeb) {
-              try { FirebaseCrashlytics.instance.recordError(e, stack, reason: 'Usta harita render öncesi kamera hareket hatası'); } catch(_){}
-            }
-          }
+          _animatedMapMove(newPos, 15.5);
         }
       });
     } else if (mounted && !_isUserPanning) {
-      _animatedMapMove(newPos, _mapController.camera.zoom);
+      _animatedMapMove(newPos, 15.5);
     }
   }
 
@@ -1749,201 +1695,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     );
   }
 
-  List<CircleMarker> _buildHeatmapCircles() {
-    List<CircleMarker> heatmapCircles = [];
-    if (currentPosition == null) return heatmapCircles;
-    
-    List<LatLng> highDemandZones = [
-      LatLng(currentPosition!.latitude + 0.01, currentPosition!.longitude + 0.01),
-      LatLng(currentPosition!.latitude - 0.015, currentPosition!.longitude - 0.005),
-    ];
-
-    for (int i = 0; i < highDemandZones.length; i++) {
-      heatmapCircles.add(
-        CircleMarker(
-          point: highDemandZones[i],
-          radius: 800,
-          useRadiusInMeter: true,
-          color: alertRed.withOpacity(0.15),
-          borderColor: Colors.transparent,
-          borderStrokeWidth: 0,
-        )
-      );
-    }
-    return heatmapCircles;
-  }
-
-  List<Marker> _buildMarkers(LatLng? providerPos, double providerHeading) {
-    List<Marker> markers = [];
-
-    LatLng? actualProviderPos = providerPos ?? 
-        _targetProviderPos ?? 
-        _oldProviderPos ?? 
-        (currentPosition != null ? LatLng(currentPosition!.latitude, currentPosition!.longitude) : null);
-
-    if (isOnline && actualProviderPos != null) {
-      markers.add(
-        Marker(
-          point: actualProviderPos,
-          width: 76, height: 76,
-          alignment: Alignment.center,
-          child: Transform.rotate(
-            angle: providerHeading * math.pi / 180,
-            child: Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: const RadialGradient(
-                  colors: [Color(0xFF0F3826), Color(0xFF051C12)],
-                  center: Alignment.center,
-                  radius: 0.8,
-                ),
-                border: Border.all(color: neonGreen, width: 2.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: neonGreen.withOpacity(0.35 + (Curves.easeInOutSine.transform(_pulseController.value) * 0.45)), 
-                    blurRadius: 14 + (Curves.easeInOutSine.transform(_pulseController.value) * 12), 
-                    spreadRadius: 2 + (Curves.easeInOutSine.transform(_pulseController.value) * 4)
-                  ),
-                  const BoxShadow(color: Colors.black87, blurRadius: 8, offset: Offset(0, 4)),
-                ]
-              ),
-              child: Center(
-                child: Image.asset(
-                  _providerAsset,
-                  width: 34,
-                  height: 34,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.build_circle_rounded, color: neonGreen, size: 30),
-                ),
-              ),
-            ),
-          ),
-        )
-      );
-    }
-
-    if (isOnline) {
-      for (int i = 0; i < jobList.length; i++) {
-        final job = jobList[i];
-        final int currentJobId = int.tryParse(job['id']?.toString() ?? '0') ?? 0;
-        final double lat = _parseDouble(job['latitude']);
-        final double lng = _parseDouble(job['longitude']);
-        final bool isFlashing = currentJobId == _flitchingJobId;
-        final String serviceType = job['service_type']?.toString() ?? 'mechanic';
-        
-        markers.add(
-          Marker(
-            point: LatLng(lat, lng),
-            width: isFlashing ? 75 : 60, 
-            height: isFlashing ? 75 : 60,
-            alignment: Alignment.center,
-            child: GestureDetector(
-              onTap: () {
-                HapticFeedback.selectionClick();
-                setState(() {
-                  _showJobCard = true;
-                  _currentJobIndex = i;
-                  _flitchingJobId = null;
-                });
-                if (_pageController.hasClients) {
-                  _pageController.animateToPage(i, duration: const Duration(milliseconds: 600), curve: Curves.fastOutSlowIn);
-                }
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                decoration: BoxDecoration(
-                  color: isFlashing ? alertRed : panelBlack,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: isFlashing ? Colors.white : Colors.blueAccent, width: 2.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: (isFlashing ? alertRed : Colors.blueAccent).withOpacity(0.6),
-                      blurRadius: isFlashing ? 20 : 10,
-                      spreadRadius: isFlashing ? 5 : 2,
-                    )
-                  ]
-                ),
-                child: Center(
-                  child: Icon(
-                    _getServiceIcon(serviceType),
-                    color: isFlashing ? Colors.white : Colors.blueAccent,
-                    size: isFlashing ? 32 : 26,
-                  ),
-                ),
-              )
-            )
-          )
-        );
-      }
-    }
-    return markers;
-  }
-
-  List<CircleMarker> _buildCircles(LatLng? providerPos) {
-    List<CircleMarker> circles = _buildHeatmapCircles();
-
-    LatLng? actualProviderPos = providerPos ?? 
-        (currentPosition != null ? LatLng(currentPosition!.latitude, currentPosition!.longitude) : null);
-
-    if (isOnline && actualProviderPos != null) {
-      if (currentPosition != null && currentPosition!.accuracy > 0) {
-        circles.add(
-          CircleMarker(
-            point: actualProviderPos,
-            radius: currentPosition!.accuracy,
-            useRadiusInMeter: true,
-            color: Colors.blueAccent.withOpacity(0.15),
-            borderColor: Colors.blueAccent.withOpacity(0.4),
-            borderStrokeWidth: 1.5,
-          )
-        );
-      }
-
-      for (int i = 0; i < 3; i++) {
-        final double progress = (_pulseController.value + (i * 0.33)) % 1.0;
-        final double curvedProgress = Curves.easeOutCubic.transform(progress);
-        final double waveAlpha = (1.0 - curvedProgress).clamp(0.0, 1.0);
-        circles.add(
-          CircleMarker(
-            point: actualProviderPos,
-            radius: 450 * curvedProgress, 
-            useRadiusInMeter: true,
-            color: neonGreen.withOpacity(waveAlpha * 0.16),
-            borderColor: neonGreen.withOpacity(waveAlpha * 0.55),
-            borderStrokeWidth: 2.2,
-          ),
-        );
-      }
-    }
-
-    if (isOnline && _flitchingJobId != null) {
-      try {
-        final job = jobList.firstWhere((j) => int.parse(j['id'].toString()) == _flitchingJobId);
-        double lat = _parseDouble(job['latitude']);
-        double lng = _parseDouble(job['longitude']);
-        
-        for (int i = 0; i < 2; i++) {
-          double delay = i * 0.5;
-          double progress = (_pulseController.value + delay) % 1.0;
-          circles.add(
-            CircleMarker(
-              point: LatLng(lat, lng),
-              radius: 180 * progress, 
-              useRadiusInMeter: true,
-              color: alertRed.withOpacity((1.0 - progress) * 0.2),
-              borderColor: alertRed.withOpacity((1.0 - progress) * 0.8),
-              borderStrokeWidth: 3.5,
-            )
-          );
-        }
-      } catch (_) {}
-    }
-
-    return circles;
-  }
-
   Widget _buildOfflineDashboard(BoxConstraints constraints) {
     bool isSmallScreen = constraints.maxWidth < 400;
 
@@ -2330,128 +2081,93 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
               : Stack(
                   children: [
                     Positioned.fill(
-                      child: FlutterMap(
-                        mapController: _mapController,
-                        options: MapOptions(
-                          backgroundColor: const Color(0xFF030305),
-                          initialCenter: (currentPosition != null && currentPosition!.latitude.isFinite && currentPosition!.longitude.isFinite) 
-                              ? LatLng(currentPosition!.latitude, currentPosition!.longitude)
-                              : const LatLng(39.92, 32.85),
-                          initialZoom: 15.0,
-                          minZoom: 4.5,
-                          maxZoom: 18.5,
-                          interactionOptions: const InteractionOptions(flags: InteractiveFlag.all),
-                          onMapReady: () {
-                            _isMapReady = true;
-                            try {
-                              if (currentPosition != null) {
-                                _mapController.move(LatLng(currentPosition!.latitude, currentPosition!.longitude), 15.5);
-                              }
-                            } catch(e) {}
-                          },
-                          onPositionChanged: (camera, hasGesture) {
-                            // PERFORMANS: Gereksiz render döngülerini engeller
-                            if ((_mapRotationNotifier.value - camera.rotation).abs() > 1.0) {
-                              _mapRotationNotifier.value = camera.rotation;
-                            }
-                            if (hasGesture) {
-                              _mapMoveController?.stop();
-                              _isProgrammaticCameraMove = false;
-                              _isUserPanning = true;
-                            }
-                          },
-                          onMapEvent: (event) {
-                            if (event is MapEventMoveStart) {
-                              if (_isProgrammaticCameraMove || event.source == MapEventSource.mapController) return;
-                              _mapMoveController?.stop();
-                              FocusManager.instance.primaryFocus?.unfocus(); 
-                              _isUserPanning = true;
-                            } else if (event is MapEventMoveEnd) {
-                              if (_isUserPanning) {
-                                /* UX Düzeltmesi: Kullanıcı haritayı incelerken kamera zorla geri atlamamalı.
-                                Future.delayed(const Duration(seconds: 4), () {
-                                  if (mounted) setState(() => _isUserPanning = false);
-                                });
-                                */
-                              }
-                            }
-                          },
-                          onTap: (_, __) {
-                            FocusScope.of(context).unfocus();
-                            if (_showJobCard) setState(() => _showJobCard = false);
-                          },
-                        ),
-                        children: [
-                          TileLayer(
-                            urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
-                            userAgentPackageName: 'com.berdas.otoyardim',
-                            keepBuffer: 2, // KRİTİK DÜZELTME: 8 değeri RAM'i doldurup uygulamayı çökertebilir
-                            panBuffer: 1,  // DÜZELTME: İşlemci yükünü hafifletir
-                            retinaMode: true, 
-                            minZoom: 3,
-                            maxZoom: 19,
-                            minNativeZoom: 1,
-                            maxNativeZoom: 18,
-                            errorTileCallback: (tile, error, stackTrace) {
-                              debugPrint("Harita Tile hatası: $error");
+                      child: defaultTargetPlatform == TargetPlatform.iOS
+                        ? amaps.AppleMap(
+                            initialCameraPosition: amaps.CameraPosition(
+                              target: amaps.LatLng(
+                                currentPosition?.latitude ?? 39.92,
+                                currentPosition?.longitude ?? 32.85,
+                              ),
+                              zoom: 15.0,
+                            ),
+                            myLocationEnabled: true,
+                            myLocationButtonEnabled: false,
+                            compassEnabled: true,
+                            trafficEnabled: false,
+                            annotations: {
+                              for (int i = 0; i < jobList.length; i++)
+                                amaps.Annotation(
+                                  annotationId: amaps.AnnotationId('job_${jobList[i]['id']}'),
+                                  position: amaps.LatLng(
+                                    _parseDouble(jobList[i]['latitude']),
+                                    _parseDouble(jobList[i]['longitude']),
+                                  ),
+                                  onTap: () {
+                                    HapticFeedback.selectionClick();
+                                    setState(() {
+                                      _showJobCard = true;
+                                      _currentJobIndex = i;
+                                      _flitchingJobId = null;
+                                    });
+                                  },
+                                ),
+                            },
+                            onMapCreated: (controller) {
+                              _appleMapController = controller;
+                              _isMapReady = true;
+                            },
+                            onTap: (_) {
+                              FocusScope.of(context).unfocus();
+                              if (_showJobCard) setState(() => _showJobCard = false);
+                            },
+                          )
+                        : gmaps.GoogleMap(
+                            initialCameraPosition: gmaps.CameraPosition(
+                              target: gmaps.LatLng(
+                                currentPosition?.latitude ?? 39.92,
+                                currentPosition?.longitude ?? 32.85,
+                              ),
+                              zoom: 15.0,
+                            ),
+                            style: '''
+                              [
+                                {"elementType": "geometry", "stylers": [{"color": "#030305"}]},
+                                {"elementType": "labels.text.stroke", "stylers": [{"color": "#111115"}]},
+                                {"elementType": "labels.text.fill", "stylers": [{"color": "#746855"}]}
+                              ]
+                            ''',
+                            myLocationEnabled: true,
+                            myLocationButtonEnabled: false,
+                            compassEnabled: true,
+                            trafficEnabled: false,
+                            zoomControlsEnabled: false,
+                            markers: {
+                              for (int i = 0; i < jobList.length; i++)
+                                gmaps.Marker(
+                                  markerId: gmaps.MarkerId('job_${jobList[i]['id']}'),
+                                  position: gmaps.LatLng(
+                                    _parseDouble(jobList[i]['latitude']),
+                                    _parseDouble(jobList[i]['longitude']),
+                                  ),
+                                  onTap: () {
+                                    HapticFeedback.selectionClick();
+                                    setState(() {
+                                      _showJobCard = true;
+                                      _currentJobIndex = i;
+                                      _flitchingJobId = null;
+                                    });
+                                  },
+                                ),
+                            },
+                            onMapCreated: (controller) {
+                              _googleMapController = controller;
+                              _isMapReady = true;
+                            },
+                            onTap: (_) {
+                              FocusScope.of(context).unfocus();
+                              if (_showJobCard) setState(() => _showJobCard = false);
                             },
                           ),
-                          if (_isMapReady && isOnline)
-                            ValueListenableBuilder<LatLng?>(
-                              valueListenable: _animatedProviderPos,
-                              builder: (context, providerPos, child) {
-                                return RepaintBoundary(
-                                  child: AnimatedBuilder(
-                                    animation: _pulseController,
-                                    builder: (context, child) {
-                                      return CircleLayer(circles: _buildCircles(providerPos));
-                                    }
-                                  ),
-                                );
-                              }
-                            ),
-                          if (_isMapReady && isOnline) 
-                            ValueListenableBuilder<LatLng?>(
-                              valueListenable: _animatedProviderPos,
-                              builder: (context, providerPos, child) {
-                                return ValueListenableBuilder<double>(
-                                  valueListenable: _animatedHeading,
-                                  builder: (context, providerHeading, child) {
-                                    return AnimatedBuilder(
-                                      animation: _pulseController,
-                                      builder: (context, child) {
-                                        return MarkerLayer(markers: _buildMarkers(providerPos, providerHeading));
-                                      }
-                                    );
-                                  }
-                                );
-                              }
-                            ),
-                          if (_isMapReady && isOnline && _showJobCard && jobList.isNotEmpty)
-                            ValueListenableBuilder<LatLng?>(
-                              valueListenable: _animatedProviderPos,
-                              builder: (context, providerPos, child) {
-                                return PolylineLayer(
-                                  polylines: [
-                                    Polyline(
-                                      points: [
-                                        providerPos ?? (currentPosition != null ? LatLng(currentPosition!.latitude, currentPosition!.longitude) : const LatLng(39.92, 32.85)),
-                                        LatLng(
-                                          _parseDouble(jobList[_currentJobIndex]['latitude']),
-                                          _parseDouble(jobList[_currentJobIndex]['longitude'])
-                                        )
-                                      ],
-                                      color: alertRed.withOpacity(0.8),
-                                      strokeWidth: 4.0,
-                                      strokeJoin: StrokeJoin.round,
-                                      strokeCap: StrokeCap.round,
-                                    )
-                                  ],
-                                );
-                              }
-                            ),
-                        ],
-                      ),
                     ),
 
                     if (!isOnline)
@@ -2652,7 +2368,15 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                               ),
                                               onPressed: () {
                                                 HapticFeedback.selectionClick();
-                                                _mapController.rotate(0);
+                                                final pos = _animatedProviderPos.value ?? (currentPosition != null ? LatLng(currentPosition!.latitude, currentPosition!.longitude) : const LatLng(39.92, 32.85));
+                                                if (defaultTargetPlatform == TargetPlatform.android && _googleMapController != null) {
+                                                  _googleMapController!.animateCamera(
+                                                    gmaps.CameraUpdate.newCameraPosition(
+                                                      gmaps.CameraPosition(target: gmaps.LatLng(pos.latitude, pos.longitude), zoom: 15.5, bearing: 0.0),
+                                                    ),
+                                                  );
+                                                }
+                                                _mapRotationNotifier.value = 0.0;
                                               },
                                             ),
                                             Container(width: 24, height: 2.0, color: Colors.white.withOpacity(0.2)),
@@ -2678,11 +2402,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                       onPressed: () {
                                         HapticFeedback.selectionClick();
                                         if (currentPosition != null) {
-                                          double speed = currentPosition!.speed * 3.6;
                                           setState(() => _isUserPanning = false);
-                                          _mapController.move(
+                                          _animatedMapMove(
                                             LatLng(currentPosition!.latitude, currentPosition!.longitude), 
-                                            speed > 40 ? 14.5 : 16.0
+                                            16.0,
                                           );
                                           _fetchNearbyJobs(radius: _searchRadius.toInt());
                                         }

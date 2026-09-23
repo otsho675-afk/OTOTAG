@@ -1006,6 +1006,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
               final effectiveInsDate = getInsuranceExpiryDate(insDate);
               final int daysLeft = effectiveInsDate.difference(DateTime(now.year, now.month, now.day)).inDays;
               if (daysLeft < 0) {
+                try {
+                  await notificationHelper.cancelNotification(vId.hashCode ^ "sigorta_yaklasan".hashCode);
+                  await notificationHelper.cancelNotification(vId.hashCode ^ "sigorta".hashCode);
+                } catch (_) {}
                 await notificationHelper.scheduleNotification(
                   id: vId.hashCode ^ "sigorta_gecmis".hashCode,
                   title: "⚠️ Sigorta Süresi Geçti!",
@@ -1013,6 +1017,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                   scheduledDate: now.add(const Duration(seconds: 4))
                 );
               } else if (daysLeft <= 15) {
+                try {
+                  await notificationHelper.cancelNotification(vId.hashCode ^ "sigorta_gecmis".hashCode);
+                  await notificationHelper.cancelNotification(vId.hashCode ^ "sigorta".hashCode);
+                } catch (_) {}
                 await notificationHelper.scheduleNotification(
                   id: vId.hashCode ^ "sigorta_yaklasan".hashCode,
                   title: "Trafik Sigortası Hatırlatması",
@@ -1020,7 +1028,12 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                   scheduledDate: now.add(const Duration(seconds: 4))
                 );
               } else {
-                DateTime notifyDate = insDate.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
+                // İleri tarihe güncellendiğinde geçmiş/yaklaşan uyarılarını hemen iptal et
+                try {
+                  await notificationHelper.cancelNotification(vId.hashCode ^ "sigorta_gecmis".hashCode);
+                  await notificationHelper.cancelNotification(vId.hashCode ^ "sigorta_yaklasan".hashCode);
+                } catch (_) {}
+                DateTime notifyDate = effectiveInsDate.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
                 if (notifyDate.isAfter(now)) {
                   await notificationHelper.scheduleNotification(
                     id: vId.hashCode ^ "sigorta".hashCode,
@@ -1037,6 +1050,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
               final effectiveInspDate = getInspectionExpiryDate(inspDate, v['brand_model']?.toString());
               final int daysLeft = effectiveInspDate.difference(DateTime(now.year, now.month, now.day)).inDays;
               if (daysLeft < 0) {
+                try {
+                  await notificationHelper.cancelNotification(vId.hashCode ^ "muayene_yaklasan".hashCode);
+                  await notificationHelper.cancelNotification(vId.hashCode ^ "muayene".hashCode);
+                } catch (_) {}
                 await notificationHelper.scheduleNotification(
                   id: vId.hashCode ^ "muayene_gecmis".hashCode,
                   title: "⚠️ Araç Muayenesi Gecikti!",
@@ -1044,6 +1061,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                   scheduledDate: now.add(const Duration(seconds: 5))
                 );
               } else if (daysLeft <= 15) {
+                try {
+                  await notificationHelper.cancelNotification(vId.hashCode ^ "muayene_gecmis".hashCode);
+                  await notificationHelper.cancelNotification(vId.hashCode ^ "muayene".hashCode);
+                } catch (_) {}
                 await notificationHelper.scheduleNotification(
                   id: vId.hashCode ^ "muayene_yaklasan".hashCode,
                   title: "Araç Muayenesi Hatırlatması",
@@ -1051,7 +1072,12 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                   scheduledDate: now.add(const Duration(seconds: 5))
                 );
               } else {
-                DateTime notifyDate = inspDate.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
+                // İleri tarihe güncellendiğinde geçmiş/yaklaşan uyarılarını hemen iptal et
+                try {
+                  await notificationHelper.cancelNotification(vId.hashCode ^ "muayene_gecmis".hashCode);
+                  await notificationHelper.cancelNotification(vId.hashCode ^ "muayene_yaklasan".hashCode);
+                } catch (_) {}
+                DateTime notifyDate = effectiveInspDate.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
                 if (notifyDate.isAfter(now)) {
                   await notificationHelper.scheduleNotification(
                     id: vId.hashCode ^ "muayene".hashCode,
@@ -1107,33 +1133,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
           }
         } catch(e) {}
         
-        // --- EKLENEN KISIM: Araç Eklendiğinde Süresi Geçenleri Anında Hatırlat ---
-        if (!kIsWeb) {
-          if (insDate != null) {
-            final int insDays = insDate.difference(DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day)).inDays;
-            if (insDays < 0) {
-              await notificationHelper.scheduleNotification(
-                id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-                title: "⚠️ Sigorta Süresi Geçti!",
-                body: "${plate.toUpperCase()} plakalı aracınızın trafik sigortası ${insDays.abs()} gün önce bitti. Lütfen yenileyin.",
-                scheduledDate: DateTime.now().add(const Duration(seconds: 4))
-              );
-            }
-          }
-          if (inspDate != null) {
-            final int inspDays = inspDate.difference(DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day)).inDays;
-            if (inspDays < 0) {
-              await notificationHelper.scheduleNotification(
-                id: (DateTime.now().millisecondsSinceEpoch ~/ 1000) + 1,
-                title: "⚠️ Araç Muayenesi Gecikti!",
-                body: "${plate.toUpperCase()} plakalı aracınızın muayene süresi ${inspDays.abs()} gün önce bitti. Lütfen yenileyin.",
-                scheduledDate: DateTime.now().add(const Duration(seconds: 5))
-              );
-            }
-          }
-        }
-        // -------------------------------------------------------------------------
-        
+        // Bildirimler ve tarih geçerlilikleri _fetchVehicles içerisinde senkron ve hatasız kurulur
         await _fetchVehicles();
       } else {
         if (mounted) _showTopSnackBar(data['message'] ?? "İşlem başarısız.", isError: true);
@@ -1314,104 +1314,107 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       elevation: 0,
-      builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.viewInsetsOf(context).bottom,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: _cardColor.withOpacity(0.95),
-                  borderRadius: BorderRadius.circular(32),
-                  border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.6), blurRadius: 40, offset: const Offset(0, 10))
-                  ]
-                ),
-                child: SafeArea(
-                  top: false,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: _primaryColor.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(16),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.viewInsetsOf(context).bottom,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: _cardColor.withOpacity(0.95),
+                    borderRadius: BorderRadius.circular(32),
+                    border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.6), blurRadius: 40, offset: const Offset(0, 10))
+                    ]
+                  ),
+                  child: SafeArea(
+                    top: false,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: _primaryColor.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Icon(isEditing ? Icons.edit_rounded : Icons.add_circle_rounded, color: _primaryColor, size: 24),
                             ),
-                            child: Icon(isEditing ? Icons.edit_rounded : Icons.add_circle_rounded, color: _primaryColor, size: 24),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Text(
-                              isEditing ? "Aracı Düzenle" : "Yeni Araç Ekle", 
-                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: -0.5),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(20),
-                              onTap: () => Navigator.pop(context),
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle),
-                                child: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Text(
+                                isEditing ? "Aracı Düzenle" : "Yeni Araç Ekle", 
+                                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: -0.5),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      
-                      Row(
-                        children: [
-                          Expanded(child: _buildInputField(plateCtrl, "Plaka", Icons.pin_rounded, isCapital: true)),
-                          const SizedBox(width: 12),
-                          Expanded(child: _buildInputField(brandCtrl, "Marka & Model", Icons.directions_car_rounded)),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildCompactDatePicker("Sigorta Tarihi", tempIns, Icons.shield_rounded, _primaryColor, () {
-                              _showScrollableDatePicker(
-                                context: context,
-                                initialDate: tempIns,
-                                onDateSelected: (date) {
-                                  setState(() => tempIns = date); 
-                                },
-                              );
-                            }),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildCompactDatePicker("Muayene Tarihi", tempInsp, Icons.fact_check_rounded, _primaryColor, () {
-                              _showScrollableDatePicker(
-                                context: context,
-                                initialDate: tempInsp,
-                                onDateSelected: (date) {
-                                  setState(() => tempInsp = date); 
-                                },
-                              );
-                            }),
-                          ),
-                        ],
-                      ),
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(20),
+                                onTap: () => Navigator.pop(context),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle),
+                                  child: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        
+                        Row(
+                          children: [
+                            Expanded(child: _buildInputField(plateCtrl, "Plaka", Icons.pin_rounded, isCapital: true)),
+                            const SizedBox(width: 12),
+                            Expanded(child: _buildInputField(brandCtrl, "Marka & Model", Icons.directions_car_rounded)),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildCompactDatePicker("Sigorta Tarihi", tempIns, Icons.shield_rounded, _primaryColor, () {
+                                _showScrollableDatePicker(
+                                  context: context,
+                                  initialDate: tempIns,
+                                  onDateSelected: (date) {
+                                    setModalState(() => tempIns = date);
+                                    setState(() => tempIns = date); 
+                                  },
+                                );
+                              }),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildCompactDatePicker("Muayene Tarihi", tempInsp, Icons.fact_check_rounded, _primaryColor, () {
+                                _showScrollableDatePicker(
+                                  context: context,
+                                  initialDate: tempInsp,
+                                  onDateSelected: (date) {
+                                    setModalState(() => tempInsp = date);
+                                    setState(() => tempInsp = date); 
+                                  },
+                                );
+                              }),
+                            ),
+                          ],
+                        ),
                       const SizedBox(height: 12),
                       Row(
                         children: [
@@ -1477,6 +1480,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
           ),
         ),
       ),
+    ),
     ).whenComplete(() {
       _isVehicleModalOpen = false;
     });

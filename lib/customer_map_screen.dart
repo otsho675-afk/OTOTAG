@@ -3,8 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' hide Path;
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
+import 'package:apple_maps_flutter/apple_maps_flutter.dart' as amaps;
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_compass/flutter_compass.dart';
@@ -31,7 +32,10 @@ class CustomerMapScreen extends StatefulWidget {
 }
 
 class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProviderStateMixin, WidgetsBindingObserver {
-  final MapController mapController = MapController();
+  gmaps.GoogleMapController? _googleMapController;
+  amaps.AppleMapController? _appleMapController;
+  Set<gmaps.Marker> _googleMarkers = {};
+  Set<amaps.Annotation> _appleAnnotations = {};
   final TextEditingController problemController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   
@@ -76,8 +80,6 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
   late final AnimationController _panelSlideController;
   late final AnimationController _markerBounceController;
   AnimationController? _mapMoveController; 
-  bool _isProgrammaticCameraMove = false;
-  int _mapMoveId = 0; 
   
   final String baseUrl = "https://eliteagency.sbs/api.php";
   late final String googleApiKey;
@@ -118,59 +120,28 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
 
   void _animatedMapMove(LatLng destLocation, double destZoom) {
     if (!_isMapReady || !mounted || !destLocation.latitude.isFinite || !destLocation.longitude.isFinite || !destZoom.isFinite) return;
-    
-    // GÜVENLİK (ÇÖKME ÖNLEYİCİ): Geçersiz koordinat koruması
     if (destLocation.latitude < -90 || destLocation.latitude > 90 || destLocation.longitude < -180 || destLocation.longitude > 180) return;
 
-    final startCenter = mapController.camera.center;
-    final latDiff = (startCenter.latitude - destLocation.latitude).abs();
-    final lngDiff = (startCenter.longitude - destLocation.longitude).abs();
-    final zoomDiff = (mapController.camera.zoom - destZoom).abs();
-    
-    if (latDiff < 0.00015 && lngDiff < 0.00015 && zoomDiff < 0.1) return;
-
-    _mapMoveId++;
-    final int currentMoveId = _mapMoveId;
-    _isProgrammaticCameraMove = true;
-    
-    final distance = const Distance().as(LengthUnit.Kilometer, startCenter, destLocation);
-    
-    if (distance > 50.0) {
-      mapController.move(destLocation, destZoom.clamp(4.5, 18.0));
-      _isProgrammaticCameraMove = false;
-      return;
+    _currentZoom = destZoom;
+    if (defaultTargetPlatform == TargetPlatform.iOS && _appleMapController != null) {
+      _appleMapController!.animateCamera(
+        amaps.CameraUpdate.newCameraPosition(
+          amaps.CameraPosition(
+            target: amaps.LatLng(destLocation.latitude, destLocation.longitude),
+            zoom: destZoom,
+          ),
+        ),
+      );
+    } else if (_googleMapController != null) {
+      _googleMapController!.animateCamera(
+        gmaps.CameraUpdate.newCameraPosition(
+          gmaps.CameraPosition(
+            target: gmaps.LatLng(destLocation.latitude, destLocation.longitude),
+            zoom: destZoom,
+          ),
+        ),
+      );
     }
-
-    int animDuration = distance > 5.0 ? 1400 : (distance > 1.0 ? 1000 : 650);
-
-    final latTween = Tween<double>(begin: startCenter.latitude, end: destLocation.latitude);
-    final lngTween = Tween<double>(begin: startCenter.longitude, end: destLocation.longitude);
-    final zoomTween = Tween<double>(begin: mapController.camera.zoom, end: destZoom.clamp(4.5, 18.0));
-
-    _mapMoveController?.stop(); 
-    _mapMoveController?.dispose();
-    
-    _mapMoveController = AnimationController(duration: Duration(milliseconds: animDuration), vsync: this);
-    final Animation<double> animation = CurvedAnimation(parent: _mapMoveController!, curve: Curves.easeInOutCubic);
-
-    _mapMoveController!.addListener(() {
-      if (mounted && _mapMoveId == currentMoveId) {
-        mapController.move(
-          LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)), 
-          zoomTween.evaluate(animation)
-        );
-      }
-    });
-
-    _mapMoveController!.addStatusListener((status) {
-      if (status == AnimationStatus.completed || status == AnimationStatus.dismissed) {
-        if (mounted && _mapMoveId == currentMoveId) {
-          _isProgrammaticCameraMove = false;
-        }
-      }
-    });
-
-    _mapMoveController!.forward();
   }
 
   void _initCompassStream() {
@@ -261,7 +232,8 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     _panelSlideController.dispose();
     _markerBounceController.dispose();
     _mapRotationNotifier.dispose(); 
-    mapController.dispose();
+    _googleMapController?.dispose();
+    _appleMapController = null;
     super.dispose();
   }
 
@@ -385,10 +357,10 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: panelBlack.withOpacity(0.9),
+              color: panelBlack.withValues(alpha:0.9),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-              border: Border.all(color: neonGreen.withOpacity(0.2), width: 1.5),
-              boxShadow: [BoxShadow(color: pureBlack.withOpacity(0.9), blurRadius: 40, offset: const Offset(0, -10))],
+              border: Border.all(color: neonGreen.withValues(alpha:0.2), width: 1.5),
+              boxShadow: [BoxShadow(color: pureBlack.withValues(alpha:0.9), blurRadius: 40, offset: const Offset(0, -10))],
             ),
             child: SafeArea(
               child: Column(
@@ -400,10 +372,10 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: neonGreen.withOpacity(0.1),
+                      color: neonGreen.withValues(alpha:0.1),
                       shape: BoxShape.circle,
-                      border: Border.all(color: neonGreen.withOpacity(0.3)),
-                      boxShadow: [BoxShadow(color: neonGreen.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 5))],
+                      border: Border.all(color: neonGreen.withValues(alpha:0.3)),
+                      boxShadow: [BoxShadow(color: neonGreen.withValues(alpha:0.2), blurRadius: 20, offset: const Offset(0, 5))],
                     ),
                     child: const Icon(Icons.notifications_active_rounded, color: neonGreen, size: 36),
                   ),
@@ -427,9 +399,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                               margin: const EdgeInsets.only(bottom: 12),
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                               decoration: BoxDecoration(
-                                color: isDanger ? const Color(0xFFFF3366).withOpacity(0.1) : neonGreen.withOpacity(0.05),
+                                color: isDanger ? const Color(0xFFFF3366).withValues(alpha:0.1) : neonGreen.withValues(alpha:0.05),
                                 borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: isDanger ? const Color(0xFFFF3366).withOpacity(0.4) : neonGreen.withOpacity(0.4), width: 1.5),
+                                border: Border.all(color: isDanger ? const Color(0xFFFF3366).withValues(alpha:0.4) : neonGreen.withValues(alpha:0.4), width: 1.5),
                               ),
                               child: Row(
                                 children: [
@@ -447,14 +419,14 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                   Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
-                      boxShadow: [BoxShadow(color: pureBlack.withOpacity(0.5), blurRadius: 10, offset: const Offset(0, 5))],
+                      boxShadow: [BoxShadow(color: pureBlack.withValues(alpha:0.5), blurRadius: 10, offset: const Offset(0, 5))],
                     ),
                     child: ElevatedButton(
                       onPressed: () => Navigator.pop(context),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: pureBlack, 
                         padding: const EdgeInsets.symmetric(vertical: 18), 
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: Colors.white.withOpacity(0.1))), 
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: Colors.white.withValues(alpha:0.1))), 
                         elevation: 0
                       ),
                       child: const Text("Paneli Kapat", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
@@ -544,6 +516,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     }
 
     _simulatedVehiclesNotifier.value = vehicles;
+    _updateNativeMarkers(vehicles);
   }
 
   void _startSimulation() {
@@ -681,6 +654,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
       }
 
       _simulatedVehiclesNotifier.value = updated;
+      _updateNativeMarkers(updated);
     });
   }
 
@@ -702,17 +676,11 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     }
     
     if (_isMapReady && mounted) {
-      try {
-        _animatedMapMove(loc, 16.5);
-      } catch (_) {
-        mapController.move(loc, 16.5);
-      }
+      _animatedMapMove(loc, 16.5);
     } else {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_isMapReady && mounted) {
-          try {
-            mapController.move(loc, 16.5);
-          } catch (_) {}
+          _animatedMapMove(loc, 16.5);
         }
       });
     }
@@ -864,7 +832,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha:0.2),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -982,7 +950,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     HapticFeedback.lightImpact();
     setState(() {
       _currentZoom = (_currentZoom + 1).clamp(4.5, 18.0);
-      final center = mapController.camera.center;
+      final center = _pinLocationNotifier.value ?? const LatLng(39.92, 32.85);
       _animatedMapMove(center, _currentZoom);
     });
   }
@@ -991,9 +959,33 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     HapticFeedback.lightImpact();
     setState(() {
       _currentZoom = (_currentZoom - 1).clamp(4.5, 18.0);
-      final center = mapController.camera.center;
+      final center = _pinLocationNotifier.value ?? const LatLng(39.92, 32.85);
       _animatedMapMove(center, _currentZoom);
     });
+  }
+
+  void _updateNativeMarkers(List<Map<String, dynamic>> vehicles) {
+    if (!mounted) return;
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      final annotations = vehicles.map((v) {
+        final LatLng p = v['pos'] as LatLng;
+        return amaps.Annotation(
+          annotationId: amaps.AnnotationId('car_${v['id']}'),
+          position: amaps.LatLng(p.latitude, p.longitude),
+        );
+      }).toSet();
+      setState(() => _appleAnnotations = annotations);
+    } else {
+      final markers = vehicles.map((v) {
+        final LatLng p = v['pos'] as LatLng;
+        return gmaps.Marker(
+          markerId: gmaps.MarkerId('car_${v['id']}'),
+          position: gmaps.LatLng(p.latitude, p.longitude),
+          rotation: v['heading'] ?? 0.0,
+        );
+      }).toSet();
+      setState(() => _googleMarkers = markers);
+    }
   }
 
   Widget _buildMapControls() {
@@ -1005,12 +997,12 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
           width: 52,
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: panelBlack.withOpacity(0.92),
+            color: panelBlack.withValues(alpha:0.92),
             borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: neonGreen.withOpacity(0.35), width: 1.5),
+            border: Border.all(color: neonGreen.withValues(alpha:0.35), width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: pureBlack.withOpacity(0.8),
+                color: pureBlack.withValues(alpha:0.8),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               )
@@ -1033,10 +1025,22 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                         ),
                         onPressed: () {
                           HapticFeedback.lightImpact();
-                          mapController.rotate(0.0);
+                          if (defaultTargetPlatform == TargetPlatform.android && _googleMapController != null) {
+                            final center = _pinLocationNotifier.value ?? const LatLng(39.92, 32.85);
+                            _googleMapController!.animateCamera(
+                              gmaps.CameraUpdate.newCameraPosition(
+                                gmaps.CameraPosition(
+                                  target: gmaps.LatLng(center.latitude, center.longitude),
+                                  zoom: _currentZoom,
+                                  bearing: 0.0,
+                                ),
+                              ),
+                            );
+                          }
+                          _mapRotationNotifier.value = 0.0;
                         },
                       ),
-                      Container(margin: const EdgeInsets.symmetric(vertical: 4), width: 28, height: 1, color: Colors.white.withOpacity(0.1)),
+                      Container(margin: const EdgeInsets.symmetric(vertical: 4), width: 28, height: 1, color: Colors.white.withValues(alpha:0.1)),
                     ],
                   );
                 },
@@ -1046,13 +1050,13 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                 icon: const Icon(Icons.add_rounded, color: Colors.white, size: 24),
                 onPressed: _zoomIn,
               ),
-              Container(margin: const EdgeInsets.symmetric(vertical: 4), width: 28, height: 1, color: Colors.white.withOpacity(0.1)),
+              Container(margin: const EdgeInsets.symmetric(vertical: 4), width: 28, height: 1, color: Colors.white.withValues(alpha:0.1)),
               IconButton(
                 tooltip: "Uzaklaş",
                 icon: const Icon(Icons.remove_rounded, color: Colors.white, size: 24),
                 onPressed: _zoomOut,
               ),
-              Container(margin: const EdgeInsets.symmetric(vertical: 4), width: 28, height: 1, color: Colors.white.withOpacity(0.1)),
+              Container(margin: const EdgeInsets.symmetric(vertical: 4), width: 28, height: 1, color: Colors.white.withValues(alpha:0.1)),
               IconButton(
                 tooltip: "Konumuma Git",
                 icon: Icon(
@@ -1091,297 +1095,183 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
           body: Stack(
             children: [
               Positioned.fill(
-                child: FlutterMap(
-                  mapController: mapController,
-                  options: MapOptions(
-                    backgroundColor: const Color(0xFF030305),
-                    initialCenter: _pinLocationNotifier.value ?? const LatLng(39.92, 32.85),
-                    initialZoom: _currentZoom,
-                    minZoom: 4.5,
-                    maxZoom: 18.5,
-                    interactionOptions: const InteractionOptions(
-                      flags: InteractiveFlag.all,
-                      enableMultiFingerGestureRace: true, // Dokunmatik parmak yarışını optimize ederek mikro donmaları önler
-                    ),
-                    onMapReady: () {
-                      _isMapReady = true;
-                      if (_pinLocationNotifier.value != null && mounted) {
-                        mapController.move(_pinLocationNotifier.value!, _currentZoom);
-                      }
-                    },
-                    onTap: (tapPosition, point) {
-                      FocusScope.of(context).unfocus();
-                    },
-                    onPositionChanged: (cameraPosition, hasGesture) {
-                      _currentZoom = cameraPosition.zoom;
-                      if ((_mapRotationNotifier.value - cameraPosition.rotation).abs() > 2.0) {
-                        _mapRotationNotifier.value = cameraPosition.rotation;
-                      }
-                      if (hasGesture) {
-                        _mapMoveController?.stop();
-                        _isProgrammaticCameraMove = false;
-                        _isUserPanning = true;
-                        _resumeTrackingTimer?.cancel();
-                      }
-                    },
-                    onMapEvent: (event) {
-                      // Kaydırma ve süzülme (fling) başladığında animasyon hesaplarını askıya al
-                      if (event is MapEventMoveStart || event is MapEventFlingAnimationStart) {
-                        if (_isProgrammaticCameraMove || event.source == MapEventSource.mapController) {
-                          return;
-                        }
-                        _mapMoveController?.stop();
+                child: defaultTargetPlatform == TargetPlatform.iOS 
+                  ? amaps.AppleMap(
+                      initialCameraPosition: amaps.CameraPosition(
+                        target: amaps.LatLng(
+                          (_pinLocationNotifier.value ?? const LatLng(39.92, 32.85)).latitude,
+                          (_pinLocationNotifier.value ?? const LatLng(39.92, 32.85)).longitude,
+                        ),
+                        zoom: _currentZoom,
+                      ),
+                      myLocationEnabled: true,
+                      myLocationButtonEnabled: false,
+                      compassEnabled: true,
+                      trafficEnabled: false,
+                      annotations: _appleAnnotations,
+                      onMapCreated: (amaps.AppleMapController controller) {
+                        _appleMapController = controller;
+                        _isMapReady = true;
+                      },
+                      onCameraMoveStarted: () {
                         FocusManager.instance.primaryFocus?.unfocus(); 
                         _isMapMovingNotifier.value = true;
                         _isUserPanning = true;
-                        _resumeTrackingTimer?.cancel();
-                      } 
-                      // Kaydırma ve süzülme bittiğinde simülasyonu pürüzsüz devam ettir
-                      else if (event is MapEventMoveEnd || event is MapEventFlingAnimationEnd) {
+                      },
+                      onCameraMove: (amaps.CameraPosition position) {
+                        _currentZoom = position.zoom;
+                        _pinLocationNotifier.value = LatLng(position.target.latitude, position.target.longitude);
+                      },
+                      onCameraIdle: () {
                         _isMapMovingNotifier.value = false;
-                        _resumeTrackingTimer?.cancel();
-                      }
-                    }
-                  ),
-                  children: [
-                    TileLayer(
-                      // 4 kanallı paralel Google CDN bağlantısı (İlk açılışta karoları ışık hızında getirir)
-                      urlTemplate: 'https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
-                      subdomains: const ['0', '1', '2', '3'],
-                      userAgentPackageName: 'com.berdas.otoyardim',
-                      keepBuffer: 6, // RAM şişmesini önleyen ve karoları hazır tutan dengeli bellek
-                      panBuffer: 2,  // Parmağı hızlı çekerken gri boşluk kalmasını engelleyen tampon
-                      minZoom: 3,
-                      maxZoom: 19,
-                      minNativeZoom: 1,
-                      maxNativeZoom: 18,
-                      tileDisplay: const TileDisplay.fadeIn(duration: Duration(milliseconds: 60)), // Gecikmesiz hızlı beliriş
-                      errorTileCallback: (tile, error, stackTrace) {
-                        debugPrint("Harita Tile yüklenemedi: $error");
+                        if (_pinLocationNotifier.value != null) {
+                          _debounceTimer?.cancel();
+                          _debounceTimer = Timer(const Duration(milliseconds: 600), () {
+                            _fetchAddressForPin(_pinLocationNotifier.value!);
+                          });
+                        }
+                      },
+                    )
+                  : gmaps.GoogleMap(
+                      initialCameraPosition: gmaps.CameraPosition(
+                        target: gmaps.LatLng(
+                          (_pinLocationNotifier.value ?? const LatLng(39.92, 32.85)).latitude,
+                          (_pinLocationNotifier.value ?? const LatLng(39.92, 32.85)).longitude,
+                        ),
+                        zoom: _currentZoom,
+                      ),
+                      myLocationEnabled: true,
+                      myLocationButtonEnabled: false,
+                      compassEnabled: true,
+                      trafficEnabled: false,
+                      zoomControlsEnabled: false,
+                      markers: _googleMarkers,
+                      style: '''
+                        [
+                          {"elementType": "geometry", "stylers": [{"color": "#030305"}]},
+                          {"elementType": "labels.text.stroke", "stylers": [{"color": "#111115"}]},
+                          {"elementType": "labels.text.fill", "stylers": [{"color": "#746855"}]}
+                        ]
+                      ''',
+                      onMapCreated: (gmaps.GoogleMapController controller) {
+                        _googleMapController = controller;
+                        _isMapReady = true;
+                      },
+                      onCameraMoveStarted: () {
+                        FocusManager.instance.primaryFocus?.unfocus(); 
+                        _isMapMovingNotifier.value = true;
+                        _isUserPanning = true;
+                      },
+                      onCameraMove: (gmaps.CameraPosition position) {
+                        _currentZoom = position.zoom;
+                        _pinLocationNotifier.value = LatLng(position.target.latitude, position.target.longitude);
+                      },
+                      onCameraIdle: () {
+                        _isMapMovingNotifier.value = false;
+                        if (_pinLocationNotifier.value != null) {
+                          _debounceTimer?.cancel();
+                          _debounceTimer = Timer(const Duration(milliseconds: 600), () {
+                            _fetchAddressForPin(_pinLocationNotifier.value!);
+                          });
+                        }
                       },
                     ),
-                    
-                    // --- SİMÜLE EDİLMİŞ ARAÇLARIN HARİTADA ÇİZİLMESİ (GPU İZOLELİ) ---
-                    ValueListenableBuilder<List<Map<String, dynamic>>>(
-                      valueListenable: _simulatedVehiclesNotifier,
-                      builder: (context, vehicles, child) {
-                        if (vehicles.isEmpty) return const SizedBox.shrink();
-                        return MarkerLayer(
-                          markers: vehicles.map((v) {
-                            final LatLng pos = v['displayPos'] ?? v['pos'];
-                            final double heading = v['heading'] ?? 0.0;
-                            final String carAsset = v['carAsset'] ?? 'assets/images/small_car_1.png';
+              ),
 
-                            return Marker(
-                              point: pos,
-                              width: 36,
-                              height: 36,
-                              alignment: Alignment.center,
-                              // RepaintBoundary: Harita kaydırılırken her arabanın baştan render edilmesini önler, GPU katmanında kaydırır
-                              child: RepaintBoundary(
-                                child: Transform.rotate(
-                                  angle: heading * (math.pi / 180.0),
-                                  child: Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      // 1. Katman: Orantılı Sokak Aracı
-                                      Image.asset(
-                                        carAsset,
-                                        width: 20,
-                                        height: 36,
-                                        fit: BoxFit.contain,
-                                        gaplessPlayback: true, // Resim yeniden çizildiğinde titremeyi keser
-                                        errorBuilder: (context, error, stackTrace) => Container(
-                                          width: 14,
-                                          height: 26,
-                                          decoration: BoxDecoration(
-                                            color: Colors.white24,
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                        ),
-                                      ),
-
-                                      // 2. Katman: Arabanın Tavanına Gömülü Mikro Rozet
-                                      Positioned(
-                                        top: 12,
-                                        child: Container(
-                                          width: 11,
-                                          height: 11,
-                                          decoration: BoxDecoration(
-                                            color: pureBlack.withOpacity(0.9),
-                                            shape: BoxShape.circle,
-                                            border: Border.all(color: neonGreen, width: 0.8),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: neonGreen.withOpacity(0.4),
-                                                blurRadius: 3,
-                                              )
-                                            ],
-                                          ),
-                                          child: Center(
-                                            child: Icon(
-                                              selectedServiceData['icon'] as IconData,
-                                              color: neonGreen,
-                                              size: 7,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+              // Martı Tarzı Merkeze Sabitlenen Holografik Radar ve Araç Pini
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Center(
+                    child: SizedBox(
+                      width: 200,
+                      height: 200,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          RepaintBoundary(
+                            child: AnimatedBuilder(
+                              animation: Listenable.merge([_radarPulseController, _radarScanController]),
+                              builder: (context, child) {
+                                return CustomPaint(
+                                  painter: AdvancedRadarPainter(
+                                    pulseValue: _radarPulseController.value,
+                                    scanValue: _radarScanController.value,
+                                    color: neonGreen,
                                   ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        );
-                      }
-                    ),
-                    // ---------------------------------------------------
-
-                    ValueListenableBuilder<Position?>(
-                      valueListenable: currentPositionNotifier,
-                      builder: (context, pos, child) {
-                        if (pos == null) return const SizedBox.shrink();
-                        return MarkerLayer(
-                          markers: [
-                            Marker(
-                              point: LatLng(pos.latitude, pos.longitude),
-                              width: 24, height: 24,
-                              alignment: Alignment.center,
-                              child: AnimatedBuilder(
-                                animation: _buttonPulseController,
-                                builder: (context, child) {
-                                  return Container(
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF3B82F6),
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.white, width: 3),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(0xFF3B82F6).withOpacity(0.3 + (_buttonPulseController.value * 0.5)), 
-                                          blurRadius: 10 + (_buttonPulseController.value * 15), 
-                                          spreadRadius: 2 + (_buttonPulseController.value * 6)
-                                        )
-                                      ]
-                                    ),
-                                  );
-                                }
-                              )
-                            )
-                          ]
-                        );
-                      }
-                    ),
-                    
-                    ValueListenableBuilder<LatLng?>(
-                      valueListenable: _pinLocationNotifier,
-                      builder: (context, pinPos, child) {
-                        if (pinPos == null) return const SizedBox.shrink();
-                        return MarkerLayer(
-                          markers: [
-                            Marker(
-                              point: pinPos,
-                              width: 200,
-                              height: 200,
-                              alignment: Alignment.center,
-                              child: IgnorePointer(
-                                child: SizedBox(
-                                  width: 200,
-                                  height: 200,
-                                  child: Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      RepaintBoundary(
-                                        child: AnimatedBuilder(
-                                          animation: Listenable.merge([_radarPulseController, _radarScanController]),
-                                          builder: (context, child) {
-                                            return CustomPaint(
-                                              painter: AdvancedRadarPainter(
-                                                pulseValue: _radarPulseController.value,
-                                                scanValue: _radarScanController.value,
-                                                color: neonGreen,
-                                              ),
-                                              child: const SizedBox(width: 180, height: 180),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                      Positioned(
-                                        bottom: 54,
-                                        child: Container(
-                                          width: 20,
-                                          height: 6,
-                                          decoration: BoxDecoration(
-                                            color: Colors.black.withOpacity(0.8),
-                                            borderRadius: BorderRadius.circular(50),
-                                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.6), blurRadius: 8, spreadRadius: 2)],
-                                          ),
-                                        ),
-                                      ),
-                                      Positioned(
-                                        bottom: 60,
-                                        child: AnimatedBuilder(
-                                          animation: _markerBounceController,
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Stack(
-                                                alignment: Alignment.center,
-                                                children: [
-                                                  // Alt katman: Gerçekçi araç görseli
-                                                  Image.asset(
-                                                    'assets/images/car_top_view.png', 
-                                                    width: 65, 
-                                                    height: 130,
-                                                    fit: BoxFit.contain,
-                                                  ),
-                                                  // Üst katman: Logoyu tam tavana ortala
-                                                  Align(
-                                                    alignment: Alignment.center, // Arabanın tam ağırlık merkezine hizalar
-                                                    child: Container(
-                                                      padding: const EdgeInsets.all(4),
-                                                      decoration: BoxDecoration(
-                                                        color: pureBlack.withOpacity(0.8), 
-                                                        shape: BoxShape.circle,
-                                                        border: Border.all(color: neonGreen.withOpacity(0.7), width: 1.5), 
-                                                        boxShadow: [
-                                                          BoxShadow(
-                                                            color: neonGreen.withOpacity(0.3), 
-                                                            blurRadius: 4, 
-                                                            offset: const Offset(0, 2)
-                                                          )
-                                                        ]
-                                                      ),
-                                                      child: Icon(
-                                                        selectedServiceData['icon'] as IconData,
-                                                        color: neonGreen.withOpacity(0.95),
-                                                        size: 16, // Logo boyutu araca tam uyum sağlaması için 16'ya çekildi
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                          builder: (context, staticMarkerChild) {
-                                            final double smoothBounce = Curves.easeInOutSine.transform(_markerBounceController.value);
-                                            return Transform.translate(
-                                              offset: Offset(0, -8.0 * smoothBounce), 
-                                              child: staticMarkerChild,
-                                            );
-                                          }
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                                  child: const SizedBox(width: 180, height: 180),
+                                );
+                              },
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 54,
+                            child: Container(
+                              width: 20,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.8),
+                                borderRadius: BorderRadius.circular(50),
+                                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 8, spreadRadius: 2)],
                               ),
                             ),
-                          ]
-                        );
-                      }
+                          ),
+                          Positioned(
+                            bottom: 60,
+                            child: AnimatedBuilder(
+                              animation: _markerBounceController,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      Image.asset(
+                                        'assets/images/car_top_view.png', 
+                                        width: 65, 
+                                        height: 130,
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (_, __, ___) => const Icon(Icons.directions_car_rounded, color: neonGreen, size: 50),
+                                      ),
+                                      Align(
+                                        alignment: Alignment.center,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: BoxDecoration(
+                                            color: pureBlack.withValues(alpha: 0.8), 
+                                            shape: BoxShape.circle,
+                                            border: Border.all(color: neonGreen.withValues(alpha: 0.7), width: 1.5), 
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: neonGreen.withValues(alpha: 0.3), 
+                                                blurRadius: 4, 
+                                                offset: const Offset(0, 2)
+                                              )
+                                            ]
+                                          ),
+                                          child: Icon(
+                                            selectedServiceData['icon'] as IconData,
+                                            color: neonGreen.withValues(alpha: 0.95),
+                                            size: 16,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              builder: (context, staticMarkerChild) {
+                                final double smoothBounce = Curves.easeInOutSine.transform(_markerBounceController.value);
+                                return Transform.translate(
+                                  offset: Offset(0, -8.0 * smoothBounce), 
+                                  child: staticMarkerChild,
+                                );
+                              }
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
+                  ),
                 ),
               ),
 
@@ -1401,16 +1291,16 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), 
                               decoration: BoxDecoration(
-                                color: panelBlack.withOpacity(0.85), 
+                                color: panelBlack.withValues(alpha:0.85), 
                                 borderRadius: BorderRadius.circular(30),
-                                border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.0),
-                                boxShadow: [BoxShadow(color: pureBlack.withOpacity(0.6), blurRadius: 25, offset: const Offset(0, 10))],
+                                border: Border.all(color: Colors.white.withValues(alpha:0.05), width: 1.0),
+                                boxShadow: [BoxShadow(color: pureBlack.withValues(alpha:0.6), blurRadius: 25, offset: const Offset(0, 10))],
                               ),
                               child: Row(
                                 children: [
                                   Container(
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.05), 
+                                      color: Colors.white.withValues(alpha:0.05), 
                                       shape: BoxShape.circle,
                                     ),
                                     child: IconButton(
@@ -1442,7 +1332,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                     child: Container(
                                       padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
-                                        color: hasReminders ? const Color(0xFFFF3366).withOpacity(0.1) : neonGreen.withOpacity(0.1), 
+                                        color: hasReminders ? const Color(0xFFFF3366).withValues(alpha:0.1) : neonGreen.withValues(alpha:0.1), 
                                         shape: BoxShape.circle,
                                       ),
                                       child: Stack(
@@ -1472,7 +1362,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                 borderRadius: BorderRadius.circular(24),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: neonGreen.withOpacity(0.1 + (_buttonPulseController.value * 0.1)), 
+                                    color: neonGreen.withValues(alpha:0.1 + (_buttonPulseController.value * 0.1)), 
                                     blurRadius: 25, 
                                     spreadRadius: 3
                                   )
@@ -1488,16 +1378,16 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12), 
                                 decoration: BoxDecoration(
-                                  color: panelBlack.withOpacity(0.9),
+                                  color: panelBlack.withValues(alpha:0.9),
                                   borderRadius: BorderRadius.circular(24),
                                   border: Border.all(
                                     color: _isAddressLoading 
-                                        ? neonGreen.withOpacity(0.8) 
-                                        : neonGreen.withOpacity(0.3), 
+                                        ? neonGreen.withValues(alpha:0.8) 
+                                        : neonGreen.withValues(alpha:0.3), 
                                     width: _isAddressLoading ? 2.0 : 1.5
                                   ),
                                   boxShadow: _isAddressLoading ? [
-                                    BoxShadow(color: neonGreen.withOpacity(0.2), blurRadius: 15, spreadRadius: 2)
+                                    BoxShadow(color: neonGreen.withValues(alpha:0.2), blurRadius: 15, spreadRadius: 2)
                                   ] : [],
                                 ),
                                 child: Row(
@@ -1557,14 +1447,14 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                       constraints: BoxConstraints(maxWidth: isWideScreen ? 420 : 800),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: panelBlack.withOpacity(0.96),
+                          color: panelBlack.withValues(alpha:0.96),
                           borderRadius: BorderRadius.circular(36), 
                           border: Border.all(
-                            color: neonGreen.withOpacity(0.35),
+                            color: neonGreen.withValues(alpha:0.35),
                             width: 1.5,
                           ),
                           boxShadow: [
-                            BoxShadow(color: pureBlack.withOpacity(0.95), blurRadius: 40, offset: const Offset(0, 10)),
+                            BoxShadow(color: pureBlack.withValues(alpha:0.95), blurRadius: 40, offset: const Offset(0, 10)),
                           ],
                         ),
                         child: ClipRRect(
@@ -1602,9 +1492,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                               width: 50, height: 6,
                                               margin: const EdgeInsets.only(bottom: 12, top: 16), 
                                               decoration: BoxDecoration(
-                                                color: neonGreen.withOpacity(0.4 + (_buttonPulseController.value * 0.4)), 
+                                                color: neonGreen.withValues(alpha:0.4 + (_buttonPulseController.value * 0.4)), 
                                                 borderRadius: BorderRadius.circular(10),
-                                                boxShadow: [BoxShadow(color: neonGreen.withOpacity(0.6), blurRadius: 10 * _buttonPulseController.value)]
+                                                boxShadow: [BoxShadow(color: neonGreen.withValues(alpha:0.6), blurRadius: 10 * _buttonPulseController.value)]
                                               )
                                             );
                                           }
@@ -1630,9 +1520,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                                       margin: const EdgeInsets.only(bottom: 18),
                                                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                                       decoration: BoxDecoration(
-                                                        color: neonGreen.withOpacity(0.1),
+                                                        color: neonGreen.withValues(alpha:0.1),
                                                         borderRadius: BorderRadius.circular(14),
-                                                        border: Border.all(color: neonGreen.withOpacity(0.2))
+                                                        border: Border.all(color: neonGreen.withValues(alpha:0.2))
                                                       ),
                                                       child: Row(
                                                         children: [
@@ -1660,15 +1550,15 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                                             curve: Curves.easeOutBack,
                                                             width: screenWidth < 400 ? 92 : 105, 
                                                             decoration: BoxDecoration(
-                                                              color: isSelected ? neonGreen.withOpacity(0.18) : pureBlack,
+                                                              color: isSelected ? neonGreen.withValues(alpha:0.18) : pureBlack,
                                                               borderRadius: BorderRadius.circular(22),
                                                               border: Border.all(
-                                                                color: isSelected ? neonGreen : Colors.white.withOpacity(0.08), 
+                                                                color: isSelected ? neonGreen : Colors.white.withValues(alpha:0.08), 
                                                                 width: 1.5
                                                               ),
                                                               boxShadow: isSelected 
-                                                                ? [BoxShadow(color: neonGreen.withOpacity(0.25), blurRadius: 18, spreadRadius: -2)] 
-                                                                : [BoxShadow(color: pureBlack.withOpacity(0.5), blurRadius: 10, offset: const Offset(0, 4))],
+                                                                ? [BoxShadow(color: neonGreen.withValues(alpha:0.25), blurRadius: 18, spreadRadius: -2)] 
+                                                                : [BoxShadow(color: pureBlack.withValues(alpha:0.5), blurRadius: 10, offset: const Offset(0, 4))],
                                                             ),
                                                             child: Column(
                                                               mainAxisAlignment: MainAxisAlignment.center,
@@ -1703,7 +1593,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                                   Container(
                                                     decoration: BoxDecoration(
                                                       borderRadius: BorderRadius.circular(20),
-                                                      boxShadow: [BoxShadow(color: pureBlack.withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 5))]
+                                                      boxShadow: [BoxShadow(color: pureBlack.withValues(alpha:0.4), blurRadius: 15, offset: const Offset(0, 5))]
                                                     ),
                                                     child: TextField(
                                                       controller: problemController,
@@ -1729,10 +1619,10 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                                         labelStyle: const TextStyle(fontSize: 13, color: textGray, fontWeight: FontWeight.w600, letterSpacing: 0.5), 
                                                         prefixIcon: const Padding(padding: EdgeInsets.only(bottom: 4, left: 16, right: 12), child: Icon(Icons.edit_note_rounded, color: neonGreen, size: 24)),
                                                         filled: true,
-                                                        fillColor: pureBlack.withOpacity(0.85),
+                                                        fillColor: pureBlack.withValues(alpha:0.85),
                                                         counterStyle: const TextStyle(color: neonGreen, fontSize: 12, fontWeight: FontWeight.w900),
                                                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-                                                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: Colors.white.withOpacity(0.1), width: 1.5)),
+                                                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: Colors.white.withValues(alpha:0.1), width: 1.5)),
                                                         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: neonGreen, width: 2.0)),
                                                         contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 18), 
                                                       ),
@@ -1753,7 +1643,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                                               color: neonGreen,
                                                               boxShadow: [
                                                                 BoxShadow(
-                                                                  color: neonGreen.withOpacity(0.35 + (_buttonPulseController.value * 0.35)), 
+                                                                  color: neonGreen.withValues(alpha:0.35 + (_buttonPulseController.value * 0.35)), 
                                                                   blurRadius: 28 + (_buttonPulseController.value * 12), 
                                                                   spreadRadius: 2 + (_buttonPulseController.value * 5),
                                                                   offset: const Offset(0, 8)
@@ -1811,9 +1701,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                               margin: const EdgeInsets.all(16.0),
                                               padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
                                               decoration: BoxDecoration(
-                                                color: neonGreen.withOpacity(0.12),
+                                                color: neonGreen.withValues(alpha:0.12),
                                                 borderRadius: BorderRadius.circular(20),
-                                                border: Border.all(color: neonGreen.withOpacity(0.35), width: 1.5),
+                                                border: Border.all(color: neonGreen.withValues(alpha:0.35), width: 1.5),
                                               ),
                                               child: Row(
                                                 mainAxisSize: MainAxisSize.min, 
@@ -1900,14 +1790,14 @@ class AdvancedRadarPainter extends CustomPainter {
       
       final strokePaint = Paint()
         ..isAntiAlias = true
-        ..color = color.withOpacity(waveAlpha * 0.45)
+        ..color = color.withValues(alpha:waveAlpha * 0.45)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.8;
       canvas.drawCircle(center, radius, strokePaint);
       
       final fillPaint = Paint()
         ..isAntiAlias = true
-        ..color = color.withOpacity(waveAlpha * 0.08)
+        ..color = color.withValues(alpha:waveAlpha * 0.08)
         ..style = PaintingStyle.fill;
       canvas.drawCircle(center, radius, fillPaint);
     }
@@ -1921,9 +1811,9 @@ class AdvancedRadarPainter extends CustomPainter {
       ..shader = SweepGradient(
         colors: [
           Colors.transparent, 
-          color.withOpacity(0.04), 
-          color.withOpacity(0.28), 
-          color.withOpacity(0.85), 
+          color.withValues(alpha:0.04), 
+          color.withValues(alpha:0.28), 
+          color.withValues(alpha:0.85), 
           Colors.transparent, 
         ],
         stops: const [0.0, 0.45, 0.8, 0.98, 1.0], 

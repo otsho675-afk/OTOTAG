@@ -8,8 +8,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' hide Path;
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
+import 'package:apple_maps_flutter/apple_maps_flutter.dart' as amaps;
 import 'package:geolocator/geolocator.dart';
 import 'dart:math' as math;
 import 'package:flutter_tts/flutter_tts.dart';
@@ -79,9 +80,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
   bool _isPanelExpanded = true;
   bool _autoFollowBounds = true;
-  bool _isUserPanning = false;
-  bool _isProgrammaticCameraMove = false; 
-  int _mapMoveId = 0; 
+  bool _isUserPanning = false; 
   
   bool _isMapSdkLoaded = !kIsWeb;
   bool _isMapReady = false; 
@@ -95,7 +94,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
   final TextEditingController _codeController = TextEditingController();
   final TextEditingController _commentController = TextEditingController();
-  final MapController _mapController = MapController();
+  gmaps.GoogleMapController? _googleMapController;
+  amaps.AppleMapController? _appleMapController;
   final ValueNotifier<double> _mapRotation = ValueNotifier<double>(0.0);
   int _selectedRating = 5;
 
@@ -173,74 +173,40 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   }
 
   void _zoomIn() {
-    final zoom = (_mapController.camera.zoom + 1).clamp(4.5, 18.0);
-    _animatedMapMove(_mapController.camera.center, zoom);
+    final pos = LatLng(customerLat != 0.0 ? customerLat : 39.92, customerLng != 0.0 ? customerLng : 32.85);
+    _animatedMapMove(pos, 16.5);
     setState(() => _autoFollowBounds = false);
   }
 
   void _zoomOut() {
-    final zoom = (_mapController.camera.zoom - 1).clamp(4.5, 18.0);
-    _animatedMapMove(_mapController.camera.center, zoom);
+    final pos = LatLng(customerLat != 0.0 ? customerLat : 39.92, customerLng != 0.0 ? customerLng : 32.85);
+    _animatedMapMove(pos, 13.5);
     setState(() => _autoFollowBounds = false);
   }
 
   void _animatedMapMove(LatLng destLocation, double destZoom) {
     if (!_isMapReady || !mounted || !destLocation.latitude.isFinite || !destLocation.longitude.isFinite || !destZoom.isFinite) return;
-    
-    // GÜVENLİK (ÇÖKME ÖNLEYİCİ): Geçersiz koordinat koruması
     if (destLocation.latitude < -90 || destLocation.latitude > 90 || destLocation.longitude < -180 || destLocation.longitude > 180) return;
 
-    final startCenter = _mapController.camera.center;
-    final latDiff = (startCenter.latitude - destLocation.latitude).abs();
-    final lngDiff = (startCenter.longitude - destLocation.longitude).abs();
-    final zoomDiff = (_mapController.camera.zoom - destZoom).abs();
-    
-    if (latDiff < 0.00015 && lngDiff < 0.00015 && zoomDiff < 0.1) return;
-
-    final distance = const Distance().as(LengthUnit.Kilometer, startCenter, destLocation);
-
-    if (distance > 50.0) {
-      _mapController.move(destLocation, destZoom.clamp(4.5, 18.0));
-      _isProgrammaticCameraMove = false; // Programatik bayrak temizlendi
-      return;
+    if (defaultTargetPlatform == TargetPlatform.iOS && _appleMapController != null) {
+      _appleMapController!.animateCamera(
+        amaps.CameraUpdate.newCameraPosition(
+          amaps.CameraPosition(
+            target: amaps.LatLng(destLocation.latitude, destLocation.longitude),
+            zoom: destZoom,
+          ),
+        ),
+      );
+    } else if (_googleMapController != null) {
+      _googleMapController!.animateCamera(
+        gmaps.CameraUpdate.newCameraPosition(
+          gmaps.CameraPosition(
+            target: gmaps.LatLng(destLocation.latitude, destLocation.longitude),
+            zoom: destZoom,
+          ),
+        ),
+      );
     }
-
-    _mapMoveId++;
-    final int currentMoveId = _mapMoveId;
-    _isProgrammaticCameraMove = true;
-    
-    int animDuration = distance > 5.0 ? 1400 : (distance > 1.0 ? 1000 : 650);
-
-    final latTween = Tween<double>(begin: startCenter.latitude, end: destLocation.latitude);
-    final lngTween = Tween<double>(begin: startCenter.longitude, end: destLocation.longitude);
-    final zoomTween = Tween<double>(begin: _mapController.camera.zoom, end: destZoom.clamp(4.5, 18.0));
-
-    _mapMoveController?.stop(); 
-    _mapMoveController?.dispose();
-    
-    _mapMoveController = AnimationController(duration: Duration(milliseconds: animDuration), vsync: this);
-    final Animation<double> animation = CurvedAnimation(parent: _mapMoveController!, curve: Curves.easeInOutCubic);
-
-    _mapMoveController!.addListener(() {
-      if (mounted && _mapMoveId == currentMoveId) {
-        try {
-          _mapController.move(
-            LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)), 
-            zoomTween.evaluate(animation)
-          );
-        } catch (e) {}
-      }
-    });
-
-    _mapMoveController!.addStatusListener((status) {
-      if (status == AnimationStatus.completed || status == AnimationStatus.dismissed) {
-        if (mounted && _mapMoveId == currentMoveId) {
-          _isProgrammaticCameraMove = false;
-        }
-      }
-    });
-
-    _mapMoveController!.forward();
   }
 
   void _checkSoftGeofences(double distKm) {
@@ -876,6 +842,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     _animatedHeading.dispose();
     _myPositionNotifier.dispose();
     _mapRotation.dispose(); 
+    _googleMapController?.dispose();
+    _appleMapController = null;
     super.dispose();
   }
 
@@ -883,42 +851,32 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     if (!_isMapReady) return;
     if (customerLat == 0.0 || providerLat == 0.0) return;
     if (!customerLat.isFinite || !customerLng.isFinite || !providerLat.isFinite || !providerLng.isFinite) return;
-    
-    try {
-      if ((customerLat - providerLat).abs() < 0.00015 && (customerLng - providerLng).abs() < 0.00015) {
-        _animatedMapMove(LatLng(customerLat, customerLng), 16.5);
-        return;
-      }
 
-      List<LatLng> boundsPoints = [LatLng(customerLat, customerLng), LatLng(providerLat, providerLng)];
-      if (distanceInKm > 0.4 && _routePoints.isNotEmpty) {
-        boundsPoints.addAll(_routePoints);
-      }
+    double south = math.min(customerLat, providerLat);
+    double north = math.max(customerLat, providerLat);
+    double west = math.min(customerLng, providerLng);
+    double east = math.max(customerLng, providerLng);
 
-      if (boundsPoints.isEmpty) return; // ÇÖKME ÖNLEYİCİ: Hatalı/Boş koordinatlarda çökmesini engeller
-      var bounds = LatLngBounds.fromPoints(boundsPoints);
-      
-      final size = MediaQuery.sizeOf(context);
-      final bool isDesktop = size.width > 800;
-      
-      final double topPadding = MediaQuery.paddingOf(context).top + 100.0;
-      final double bottomPadding = isDesktop 
-          ? 50.0 
-          : (_isPanelExpanded ? size.height * 0.42 : size.height * 0.25);
-      final double leftPadding = isDesktop ? 450.0 : 40.0;
-      final double rightPadding = isDesktop ? 50.0 : 40.0;
-
-      final edgePadding = EdgeInsets.only(
-        top: topPadding,
-        bottom: bottomPadding,
-        left: leftPadding,
-        right: rightPadding,
+    if (defaultTargetPlatform == TargetPlatform.iOS && _appleMapController != null) {
+      _appleMapController!.animateCamera(
+        amaps.CameraUpdate.newLatLngBounds(
+          amaps.LatLngBounds(
+            southwest: amaps.LatLng(south, west),
+            northeast: amaps.LatLng(north, east),
+          ),
+          60.0,
+        ),
       );
-      
-      final cameraFit = CameraFit.bounds(bounds: bounds, padding: edgePadding).fit(_mapController.camera);
-      _animatedMapMove(cameraFit.center, cameraFit.zoom.clamp(4.5, 16.5));
-    } catch (e) {
-      debugPrint("Map bound error: $e");
+    } else if (_googleMapController != null) {
+      _googleMapController!.animateCamera(
+        gmaps.CameraUpdate.newLatLngBounds(
+          gmaps.LatLngBounds(
+            southwest: gmaps.LatLng(south, west),
+            northeast: gmaps.LatLng(north, east),
+          ),
+          60.0,
+        ),
+      );
     }
   }
 
@@ -1980,300 +1938,121 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         child: CircularProgressIndicator(color: neonGreen, strokeWidth: 4),
       );
     }
-    
-    List<CircleMarker> mapCircles = [];
-    if (customerLat != 0.0 && customerLng != 0.0 && jobStatus != 'completed') {
-      if (distanceInKm > 0.5 && distanceInKm <= 2.0) {
-        mapCircles.add(CircleMarker(
-          point: LatLng(customerLat, customerLng), radius: 300, useRadiusInMeter: true,
-          color: const Color(0xFFFF3366).withValues(alpha: 0.03), borderColor: const Color(0xFFFF3366).withValues(alpha: 0.25), borderStrokeWidth: 1.0,
-        ));
-      }
-    }
 
-    List<CircleMarker> buildAnimatedGlows(double pulseVal, LatLng currentPos) {
-      List<CircleMarker> glows = [];
-      if (customerLat != 0.0 && customerLng != 0.0 && jobStatus != 'completed') {
-        double progress = pulseVal % 1.0;
-        glows.add(CircleMarker(
-          point: LatLng(customerLat, customerLng), radius: 30 * progress, useRadiusInMeter: false,
-          color: const Color(0xFFF59E0B).withValues(alpha: (1.0 - progress) * 0.2), borderColor: Colors.transparent, borderStrokeWidth: 0,
-        ));
-      }
-      if (currentPos.latitude != 0.0 && currentPos.longitude != 0.0 && jobStatus != 'completed') {
-        double progress = pulseVal % 1.0;
-        glows.add(CircleMarker(
-          point: currentPos, radius: 35 * progress, useRadiusInMeter: false,
-          color: neonGreen.withValues(alpha: (1.0 - progress) * 0.25), borderColor: Colors.transparent, borderStrokeWidth: 0,
-        ));
-      }
-      return glows;
-    }
+    final bool isIOS = defaultTargetPlatform == TargetPlatform.iOS;
 
-    return FlutterMap(
-      mapController: _mapController,
-      options: MapOptions(
-        backgroundColor: const Color(0xFF030305),
-        initialCenter: customerLat != 0.0 ? LatLng(customerLat, customerLng) : const LatLng(39.92, 32.85),
-        initialZoom: 14.5,
-        minZoom: 4.5,
-        maxZoom: 18.5,
-        interactionOptions: const InteractionOptions(flags: InteractiveFlag.all),
-        onMapReady: () {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            setState(() { _isMapReady = true; });
-            try {
-              if (customerLat != 0.0 && providerLat != 0.0) {
-                _fitMapBounds();
-              } else if (_myPosition != null) {
-                _mapController.move(LatLng(_myPosition!.latitude, _myPosition!.longitude), 15.0);
-              }
-            } catch(e) {
-              debugPrint("Harita render hatası: $e");
-            }
-          });
-        },
-        onPositionChanged: (camera, hasGesture) {
-          // PERFORMANS: Frame drop (FPS düşüşü) önleyici kısıtlama
-          if ((_mapRotation.value - camera.rotation).abs() > 1.0) {
-             _mapRotation.value = camera.rotation;
-          }
-          if (hasGesture) {
-            _mapMoveController?.stop();
-            _isProgrammaticCameraMove = false;
-            if (_autoFollowBounds || !_isUserPanning) {
-              setState(() {
-                _autoFollowBounds = false;
-                _isUserPanning = true;
-              });
-            }
-            _resumeTrackingTimer?.cancel();
-          }
-        },
-        onMapEvent: (event) {
-          if (event is MapEventMoveStart) {
-            if (_isProgrammaticCameraMove || event.source == MapEventSource.mapController) {
-              return;
-            }
-            _mapMoveController?.stop();
-            if (_isPanelExpanded) {
-               setState(() => _isPanelExpanded = false);
-            }
-            setState(() { _autoFollowBounds = false; _isUserPanning = true; });
-            _resumeTrackingTimer?.cancel();
-          } else if (event is MapEventMoveEnd) {
-            if (_isUserPanning) {
-              _resumeTrackingTimer?.cancel();
-              /* UX Düzeltmesi: Kullanıcı haritayı incelerken kamera zorla geri atlamamalı.
-              _resumeTrackingTimer = Timer(const Duration(seconds: 5), () {
-                if (mounted) {
-                  setState(() { _isUserPanning = false; _autoFollowBounds = true; });
-                  _fitMapBounds();
-                }
-              });
-              */
-            }
-          }
-        }
-      ),
-      children: [
-        TileLayer(
-          urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
-          userAgentPackageName: 'com.berdas.otoyardim',
-          keepBuffer: 2, // BELLEK OPTİMİZASYONU
-          panBuffer: 1,  // AKICI KAYDIRMA DÜZELTMESİ
-          minZoom: 3,
-          maxZoom: 19,
-          minNativeZoom: 1,
-          maxNativeZoom: 18,
-        ),
-        CircleLayer(circles: mapCircles),
-        if (_routePoints.isNotEmpty)
-          PolylineLayer(
-            polylines: [
-              Polyline(
-                points: _routePoints,
-                color: _polylineColor.withValues(alpha: 0.25),
-                strokeWidth: 8, strokeJoin: StrokeJoin.round, strokeCap: StrokeCap.round,
-              ),
-              Polyline(
-                points: _routePoints,
-                color: distanceInKm <= 0.05 && jobStatus != 'completed' ? Colors.grey.withValues(alpha: 0.6) : _polylineColor,
-                strokeWidth: 4.5, strokeJoin: StrokeJoin.round, strokeCap: StrokeCap.round,
-              )
-            ],
+    if (isIOS) {
+      final Set<amaps.Polyline> applePolylines = {};
+      if (_routePoints.isNotEmpty) {
+        applePolylines.add(
+          amaps.Polyline(
+            polylineId: amaps.PolylineId('tracking_route'),
+            points: _routePoints.map((p) => amaps.LatLng(p.latitude, p.longitude)).toList(),
+            color: _polylineColor,
+            width: 5,
           ),
-        ValueListenableBuilder<LatLng?>(
-          valueListenable: _animatedProviderPos,
-          builder: (context, currentPos, child) {
-            if (_routePoints.isEmpty) return const SizedBox.shrink();
-            LatLng providerPosToDraw = currentPos ?? LatLng(providerLat, providerLng);
-            return PolylineLayer(
-              polylines: [
-                Polyline(
-                  points: [providerPosToDraw, _routePoints.first],
-                  color: _polylineColor,
-                  strokeWidth: 4.5,
-                  strokeJoin: StrokeJoin.round,
-                  strokeCap: StrokeCap.round,
-                )
-              ],
-            );
-          }
-        ),
-        
-        ValueListenableBuilder<LatLng?>(
-          valueListenable: _animatedProviderPos,
-          builder: (context, currentPos, child) {
-            LatLng providerPosToDraw = currentPos ?? LatLng(providerLat, providerLng);
-            return AnimatedBuilder(
-              animation: _pulseController,
-              builder: (context, child) {
-                return CircleLayer(circles: buildAnimatedGlows(_pulseController.value, providerPosToDraw));
-              }
-            );
-          }
-        ),
+        );
+      }
 
-        ValueListenableBuilder<LatLng?>(
-          valueListenable: _animatedProviderPos,
-          builder: (context, currentPos, child) {
-            List<Marker> mapMarkers = [];
-            
-            if (customerLat != 0.0 && customerLng != 0.0 && jobStatus != 'completed') {
-              mapMarkers.add(Marker(
-                point: LatLng(customerLat, customerLng), width: 60, height: 60, alignment: Alignment.center,
-                child: Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const RadialGradient(
-                      colors: [Color(0xFF382A0F), Color(0xFF141005)],
-                      center: Alignment.center,
-                      radius: 0.8,
-                    ),
-                    border: Border.all(color: const Color(0xFFF59E0B), width: 2.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFF59E0B).withValues(alpha: 0.5),
-                        blurRadius: 14,
-                        spreadRadius: 1,
-                      ),
-                      const BoxShadow(color: Colors.black54, blurRadius: 6, offset: Offset(0, 3)),
-                    ],
-                  ),
-                  child: const Center(
-                    child: Icon(Icons.person_rounded, color: Color(0xFFF59E0B), size: 26),
-                  ),
-                ),
-              ));
-            }
+      final Set<amaps.Annotation> appleAnnotations = {};
+      if (customerLat != 0.0 && customerLng != 0.0) {
+        appleAnnotations.add(
+          amaps.Annotation(
+            annotationId: amaps.AnnotationId('customer_marker'),
+            position: amaps.LatLng(customerLat, customerLng),
+          ),
+        );
+      }
+      if (providerLat != 0.0 && providerLng != 0.0) {
+        appleAnnotations.add(
+          amaps.Annotation(
+            annotationId: amaps.AnnotationId('provider_marker'),
+            position: amaps.LatLng(providerLat, providerLng),
+          ),
+        );
+      }
 
-            LatLng providerPosToDraw = currentPos ?? LatLng(providerLat, providerLng);
-            if (providerPosToDraw.latitude != 0.0 && providerPosToDraw.longitude != 0.0 && jobStatus != 'completed') {
-              bool isOffline = false;
-              if (widget.userType == 'customer' && _lastLocationUpdateTime != null) {
-                if (DateTime.now().difference(_lastLocationUpdateTime!).inSeconds > 15) isOffline = true;
-              }
-
-              mapMarkers.add(Marker(
-                point: providerPosToDraw, width: 70, height: 70, alignment: Alignment.center,
-                child: AnimatedOpacity(
-                  duration: const Duration(milliseconds: 500), opacity: isOffline ? 0.4 : 1.0, 
-                  child: ValueListenableBuilder<double>(
-                    valueListenable: _animatedHeading,
-                    builder: (context, providerHeading, child) {
-                      return Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Transform.rotate(
-                            angle: providerHeading * math.pi / 180,
-                            child: Container(
-                              width: 66,
-                              height: 66,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(color: neonGreen.withValues(alpha: 0.6), width: 2),
-                              ),
-                              alignment: Alignment.topCenter,
-                              child: Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(color: neonGreen, shape: BoxShape.circle),
-                              ),
-                            ),
-                          ),
-                          Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: const RadialGradient(
-                                colors: [Color(0xFF0F3826), Color(0xFF051C12)],
-                                center: Alignment.center,
-                                radius: 0.8,
-                              ),
-                              border: Border.all(color: neonGreen, width: 2.5),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: neonGreen.withValues(alpha: 0.5),
-                                  blurRadius: 16,
-                                  spreadRadius: 2,
-                                ),
-                                const BoxShadow(color: Colors.black87, blurRadius: 6, offset: Offset(0, 3)),
-                              ],
-                            ),
-                            child: Center(
-                              child: Image.asset(
-                                serviceType == 'tow' ? 'assets/images/marker_tow.png' :
-                                serviceType == 'tire' ? 'assets/images/marker_tire.png' :
-                                serviceType == 'wash' ? 'assets/images/marker_wash.png' :
-                                'assets/images/marker_mechanic.png',
-                                width: 28,
-                                height: 28,
-                                fit: BoxFit.contain,
-                                errorBuilder: (context, error, stackTrace) => Icon(
-                                  serviceType == 'tow' ? Icons.car_repair_rounded :
-                                  serviceType == 'tire' ? Icons.tire_repair_rounded :
-                                  serviceType == 'wash' ? Icons.local_car_wash_rounded :
-                                  Icons.build_circle_rounded,
-                                  color: neonGreen,
-                                  size: 26,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    }
-                  ),
-                )
-              ));
-            }
-            return MarkerLayer(markers: mapMarkers);
-          }
+      return amaps.AppleMap(
+        initialCameraPosition: amaps.CameraPosition(
+          target: amaps.LatLng(
+            customerLat != 0.0 ? customerLat : 39.92,
+            customerLng != 0.0 ? customerLng : 32.85,
+          ),
+          zoom: 14.5,
         ),
-
-        ValueListenableBuilder<Position?>(
-          valueListenable: _myPositionNotifier,
-          builder: (context, pos, child) {
-            if (pos == null || widget.userType == 'provider') return const SizedBox.shrink();
-            return MarkerLayer(
-              markers: [
-                Marker(
-                  point: LatLng(pos.latitude, pos.longitude), width: 20, height: 20, alignment: Alignment.center,
-                  child: Container(
-                    decoration: BoxDecoration(color: const Color(0xFF3B82F6), shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2.5)),
-                  )
-                )
-              ]
-            );
+        polylines: applePolylines,
+        annotations: appleAnnotations,
+        myLocationEnabled: true,
+        myLocationButtonEnabled: false,
+        onMapCreated: (controller) {
+          _appleMapController = controller;
+          _isMapReady = true;
+          if (_autoFollowBounds) {
+            _fitMapBounds();
           }
+        },
+      );
+    } else {
+      final Set<gmaps.Polyline> googlePolylines = {};
+      if (_routePoints.isNotEmpty) {
+        googlePolylines.add(
+          gmaps.Polyline(
+            polylineId: gmaps.PolylineId('tracking_route'),
+            points: _routePoints.map((p) => gmaps.LatLng(p.latitude, p.longitude)).toList(),
+            color: _polylineColor,
+            width: 5,
+          ),
+        );
+      }
+
+      final Set<gmaps.Marker> googleMarkers = {};
+      if (customerLat != 0.0 && customerLng != 0.0) {
+        googleMarkers.add(
+          gmaps.Marker(
+            markerId: gmaps.MarkerId('customer_marker'),
+            position: gmaps.LatLng(customerLat, customerLng),
+          ),
+        );
+      }
+      if (providerLat != 0.0 && providerLng != 0.0) {
+        googleMarkers.add(
+          gmaps.Marker(
+            markerId: gmaps.MarkerId('provider_marker'),
+            position: gmaps.LatLng(providerLat, providerLng),
+            rotation: _animatedHeading.value,
+          ),
+        );
+      }
+
+      return gmaps.GoogleMap(
+        initialCameraPosition: gmaps.CameraPosition(
+          target: gmaps.LatLng(
+            customerLat != 0.0 ? customerLat : 39.92,
+            customerLng != 0.0 ? customerLng : 32.85,
+          ),
+          zoom: 14.5,
         ),
-      ],
-    );
+        style: '''
+          [
+            {"elementType": "geometry", "stylers": [{"color": "#030305"}]},
+            {"elementType": "labels.text.stroke", "stylers": [{"color": "#111115"}]},
+            {"elementType": "labels.text.fill", "stylers": [{"color": "#746855"}]}
+          ]
+        ''',
+        polylines: googlePolylines,
+        markers: googleMarkers,
+        myLocationEnabled: true,
+        myLocationButtonEnabled: false,
+        zoomControlsEnabled: false,
+        onMapCreated: (controller) {
+          _googleMapController = controller;
+          _isMapReady = true;
+          if (_autoFollowBounds) {
+            _fitMapBounds();
+          }
+        },
+      );
+    }
   }
 
   @override
@@ -2395,7 +2174,16 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                                       child: const Icon(Icons.navigation_rounded, color: Colors.redAccent, size: 22),
                                     ),
                                     onPressed: () {
-                                      _mapController.rotate(0);
+                                      HapticFeedback.lightImpact();
+                                      final pos = LatLng(customerLat != 0.0 ? customerLat : 39.92, customerLng != 0.0 ? customerLng : 32.85);
+                                      if (defaultTargetPlatform == TargetPlatform.android && _googleMapController != null) {
+                                        _googleMapController!.animateCamera(
+                                          gmaps.CameraUpdate.newCameraPosition(
+                                            gmaps.CameraPosition(target: gmaps.LatLng(pos.latitude, pos.longitude), zoom: 15.0, bearing: 0.0),
+                                          ),
+                                        );
+                                      }
+                                      _mapRotation.value = 0.0;
                                     },
                                   ),
                                 ],

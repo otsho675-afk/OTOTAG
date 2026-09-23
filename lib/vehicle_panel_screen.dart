@@ -406,7 +406,6 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
   void _checkRemindersAndAlert() {
     _hasShownAlert = true;
     final insDate = _effectiveInsuranceDate;
-    final inspDate = _inspectionDateCache;
     final DateTime nowNormalized = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
     
     final List<String> alerts = [];

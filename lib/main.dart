@@ -46,16 +46,22 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
 
-    // Arayüz (Flutter) çökmelerini yakala
-    FlutterError.onError = (errorDetails) {
-      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
-    };
-    
-    // Arka plan ve API (Asenkron) çökmelerini yakala
-    PlatformDispatcher.instance.onError = (error, stack) {
-      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-      return true;
-    };
+    // Crashlytics Web ortamını desteklemediği için yalnızca mobilde çalıştırılır
+    if (!kIsWeb) {
+      // Arayüz (Flutter) çökmelerini yakala
+      FlutterError.onError = (errorDetails) {
+        FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+      };
+      
+      // Arka plan ve API (Asenkron) çökmelerini yakala
+      PlatformDispatcher.instance.onError = (error, stack) {
+        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+        return true;
+      };
+    } else {
+      // Web ortamında hataların tarayıcı konsoluna yazılmasını sağla
+      FlutterError.onError = FlutterError.dumpErrorToConsole;
+    }
   } catch (e) {
     debugPrint("Firebase başlatılamadı: $e");
   }

@@ -218,15 +218,19 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
   }
 
+  // Siber Tema Renk Paleti (V2 - Ultra Modern Glassmorphism)
+  static const Color neonGreen = Color(0xFF00FFA3);
+  static const Color pureBlack = Color(0xFF05070F); 
+  static const Color panelBlack = Color(0xFF131624); 
+  static const Color neonCyan = Color(0xFF00E5FF);
+  static const Color alertRed = Color(0xFFFF2A5F);
+
   @override
   Widget build(BuildContext context) {
-    const Color bgColor = Color(0xFF030305);
-    const Color primaryColor = Color(0xFF00FFA3);
-
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: pureBlack,
       extendBodyBehindAppBar: true,
-      appBar: _buildAppBar(primaryColor),
+      appBar: _buildAppBar(neonGreen),
       body: Stack(
         children: [
           _buildBackgroundGlow(),
@@ -235,30 +239,21 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             child: Column(
               children: [
                 if (isUploading)
-                  LinearProgressIndicator(
-                    color: primaryColor, 
-                    backgroundColor: Colors.transparent,
-                    minHeight: 2,
-                  ),
+                  const LinearProgressIndicator(color: neonGreen, backgroundColor: Colors.transparent, minHeight: 2),
                 Expanded(
                   child: ListView.builder(
                     reverse: true, // Listeyi ters çevirir. Klavye açıldığında kusursuz çalışır.
-                    padding: const EdgeInsets.only(
-                      top: 20, 
-                      bottom: 20, 
-                      left: 16, 
-                      right: 16
-                    ),
+                    padding: const EdgeInsets.only(top: 20, bottom: 20, left: 16, right: 16),
                     physics: const BouncingScrollPhysics(),
                     itemCount: messages.length,
                     itemBuilder: (context, index) {
                       final msg = messages[index];
                       final isMe = msg['sender_id'].toString() == widget.currentUserId.toString();
-                      return _buildMessageBubble(msg, isMe, primaryColor);
+                      return _buildMessageBubble(msg, isMe, neonGreen);
                     },
                   ),
                 ),
-                _buildInputArea(primaryColor),
+                _buildInputArea(neonGreen),
               ],
             ),
           ),
@@ -268,57 +263,78 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   PreferredSizeWidget _buildAppBar(Color primaryColor) {
-    return AppBar(
-      backgroundColor: Colors.black.withOpacity(0.5),
-      elevation: 0,
-      flexibleSpace: ClipRect(
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(60),
+      child: ClipRRect(
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-          child: Container(color: Colors.transparent),
-        ),
-      ),
-      leading: IconButton(
-        icon: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), shape: BoxShape.circle),
-          child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: Colors.white),
-        ),
-        onPressed: () => Navigator.pop(context),
-      ),
-      title: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: primaryColor.withOpacity(0.2), shape: BoxShape.circle),
-            child: Icon(Icons.person, color: primaryColor, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              widget.receiverName,
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: Colors.white, letterSpacing: -0.3),
-              overflow: TextOverflow.ellipsis,
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: AppBar(
+            backgroundColor: panelBlack.withOpacity(0.65),
+            elevation: 0,
+            shadowColor: primaryColor.withOpacity(0.2),
+            surfaceTintColor: Colors.transparent,
+            shape: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.05), width: 1)),
+            leading: IconButton(
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle, border: Border.all(color: Colors.white10)),
+                child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.white),
+              ),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: primaryColor.withOpacity(0.15), shape: BoxShape.circle, border: Border.all(color: primaryColor.withOpacity(0.3))),
+                  child: Icon(Icons.person_rounded, color: primaryColor, size: 20),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    widget.receiverName,
+                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Colors.white, letterSpacing: -0.3),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildBackgroundGlow() {
-    return Positioned(
-      top: MediaQuery.of(context).size.height * 0.1,
-      left: -MediaQuery.of(context).size.width * 0.3,
-      child: Container(
-        width: MediaQuery.of(context).size.width * 1.5,
-        height: MediaQuery.of(context).size.width * 1.5,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: [const Color(0xFF00FFA3).withOpacity(0.04), Colors.transparent],
+    return Stack(
+      children: [
+        Positioned(
+          top: -100,
+          left: -100,
+          child: Container(
+            width: 300,
+            height: 300,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(colors: [neonGreen.withOpacity(0.12), Colors.transparent]),
+              boxShadow: [BoxShadow(color: neonGreen.withOpacity(0.1), blurRadius: 100, spreadRadius: 50)],
+            ),
           ),
         ),
-      ),
+        Positioned(
+          bottom: 100,
+          right: -100,
+          child: Container(
+            width: 350,
+            height: 350,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(colors: [neonCyan.withOpacity(0.1), Colors.transparent]),
+              boxShadow: [BoxShadow(color: neonCyan.withOpacity(0.1), blurRadius: 100, spreadRadius: 50)],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -337,28 +353,38 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 14),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
         decoration: BoxDecoration(
-          color: isMe ? primaryColor : const Color(0xFF1E1E24), 
+          color: isMe ? primaryColor : panelBlack.withOpacity(0.7), 
           borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(20),
-            topRight: const Radius.circular(20),
-            bottomLeft: isMe ? const Radius.circular(20) : const Radius.circular(4),
-            bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(20),
+            topLeft: const Radius.circular(24),
+            topRight: const Radius.circular(24),
+            bottomLeft: isMe ? const Radius.circular(24) : const Radius.circular(6),
+            bottomRight: isMe ? const Radius.circular(6) : const Radius.circular(24),
           ),
+          border: isMe ? null : Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
           boxShadow: isMe ? [
-            BoxShadow(color: primaryColor.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))
+            BoxShadow(color: primaryColor.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 5))
           ] : [
-            BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 5, offset: const Offset(0, 2))
+            BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 5))
           ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Column(
-            crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
+        child: ClipRRect(
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(24),
+            topRight: const Radius.circular(24),
+            bottomLeft: isMe ? const Radius.circular(24) : const Radius.circular(6),
+            bottomRight: isMe ? const Radius.circular(6) : const Radius.circular(24),
+          ),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: isMe ? 0 : 10, sigmaY: isMe ? 0 : 10),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Column(
+                crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
               if (hasMedia && msg['media_type'] == 'image')
                 Padding(
                   padding: const EdgeInsets.only(bottom: 6.0),
@@ -409,8 +435,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   style: TextStyle(
                     color: isMe ? const Color(0xFF0A2B1D) : Colors.white, 
                     fontSize: 15, 
-                    fontWeight: FontWeight.w500, 
-                    height: 1.3
+                    fontWeight: FontWeight.w600, 
+                    height: 1.3,
+                    letterSpacing: -0.2
                   ),
                 ),
               const SizedBox(height: 6),
@@ -439,6 +466,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             ],
           ),
         ),
+        ), // BackdropFilter Kapanışı
+        ), // ClipRRect Kapanışı
       ),
     );
   }
@@ -446,73 +475,82 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   Widget _buildInputArea(Color primaryColor) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF030305).withOpacity(0.85),
-        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.05))),
+        color: panelBlack.withOpacity(0.75),
+        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.08), width: 1.5)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 20, offset: const Offset(0, -5))],
       ),
       child: ClipRect(
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
           child: SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 4.0),
+                    padding: const EdgeInsets.only(bottom: 2.0),
                     child: GestureDetector(
-                      onTap: () => _showMediaBottomSheet(primaryColor),
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        _showMediaBottomSheet(primaryColor);
+                      },
                       child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), shape: BoxShape.circle),
-                        child: const Icon(Icons.add_rounded, color: Colors.white, size: 24),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.05), 
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white.withOpacity(0.1))
+                        ),
+                        child: Icon(Icons.add_rounded, color: primaryColor, size: 22),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.07),
+                        color: Colors.black.withOpacity(0.3),
                         borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: Colors.white.withOpacity(0.1)),
+                        border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
                       ),
                       child: TextField(
                         controller: _msgController,
                         minLines: 1,
-                        maxLines: 5, // Daha uzun metinler için esneklik artırıldı
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 15),
+                        maxLines: 5,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
                         textCapitalization: TextCapitalization.sentences,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: "Mesaj gönder...",
-                          hintStyle: TextStyle(color: Colors.white54, fontWeight: FontWeight.w400),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                          hintStyle: TextStyle(color: Colors.white.withOpacity(0.4), fontWeight: FontWeight.w500),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                           border: InputBorder.none,
                           isDense: true,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 4.0),
+                    padding: const EdgeInsets.only(bottom: 2.0),
                     child: GestureDetector(
                       onTap: _isTyping ? _sendMessage : null, 
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: _isTyping ? primaryColor : Colors.white.withOpacity(0.1), 
+                          color: _isTyping ? primaryColor : Colors.white.withOpacity(0.05), 
                           shape: BoxShape.circle,
+                          border: Border.all(color: _isTyping ? primaryColor : Colors.white.withOpacity(0.1)),
                           boxShadow: _isTyping ? [
-                            BoxShadow(color: primaryColor.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 2))
+                            BoxShadow(color: primaryColor.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))
                           ] : [],
                         ),
                         child: Icon(
                           Icons.send_rounded, 
                           color: _isTyping ? const Color(0xFF0A2B1D) : Colors.white54, 
-                          size: 22
+                          size: 20
                         ),
                       ),
                     ),
@@ -532,12 +570,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
         child: Container(
           decoration: BoxDecoration(
-            color: const Color(0xFF111115).withOpacity(0.95),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border.all(color: Colors.white.withOpacity(0.1))
+            color: panelBlack.withOpacity(0.9),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5)
           ),
           child: SafeArea(
             child: Wrap(
@@ -546,39 +584,46 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   padding: const EdgeInsets.all(16.0),
                   child: Center(
                     child: Container(
-                      width: 40, height: 4, 
-                      decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10))
+                      width: 48, height: 5, 
+                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(10))
                     )
                   ),
                 ),
+                const Padding(
+                  padding: EdgeInsets.only(left: 24, bottom: 12),
+                  child: Text("Medya Gönder", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+                ),
                 ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
                   leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: primaryColor.withOpacity(0.1), shape: BoxShape.circle),
-                    child: Icon(Icons.camera_alt_rounded, color: primaryColor),
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(color: primaryColor.withOpacity(0.15), shape: BoxShape.circle, border: Border.all(color: primaryColor.withOpacity(0.3))),
+                    child: Icon(Icons.camera_alt_rounded, color: primaryColor, size: 22),
                   ),
-                  title: const Text("Fotoğraf Çek", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                  title: const Text("Fotoğraf Çek", style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
                   onTap: () { Navigator.pop(context); _pickMedia(ImageSource.camera, 'image'); },
                 ),
                 ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
                   leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: primaryColor.withOpacity(0.1), shape: BoxShape.circle),
-                    child: Icon(Icons.image_rounded, color: primaryColor),
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(color: neonCyan.withOpacity(0.15), shape: BoxShape.circle, border: Border.all(color: neonCyan.withOpacity(0.3))),
+                    child: const Icon(Icons.image_rounded, color: neonCyan, size: 22),
                   ),
-                  title: const Text("Galeriden Seç", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                  title: const Text("Galeriden Seç", style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
                   onTap: () { Navigator.pop(context); _pickMedia(ImageSource.gallery, 'image'); },
                 ),
                 ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
                   leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: primaryColor.withOpacity(0.1), shape: BoxShape.circle),
-                    child: Icon(Icons.videocam_rounded, color: primaryColor),
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(color: alertRed.withOpacity(0.15), shape: BoxShape.circle, border: Border.all(color: alertRed.withOpacity(0.3))),
+                    child: const Icon(Icons.videocam_rounded, color: alertRed, size: 22),
                   ),
-                  title: const Text("Video Çek", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                  title: const Text("Video Çek", style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
                   onTap: () { Navigator.pop(context); _pickMedia(ImageSource.camera, 'video'); },
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
               ],
             ),
           ),

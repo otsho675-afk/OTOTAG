@@ -186,6 +186,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
   void _animatedMapMove(LatLng destLocation, double destZoom) {
     if (!_isMapReady || !mounted || !destLocation.latitude.isFinite || !destLocation.longitude.isFinite || !destZoom.isFinite) return;
+    
+    // GÜVENLİK (ÇÖKME ÖNLEYİCİ): Geçersiz koordinat koruması
+    if (destLocation.latitude < -90 || destLocation.latitude > 90 || destLocation.longitude < -180 || destLocation.longitude > 180) return;
 
     final startCenter = _mapController.camera.center;
     final latDiff = (startCenter.latitude - destLocation.latitude).abs();
@@ -892,6 +895,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         boundsPoints.addAll(_routePoints);
       }
 
+      if (boundsPoints.isEmpty) return; // ÇÖKME ÖNLEYİCİ: Hatalı/Boş koordinatlarda çökmesini engeller
       var bounds = LatLngBounds.fromPoints(boundsPoints);
       
       final size = MediaQuery.sizeOf(context);
@@ -1044,7 +1048,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
       if (response.statusCode == 200 && data['status'] != 'error') {
         String currentDataHash = jsonEncode(data);
-        if (_lastStatusHash == currentDataHash) {
+        bool isSearching = (data['status']?.toString().trim().toLowerCase() ?? 'matched') == 'searching';
+        if (_lastStatusHash == currentDataHash && !isSearching) {
           if (mounted) setState(() => _isFetchingStatus = false);
           return;
         }
@@ -1087,8 +1092,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
              serviceType = data['service_type']?.toString() ?? 'mechanic';
           }
 
-          if (agreedPrice != (data['agreed_price']?.toString() ?? "")) {
-            agreedPrice = data['agreed_price']?.toString() ?? "";
+          String rawPrice = (data['agreed_price'] ?? data['amount'] ?? data['price'])?.toString() ?? "";
+          if (agreedPrice != rawPrice && rawPrice.isNotEmpty) {
+            agreedPrice = rawPrice;
           }
 
           providerName = data['provider_name'] ?? "";
@@ -1178,7 +1184,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
             isRated = data['is_rated'] == true;
           }
 
-          if (widget.userType == 'customer') matchCode = data['match_code']?.toString() ?? '';
+          if (widget.userType == 'customer') {
+            matchCode = (data['match_code'] ?? data['code'] ?? data['confirmation_code'])?.toString() ?? '';
+          }
 
           if (jobStatus != 'searching' && jobStatus != 'cancelled' && widget.userType == 'provider') {
              if (providerId != 0 && providerId != widget.userId) {
@@ -1329,7 +1337,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         body: {
           "job_id": widget.jobId.toString(), 
           "bid_id": bidId, 
-          "provider_id": widget.userId.toString(), 
+          "provider_id": (widget.userId ?? providerId).toString(),
+          "customer_id": (customerId ?? 0).toString(),
           "amount": amount,
           "user_type": widget.userType
         },
@@ -1982,24 +1991,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       }
     }
 
-    List<Polyline> mapPolylines = [];
-    if (_routePoints.isNotEmpty) {
-      // Çizginin doğrudan araçtan başlaması için anlık konumu render anında en başa ekliyoruz
-      List<LatLng> polylinePoints = [LatLng(providerLat, providerLng)];
-      polylinePoints.addAll(_routePoints);
-
-      mapPolylines.add(Polyline(
-        points: polylinePoints,
-        color: _polylineColor.withValues(alpha: 0.25),
-        strokeWidth: 8, strokeJoin: StrokeJoin.round, strokeCap: StrokeCap.round,
-      ));
-      mapPolylines.add(Polyline(
-        points: polylinePoints,
-        color: distanceInKm <= 0.05 && jobStatus != 'completed' ? Colors.grey.withValues(alpha: 0.6) : _polylineColor,
-        strokeWidth: 4.5, strokeJoin: StrokeJoin.round, strokeCap: StrokeCap.round,
-      ));
-    }
-
     List<CircleMarker> buildAnimatedGlows(double pulseVal, LatLng currentPos) {
       List<CircleMarker> glows = [];
       if (customerLat != 0.0 && customerLng != 0.0 && jobStatus != 'completed') {
@@ -2044,7 +2035,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           });
         },
         onPositionChanged: (camera, hasGesture) {
-          _mapRotation.value = camera.rotation;
+          // PERFORMANS: Frame drop (FPS düşüşü) önleyici kısıtlama
+          if ((_mapRotation.value - camera.rotation).abs() > 1.0) {
+             _mapRotation.value = camera.rotation;
+          }
           if (hasGesture) {
             _mapMoveController?.stop();
             _isProgrammaticCameraMove = false;
@@ -2087,14 +2081,47 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         TileLayer(
           urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
           userAgentPackageName: 'com.berdas.otoyardim',
-          keepBuffer: 5,
+          keepBuffer: 2, // BELLEK OPTİMİZASYONU
+          panBuffer: 1,  // AKICI KAYDIRMA DÜZELTMESİ
           minZoom: 3,
           maxZoom: 19,
           minNativeZoom: 1,
           maxNativeZoom: 18,
         ),
         CircleLayer(circles: mapCircles),
-        PolylineLayer(polylines: mapPolylines),
+        if (_routePoints.isNotEmpty)
+          PolylineLayer(
+            polylines: [
+              Polyline(
+                points: _routePoints,
+                color: _polylineColor.withValues(alpha: 0.25),
+                strokeWidth: 8, strokeJoin: StrokeJoin.round, strokeCap: StrokeCap.round,
+              ),
+              Polyline(
+                points: _routePoints,
+                color: distanceInKm <= 0.05 && jobStatus != 'completed' ? Colors.grey.withValues(alpha: 0.6) : _polylineColor,
+                strokeWidth: 4.5, strokeJoin: StrokeJoin.round, strokeCap: StrokeCap.round,
+              )
+            ],
+          ),
+        ValueListenableBuilder<LatLng?>(
+          valueListenable: _animatedProviderPos,
+          builder: (context, currentPos, child) {
+            if (_routePoints.isEmpty) return const SizedBox.shrink();
+            LatLng providerPosToDraw = currentPos ?? LatLng(providerLat, providerLng);
+            return PolylineLayer(
+              polylines: [
+                Polyline(
+                  points: [providerPosToDraw, _routePoints.first],
+                  color: _polylineColor,
+                  strokeWidth: 4.5,
+                  strokeJoin: StrokeJoin.round,
+                  strokeCap: StrokeCap.round,
+                )
+              ],
+            );
+          }
+        ),
         
         ValueListenableBuilder<LatLng?>(
           valueListenable: _animatedProviderPos,

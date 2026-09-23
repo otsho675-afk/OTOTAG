@@ -289,7 +289,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       height: height,
       fit: fit,
       // RAM Optimizasyonu: Yüksek çözünürlüklü resimlerin cihaz belleğini (Heap) şişirip uygulamayı çökertmesini engeller
-      cacheWidth: width != null ? (width * 3).round() : 800,
+      cacheWidth: (width != null && width.isFinite) ? (width * 3).round() : 800,
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
         return Center(

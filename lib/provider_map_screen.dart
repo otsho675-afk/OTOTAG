@@ -557,38 +557,28 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                             _lastBidPrice = priceController.text.trim();
                                             _lastBidTime = timeController.text.trim();
                                             
-                                            Navigator.pop(context);
+                                            Navigator.pop(context); // Diyaloğu kapat
                                             
-                                            // Teklif verilen iş listeden düşer, sıradaki işe akıcı geçilir
                                             setState(() {
                                               jobList.removeWhere((j) => int.parse(j['id'].toString()) == jobId);
                                               knownJobIds.remove(jobId);
-                                              
-                                              if (jobList.isNotEmpty) {
-                                                _currentJobIndex = _currentJobIndex.clamp(0, jobList.length - 1);
-                                                final nextJob = jobList[_currentJobIndex];
-                                                _animatedMapMove(
-                                                  LatLng(_parseDouble(nextJob['latitude']), _parseDouble(nextJob['longitude'])),
-                                                  15.5,
-                                                  avoidBottomSheet: true
-                                                );
-                                                _showJobCard = true;
-                                                
-                                                Future.delayed(const Duration(milliseconds: 600), () {
-                                                  if (mounted && _showJobCard && jobList.isNotEmpty) {
-                                                    final autoJob = jobList[_currentJobIndex];
-                                                    _showBidDialog(
-                                                      int.parse(autoJob['id'].toString()), 
-                                                      _getServiceName(autoJob['service_type']?.toString() ?? ''), 
-                                                      autoJob['problem_description']?.toString() ?? '', 
-                                                      autoJob['distance'] != null ? _parseDouble(autoJob['distance']).toStringAsFixed(1) : "0.0", 
-                                                      autoJob['service_type']?.toString() ?? 'mechanic'
-                                                    );
-                                                  }
-                                                });
-                                              } else {
-                                                _showJobCard = false;
-                                                _currentJobIndex = 0;
+                                              _showJobCard = false;
+                                            });
+
+                                            // Müşterinin yanıtını ve pazarlık sürecini canlı takip etmek için Takip Ekranına geç
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) => JobTrackingScreen(
+                                                  jobId: jobId,
+                                                  userType: 'provider',
+                                                  userId: widget.providerId,
+                                                ),
+                                              ),
+                                            ).then((_) {
+                                              if (mounted) {
+                                                _fetchNearbyJobs(radius: _searchRadius.toInt());
+                                                _checkActiveJob();
                                               }
                                             });
                                           } else {
@@ -670,7 +660,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
   void _startJobRefreshTimer() {
     _jobRefreshTimer?.cancel();
-    _jobRefreshTimer = Timer.periodic(const Duration(seconds: 5), (_) { // Performans için 5 saniyeye optimize edildi
+    // Dinamik Aralık: Ekranda iş varken veritabanını yormamak için 7 saniye, iş yokken 4 saniye
+    final int intervalSec = jobList.isEmpty ? 4 : 7;
+    _jobRefreshTimer = Timer.periodic(Duration(seconds: intervalSec), (_) {
       if (isOnline && !isSuspended && !isRefreshing && currentPosition != null) {
         _fetchNearbyJobs(isAuto: true, radius: _searchRadius.toInt());
         _checkActiveJob(); 
@@ -1147,8 +1139,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
       try {
         Position fastPos = await Geolocator.getCurrentPosition(
-          desiredAccuracy: kIsWeb ? LocationAccuracy.low : LocationAccuracy.medium,
-          timeLimit: const Duration(seconds: 10),
+          desiredAccuracy: LocationAccuracy.low,
+          timeLimit: const Duration(seconds: 3),
         );
         if (mounted) {
           _updatePositionInternal(fastPos, isFirst: currentPosition == null);
@@ -1331,12 +1323,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         }
         if (data['status'] == 'success' && mounted) {
           final List<Map<String, dynamic>> fetchedJobs = List<Map<String, dynamic>>.from(data['jobs']);
-          final Set<int> currentJobIds = fetchedJobs.map((j) => int.parse(j['id'].toString())).toSet();
+          final Set<int> currentJobIds = fetchedJobs.map((j) => int.tryParse(j['id']?.toString() ?? '0') ?? 0).toSet();
 
           final newJobs = currentJobIds.difference(knownJobIds);
           if (newJobs.isNotEmpty) {
             final newJobId = newJobs.first;
-            final newJobData = fetchedJobs.firstWhere((j) => int.parse(j['id'].toString()) == newJobId);
+            final newJobData = fetchedJobs.firstWhere((j) => (int.tryParse(j['id']?.toString() ?? '0') ?? 0) == newJobId);
             
             if (isAuto && knownJobIds.isNotEmpty) {
               _playAlertSound();
@@ -1810,9 +1802,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                 border: Border.all(color: neonGreen, width: 2.5),
                 boxShadow: [
                   BoxShadow(
-                    color: neonGreen.withOpacity(0.6), 
-                    blurRadius: 18, 
-                    spreadRadius: 2
+                    color: neonGreen.withOpacity(0.35 + (Curves.easeInOutSine.transform(_pulseController.value) * 0.45)), 
+                    blurRadius: 14 + (Curves.easeInOutSine.transform(_pulseController.value) * 12), 
+                    spreadRadius: 2 + (Curves.easeInOutSine.transform(_pulseController.value) * 4)
                   ),
                   const BoxShadow(color: Colors.black87, blurRadius: 8, offset: Offset(0, 4)),
                 ]
@@ -1835,7 +1827,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     if (isOnline) {
       for (int i = 0; i < jobList.length; i++) {
         final job = jobList[i];
-        final int currentJobId = int.parse(job['id'].toString());
+        final int currentJobId = int.tryParse(job['id']?.toString() ?? '0') ?? 0;
         final double lat = _parseDouble(job['latitude']);
         final double lng = _parseDouble(job['longitude']);
         final bool isFlashing = currentJobId == _flitchingJobId;
@@ -1910,15 +1902,17 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       }
 
       for (int i = 0; i < 3; i++) {
-        double progress = (_pulseController.value + (i * 0.33)) % 1.0;
+        final double progress = (_pulseController.value + (i * 0.33)) % 1.0;
+        final double curvedProgress = Curves.easeOutCubic.transform(progress);
+        final double waveAlpha = (1.0 - curvedProgress).clamp(0.0, 1.0);
         circles.add(
           CircleMarker(
             point: actualProviderPos,
-            radius: 450 * progress, 
+            radius: 450 * curvedProgress, 
             useRadiusInMeter: true,
-            color: neonGreen.withOpacity((1.0 - progress) * 0.15),
-            borderColor: neonGreen.withOpacity((1.0 - progress) * 0.5),
-            borderStrokeWidth: 2.5,
+            color: neonGreen.withOpacity(waveAlpha * 0.16),
+            borderColor: neonGreen.withOpacity(waveAlpha * 0.55),
+            borderStrokeWidth: 2.2,
           ),
         );
       }
@@ -2356,7 +2350,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                             } catch(e) {}
                           },
                           onPositionChanged: (camera, hasGesture) {
-                            _mapRotationNotifier.value = camera.rotation;
+                            // PERFORMANS: Gereksiz render döngülerini engeller
+                            if ((_mapRotationNotifier.value - camera.rotation).abs() > 1.0) {
+                              _mapRotationNotifier.value = camera.rotation;
+                            }
                             if (hasGesture) {
                               _mapMoveController?.stop();
                               _isProgrammaticCameraMove = false;
@@ -2388,9 +2385,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                           TileLayer(
                             urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
                             userAgentPackageName: 'com.berdas.otoyardim',
-                            keepBuffer: 8, // Kaydırma (panning) esnasında siyahlık oluşumunu azaltır
-                            panBuffer: 2,  // Ekran dışında önceden yükleme yaparak takılmayı önler
-                            retinaMode: true, // Yüksek çözünürlüklü (HDPI) ekranlarda yazıları keskinleştirir
+                            keepBuffer: 2, // KRİTİK DÜZELTME: 8 değeri RAM'i doldurup uygulamayı çökertebilir
+                            panBuffer: 1,  // DÜZELTME: İşlemci yükünü hafifletir
+                            retinaMode: true, 
                             minZoom: 3,
                             maxZoom: 19,
                             minNativeZoom: 1,
@@ -2420,7 +2417,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                 return ValueListenableBuilder<double>(
                                   valueListenable: _animatedHeading,
                                   builder: (context, providerHeading, child) {
-                                    return MarkerLayer(markers: _buildMarkers(providerPos, providerHeading));
+                                    return AnimatedBuilder(
+                                      animation: _pulseController,
+                                      builder: (context, child) {
+                                        return MarkerLayer(markers: _buildMarkers(providerPos, providerHeading));
+                                      }
+                                    );
                                   }
                                 );
                               }
@@ -2429,22 +2431,22 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                             ValueListenableBuilder<LatLng?>(
                               valueListenable: _animatedProviderPos,
                               builder: (context, providerPos, child) {
-                                return RepaintBoundary(
-                                  child: PolylineLayer(
-                                    polylines: [
-                                      Polyline(
-                                        points: [
-                                          providerPos ?? (currentPosition != null ? LatLng(currentPosition!.latitude, currentPosition!.longitude) : const LatLng(39.92, 32.85)),
-                                          LatLng(
-                                            _parseDouble(jobList[_currentJobIndex]['latitude']),
-                                            _parseDouble(jobList[_currentJobIndex]['longitude'])
-                                          )
-                                        ],
-                                        color: alertRed.withOpacity(0.8),
-                                        strokeWidth: 4.0,
-                                      )
-                                    ],
-                                  ),
+                                return PolylineLayer(
+                                  polylines: [
+                                    Polyline(
+                                      points: [
+                                        providerPos ?? (currentPosition != null ? LatLng(currentPosition!.latitude, currentPosition!.longitude) : const LatLng(39.92, 32.85)),
+                                        LatLng(
+                                          _parseDouble(jobList[_currentJobIndex]['latitude']),
+                                          _parseDouble(jobList[_currentJobIndex]['longitude'])
+                                        )
+                                      ],
+                                      color: alertRed.withOpacity(0.8),
+                                      strokeWidth: 4.0,
+                                      strokeJoin: StrokeJoin.round,
+                                      strokeCap: StrokeCap.round,
+                                    )
+                                  ],
                                 );
                               }
                             ),

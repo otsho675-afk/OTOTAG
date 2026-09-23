@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 import 'dart:ui';
+import 'dart:math' as math;
 import 'job_tracking_screen.dart';
 
 class ProviderBidsScreen extends StatefulWidget {
@@ -15,7 +16,7 @@ class ProviderBidsScreen extends StatefulWidget {
   _ProviderBidsScreenState createState() => _ProviderBidsScreenState();
 }
 
-class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProviderStateMixin, WidgetsBindingObserver {
   final http.Client _httpClient = http.Client();
   final Duration _apiTimeout = const Duration(seconds: 15);
 
@@ -31,6 +32,20 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTick
   bool _isFetching = false;
   final String baseUrl = "https://eliteagency.sbs/api.php";
   late AnimationController _fadeController;
+  late AnimationController _radarController;
+  late AnimationController _rippleController;
+  late AnimationController _pulseController;
+  late AnimationController _toolOrbitController;
+
+  Timer? _statusTextTimer;
+  final ValueNotifier<int> _statusMessageNotifier = ValueNotifier<int>(0);
+  final List<String> _providerRadarMessages = [
+    "📡 Bölge çağrı frekansları dinleniyor...",
+    "⚡ Yakındaki arıza ve kurtarıcı bildirimleri taranıyor...",
+    "🛰️ Konumunuza en uygun işler analiz ediliyor...",
+    "🎯 Yeni müşteri talepleri için radar açık...",
+    "💰 En karlı rota ve işler için çağrılar bekleniyor...",
+  ];
 
   double totalEarnings = 0.0;
   int completedCount = 0;
@@ -53,6 +68,18 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTick
     super.initState();
     WidgetsBinding.instance.addObserver(this); 
     _fadeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800))..forward();
+    _radarController = AnimationController(vsync: this, duration: const Duration(milliseconds: 3000))..repeat();
+    _rippleController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2500))..repeat();
+    _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat(reverse: true);
+    _toolOrbitController = AnimationController(vsync: this, duration: const Duration(milliseconds: 5500))..repeat();
+
+    _statusTextTimer?.cancel();
+    _statusTextTimer = Timer.periodic(const Duration(milliseconds: 2400), (_) {
+      if (mounted && filteredBids.isEmpty) {
+        _statusMessageNotifier.value = (_statusMessageNotifier.value + 1) % _providerRadarMessages.length;
+      }
+    });
+
     _fetchBids();
     _startTimer();
   }
@@ -68,8 +95,19 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTick
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
       _timer?.cancel(); 
+      _statusTextTimer?.cancel();
+      _radarController.stop();
+      _rippleController.stop();
+      _pulseController.stop();
+      _toolOrbitController.stop();
     } else if (state == AppLifecycleState.resumed) {
       _startTimer(); 
+      if (mounted) {
+        _radarController.repeat();
+        _rippleController.repeat();
+        _pulseController.repeat(reverse: true);
+        _toolOrbitController.repeat();
+      }
     }
   }
 
@@ -78,7 +116,13 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTick
     WidgetsBinding.instance.removeObserver(this); 
     _httpClient.close();
     _timer?.cancel();
+    _statusTextTimer?.cancel();
     _fadeController.dispose();
+    _radarController.dispose();
+    _rippleController.dispose();
+    _pulseController.dispose();
+    _toolOrbitController.dispose();
+    _statusMessageNotifier.dispose();
     super.dispose();
   }
 
@@ -407,7 +451,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTick
               HapticFeedback.selectionClick();
               if (!isCompleted && !isCancelled) {
                 Navigator.push(context, PageRouteBuilder(
-                  pageBuilder: (context, animation, secondaryAnimation) => JobTrackingScreen(jobId: int.parse(job['job_id'].toString()), userType: 'provider', userId: widget.providerId),
+                  pageBuilder: (context, animation, secondaryAnimation) => JobTrackingScreen(jobId: int.tryParse(job['job_id']?.toString() ?? '0') ?? 0, userType: 'provider', userId: widget.providerId),
                   transitionsBuilder: (context, animation, secondaryAnimation, child) => FadeTransition(opacity: animation, child: child),
                 ));
               } else {
@@ -528,6 +572,320 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTick
     );
   }
 
+  Widget _build3DProviderRadar(bool isSmallScreen, BoxConstraints constraints) {
+    final double maxPossibleSize = math.min(constraints.maxWidth * 0.82, constraints.maxHeight * 0.44);
+    final double radarSize = maxPossibleSize > 360 ? 360 : (maxPossibleSize < 220 ? 220 : maxPossibleSize);
+
+    final List<Map<String, dynamic>> orbiting3DTools = [
+      {'icon': Icons.build_rounded, 'name': 'Anahtar', 'color': neonGreen},
+      {'icon': Icons.car_repair_rounded, 'name': 'Kurtarıcı', 'color': const Color(0xFF00E5FF)},
+      {'icon': Icons.tire_repair_rounded, 'name': 'Lastik', 'color': goldAccent},
+      {'icon': Icons.electrical_services_rounded, 'name': 'Akü & Elektrik', 'color': alertRed},
+    ];
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: radarSize + 40,
+              height: radarSize + 40,
+              child: RepaintBoundary(
+                child: Stack(
+                  alignment: Alignment.center,
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      width: radarSize + 28,
+                      height: radarSize + 28,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: neonGreen.withOpacity(0.12), width: 1.5),
+                      ),
+                    ),
+                    CustomPaint(
+                      size: Size(radarSize, radarSize), 
+                      painter: const ProviderRadarGridPainter(Color(0x2400FFA3)),
+                    ),
+                    RepaintBoundary(
+                      child: AnimatedBuilder(
+                        animation: _rippleController,
+                        builder: (context, child) => CustomPaint(
+                          size: Size(radarSize, radarSize),
+                          painter: ProviderRipplePainter(_rippleController.value, neonGreen),
+                        ),
+                      ),
+                    ),
+                    RepaintBoundary(
+                      child: AnimatedBuilder(
+                        animation: _pulseController,
+                        builder: (context, child) => CustomPaint(
+                          size: Size(radarSize, radarSize),
+                          painter: ProviderBlipPainter(_pulseController.value, neonGreen),
+                        ),
+                      ),
+                    ),
+                    // 3D Lazer Tarama Işını (Statik subtree önbelleğe alındı, 120 FPS akıcı dönüş)
+                    AnimatedBuilder(
+                      animation: _radarController,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: SweepGradient(
+                            colors: [
+                              Colors.transparent,
+                              neonGreen.withOpacity(0.04),
+                              neonGreen.withOpacity(0.25),
+                              neonGreen.withOpacity(0.85),
+                              Colors.transparent,
+                            ],
+                            stops: const [0.0, 0.45, 0.85, 0.99, 1.0],
+                            startAngle: 0.0,
+                            endAngle: math.pi / 1.4,
+                          ),
+                        ),
+                        alignment: Alignment.centerRight,
+                        child: Container(
+                          width: radarSize / 2,
+                          height: 3,
+                          decoration: BoxDecoration(
+                            boxShadow: const [
+                              BoxShadow(color: neonGreen, blurRadius: 16, spreadRadius: 4),
+                              BoxShadow(color: Colors.white, blurRadius: 6, spreadRadius: 1)
+                            ],
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                        ),
+                      ),
+                      builder: (context, staticBeamChild) {
+                        return Transform.rotate(
+                          angle: _radarController.value * 2 * math.pi,
+                          child: staticBeamChild,
+                        );
+                      },
+                    ),
+
+                    // Merkezdeki 3D Dönen Holografik Çekirdek (Organik Fiziksel Nabız)
+                    AnimatedBuilder(
+                      animation: Listenable.merge([_pulseController, _toolOrbitController]),
+                      builder: (context, child) {
+                        final double spin = _toolOrbitController.value * 2 * math.pi;
+                        final double smoothPulse = Curves.easeInOutSine.transform(_pulseController.value);
+                        return Transform(
+                          alignment: Alignment.center,
+                          transform: Matrix4.identity()
+                            ..setEntry(3, 2, 0.002)
+                            ..rotateY(spin)
+                            ..rotateX(math.sin(spin) * 0.22),
+                          child: Container(
+                            padding: EdgeInsets.all(radarSize * 0.08),
+                            decoration: BoxDecoration(
+                              color: pureBlack.withOpacity(0.92),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: neonGreen, width: 2.2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: neonGreen.withOpacity(0.35 + (smoothPulse * 0.45)),
+                                  blurRadius: 20 + (smoothPulse * 22),
+                                  spreadRadius: 2 + (smoothPulse * 8),
+                                )
+                              ],
+                            ),
+                            child: Transform.scale(
+                              scale: 1.0 + (smoothPulse * 0.08),
+                              child: Icon(Icons.radar_rounded, size: radarSize * 0.15, color: neonGreen),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+
+                    // RADAR ETRAFINDA 3D YÖRÜNGEDE UÇUŞAN TAMİR ALETLERİ (Opacity widget kaldırıldı, donanım hızlandırmalı)
+                    AnimatedBuilder(
+                      animation: _toolOrbitController,
+                      builder: (context, child) {
+                        final double baseAngle = _toolOrbitController.value * 2 * math.pi;
+                        final double radiusX = radarSize * 0.48;
+                        final double radiusY = radarSize * 0.28;
+
+                        return Stack(
+                          alignment: Alignment.center,
+                          children: List.generate(orbiting3DTools.length, (idx) {
+                            final double toolAngle = baseAngle + (idx * (math.pi / 2));
+                            final double x = math.cos(toolAngle) * radiusX;
+                            final double y = math.sin(toolAngle) * radiusY;
+                            final double depthFactor = (math.sin(toolAngle) + 1.0) / 2.0;
+                            final double scale = 0.75 + (depthFactor * 0.45);
+                            final double opacity = (0.40 + (depthFactor * 0.60)).clamp(0.0, 1.0);
+                            final tool = orbiting3DTools[idx];
+                            final Color toolColor = tool['color'] as Color;
+
+                            return Transform.translate(
+                              offset: Offset(x, y),
+                              child: Transform(
+                                alignment: Alignment.center,
+                                transform: Matrix4.identity()
+                                  ..setEntry(3, 2, 0.0018)
+                                  ..rotateX(0.2)
+                                  ..rotateY(math.sin(toolAngle) * 0.5)
+                                  ..rotateZ(math.cos(toolAngle) * 0.3)
+                                  ..scale(scale),
+                                child: Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: panelBlack.withOpacity(0.95 * opacity),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: toolColor.withOpacity(0.75 * opacity), width: 1.8),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: toolColor.withOpacity(0.45 * depthFactor * opacity),
+                                        blurRadius: 16 * depthFactor + 4,
+                                        spreadRadius: 2,
+                                      ),
+                                      BoxShadow(color: Colors.black.withOpacity(0.85 * opacity), blurRadius: 8, offset: const Offset(0, 4)),
+                                    ],
+                                  ),
+                                  child: Icon(tool['icon'] as IconData, color: toolColor.withOpacity(opacity), size: 22),
+                                ),
+                              ),
+                            );
+                          }),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+            AnimatedBuilder(
+              animation: _radarController,
+              builder: (context, child) {
+                return ShaderMask(
+                  shaderCallback: (bounds) {
+                    return LinearGradient(
+                      colors: [Colors.white38, Colors.white, neonGreen, Colors.white, Colors.white38],
+                      stops: [0.0, _radarController.value - 0.2, _radarController.value, _radarController.value + 0.2, 1.0],
+                      begin: const Alignment(-1.0, -0.5),
+                      end: const Alignment(1.0, 0.5),
+                      tileMode: TileMode.clamp,
+                    ).createShader(bounds);
+                  },
+                  child: const Text(
+                    "RADAR AKTİF",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 3.5),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: ValueListenableBuilder<int>(
+                valueListenable: _statusMessageNotifier,
+                builder: (context, statusIdx, child) {
+                  return AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 500),
+                    transitionBuilder: (child, animation) {
+                      return FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: Tween<Offset>(begin: const Offset(0.0, 0.25), end: Offset.zero).animate(
+                            CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+                          ),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Container(
+                      key: ValueKey<int>(statusIdx),
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: panelBlack.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: neonGreen.withOpacity(0.25), width: 1.2),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4)),
+                          BoxShadow(color: neonGreen.withOpacity(0.08), blurRadius: 16),
+                        ],
+                      ),
+                      child: Text(
+                        _providerRadarMessages[statusIdx],
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.white.withOpacity(0.95),
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.4,
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 12,
+              runSpacing: 8,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: neonGreen.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: neonGreen.withOpacity(0.25)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(width: 12, height: 12, child: CircularProgressIndicator(color: neonGreen, strokeWidth: 2)),
+                      SizedBox(width: 10),
+                      Text(
+                        "Mod: Talep Dinleniyor",
+                        style: TextStyle(fontSize: 12, color: neonGreen, fontWeight: FontWeight.w900, letterSpacing: 0.8),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.04),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withOpacity(0.08)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(color: Color(0xFF00E5FF), shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        "Frekans: 5.8 GHz Canlı",
+                        style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.75), fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -586,27 +944,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTick
                         ? FadeTransition(
                             opacity: _fadeController,
                             child: Center(
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(maxWidth: 600),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      padding: EdgeInsets.all(isSmallScreen ? 20 : 28),
-                                      decoration: BoxDecoration(
-                                        color: neonGreen.withOpacity(0.05),
-                                        shape: BoxShape.circle,
-                                        border: Border.all(color: neonGreen.withOpacity(0.2), width: 1.5),
-                                      ),
-                                      child: Icon(Icons.inbox_rounded, size: isSmallScreen ? 48 : 56, color: neonGreen.withOpacity(0.8)),
-                                    ),
-                                    SizedBox(height: isSmallScreen ? 20 : 28),
-                                    Text("RADAR TEMİZ", style: TextStyle(color: neonGreen, fontSize: isSmallScreen ? 22 : 26, fontWeight: FontWeight.w900, letterSpacing: 2.0), textAlign: TextAlign.center),
-                                    const SizedBox(height: 12),
-                                    Text("Operasyon geçmişinde kayıt bulunamadı.\nYeni çağrılar için radarı açık tutun.", textAlign: TextAlign.center, style: TextStyle(color: textGray, fontSize: isSmallScreen ? 14 : 16, height: 1.6, fontWeight: FontWeight.w600)),
-                                  ],
-                                ),
-                              ),
+                              child: _build3DProviderRadar(isSmallScreen, constraints),
                             ),
                           )
                         : Center(
@@ -668,4 +1006,86 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTick
       }
     );
   }
+}
+
+class ProviderRadarGridPainter extends CustomPainter {
+  final Color color;
+  const ProviderRadarGridPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 1.0;
+    final center = Offset(size.width / 2, size.height / 2);
+    final maxRadius = size.width / 2;
+
+    for (int i = 1; i <= 4; i++) {
+      canvas.drawCircle(center, maxRadius * (i / 4), paint);
+    }
+    
+    canvas.drawLine(Offset(size.width / 2, 0), Offset(size.width / 2, size.height), paint);
+    canvas.drawLine(Offset(0, size.height / 2), Offset(size.width, size.height / 2), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class ProviderRipplePainter extends CustomPainter {
+  final double progress;
+  final Color color;
+  const ProviderRipplePainter(this.progress, this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..isAntiAlias = true
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6; 
+    final center = Offset(size.width / 2, size.height / 2);
+    final maxRadius = size.width / 2;
+
+    for (int i = 0; i < 3; i++) {
+      final double circleProgress = (progress + (i * 0.33)) % 1.0;
+      final double smoothProgress = Curves.easeOutCubic.transform(circleProgress);
+      final double radius = maxRadius * smoothProgress;
+      paint.color = color.withOpacity(((1.0 - smoothProgress) * 0.65).clamp(0.0, 1.0));
+      canvas.drawCircle(center, radius, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(ProviderRipplePainter oldDelegate) => oldDelegate.progress != progress;
+}
+
+class ProviderBlipPainter extends CustomPainter {
+  final double progress;
+  final Color color;
+  const ProviderBlipPainter(this.progress, this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    const blips = [
+      Offset(0.35, -0.45),
+      Offset(-0.55, 0.25),
+      Offset(0.6, 0.4),
+      Offset(-0.25, -0.6),
+    ];
+
+    for (int i = 0; i < blips.length; i++) {
+      final blipOffset = Offset(center.dx + blips[i].dx * (size.width / 2), center.dy + blips[i].dy * (size.height / 2));
+      final double alpha = (math.sin((progress * 2 * math.pi) + (i * 1.5)) + 1.0) / 2.0;
+      final paintGlow = Paint()
+        ..color = color.withOpacity(0.5 * alpha)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+      final paintDot = Paint()
+        ..color = color.withOpacity(alpha)
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(blipOffset, 5, paintGlow);
+      canvas.drawCircle(blipOffset, 2.5, paintDot);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant ProviderBlipPainter oldDelegate) => oldDelegate.progress != progress;
 }

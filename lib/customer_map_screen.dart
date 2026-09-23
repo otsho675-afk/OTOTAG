@@ -57,6 +57,12 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
   List<String> reminderAlerts = [];
   bool _isNotifModalOpen = false;
 
+  // --- SİMÜLE (HAYALET) ARAÇLAR İÇİN DEĞİŞKENLER ---
+  final ValueNotifier<List<Map<String, dynamic>>> _simulatedVehiclesNotifier = ValueNotifier<List<Map<String, dynamic>>>([]);
+  Timer? _simulationTimer;
+  final math.Random _random = math.Random();
+  // ------------------------------------------------
+
   String _currentAddress = "Hedef Konum Aranıyor...";
   bool _isAddressLoading = false;
   String _smartSuggestion = ""; 
@@ -112,6 +118,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
 
   void _animatedMapMove(LatLng destLocation, double destZoom) {
     if (!_isMapReady || !mounted || !destLocation.latitude.isFinite || !destLocation.longitude.isFinite || !destZoom.isFinite) return;
+    
+    // GÜVENLİK (ÇÖKME ÖNLEYİCİ): Geçersiz koordinat koruması
+    if (destLocation.latitude < -90 || destLocation.latitude > 90 || destLocation.longitude < -180 || destLocation.longitude > 180) return;
 
     final startCenter = mapController.camera.center;
     final latDiff = (startCenter.latitude - destLocation.latitude).abs();
@@ -195,10 +204,25 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     }
   }
 
+  void _changeSelectedService(String newServiceId) {
+    if (selectedService == newServiceId) return;
+    HapticFeedback.lightImpact();
+    setState(() => selectedService = newServiceId);
+
+    // Hizmet değiştiğinde (örn: Tamirci -> Çekici) haritadaki araç filosunu yeni sokaklara rastgele dağıt
+    final LatLng center = _pinLocationNotifier.value ?? 
+        (currentPositionNotifier.value != null 
+            ? LatLng(currentPositionNotifier.value!.latitude, currentPositionNotifier.value!.longitude) 
+            : const LatLng(39.92, 32.85));
+
+    _generateSimulatedVehicles(center);
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
       _positionStream?.pause();
+      _simulationTimer?.cancel(); // SİMÜLASYONU DURDUR
       _radarPulseController.stop();
       _radarScanController.stop();
       _buttonPulseController.stop();
@@ -206,6 +230,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
       _resumeTrackingTimer?.cancel();
     } else if (state == AppLifecycleState.resumed) {
       _positionStream?.resume();
+      if (_simulatedVehiclesNotifier.value.isNotEmpty) _startSimulation(); // SİMÜLASYONU DEVAM ETTİR
       if (mounted) {
         _radarPulseController.repeat();
         _radarScanController.repeat();
@@ -222,6 +247,8 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     _compassStream?.cancel();
     _resumeTrackingTimer?.cancel();
     _debounceTimer?.cancel(); 
+    _simulationTimer?.cancel(); // SİMÜLASYONU TEMİZLE
+    _simulatedVehiclesNotifier.dispose(); // NOTIFIER'I TEMİZLE
     _mapMoveController?.dispose();
     problemController.dispose();
     _scrollController.dispose();
@@ -442,6 +469,221 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     ).whenComplete(() => _isNotifModalOpen = false);
   }
 
+  Future<void> _generateSimulatedVehicles(LatLng center) async {
+    List<Map<String, dynamic>> vehicles = [];
+    final List<List<LatLng>> streetNetwork = [];
+
+    // Gerçekçi Bağlantılı Şehir Izgarası: Sıfır API gecikmesi, sıfır 504 hatası
+    // Ana Doğu-Batı Bulvarları
+    for (double latOffset in [-0.006, -0.003, 0.0, 0.003, 0.006]) {
+      streetNetwork.add([
+        LatLng(center.latitude + latOffset, center.longitude - 0.009),
+        LatLng(center.latitude + latOffset, center.longitude - 0.0045),
+        LatLng(center.latitude + latOffset, center.longitude),
+        LatLng(center.latitude + latOffset, center.longitude + 0.0045),
+        LatLng(center.latitude + latOffset, center.longitude + 0.009),
+      ]);
+    }
+
+    // Ana Kuzey-Güney Caddeleri
+    for (double lngOffset in [-0.007, -0.0035, 0.0, 0.0035, 0.007]) {
+      streetNetwork.add([
+        LatLng(center.latitude - 0.008, center.longitude + lngOffset),
+        LatLng(center.latitude - 0.004, center.longitude + lngOffset),
+        LatLng(center.latitude, center.longitude + lngOffset),
+        LatLng(center.latitude + 0.004, center.longitude + lngOffset),
+        LatLng(center.latitude + 0.008, center.longitude + lngOffset),
+      ]);
+    }
+
+    // Şehri çapraz kesen ana hatlar (Çeşitlilik ve virajlı rotalar için)
+    streetNetwork.add([
+      LatLng(center.latitude - 0.006, center.longitude - 0.007),
+      LatLng(center.latitude - 0.003, center.longitude - 0.0035),
+      LatLng(center.latitude, center.longitude),
+      LatLng(center.latitude + 0.003, center.longitude + 0.0035),
+      LatLng(center.latitude + 0.006, center.longitude + 0.007),
+    ]);
+
+    streetNetwork.add([
+      LatLng(center.latitude + 0.006, center.longitude - 0.007),
+      LatLng(center.latitude + 0.003, center.longitude - 0.0035),
+      LatLng(center.latitude, center.longitude),
+      LatLng(center.latitude - 0.003, center.longitude + 0.0035),
+      LatLng(center.latitude - 0.006, center.longitude + 0.007),
+    ]);
+
+    for (int i = 0; i < 6; i++) {
+      final List<LatLng> assignedStreet = streetNetwork[i % streetNetwork.length];
+      final bool isForward = _random.nextBool();
+      int startIdx = _random.nextInt(assignedStreet.length - 1);
+
+      LatLng currentPoint = assignedStreet[startIdx];
+      int targetIdx = isForward ? startIdx + 1 : math.max(0, startIdx - 1);
+      LatLng nextPoint = assignedStreet[targetIdx];
+
+      double dLat = nextPoint.latitude - currentPoint.latitude;
+      double dLng = nextPoint.longitude - currentPoint.longitude;
+      double heading = (math.atan2(dLng, dLat) * 180.0 / math.pi);
+
+      vehicles.add({
+        'id': i,
+        'currentStreet': assignedStreet,
+        'allStreets': streetNetwork,
+        'nodeIdx': startIdx,
+        'targetIdx': targetIdx,
+        'isForward': isForward,
+        'pos': currentPoint,
+        'heading': heading,
+        'targetHeading': heading,
+        // HIZ: Doğal ve akıcı şehir içi sürüş (~25 km/s)
+        'speed': 0.0000022 + (_random.nextDouble() * 0.0000010),
+        'stopTicks': 0,
+        'carAsset': (i % 2 == 0) ? 'assets/images/small_car_1.png' : 'assets/images/small_car_2.png',
+      });
+    }
+
+    _simulatedVehiclesNotifier.value = vehicles;
+  }
+
+  void _startSimulation() {
+    _simulationTimer?.cancel();
+    // 50ms Akıcı oyun motoru sürüşü (Harita sürüklenirken işlemciyi yormamak için askıya alınır)
+    _simulationTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+      if (!mounted || _isMapMovingNotifier.value) return;
+
+      final List<Map<String, dynamic>> current = _simulatedVehiclesNotifier.value;
+      if (current.isEmpty) return;
+      final List<Map<String, dynamic>> updated = [];
+
+      for (var v in current) {
+        int stopTicks = v['stopTicks'] ?? 0;
+        if (stopTicks > 0) {
+          v['stopTicks'] = stopTicks - 1;
+          updated.add(v);
+          continue;
+        }
+
+        List<LatLng> street = List<LatLng>.from(v['currentStreet']);
+        final List<List<LatLng>> allStreets = (v['allStreets'] as List<dynamic>).cast<List<LatLng>>();
+        int targetIdx = v['targetIdx'];
+        bool isForward = v['isForward'];
+        double speed = v['speed'];
+        LatLng currentPos = v['pos'];
+        double heading = v['heading'];
+        double targetHeading = v['targetHeading'];
+        String asset = v['carAsset'];
+
+        LatLng targetPoint = street[targetIdx];
+
+        double dLat = targetPoint.latitude - currentPos.latitude;
+        double dLng = targetPoint.longitude - currentPos.longitude;
+        double distanceToTarget = math.sqrt(dLat * dLat + dLng * dLng);
+
+        // Hedef düğüm noktasına ulaşıldığında kavşak ve sokak değiştirme kararı
+        if (distanceToTarget < speed * 1.5) {
+          currentPos = targetPoint;
+          int nextIdx = isForward ? targetIdx + 1 : targetIdx - 1;
+
+          // Yakındaki kesişen veya bağlanan diğer sokakları tara (Kavşak Algılama)
+          List<Map<String, dynamic>> intersectingStreets = [];
+          for (var otherStreet in allStreets) {
+            if (identical(otherStreet, street)) continue;
+            for (int nodeIdx = 0; nodeIdx < otherStreet.length; nodeIdx++) {
+              double distLat = (otherStreet[nodeIdx].latitude - currentPos.latitude).abs();
+              double distLng = (otherStreet[nodeIdx].longitude - currentPos.longitude).abs();
+              // ~35 metre yakınlıktaki kesişim noktaları
+              if (distLat < 0.00035 && distLng < 0.00035) {
+                intersectingStreets.add({
+                  'street': otherStreet,
+                  'nodeIdx': nodeIdx,
+                });
+                break;
+              }
+            }
+          }
+
+          // Sokağın sonuna gelindiyse VEYA kavşakta %45 ihtimalle başka bir sokağa sap
+          bool isDeadEnd = (nextIdx >= street.length || nextIdx < 0);
+          if (intersectingStreets.isNotEmpty && (isDeadEnd || _random.nextDouble() < 0.45)) {
+            final chosen = intersectingStreets[_random.nextInt(intersectingStreets.length)];
+            street = List<LatLng>.from(chosen['street']);
+            int junctionNode = chosen['nodeIdx'];
+            
+            // Yeni sokakta ileri mi geri mi gideceğine karar ver
+            if (junctionNode == 0) {
+              isForward = true;
+              nextIdx = 1;
+            } else if (junctionNode >= street.length - 1) {
+              isForward = false;
+              nextIdx = street.length - 2;
+            } else {
+              isForward = _random.nextBool();
+              nextIdx = isForward ? junctionNode + 1 : junctionNode - 1;
+            }
+            targetIdx = nextIdx.clamp(0, street.length - 1);
+            stopTicks = _random.nextInt(16) + 8; // Kavşaktan dönerken yavaşlama / duraksama
+          } else if (isDeadEnd) {
+            // Çıkmaz sokak sonu: Şehirdeki başka bir hatta geç ya da U dönüşü yap
+            if (allStreets.length > 1 && _random.nextBool()) {
+              street = List<LatLng>.from(allStreets[_random.nextInt(allStreets.length)]);
+              targetIdx = _random.nextInt(street.length);
+              currentPos = street[targetIdx];
+              isForward = _random.nextBool();
+            } else {
+              isForward = !isForward;
+              nextIdx = isForward ? 1 : street.length - 2;
+              targetIdx = nextIdx.clamp(0, street.length - 1);
+            }
+            stopTicks = _random.nextInt(20) + 10;
+          } else {
+            targetIdx = nextIdx.clamp(0, street.length - 1);
+          }
+
+          targetPoint = street[targetIdx];
+          dLat = targetPoint.latitude - currentPos.latitude;
+          dLng = targetPoint.longitude - currentPos.longitude;
+          targetHeading = (math.atan2(dLng, dLat) * 180.0 / math.pi);
+        } else {
+          // Sokak hattı üzerinde pürüzsüz ilerleme
+          double ratio = speed / (distanceToTarget == 0 ? 1 : distanceToTarget);
+          double newLat = currentPos.latitude + (dLat * ratio);
+          double newLng = currentPos.longitude + (dLng * ratio);
+          currentPos = LatLng(newLat, newLng);
+        }
+
+        // Yumuşak direksiyon dönüşü
+        double angleDiff = (targetHeading - heading + 180) % 360 - 180;
+        heading = (heading + (angleDiff * 0.12)) % 360;
+
+        // Sağ şerit hizalaması (~3 metre sağa ofset)
+        double rad = heading * (math.pi / 180.0);
+        double laneOffset = 0.000030;
+        LatLng laneAdjustedPos = LatLng(
+          currentPos.latitude + (math.cos(rad + math.pi / 2) * laneOffset),
+          currentPos.longitude + (math.sin(rad + math.pi / 2) * laneOffset * 1.3),
+        );
+
+        updated.add({
+          'id': v['id'],
+          'currentStreet': street,
+          'allStreets': allStreets,
+          'targetIdx': targetIdx,
+          'isForward': isForward,
+          'pos': currentPos,
+          'displayPos': laneAdjustedPos,
+          'heading': heading,
+          'targetHeading': targetHeading,
+          'speed': speed,
+          'stopTicks': stopTicks,
+          'carAsset': asset,
+        });
+      }
+
+      _simulatedVehiclesNotifier.value = updated;
+    });
+  }
+
   void _applyInitialPosition(Position position, {bool isInitial = false}) {
     if (!mounted) return;
     if (!isInitial && position.accuracy > 200.0) return;
@@ -451,14 +693,29 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     
     _pinLocationNotifier.value = loc;
     _fetchAddressForPin(loc);
+
+    // İlk konum bulunduğunda simüle araçları oluştur ve hareketi başlat
+    if (_simulatedVehiclesNotifier.value.isEmpty) {
+      _generateSimulatedVehicles(loc).then((_) {
+        if (mounted) _startSimulation();
+      });
+    }
     
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_isMapReady && mounted) {
-         try {
-           mapController.move(loc, _currentZoom);
-         } catch(e) {}
+    if (_isMapReady && mounted) {
+      try {
+        _animatedMapMove(loc, 16.5);
+      } catch (_) {
+        mapController.move(loc, 16.5);
       }
-    });
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_isMapReady && mounted) {
+          try {
+            mapController.move(loc, 16.5);
+          } catch (_) {}
+        }
+      });
+    }
   }
 
   Future<void> _initLocationStream() async {
@@ -477,35 +734,64 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
         }
       }
 
-      try {
-        if (!kIsWeb) {
+      // 1. Kademe: Cihaz hafızasındaki son bilinen konumu anında (0.1 sn) ekrana yansıt
+      if (!kIsWeb) {
+        try {
           Position? lastKnown = await Geolocator.getLastKnownPosition();
           if (lastKnown != null && mounted) {
             _applyInitialPosition(lastKnown, isInitial: true);
           }
-        }
-      } catch (_) {}
+        } catch (_) {}
+      }
 
+      // 2. Kademe: Canlı konumu al (Web için doğrudan hızlı ağ/wifi konumu, mobil için GPS)
       try {
-        Position? fastPos = await Geolocator.getLastKnownPosition();
-        if (fastPos != null && mounted) {
-          _applyInitialPosition(fastPos, isInitial: currentPositionNotifier.value == null);
-        }
-        
         Position current = await Geolocator.getCurrentPosition(
-          desiredAccuracy: kIsWeb ? LocationAccuracy.medium : LocationAccuracy.high,
-          timeLimit: const Duration(seconds: 10), 
+          desiredAccuracy: kIsWeb ? LocationAccuracy.low : LocationAccuracy.high,
+          timeLimit: Duration(seconds: kIsWeb ? 10 : 3), 
         );
         if (mounted) {
           _applyInitialPosition(current, isInitial: true);
         }
       } catch (e) {
-        debugPrint("İlk konum alma hatası: $e");
+        debugPrint("İlk konum alma zaman aşımı/hata: $e");
+        try {
+          Position fallbackCurrent = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.lowest,
+            timeLimit: const Duration(seconds: 15), 
+          );
+          if (mounted) {
+            _applyInitialPosition(fallbackCurrent, isInitial: true);
+          }
+        } catch (e2) {
+          debugPrint("Yedek konum da alınamadı: $e2");
+        }
       }
 
-      LocationSettings locationSettings = kIsWeb 
-          ? const LocationSettings(accuracy: LocationAccuracy.low, distanceFilter: 5)
-          : const LocationSettings(accuracy: LocationAccuracy.bestForNavigation, distanceFilter: 1); // ANLIK TAKİP: Hassasiyet artırıldı, filtre 1 metreye düşürüldü
+      // 3. Kademe: Platforma özel optimize edilmiş canlı takip akışı
+      late LocationSettings locationSettings;
+      if (kIsWeb) {
+        locationSettings = const LocationSettings(accuracy: LocationAccuracy.low, distanceFilter: 2);
+      } else if (defaultTargetPlatform == TargetPlatform.android) {
+        locationSettings = AndroidSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 1,
+          forceLocationManager: false,
+          intervalDuration: const Duration(seconds: 2),
+        );
+      } else if (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS) {
+        locationSettings = AppleSettings(
+          accuracy: LocationAccuracy.bestForNavigation,
+          activityType: ActivityType.automotiveNavigation,
+          distanceFilter: 1,
+          pauseLocationUpdatesAutomatically: false,
+        );
+      } else {
+        locationSettings = const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 1,
+        );
+      }
 
       _positionStream?.cancel();
       _positionStream = Geolocator.getPositionStream(locationSettings: locationSettings).listen((Position position) {
@@ -815,6 +1101,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                     maxZoom: 18.5,
                     interactionOptions: const InteractionOptions(
                       flags: InteractiveFlag.all,
+                      enableMultiFingerGestureRace: true, // Dokunmatik parmak yarışını optimize ederek mikro donmaları önler
                     ),
                     onMapReady: () {
                       _isMapReady = true;
@@ -824,61 +1111,133 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                     },
                     onTap: (tapPosition, point) {
                       FocusScope.of(context).unfocus();
-                      // Müşterinin konumu manuel değiştirmesi engellendi. Sadece haritada gezinebilir.
                     },
                     onPositionChanged: (cameraPosition, hasGesture) {
                       _currentZoom = cameraPosition.zoom;
-                      _mapRotationNotifier.value = cameraPosition.rotation;
+                      if ((_mapRotationNotifier.value - cameraPosition.rotation).abs() > 2.0) {
+                        _mapRotationNotifier.value = cameraPosition.rotation;
+                      }
                       if (hasGesture) {
                         _mapMoveController?.stop();
                         _isProgrammaticCameraMove = false;
-                        // _pinLocationNotifier.value = cameraPosition.center; // İPTAL EDİLDİ: Pin merkeze kilitlenmez, yerinde sabit kalır.
-                        if (!_isUserPanning) {
-                          setState(() => _isUserPanning = true);
-                        }
+                        _isUserPanning = true;
                         _resumeTrackingTimer?.cancel();
                       }
                     },
                     onMapEvent: (event) {
-                      if (event is MapEventMoveStart) {
+                      // Kaydırma ve süzülme (fling) başladığında animasyon hesaplarını askıya al
+                      if (event is MapEventMoveStart || event is MapEventFlingAnimationStart) {
                         if (_isProgrammaticCameraMove || event.source == MapEventSource.mapController) {
                           return;
                         }
                         _mapMoveController?.stop();
                         FocusManager.instance.primaryFocus?.unfocus(); 
                         _isMapMovingNotifier.value = true;
-                        setState(() => _isUserPanning = true); 
+                        _isUserPanning = true;
                         _resumeTrackingTimer?.cancel();
-                      } else if (event is MapEventMoveEnd) {
+                      } 
+                      // Kaydırma ve süzülme bittiğinde simülasyonu pürüzsüz devam ettir
+                      else if (event is MapEventMoveEnd || event is MapEventFlingAnimationEnd) {
                         _isMapMovingNotifier.value = false;
-                        if (_isUserPanning) {
-                          // _debouncedFetchAddress(mapController.camera.center); // İPTAL EDİLDİ: Sadece ilk konumun veya GPS konumunun adresi kalır.
-                          _resumeTrackingTimer?.cancel();
-                          /* UX Düzeltmesi: Kullanıcı haritayı incelerken kamera zorla geri atlamamalı.
-                          _resumeTrackingTimer = Timer(const Duration(seconds: 5), () {
-                            if (mounted) {
-                              setState(() => _isUserPanning = false);
-                            }
-                          });
-                          */
-                        }
+                        _resumeTrackingTimer?.cancel();
                       }
                     }
                   ),
                   children: [
                     TileLayer(
-                      urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+                      // 4 kanallı paralel Google CDN bağlantısı (İlk açılışta karoları ışık hızında getirir)
+                      urlTemplate: 'https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+                      subdomains: const ['0', '1', '2', '3'],
                       userAgentPackageName: 'com.berdas.otoyardim',
-                      keepBuffer: 5,
+                      keepBuffer: 6, // RAM şişmesini önleyen ve karoları hazır tutan dengeli bellek
+                      panBuffer: 2,  // Parmağı hızlı çekerken gri boşluk kalmasını engelleyen tampon
                       minZoom: 3,
                       maxZoom: 19,
                       minNativeZoom: 1,
                       maxNativeZoom: 18,
+                      tileDisplay: const TileDisplay.fadeIn(duration: Duration(milliseconds: 60)), // Gecikmesiz hızlı beliriş
                       errorTileCallback: (tile, error, stackTrace) {
                         debugPrint("Harita Tile yüklenemedi: $error");
                       },
                     ),
                     
+                    // --- SİMÜLE EDİLMİŞ ARAÇLARIN HARİTADA ÇİZİLMESİ (GPU İZOLELİ) ---
+                    ValueListenableBuilder<List<Map<String, dynamic>>>(
+                      valueListenable: _simulatedVehiclesNotifier,
+                      builder: (context, vehicles, child) {
+                        if (vehicles.isEmpty) return const SizedBox.shrink();
+                        return MarkerLayer(
+                          markers: vehicles.map((v) {
+                            final LatLng pos = v['displayPos'] ?? v['pos'];
+                            final double heading = v['heading'] ?? 0.0;
+                            final String carAsset = v['carAsset'] ?? 'assets/images/small_car_1.png';
+
+                            return Marker(
+                              point: pos,
+                              width: 36,
+                              height: 36,
+                              alignment: Alignment.center,
+                              // RepaintBoundary: Harita kaydırılırken her arabanın baştan render edilmesini önler, GPU katmanında kaydırır
+                              child: RepaintBoundary(
+                                child: Transform.rotate(
+                                  angle: heading * (math.pi / 180.0),
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      // 1. Katman: Orantılı Sokak Aracı
+                                      Image.asset(
+                                        carAsset,
+                                        width: 20,
+                                        height: 36,
+                                        fit: BoxFit.contain,
+                                        gaplessPlayback: true, // Resim yeniden çizildiğinde titremeyi keser
+                                        errorBuilder: (context, error, stackTrace) => Container(
+                                          width: 14,
+                                          height: 26,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white24,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                        ),
+                                      ),
+
+                                      // 2. Katman: Arabanın Tavanına Gömülü Mikro Rozet
+                                      Positioned(
+                                        top: 12,
+                                        child: Container(
+                                          width: 11,
+                                          height: 11,
+                                          decoration: BoxDecoration(
+                                            color: pureBlack.withOpacity(0.9),
+                                            shape: BoxShape.circle,
+                                            border: Border.all(color: neonGreen, width: 0.8),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: neonGreen.withOpacity(0.4),
+                                                blurRadius: 3,
+                                              )
+                                            ],
+                                          ),
+                                          child: Center(
+                                            child: Icon(
+                                              selectedServiceData['icon'] as IconData,
+                                              color: neonGreen,
+                                              size: 7,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        );
+                      }
+                    ),
+                    // ---------------------------------------------------
+
                     ValueListenableBuilder<Position?>(
                       valueListenable: currentPositionNotifier,
                       builder: (context, pos, child) {
@@ -889,19 +1248,24 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                               point: LatLng(pos.latitude, pos.longitude),
                               width: 24, height: 24,
                               alignment: Alignment.center,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF3B82F6),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: 3),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFF3B82F6).withOpacity(0.5), 
-                                      blurRadius: 12, 
-                                      spreadRadius: 4
-                                    )
-                                  ]
-                                ),
+                              child: AnimatedBuilder(
+                                animation: _buttonPulseController,
+                                builder: (context, child) {
+                                  return Container(
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF3B82F6),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white, width: 3),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFF3B82F6).withOpacity(0.3 + (_buttonPulseController.value * 0.5)), 
+                                          blurRadius: 10 + (_buttonPulseController.value * 15), 
+                                          spreadRadius: 2 + (_buttonPulseController.value * 6)
+                                        )
+                                      ]
+                                    ),
+                                  );
+                                }
                               )
                             )
                           ]
@@ -958,60 +1322,52 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                         bottom: 60,
                                         child: AnimatedBuilder(
                                           animation: _markerBounceController,
-                                          builder: (context, child) {
-                                            return Transform.translate(
-                                              offset: Offset(0, -6 * _markerBounceController.value), 
-                                              child: Column(
-                                                mainAxisSize: MainAxisSize.min,
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Stack(
+                                                alignment: Alignment.center,
                                                 children: [
-                                                  Container(
-                                                    width: 64, 
-                                                    height: 64,
-                                                    decoration: BoxDecoration(
-                                                      shape: BoxShape.circle,
-                                                      gradient: const RadialGradient(
-                                                        colors: [Color(0xFF0F3826), Color(0xFF051C12)],
-                                                        center: Alignment.center,
-                                                        radius: 0.8,
-                                                     ),
-                                                      border: Border.all(color: neonGreen, width: 2.5),
-                                                      boxShadow: [
-                                                        BoxShadow(
-                                                          color: neonGreen.withOpacity(0.6), 
-                                                          blurRadius: 18, 
-                                                          spreadRadius: 2
-                                                        ),
-                                                        const BoxShadow(color: Colors.black87, blurRadius: 8, offset: Offset(0, 4)),
-                                                      ]
-                                                    ),
-                                                    child: ClipOval(
-                                                      child: Padding(
-                                                        padding: const EdgeInsets.all(12.0),
-                                                        child: AnimatedSwitcher(
-                                                          duration: const Duration(milliseconds: 300),
-                                                          transitionBuilder: (Widget child, Animation<double> animation) {
-                                                            return ScaleTransition(scale: animation, child: child);
-                                                          },
-                                                          child: Image.asset(
-                                                            'assets/images/marker_$selectedService.png',
-                                                            key: ValueKey<String>(selectedService),
-                                                            fit: BoxFit.contain,
-                                                            errorBuilder: (context, error, stackTrace) => Icon(
-                                                              selectedServiceData['icon'] as IconData,
-                                                              color: neonGreen,
-                                                              size: 32,
-                                                            ),
-                                                          ),
-                                                        ),
+                                                  // Alt katman: Gerçekçi araç görseli
+                                                  Image.asset(
+                                                    'assets/images/car_top_view.png', 
+                                                    width: 65, 
+                                                    height: 130,
+                                                    fit: BoxFit.contain,
+                                                  ),
+                                                  // Üst katman: Logoyu tam tavana ortala
+                                                  Align(
+                                                    alignment: Alignment.center, // Arabanın tam ağırlık merkezine hizalar
+                                                    child: Container(
+                                                      padding: const EdgeInsets.all(4),
+                                                      decoration: BoxDecoration(
+                                                        color: pureBlack.withOpacity(0.8), 
+                                                        shape: BoxShape.circle,
+                                                        border: Border.all(color: neonGreen.withOpacity(0.7), width: 1.5), 
+                                                        boxShadow: [
+                                                          BoxShadow(
+                                                            color: neonGreen.withOpacity(0.3), 
+                                                            blurRadius: 4, 
+                                                            offset: const Offset(0, 2)
+                                                          )
+                                                        ]
+                                                      ),
+                                                      child: Icon(
+                                                        selectedServiceData['icon'] as IconData,
+                                                        color: neonGreen.withOpacity(0.95),
+                                                        size: 16, // Logo boyutu araca tam uyum sağlaması için 16'ya çekildi
                                                       ),
                                                     ),
                                                   ),
-                                                  CustomPaint(
-                                                    size: const Size(20, 16),
-                                                    painter: TrianglePainter(color: neonGreen),
-                                                  ),
                                                 ],
                                               ),
+                                            ],
+                                          ),
+                                          builder: (context, staticMarkerChild) {
+                                            final double smoothBounce = Curves.easeInOutSine.transform(_markerBounceController.value);
+                                            return Transform.translate(
+                                              offset: Offset(0, -8.0 * smoothBounce), 
+                                              child: staticMarkerChild,
                                             );
                                           }
                                         ),
@@ -1134,7 +1490,15 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                 decoration: BoxDecoration(
                                   color: panelBlack.withOpacity(0.9),
                                   borderRadius: BorderRadius.circular(24),
-                                  border: Border.all(color: neonGreen.withOpacity(0.3), width: 1.5),
+                                  border: Border.all(
+                                    color: _isAddressLoading 
+                                        ? neonGreen.withOpacity(0.8) 
+                                        : neonGreen.withOpacity(0.3), 
+                                    width: _isAddressLoading ? 2.0 : 1.5
+                                  ),
+                                  boxShadow: _isAddressLoading ? [
+                                    BoxShadow(color: neonGreen.withOpacity(0.2), blurRadius: 15, spreadRadius: 2)
+                                  ] : [],
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -1290,10 +1654,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                                         final isSelected = selectedService == service['id'];
                                                         
                                                         return GestureDetector(
-                                                          onTap: () {
-                                                            HapticFeedback.lightImpact();
-                                                            setState(() => selectedService = service['id']);
-                                                          },
+                                                          onTap: () => _changeSelectedService(service['id'] as String),
                                                           child: AnimatedContainer(
                                                             duration: const Duration(milliseconds: 250),
                                                             curve: Curves.easeOutBack,
@@ -1532,13 +1893,22 @@ class AdvancedRadarPainter extends CustomPainter {
     final maxRadius = size.width / 2;
 
     for (int i = 0; i < 3; i++) {
-      double progress = (pulseValue + (i * 0.33)) % 1.0;
-      double radius = maxRadius * progress;
+      final double progress = (pulseValue + (i * 0.33)) % 1.0;
+      final double curvedProgress = Curves.easeOutCubic.transform(progress);
+      final double radius = maxRadius * curvedProgress;
+      final double waveAlpha = (1.0 - curvedProgress).clamp(0.0, 1.0);
       
-      final paint = Paint()..color = color.withOpacity((1.0 - progress) * 0.4)..style = PaintingStyle.stroke..strokeWidth = 2.0;
-      canvas.drawCircle(center, radius, paint);
+      final strokePaint = Paint()
+        ..isAntiAlias = true
+        ..color = color.withOpacity(waveAlpha * 0.45)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.8;
+      canvas.drawCircle(center, radius, strokePaint);
       
-      final fillPaint = Paint()..color = color.withOpacity((1.0 - progress) * 0.1)..style = PaintingStyle.fill;
+      final fillPaint = Paint()
+        ..isAntiAlias = true
+        ..color = color.withOpacity(waveAlpha * 0.08)
+        ..style = PaintingStyle.fill;
       canvas.drawCircle(center, radius, fillPaint);
     }
 
@@ -1551,12 +1921,12 @@ class AdvancedRadarPainter extends CustomPainter {
       ..shader = SweepGradient(
         colors: [
           Colors.transparent, 
-          color.withOpacity(0.05), 
-          color.withOpacity(0.35), 
-          color.withOpacity(0.8), 
-          color.withOpacity(0.0), 
+          color.withOpacity(0.04), 
+          color.withOpacity(0.28), 
+          color.withOpacity(0.85), 
+          Colors.transparent, 
         ],
-        stops: const [0.0, 0.5, 0.8, 0.95, 1.0], 
+        stops: const [0.0, 0.45, 0.8, 0.98, 1.0], 
         startAngle: 0.0,
         endAngle: math.pi / 2, 
       ).createShader(Rect.fromCircle(center: Offset.zero, radius: maxRadius))
@@ -1565,7 +1935,7 @@ class AdvancedRadarPainter extends CustomPainter {
     final linePaint = Paint()
       ..isAntiAlias = true
       ..color = color
-      ..strokeWidth = 1.5
+      ..strokeWidth = 1.8
       ..style = PaintingStyle.stroke;
 
     canvas.drawCircle(Offset.zero, maxRadius, scanPaint);

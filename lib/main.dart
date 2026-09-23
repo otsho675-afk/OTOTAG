@@ -19,6 +19,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'customer_dashboard_screen.dart';
 import 'provider_map_screen.dart';
 import 'login_screen.dart' show LoginScreen;
+import 'package:quick_actions/quick_actions.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 // Android SSL El Sıkışma & Ara Sertifika Uyumlayıcı
 class CustomHttpOverrides extends HttpOverrides {
@@ -123,6 +126,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'Oto Tamir App',
       debugShowCheckedModeBanner: false,
 
@@ -158,10 +162,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   Widget? _nextScreen; // Oturum durumuna göre gidilecek ekran
+  final QuickActions quickActions = const QuickActions();
 
   @override
   void initState() {
     super.initState();
+    _setupQuickActions(); // Hızlı eylemleri (Quick Actions) başlat
     _checkLoginStatus(); // Uygulama açılırken oturumu kontrol et
     
     _animationController = AnimationController(
@@ -202,6 +208,37 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         );
       }
     });
+  }
+
+  void _setupQuickActions() {
+    if (kIsWeb) return; // Web'de çalışıyorsa kısayol eklemeye çalışıp uygulamanın çökmesini engeller
+    
+    quickActions.initialize((String shortcutType) async {
+      final prefs = await SharedPreferences.getInstance();
+      final int? userId = prefs.getInt('logged_in_user_id');
+      final String? userType = prefs.getString('logged_in_user_type');
+
+      // Sadece müşteri giriş yapmışsa kısayollar çalışsın
+      if (userId != null && userType == 'customer') {
+        if (shortcutType == 'action_mechanic') {
+          debugPrint("Hızlı Eylem: Tamirci Çağır tetiklendi!");
+          // İleride buraya harita/talep ekranına yönlendirme kodunuzu ekleyebilirsiniz.
+        } else if (shortcutType == 'action_tow') {
+          debugPrint("Hızlı Eylem: Çekici Çağır tetiklendi!");
+        } else if (shortcutType == 'action_tire') {
+          debugPrint("Hızlı Eylem: Lastikçi Çağır tetiklendi!");
+        } else if (shortcutType == 'action_wash') {
+          debugPrint("Hızlı Eylem: Oto Yıkama Çağır tetiklendi!");
+        }
+      }
+    });
+
+    quickActions.setShortcutItems(<ShortcutItem>[
+      const ShortcutItem(type: 'action_mechanic', localizedTitle: 'Tamirci Çağır', icon: 'marker_mechanic'),
+      const ShortcutItem(type: 'action_tow', localizedTitle: 'Çekici Çağır', icon: 'marker_tow'),
+      const ShortcutItem(type: 'action_tire', localizedTitle: 'Lastikçi Çağır', icon: 'marker_tire'),
+      const ShortcutItem(type: 'action_wash', localizedTitle: 'Oto Yıkama Çağır', icon: 'marker_wash'),
+    ]);
   }
 
   // Cihaz hafızasındaki oturumu kontrol eden fonksiyon

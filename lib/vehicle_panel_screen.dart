@@ -28,7 +28,6 @@ class VehiclePanelScreen extends StatefulWidget {
 }
 
 class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProviderStateMixin {
-  // --- STATE VARIABLES ---
   final http.Client _httpClient = http.Client();
   final String baseUrl = "https://eliteagency.sbs/api.php";
   final Duration _apiTimeout = const Duration(seconds: 15);
@@ -46,12 +45,50 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
   DateTime? _insuranceDateCache;
   DateTime? _inspectionDateCache;
 
+  DateTime? get _effectiveInsuranceDate {
+    if (_insuranceDateCache == null) return null;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final insOnlyDate = DateTime(_insuranceDateCache!.year, _insuranceDateCache!.month, _insuranceDateCache!.day);
+
+    if (insOnlyDate.isBefore(today) || insOnlyDate.isAtSameMomentAs(today)) {
+      return DateTime(_insuranceDateCache!.year + 1, _insuranceDateCache!.month, _insuranceDateCache!.day);
+    }
+    return _insuranceDateCache;
+  }
+
+  DateTime? get _effectiveInspectionDate {
+    if (_inspectionDateCache == null) return null;
+    final model = (currentVehicleData['brand_model'] ?? '').toString().toLowerCase();
+    final bool isCommercial = model.contains('doblo') ||
+        model.contains('fiorino') ||
+        model.contains('caddy') ||
+        model.contains('courier') ||
+        model.contains('connect') ||
+        model.contains('kangoo') ||
+        model.contains('partner') ||
+        model.contains('berlingo') ||
+        model.contains('transporter') ||
+        model.contains('kamyon') ||
+        model.contains('ticari') ||
+        model.contains('transit');
+    
+    final int validityYears = isCommercial ? 1 : 2;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final inspOnlyDate = DateTime(_inspectionDateCache!.year, _inspectionDateCache!.month, _inspectionDateCache!.day);
+
+    if (inspOnlyDate.isBefore(today) || inspOnlyDate.isAtSameMomentAs(today)) {
+      return DateTime(_inspectionDateCache!.year + validityYears, _inspectionDateCache!.month, _inspectionDateCache!.day);
+    }
+    return _inspectionDateCache;
+  }
+
   String searchQuery = "";
   String selectedFilter = "Tümü";
   final TextEditingController _searchController = TextEditingController();
   late AnimationController _fadeController;
 
-  // --- CONSTANTS ---
   final List<String> filterOptions = const [
     'Tümü', 'Yakıt Alımı', 'Periyodik Bakım', 'Tamir & Onarım', 
     'Lastik & Balans', 'Fren & Balata', 'Akü & Elektrik', 
@@ -111,7 +148,6 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     super.dispose();
   }
 
-  // --- LOGIC & API ---
   void _updateDateCaches() {
     final insStr = currentVehicleData['insurance_date']?.toString();
     final inspStr = currentVehicleData['inspection_date']?.toString();
@@ -122,10 +158,11 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
   Future<void> _scheduleVehicleGlobalNotifications() async {
     if (kIsWeb) return;
     final String plate = currentVehicleData['plate']?.toString() ?? 'Aracınız';
+    final DateTime nowNormalized = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
     
     // Sigorta Bildirimi
-    if (_insuranceDateCache != null) {
-      final int daysLeft = _insuranceDateCache!.difference(DateTime.now()).inDays;
+    if (_effectiveInsuranceDate != null) {
+      final int daysLeft = _effectiveInsuranceDate!.difference(nowNormalized).inDays;
       if (daysLeft < 0) {
         await notificationHelper.scheduleNotification(
           id: currentVehicleData['id'].hashCode ^ "sigorta_gecmis".hashCode,
@@ -141,19 +178,21 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
           scheduledDate: DateTime.now().add(const Duration(seconds: 5))
         );
       } else {
-        DateTime notifyDate = _insuranceDateCache!.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
-        await notificationHelper.scheduleNotification(
-          id: currentVehicleData['id'].hashCode ^ "sigorta".hashCode,
-          title: "Trafik Sigortası Hatırlatması",
-          body: "$plate plakalı aracınızın trafik sigortası bitişine 3 gün kaldı.",
-          scheduledDate: notifyDate
-        );
+        DateTime notifyDate = _effectiveInsuranceDate!.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
+        if (notifyDate.isAfter(DateTime.now())) {
+          await notificationHelper.scheduleNotification(
+            id: currentVehicleData['id'].hashCode ^ "sigorta".hashCode,
+            title: "Trafik Sigortası Hatırlatması",
+            body: "$plate plakalı aracınızın trafik sigortası bitişine 3 gün kaldı.",
+            scheduledDate: notifyDate
+          );
+        }
       }
     }
 
     // Muayene Bildirimi
-    if (_inspectionDateCache != null) {
-      final int daysLeft = _inspectionDateCache!.difference(DateTime.now()).inDays;
+    if (_effectiveInspectionDate != null) {
+      final int daysLeft = _effectiveInspectionDate!.difference(nowNormalized).inDays;
       if (daysLeft < 0) {
         await notificationHelper.scheduleNotification(
           id: currentVehicleData['id'].hashCode ^ "muayene_gecmis".hashCode,
@@ -170,12 +209,14 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
         );
       } else {
         DateTime notifyDate = _inspectionDateCache!.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
-        await notificationHelper.scheduleNotification(
-          id: currentVehicleData['id'].hashCode ^ "muayene".hashCode,
-          title: "Araç Muayenesi Hatırlatması",
-          body: "$plate plakalı aracınızın muayene süresinin dolmasına 3 gün kaldı.",
-          scheduledDate: notifyDate
-        );
+        if (notifyDate.isAfter(DateTime.now())) {
+          await notificationHelper.scheduleNotification(
+            id: currentVehicleData['id'].hashCode ^ "muayene".hashCode,
+            title: "Araç Muayenesi Hatırlatması",
+            body: "$plate plakalı aracınızın muayene süresinin dolmasına 3 gün kaldı.",
+            scheduledDate: notifyDate
+          );
+        }
       }
     }
   }
@@ -364,18 +405,19 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
 
   void _checkRemindersAndAlert() {
     _hasShownAlert = true;
-    final insDate = _insuranceDateCache;
+    final insDate = _effectiveInsuranceDate;
     final inspDate = _inspectionDateCache;
+    final DateTime nowNormalized = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
     
     final List<String> alerts = [];
     
     if (insDate != null) {
-      final int days = insDate.difference(DateTime.now()).inDays;
+      final int days = insDate.difference(nowNormalized).inDays;
       if (days < 0) alerts.add("Trafik Sigortanızın süresi ${days.abs()} gün geçmiş!");
       else if (days <= 15) alerts.add("Trafik Sigortanızın bitmesine $days gün kaldı.");
     }
-    if (inspDate != null) {
-      final int days = inspDate.difference(DateTime.now()).inDays;
+    if (_effectiveInspectionDate != null) {
+      final int days = _effectiveInspectionDate!.difference(nowNormalized).inDays;
       if (days < 0) alerts.add("Araç Muayene süreniz ${days.abs()} gün geçmiş!");
       else if (days <= 15) alerts.add("Araç Muayenenizin bitmesine $days gün kaldı.");
     }
@@ -462,7 +504,6 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     }
   }
 
-  // --- UI WIDGETS ---
   void _showRecordSheet({Map<String, dynamic>? recordToEdit}) {
     HapticFeedback.selectionClick();
     showModalBottomSheet(
@@ -752,9 +793,9 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildInfoRow("Trafik Sigortası", _insuranceDateCache, Icons.shield_rounded, 365),
+            _buildInfoRow("Trafik Sigortası", _effectiveInsuranceDate, Icons.shield_rounded, 365),
             Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Divider(height: 1, color: Colors.white.withOpacity(0.08))),
-            _buildInfoRow("Araç Muayenesi", _inspectionDateCache, Icons.fact_check_rounded, 730),
+            _buildInfoRow("Araç Muayenesi", _effectiveInspectionDate, Icons.fact_check_rounded, 365),
             Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Divider(height: 1, color: Colors.white.withOpacity(0.08))),
             _buildMaintenanceRow(cKm, mKm),
           ],
@@ -764,7 +805,8 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
   }
 
   Widget _buildInfoRow(String title, DateTime? date, IconData icon, int totalDays) {
-    final int daysLeft = date != null ? date.difference(DateTime.now()).inDays : 0;
+    final DateTime nowNormalized = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final int daysLeft = date != null ? date.difference(nowNormalized).inDays : 0;
     final double progress = date != null ? (daysLeft / totalDays).clamp(0.0, 1.0) : 0.0;
     final Color statusColor = date == null 
       ? const Color(0xFF64748B)
@@ -1219,7 +1261,6 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
   }
 }
 
-// --- RECORD FORM SHEET ---
 class _RecordFormSheet extends StatefulWidget {
   final String vehicleId;
   final String vehiclePlate; 
@@ -1248,7 +1289,6 @@ class _RecordFormSheet extends StatefulWidget {
 }
 
 class __RecordFormSheetState extends State<_RecordFormSheet> {
-  // GÜNCELLEME 1: Yükleme Zaman Aşımı 30'dan 60 saniyeye çıkarıldı.
   final Duration _uploadTimeout = const Duration(seconds: 60);
   
   late String selectedType;
@@ -1422,7 +1462,6 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
     final action = isEditing ? "update_vehicle_record" : "add_vehicle_record";
 
     try {
-      // GÜNCELLEME 2: Ağ üzerinden yükleme denenmeden önce dosya boyutlarını 5 MB ile sınırlar.
       if (selectedImage != null && !kIsWeb) {
         final int sizeInBytes = await File(selectedImage!.path).length();
         if (sizeInBytes > 5 * 1024 * 1024) {
@@ -1442,7 +1481,6 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
       }
 
       var request = http.MultipartRequest('POST', Uri.parse("${widget.baseUrl}?action=$action"));
-      // GÜVENLİK FIX'I: API.php'deki anti-bot korumasına takılmamak için tarayıcı kimliği eklendi
       request.headers['User-Agent'] = "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36";
       request.fields['vehicle_id'] = widget.vehicleId;
       request.fields['record_type'] = selectedType;
@@ -1600,7 +1638,6 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Container(
-        // İçeriği alttan klavye kadar kaydırmak ve ekran kenarlarından boşluk bırakmak (floating görünüm) için
         margin: EdgeInsets.only(
           left: 12, 
           right: 12, 
@@ -1608,12 +1645,10 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
         ),
         constraints: BoxConstraints(
           maxWidth: 650,
-          // Sayfayı hiçbir zaman tamamen kaplamasın, en fazla ekranın %85'ini kullansın
           maxHeight: screenHeight * 0.85, 
         ),
         decoration: BoxDecoration(
           color: const Color(0xFF13151F).withOpacity(0.98), 
-          // Her köşesi kavisli zarif görünüm
           borderRadius: BorderRadius.circular(32),
           border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
           boxShadow: [
@@ -1625,14 +1660,12 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
             child: Column(
-              mainAxisSize: MainAxisSize.min, // Modal yalnızca içindeki içerik kadar uzar
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Tutamaç (Drag Handle)
                 Padding(
                   padding: const EdgeInsets.only(top: 14, bottom: 6),
                   child: Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10))),
                 ),
-                // Üst Başlık
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 4, 12, 12),
                   child: Row(
@@ -1666,7 +1699,6 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                   ),
                 ),
                 const Divider(color: Colors.white10, height: 1),
-                // Kaydırılabilir İçerik
                 Flexible(
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
@@ -1861,8 +1893,6 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
       onTap: () async {
         HapticFeedback.selectionClick();
         final picker = ImagePicker();
-        // GÜNCELLEME 3: Resim seçicide kalite 70'ten 60'a, genişlik ise 1600'den 1080'e düşürülerek
-        // fotoğraf boyutlarının sunucu limitlerine takılmadan hızlıca yüklenmesi sağlandı.
         final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 60, maxWidth: 1080);
         if (picked != null) setState(() => selectedImage = picked);
       },
@@ -1948,7 +1978,6 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
   }
 }
 
-// --- NOTIFICATION HELPER ---
 class NotificationHelper {
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
   bool _isInitialized = false;
@@ -1989,7 +2018,7 @@ class NotificationHelper {
       tz.TZDateTime.from(scheduledDate, tz.local),
       const NotificationDetails(
         android: AndroidNotificationDetails(
-          'vehicle_reminders_premium', // Kanal ID değişmeli ki yeni ses ayarları telefona işlesin
+          'vehicle_reminders_premium',
           'Araç Hatırlatmaları',
           channelDescription: 'Muayene, sigorta ve periyodik işlemler için sistem hatırlatıcıları',
           importance: Importance.max,

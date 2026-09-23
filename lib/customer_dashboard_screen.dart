@@ -75,6 +75,50 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   static const Color _textColor = Colors.white;
   static const Color _subtitleColor = Colors.white54;
 
+  // Muayene geçerlilik bitiş tarihini hesaplar (Ticari: 1 yıl, Binek: 2 yıl)
+  static DateTime getInspectionExpiryDate(DateTime inspDate, [String? brandModel]) {
+    final model = (brandModel ?? '').toLowerCase();
+    final bool isCommercial = model.contains('doblo') ||
+        model.contains('fiorino') ||
+        model.contains('caddy') ||
+        model.contains('courier') ||
+        model.contains('connect') ||
+        model.contains('kangoo') ||
+        model.contains('partner') ||
+        model.contains('berlingo') ||
+        model.contains('transporter') ||
+        model.contains('kamyon') ||
+        model.contains('ticari') ||
+        model.contains('panelvan') ||
+        model.contains('transit') ||
+        model.contains('vito') ||
+        model.contains('ducato');
+
+    final int validityYears = isCommercial ? 1 : 2;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final inspOnlyDate = DateTime(inspDate.year, inspDate.month, inspDate.day);
+
+    // Eğer girilen tarih geçmişte veya bugünse (yapılış tarihiyse) periyot ekle
+    if (inspOnlyDate.isBefore(today) || inspOnlyDate.isAtSameMomentAs(today)) {
+      return DateTime(inspDate.year + validityYears, inspDate.month, inspDate.day);
+    }
+    return inspDate;
+  }
+
+  // Sigorta geçerlilik bitiş tarihini hesaplar (Standart: 1 yıl)
+  static DateTime getInsuranceExpiryDate(DateTime insDate) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final insOnlyDate = DateTime(insDate.year, insDate.month, insDate.day);
+
+    // Girilen tarih geçmişte/bugünse (poliçe başlangıcıysa) 1 yıl ekle
+    if (insOnlyDate.isBefore(today) || insOnlyDate.isAtSameMomentAs(today)) {
+      return DateTime(insDate.year + 1, insDate.month, insDate.day);
+    }
+    return insDate; // Gelecek bir tarihse zaten bitiş tarihi girilmiş demektir
+  }
+
   static const List<Map<String, dynamic>> services = [
     {'id': 'mechanic', 'name': 'Tamirci', 'icon': Icons.build_rounded, 'color': _primaryColor, 'gradient': [_cardColor, _bgColor]},
     {'id': 'tow', 'name': 'Çekici', 'icon': Icons.car_repair_rounded, 'color': _primaryColor, 'gradient': [_cardColor, _bgColor]},
@@ -244,6 +288,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       width: width,
       height: height,
       fit: fit,
+      // RAM Optimizasyonu: Yüksek çözünürlüklü resimlerin cihaz belleğini (Heap) şişirip uygulamayı çökertmesini engeller
+      cacheWidth: width != null ? (width * 3).round() : 800,
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
         return Center(
@@ -957,7 +1003,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
             // Sigorta Kontrolü
             if (insDate != null) {
-              final int daysLeft = insDate.difference(now).inDays;
+              final effectiveInsDate = getInsuranceExpiryDate(insDate);
+              final int daysLeft = effectiveInsDate.difference(DateTime(now.year, now.month, now.day)).inDays;
               if (daysLeft < 0) {
                 await notificationHelper.scheduleNotification(
                   id: vId.hashCode ^ "sigorta_gecmis".hashCode,
@@ -987,7 +1034,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
             // Muayene Kontrolü
             if (inspDate != null) {
-              final int daysLeft = inspDate.difference(now).inDays;
+              final effectiveInspDate = getInspectionExpiryDate(inspDate, v['brand_model']?.toString());
+              final int daysLeft = effectiveInspDate.difference(DateTime(now.year, now.month, now.day)).inDays;
               if (daysLeft < 0) {
                 await notificationHelper.scheduleNotification(
                   id: vId.hashCode ^ "muayene_gecmis".hashCode,
@@ -1062,7 +1110,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
         // --- EKLENEN KISIM: Araç Eklendiğinde Süresi Geçenleri Anında Hatırlat ---
         if (!kIsWeb) {
           if (insDate != null) {
-            final int insDays = insDate.difference(DateTime.now()).inDays;
+            final int insDays = insDate.difference(DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day)).inDays;
             if (insDays < 0) {
               await notificationHelper.scheduleNotification(
                 id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -1073,7 +1121,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
             }
           }
           if (inspDate != null) {
-            final int inspDays = inspDate.difference(DateTime.now()).inDays;
+            final int inspDays = inspDate.difference(DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day)).inDays;
             if (inspDays < 0) {
               await notificationHelper.scheduleNotification(
                 id: (DateTime.now().millisecondsSinceEpoch ~/ 1000) + 1,
@@ -2215,8 +2263,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   }
 
   Widget _buildModernVehicleCard(Map<String, dynamic> vehicle, Color cardColor, Color textColor, Color subtitleColor, bool isSelected) {
-    final insDate = DateTime.tryParse(vehicle['insurance_date']?.toString() ?? '');
-    final inspDate = DateTime.tryParse(vehicle['inspection_date']?.toString() ?? '');
+    final rawInsDate = DateTime.tryParse(vehicle['insurance_date']?.toString() ?? '');
+    final insDate = rawInsDate != null ? getInsuranceExpiryDate(rawInsDate) : null;
+    final rawInspDate = DateTime.tryParse(vehicle['inspection_date']?.toString() ?? '');
+    final inspDate = rawInspDate != null ? getInspectionExpiryDate(rawInspDate, vehicle['brand_model']?.toString()) : null;
     final int cKm = int.tryParse(vehicle['current_km']?.toString() ?? '0') ?? 0;
     final int mKm = int.tryParse(vehicle['maintenance_km']?.toString() ?? '10000') ?? 10000;
 
@@ -2366,7 +2416,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
         statusColor = Colors.white38;
         valueText = "Yok";
       } else {
-        int daysLeft = date.difference(DateTime.now()).inDays;
+        int daysLeft = date.difference(DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day)).inDays;
         statusColor = daysLeft <= 15 ? _dangerColor : (daysLeft <= 30 ? Colors.amber : _primaryColor);
         valueText = daysLeft < 0 ? "${daysLeft.abs()}G Geçti" : "${daysLeft}G";
       }

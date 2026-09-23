@@ -251,22 +251,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     );
   }
 
-  Widget _buildTopButton(IconData icon, Color color, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          shape: BoxShape.circle,
-          border: Border.all(color: color.withOpacity(0.3), width: 1.5),
-          boxShadow: [BoxShadow(color: color.withOpacity(0.1), blurRadius: 10)]
-        ),
-        child: Icon(icon, color: color, size: 24),
-      ),
-    );
-  }
+  
 
   void _showSuspensionSheet() {
     setState(() => _isModalOpen = true);
@@ -685,7 +670,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
   void _startJobRefreshTimer() {
     _jobRefreshTimer?.cancel();
-    _jobRefreshTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+    _jobRefreshTimer = Timer.periodic(const Duration(seconds: 5), (_) { // Performans için 5 saniyeye optimize edildi
       if (isOnline && !isSuspended && !isRefreshing && currentPosition != null) {
         _fetchNearbyJobs(isAuto: true, radius: _searchRadius.toInt());
         _checkActiveJob(); 
@@ -1229,7 +1214,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
           }
           // ---------------------------------------------------------------------------------------------------
 
-          if (_lastApiCallTime == null || now.difference(_lastApiCallTime!).inSeconds > 15) {
+          // Akıllı Konum Güncellemesi: Usta sabitse gereksiz API isteği atma (Pil Tasarrufu)
+          bool hasMoved = _oldProviderPos == null || Geolocator.distanceBetween(_oldProviderPos!.latitude, _oldProviderPos!.longitude, position.latitude, position.longitude) > 10.0;
+          
+          if ((_lastApiCallTime == null || now.difference(_lastApiCallTime!).inSeconds > 15) && hasMoved) {
             if (!_isUpdatingLocation) {
               _isUpdatingLocation = true;
               _lastApiCallTime = now;
@@ -2004,26 +1992,58 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                     
                     _buildAnimatedDashboardItem(
                       index: 1,
-                      child: Wrap(
-                        alignment: WrapAlignment.spaceBetween,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 16,
-                        runSpacing: 16,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text("Kontrol Merkezi", style: TextStyle(color: Colors.white, fontSize: isSmallScreen ? 24 : 32, fontWeight: FontWeight.w900, letterSpacing: -1.0)),
-                              const SizedBox(height: 8),
-                              Text("İş almak ve kazanmak için çevrimiçi olun.", style: TextStyle(color: textGray, fontSize: isSmallScreen ? 14 : 16, height: 1.4, fontWeight: FontWeight.w600)),
-                            ],
-                          ),
+                          Text("Kontrol Merkezi", style: TextStyle(color: Colors.white, fontSize: isSmallScreen ? 24 : 28, fontWeight: FontWeight.w900, letterSpacing: -1.0)),
+                          const SizedBox(height: 8),
+                          Text("İş almak ve kazanmak için çevrimiçi olun.", style: TextStyle(color: textGray, fontSize: isSmallScreen ? 13 : 15, height: 1.4, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 24),
                           Row(
-                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              _buildTopButton(Icons.history_rounded, neonGreen, () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProviderBidsScreen(providerId: widget.providerId)))),
-                              const SizedBox(width: 12),
-                              _buildTopButton(Icons.person_rounded, neonGreen, () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen(userId: widget.providerId, userType: 'provider')))),
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProviderBidsScreen(providerId: widget.providerId))),
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 16 : 20),
+                                    decoration: BoxDecoration(
+                                      color: panelBlack,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
+                                    ),
+                                    child: const Column(
+                                      children: [
+                                        Icon(Icons.history_rounded, color: neonGreen, size: 28),
+                                        SizedBox(height: 8),
+                                        Text("İşlemlerim", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen(userId: widget.providerId, userType: 'provider'))),
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 16 : 20),
+                                    decoration: BoxDecoration(
+                                      color: panelBlack,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
+                                    ),
+                                    child: const Column(
+                                      children: [
+                                        Icon(Icons.person_rounded, color: Colors.blueAccent, size: 28),
+                                        SizedBox(height: 8),
+                                        Text("Hesabım", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ],
                           )
                         ],
@@ -2368,7 +2388,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                           TileLayer(
                             urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
                             userAgentPackageName: 'com.berdas.otoyardim',
-                            keepBuffer: 5,
+                            keepBuffer: 8, // Kaydırma (panning) esnasında siyahlık oluşumunu azaltır
+                            panBuffer: 2,  // Ekran dışında önceden yükleme yaparak takılmayı önler
+                            retinaMode: true, // Yüksek çözünürlüklü (HDPI) ekranlarda yazıları keskinleştirir
                             minZoom: 3,
                             maxZoom: 19,
                             minNativeZoom: 1,
@@ -2381,11 +2403,13 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                             ValueListenableBuilder<LatLng?>(
                               valueListenable: _animatedProviderPos,
                               builder: (context, providerPos, child) {
-                                return AnimatedBuilder(
-                                  animation: _pulseController,
-                                  builder: (context, child) {
-                                    return CircleLayer(circles: _buildCircles(providerPos));
-                                  }
+                                return RepaintBoundary(
+                                  child: AnimatedBuilder(
+                                    animation: _pulseController,
+                                    builder: (context, child) {
+                                      return CircleLayer(circles: _buildCircles(providerPos));
+                                    }
+                                  ),
                                 );
                               }
                             ),
@@ -2405,20 +2429,22 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                             ValueListenableBuilder<LatLng?>(
                               valueListenable: _animatedProviderPos,
                               builder: (context, providerPos, child) {
-                                return PolylineLayer(
-                                  polylines: [
-                                    Polyline(
-                                      points: [
-                                        providerPos ?? (currentPosition != null ? LatLng(currentPosition!.latitude, currentPosition!.longitude) : const LatLng(39.92, 32.85)),
-                                        LatLng(
-                                          _parseDouble(jobList[_currentJobIndex]['latitude']),
-                                          _parseDouble(jobList[_currentJobIndex]['longitude'])
-                                        )
-                                      ],
-                                      color: alertRed.withOpacity(0.8),
-                                      strokeWidth: 4.0,
-                                    )
-                                  ],
+                                return RepaintBoundary(
+                                  child: PolylineLayer(
+                                    polylines: [
+                                      Polyline(
+                                        points: [
+                                          providerPos ?? (currentPosition != null ? LatLng(currentPosition!.latitude, currentPosition!.longitude) : const LatLng(39.92, 32.85)),
+                                          LatLng(
+                                            _parseDouble(jobList[_currentJobIndex]['latitude']),
+                                            _parseDouble(jobList[_currentJobIndex]['longitude'])
+                                          )
+                                        ],
+                                        color: alertRed.withOpacity(0.8),
+                                        strokeWidth: 4.0,
+                                      )
+                                    ],
+                                  ),
                                 );
                               }
                             ),

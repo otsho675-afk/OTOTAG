@@ -527,7 +527,14 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
         // Eğer kullanıcı haritayı manuel kaydırmıyorsa, marker sürekli müşteriyi takip etsin
         if (!_isUserPanning) {
           _pinLocationNotifier.value = currentLatLng; // Marker'ı yeni GPS konumuna taşı
-          _fetchAddressForPin(currentLatLng); // O anki yeni konumun adresini getir
+          
+          // Akıllı Geocoding (API Maliyet Düşürücü): Sadece 50 metreden fazla hareket edildiyse ve duraksandıysa adres çek
+          if (_lastGeocodedLocation == null || Geolocator.distanceBetween(_lastGeocodedLocation!.latitude, _lastGeocodedLocation!.longitude, currentLatLng.latitude, currentLatLng.longitude) > 50.0) {
+            _debounceTimer?.cancel();
+            _debounceTimer = Timer(const Duration(milliseconds: 1500), () {
+              if (mounted) _fetchAddressForPin(currentLatLng);
+            });
+          }
           
           // Harita kamerasını da o konuma yavaşça kaydır
           if (_isMapReady && mounted) {
@@ -920,18 +927,20 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                   child: Stack(
                                     alignment: Alignment.center,
                                     children: [
-                                      AnimatedBuilder(
-                                        animation: Listenable.merge([_radarPulseController, _radarScanController]),
-                                        builder: (context, child) {
-                                          return CustomPaint(
-                                            painter: AdvancedRadarPainter(
-                                              pulseValue: _radarPulseController.value,
-                                              scanValue: _radarScanController.value,
-                                              color: neonGreen,
-                                            ),
-                                            child: const SizedBox(width: 180, height: 180),
-                                          );
-                                        },
+                                      RepaintBoundary(
+                                        child: AnimatedBuilder(
+                                          animation: Listenable.merge([_radarPulseController, _radarScanController]),
+                                          builder: (context, child) {
+                                            return CustomPaint(
+                                              painter: AdvancedRadarPainter(
+                                                pulseValue: _radarPulseController.value,
+                                                scanValue: _radarScanController.value,
+                                                color: neonGreen,
+                                              ),
+                                              child: const SizedBox(width: 180, height: 180),
+                                            );
+                                          },
+                                        ),
                                       ),
                                       Positioned(
                                         bottom: 54,

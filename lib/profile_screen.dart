@@ -51,11 +51,15 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   late AnimationController _pulseController;
   late AnimationController _listAnimController;
 
-  // Yenilenmiş Tasarım Paleti
+  // Modern Tasarım Renk Paleti
   static const Color _bgColor = Color(0xFF030305);
   static const Color _cardColor = Color(0xFF111115);
+  static const Color _cardColorLight = Color(0xFF181820);
   static const Color _primaryColor = Color(0xFF00FFA3);
+  static const Color _secondaryColor = Color(0xFF00E5FF);
   static const Color _dangerColor = Color(0xFFFF3366);
+  static const Color _warningColor = Color(0xFFF59E0B);
+  static const Color _purpleColor = Color(0xFF8B5CF6);
   static const Color _textColor = Colors.white;
   static const Color _subtitleColor = Colors.white54;
 
@@ -142,7 +146,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           ],
         ),
         backgroundColor: isNewAlert 
-          ? _primaryColor.withOpacity(0.95) 
+          ? _secondaryColor.withOpacity(0.95) 
           : (isError ? _dangerColor : _primaryColor.withOpacity(0.95)),
         behavior: SnackBarBehavior.floating,
         margin: EdgeInsets.only(
@@ -187,7 +191,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           _phoneController.text = profile['phone']?.toString() ?? '';
           _ibanController.text = profile['iban']?.toString() ?? '';
           selectedService = profile['service_category']?.toString() ?? 'mechanic';
-          historyJobs = hData['history'] ?? [];
+          historyJobs = (hData['history'] as List<dynamic>?)?.where((job) => job['status'] == 'completed').toList() ?? [];
           _historyPage = 1;
           isLoading = false;
         });
@@ -261,7 +265,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     }
   }
 
-  Future<void> _updateProfile() async {
+  Future<void> _updateProfile({VoidCallback? onSuccess}) async {
     if (_nameController.text.trim().isEmpty) {
       _showCustomSnackBar("Lütfen ad ve soyad alanını boş bırakmayın.", isError: true);
       return;
@@ -289,7 +293,14 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success') {
+          setState(() {
+            profile['name'] = _nameController.text.trim();
+            if (widget.userType == 'provider') {
+              profile['iban'] = _ibanController.text.trim();
+            }
+          });
           _showCustomSnackBar("Profiliniz başarıyla güncellendi!");
+          if (onSuccess != null) onSuccess();
         } else {
           _showCustomSnackBar(data['message'] ?? "Güncelleme tamamlanamadı.", isError: true);
         }
@@ -301,6 +312,286 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     } finally {
       if (mounted) setState(() => isSaving = false);
     }
+  }
+
+  // PROFİL DÜZENLEME MODALI (TATLI & RESPONSIVE)
+  void _showEditProfileDialog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalCtx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final isProvider = widget.userType == 'provider';
+          return SafeArea(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+              child: Container(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 24, 
+                  left: 20, 
+                  right: 20, 
+                  top: 20
+                ),
+                decoration: BoxDecoration(
+                  color: _cardColor.withOpacity(0.98),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                  border: Border.all(color: _primaryColor.withOpacity(0.3), width: 1.5),
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 48, 
+                          height: 6, 
+                          decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10))
+                        )
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: _primaryColor.withOpacity(0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.badge_rounded, color: _primaryColor, size: 24),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text(
+                            "Profili Düzenle", 
+                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        "Kişisel bilgilerinizi buradan güncelleyebilirsiniz.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: _subtitleColor, fontSize: 13),
+                      ),
+                      const SizedBox(height: 24),
+                      _buildGlassTextField(_nameController, "Ad Soyad", Icons.person_rounded, _primaryColor, action: TextInputAction.next),
+                      const SizedBox(height: 16),
+                      _buildGlassTextField(_phoneController, "Telefon Numarası", Icons.phone_rounded, _primaryColor, readOnly: true),
+                      if (isProvider) ...[
+                        const SizedBox(height: 16),
+                        _buildGlassTextField(_ibanController, "IBAN Numarası", Icons.account_balance_rounded, _primaryColor, action: TextInputAction.done),
+                      ],
+                      const SizedBox(height: 28),
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          gradient: const LinearGradient(colors: [_primaryColor, _secondaryColor]),
+                          boxShadow: [
+                            BoxShadow(color: _primaryColor.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 5))
+                          ]
+                        ),
+                        child: ElevatedButton(
+                          onPressed: isSaving ? null : () {
+                            _updateProfile(onSuccess: () => Navigator.pop(modalCtx));
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          ),
+                          child: isSaving 
+                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3))
+                            : const Text("Bilgileri Kaydet", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+      ),
+    );
+  }
+
+  void _showChangePasswordDialog() {
+    final TextEditingController oldPasswordCtrl = TextEditingController();
+    final TextEditingController newPasswordCtrl = TextEditingController();
+    bool isUpdating = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return SafeArea(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+              child: Container(
+                padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 24, left: 20, right: 20, top: 20),
+                decoration: BoxDecoration(
+                  color: _cardColor.withOpacity(0.98),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                  border: Border.all(color: Colors.blueAccent.withOpacity(0.3), width: 1.5),
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(color: Colors.blueAccent.withOpacity(0.15), shape: BoxShape.circle),
+                            child: const Icon(Icons.lock_rounded, color: Colors.blueAccent, size: 24),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text("Şifre Değiştir", textAlign: TextAlign.center, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white)),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      _buildGlassTextField(oldPasswordCtrl, "Mevcut Şifre", Icons.lock_outline, Colors.blueAccent, action: TextInputAction.next),
+                      const SizedBox(height: 14),
+                      _buildGlassTextField(newPasswordCtrl, "Yeni Şifre", Icons.lock_reset, Colors.blueAccent, action: TextInputAction.done),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: isUpdating ? null : () async {
+                          if (oldPasswordCtrl.text.isEmpty || newPasswordCtrl.text.isEmpty) {
+                            _showCustomSnackBar("Lütfen tüm alanları doldurun.", isError: true);
+                            return;
+                          }
+                          setModalState(() => isUpdating = true);
+                          try {
+                            final response = await _httpClient.post(
+                              Uri.parse("$baseUrl?action=change_password"),
+                              headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                              body: {"user_id": widget.userId.toString(), "old_password": oldPasswordCtrl.text, "new_password": newPasswordCtrl.text}
+                            ).timeout(_apiTimeout);
+                            final data = json.decode(response.body);
+                            if (response.statusCode == 200 && data['status'] == 'success') {
+                              Navigator.pop(context);
+                              _showCustomSnackBar("Şifreniz başarıyla değiştirildi.");
+                            } else {
+                              _showCustomSnackBar(data['message'] ?? "Şifre değiştirilemedi.", isError: true);
+                            }
+                          } catch (_) {
+                            _showCustomSnackBar("Bağlantı hatası.", isError: true);
+                          } finally {
+                            setModalState(() => isUpdating = false);
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent, padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                        child: isUpdating ? const CircularProgressIndicator(color: Colors.white) : const Text("Şifreyi Güncelle", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+      ),
+    );
+  }
+
+  void _showFeedbackDialog() {
+    final TextEditingController subjectCtrl = TextEditingController(text: "Uygulama Geri Bildirimi");
+    final TextEditingController messageCtrl = TextEditingController();
+    bool isSending = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return SafeArea(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+              child: Container(
+                padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 24, left: 20, right: 20, top: 20),
+                decoration: BoxDecoration(
+                  color: _cardColor.withOpacity(0.98),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                  border: Border.all(color: _warningColor.withOpacity(0.3), width: 1.5),
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(color: _warningColor.withOpacity(0.15), shape: BoxShape.circle),
+                            child: const Icon(Icons.favorite_rounded, color: _warningColor, size: 24),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text("Geri Bildirim Gönder", textAlign: TextAlign.center, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        "Fikir ve önerileriniz bizim için çok değerlidir.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: _subtitleColor, fontSize: 13),
+                      ),
+                      const SizedBox(height: 24),
+                      _buildGlassTextField(subjectCtrl, "Konu", Icons.subject_rounded, _warningColor, readOnly: true),
+                      const SizedBox(height: 14),
+                      _buildGlassTextField(messageCtrl, "Mesajınız / Öneriniz", Icons.mark_chat_unread_rounded, _warningColor, maxLines: 4, action: TextInputAction.done),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: isSending ? null : () async {
+                          if (messageCtrl.text.trim().isEmpty) {
+                            _showCustomSnackBar("Lütfen bir mesaj yazın.", isError: true);
+                            return;
+                          }
+                          setModalState(() => isSending = true);
+                          try {
+                            final response = await _httpClient.post(
+                              Uri.parse("$baseUrl?action=send_feedback"),
+                              headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                              body: {"user_id": widget.userId.toString(), "message": messageCtrl.text}
+                            ).timeout(_apiTimeout);
+                            final data = json.decode(response.body);
+                            if (response.statusCode == 200 && data['status'] == 'success') {
+                              Navigator.pop(context);
+                              _showCustomSnackBar("Geri bildiriminiz için çok teşekkürler!");
+                            } else {
+                              _showCustomSnackBar("Gönderilemedi.", isError: true);
+                            }
+                          } catch (_) {
+                            _showCustomSnackBar("Bağlantı hatası.", isError: true);
+                          } finally {
+                            setModalState(() => isSending = false);
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(backgroundColor: _warningColor, padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                        child: isSending ? const CircularProgressIndicator(color: Colors.white) : const Text("Gönder", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+      ),
+    );
   }
 
   void _showComplaintDialog(int jobId, int? providerId) {
@@ -330,7 +621,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 decoration: BoxDecoration(
                   color: _cardColor.withOpacity(0.98),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                  border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5),
+                  border: Border.all(color: _dangerColor.withOpacity(0.3), width: 1.5),
                   boxShadow: [
                     BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 40, offset: const Offset(0, -10))
                   ],
@@ -371,7 +662,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                       Text(
                         "İşlem #$jobId için yaşadığınız problemi yetkililere iletin.", 
                         textAlign: TextAlign.center, 
-                        style: TextStyle(fontSize: 15, color: _subtitleColor, fontWeight: FontWeight.w500)
+                        style: const TextStyle(fontSize: 15, color: _subtitleColor, fontWeight: FontWeight.w500)
                       ),
                       const SizedBox(height: 24),
                       _buildGlassTextField(
@@ -634,271 +925,523 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
     return DefaultTabController(
       length: isProvider ? 3 : 2,
-      child: Scaffold(
-        backgroundColor: _bgColor,
-        extendBodyBehindAppBar: true,
-        resizeToAvoidBottomInset: false, // KLAVYE HATASINI ÖNLEMEK İÇİN EKLENDİ
-        appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(110),
-          child: ClipRRect(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: AppBar(
-                title: const Text(
-                  "Hesabım", 
-                  style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 24, letterSpacing: -0.5)
-                ),
-                backgroundColor: _bgColor.withOpacity(0.65),
-                elevation: 0,
-                centerTitle: true,
-                iconTheme: const IconThemeData(color: Colors.white),
-                bottom: TabBar(
-                  labelColor: _primaryColor,
-                  unselectedLabelColor: Colors.white.withOpacity(0.4),
-                  indicatorColor: _primaryColor,
-                  indicatorWeight: 4,
-                  dividerColor: Colors.white.withOpacity(0.05),
-                  indicatorSize: TabBarIndicatorSize.label,
-                  labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: -0.2),
-                  tabs: [
-                    const Tab(text: "Profil"),
-                    const Tab(text: "Geçmiş"),
-                    if (isProvider) const Tab(text: "Rapor"),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-        body: LayoutBuilder(
-          builder: (context, constraints) {
-            return Stack(
-              children: [
-                Positioned(
-                  top: -constraints.maxHeight * 0.15,
-                  right: -constraints.maxWidth * 0.3,
-                  child: Container(
-                    width: constraints.maxWidth * 1.5,
-                    height: constraints.maxWidth * 1.5,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [_primaryColor.withOpacity(0.12), Colors.transparent],
-                      ),
+      child: Builder(
+        builder: (tabContext) {
+          return Scaffold(
+            backgroundColor: _bgColor,
+            extendBodyBehindAppBar: true,
+            resizeToAvoidBottomInset: false,
+            appBar: PreferredSize(
+              preferredSize: const Size.fromHeight(110),
+              child: ClipRRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                  child: AppBar(
+                    title: const Text(
+                      "Hesabım", 
+                      style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 24, letterSpacing: -0.5)
+                    ),
+                    backgroundColor: _bgColor.withOpacity(0.65),
+                    elevation: 0,
+                    centerTitle: true,
+                    iconTheme: const IconThemeData(color: Colors.white),
+                    bottom: TabBar(
+                      labelColor: _primaryColor,
+                      unselectedLabelColor: Colors.white.withOpacity(0.4),
+                      indicatorColor: _primaryColor,
+                      indicatorWeight: 4,
+                      dividerColor: Colors.white.withOpacity(0.05),
+                      indicatorSize: TabBarIndicatorSize.label,
+                      labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: -0.2),
+                      tabs: [
+                        const Tab(text: "Profil"),
+                        const Tab(text: "Geçmiş"),
+                        if (isProvider) const Tab(text: "Rapor"),
+                      ],
                     ),
                   ),
                 ),
-                SafeArea(
-                  child: isLoading
-                      ? const Center(child: CircularProgressIndicator(color: _primaryColor, strokeWidth: 4))
-                      : TabBarView(
-                          physics: const BouncingScrollPhysics(),
-                          children: [
-                            _buildProfileTab(isProvider, _primaryColor, constraints),
-                            _buildHistoryTab(isProvider, _primaryColor, constraints),
-                            if (isProvider) _buildDashboardTab(_primaryColor, constraints),
-                          ],
+              ),
+            ),
+            body: LayoutBuilder(
+              builder: (context, constraints) {
+                return Stack(
+                  children: [
+                    Positioned(
+                      top: -constraints.maxHeight * 0.15,
+                      right: -constraints.maxWidth * 0.3,
+                      child: Container(
+                        width: constraints.maxWidth * 1.5,
+                        height: constraints.maxWidth * 1.5,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [_primaryColor.withOpacity(0.12), Colors.transparent],
+                          ),
                         ),
-                ),
-              ],
-            );
-          }
-        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: -constraints.maxHeight * 0.2,
+                      left: -constraints.maxWidth * 0.3,
+                      child: Container(
+                        width: constraints.maxWidth * 1.4,
+                        height: constraints.maxWidth * 1.4,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [_purpleColor.withOpacity(0.08), Colors.transparent],
+                          ),
+                        ),
+                      ),
+                    ),
+                    SafeArea(
+                      child: isLoading
+                          ? const Center(child: CircularProgressIndicator(color: _primaryColor, strokeWidth: 4))
+                          : TabBarView(
+                              physics: const BouncingScrollPhysics(),
+                              children: [
+                                _buildProfileTab(tabContext, isProvider, _primaryColor, constraints),
+                                _buildHistoryTab(isProvider, _primaryColor, constraints),
+                                if (isProvider) _buildDashboardTab(_primaryColor, constraints),
+                              ],
+                            ),
+                    ),
+                  ],
+                );
+              }
+            ),
+          );
+        }
       ),
     );
   }
 
-  Widget _buildProfileTab(bool isProvider, Color primaryColor, BoxConstraints constraints) {
-    double horizontalPadding = constraints.maxWidth > 600 ? constraints.maxWidth * 0.15 : 20;
-    
+  // YENİLENMİŞ, TATLI BUTONLU PROFİL SEKMESİ
+  Widget _buildProfileTab(BuildContext tabContext, bool isProvider, Color primaryColor, BoxConstraints constraints) {
+    double horizontalPadding = constraints.maxWidth > 650 ? constraints.maxWidth * 0.15 : 20;
+
     return SingleChildScrollView(
-      padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 32),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 24),
       physics: const BouncingScrollPhysics(),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 500),
+          constraints: const BoxConstraints(maxWidth: 580),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Center(
-                child: Stack(
-                  alignment: Alignment.bottomRight,
+              // ÜST KULLANICI ÖZET KARTI
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [_cardColor.withOpacity(0.9), _cardColorLight.withOpacity(0.8)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(32),
+                  border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.4),
+                      blurRadius: 25,
+                      offset: const Offset(0, 10),
+                    )
+                  ],
+                ),
+                child: Row(
                   children: [
+                    // Parlayan Avatar
                     RepaintBoundary(
                       child: AnimatedBuilder(
                         animation: _pulseController,
                         builder: (context, child) {
                           return Container(
-                            padding: const EdgeInsets.all(28),
+                            padding: const EdgeInsets.all(18),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
-                                colors: [primaryColor, primaryColor.withOpacity(0.6)], 
+                                colors: [primaryColor, _secondaryColor], 
                                 begin: Alignment.topLeft, 
                                 end: Alignment.bottomRight
                               ),
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: primaryColor.withOpacity(0.3 + (_pulseController.value * 0.2)), 
-                                  blurRadius: 40, 
-                                  spreadRadius: _pulseController.value * 8, 
-                                  offset: const Offset(0, 10)
+                                  color: primaryColor.withOpacity(0.35 + (_pulseController.value * 0.2)), 
+                                  blurRadius: 25, 
+                                  spreadRadius: _pulseController.value * 4, 
+                                  offset: const Offset(0, 6)
                                 ),
                               ]
                             ),
-                            child: Icon(isProvider ? Icons.engineering_rounded : Icons.person_rounded, size: 56, color: Colors.black),
+                            child: Icon(
+                              isProvider ? Icons.engineering_rounded : Icons.person_rounded, 
+                              size: 40, 
+                              color: Colors.black
+                            ),
                           );
                         }
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: _cardColor, 
-                        shape: BoxShape.circle, 
-                        border: Border.all(color: primaryColor, width: 2),
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 15, offset: const Offset(0, 5))]
+                    const SizedBox(width: 20),
+                    // Kullanıcı Bilgisi
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            profile['name']?.toString().isNotEmpty == true 
+                              ? profile['name'].toString() 
+                              : "Kullanıcı",
+                            style: const TextStyle(
+                              color: Colors.white, 
+                              fontSize: 22, 
+                              fontWeight: FontWeight.w900, 
+                              letterSpacing: -0.5
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Icon(Icons.phone_iphone_rounded, color: Colors.white.withOpacity(0.5), size: 16),
+                              const SizedBox(width: 6),
+                              Text(
+                                profile['phone']?.toString().isNotEmpty == true 
+                                  ? profile['phone'].toString() 
+                                  : "Telefon yok",
+                                style: const TextStyle(
+                                  color: _subtitleColor, 
+                                  fontSize: 14, 
+                                  fontWeight: FontWeight.w600
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: primaryColor.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: primaryColor.withOpacity(0.3), width: 1),
+                            ),
+                            child: Text(
+                              isProvider ? "Usta / Hizmet Veren" : "Müşteri Hesabı",
+                              style: TextStyle(
+                                color: primaryColor, 
+                                fontSize: 12, 
+                                fontWeight: FontWeight.w800, 
+                                letterSpacing: 0.2
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      child: Icon(Icons.edit_rounded, size: 20, color: primaryColor),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 40),
-              
-              _buildGlassTextField(_nameController, "Ad Soyad", Icons.badge_rounded, primaryColor, action: TextInputAction.next),
-              const SizedBox(height: 20),
-              
-              _buildGlassTextField(_phoneController, "Telefon Numarası", Icons.phone_rounded, primaryColor, type: TextInputType.phone, action: TextInputAction.next, readOnly: true),
-              const SizedBox(height: 20),
-              
-              if (isProvider) ...[
-                _buildGlassTextField(_ibanController, "IBAN Numarası", Icons.account_balance_rounded, primaryColor, action: TextInputAction.done, onSubmitted: (_) => FocusScope.of(context).unfocus()),
-                const SizedBox(height: 20),
-                
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                  decoration: BoxDecoration(
-                    color: _cardColor.withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10))],
+
+              const SizedBox(height: 32),
+
+              // BÖLÜM BAŞLIĞI: KULLANICI İŞLEMLERİ
+              Row(
+                children: [
+                  Container(
+                    width: 5,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: primaryColor,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(color: primaryColor.withOpacity(0.15), borderRadius: BorderRadius.circular(16)),
-                        child: Icon(Icons.work_rounded, color: primaryColor, size: 24)
+                  const SizedBox(width: 10),
+                  const Text(
+                    "Kullanıcı İşlemleri",
+                    style: TextStyle(
+                      fontSize: 20, 
+                      fontWeight: FontWeight.w900, 
+                      color: Colors.white, 
+                      letterSpacing: -0.4
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 18),
+
+              // TATLI VE ÇOK GÖRÜNÜR İŞLEM BUTONLARI (2'Lİ GRID MENÜ)
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: constraints.maxWidth > 480 ? 2 : 2,
+                childAspectRatio: 1.15,
+                crossAxisSpacing: 14,
+                mainAxisSpacing: 14,
+                children: [
+                  // 1. PROFİLİ DÜZENLE
+                  _buildSweetActionButton(
+                    icon: Icons.manage_accounts_rounded,
+                    title: "Profili Düzenle",
+                    subtitle: "Ad, Soyad & IBAN",
+                    accentColor: _secondaryColor,
+                    gradientColors: [const Color(0xFF00E5FF), const Color(0xFF0077FF)],
+                    onTap: _showEditProfileDialog,
+                  ),
+
+                  // 2. GEÇMİŞİM SEKMESİNE GEÇİŞ
+                  _buildSweetActionButton(
+                    icon: Icons.receipt_long_rounded,
+                    title: "Geçmişim",
+                    subtitle: "${historyJobs.length} Tamamlanan İş",
+                    accentColor: _primaryColor,
+                    gradientColors: [const Color(0xFF00FFA3), const Color(0xFF00B074)],
+                    onTap: () {
+                      DefaultTabController.of(tabContext).animateTo(1);
+                    },
+                  ),
+
+                  // 3. ŞİFREMİ DEĞİŞTİR
+                  _buildSweetActionButton(
+                    icon: Icons.lock_reset_rounded,
+                    title: "Şifre Değiştir",
+                    subtitle: "Hesap Güvenliği",
+                    accentColor: Colors.blueAccent,
+                    gradientColors: [const Color(0xFF3B82F6), const Color(0xFF1D4ED8)],
+                    onTap: _showChangePasswordDialog,
+                  ),
+
+                  // 4. GERİ BİLDİRİM GÖNDER
+                  _buildSweetActionButton(
+                    icon: Icons.mark_chat_unread_rounded,
+                    title: "Geri Bildirim",
+                    subtitle: "Bize Yazın & Önerin",
+                    accentColor: _warningColor,
+                    gradientColors: [const Color(0xFFF59E0B), const Color(0xFFD97706)],
+                    onTap: _showFeedbackDialog,
+                  ),
+                ],
+              ),
+
+              if (isProvider) ...[
+                const SizedBox(height: 14),
+                // USTA İÇİN RAPOR BUTONU KISAYOLU
+                InkWell(
+                  onTap: () => DefaultTabController.of(tabContext).animateTo(2),
+                  borderRadius: BorderRadius.circular(24),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [_purpleColor.withOpacity(0.2), _cardColor],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: _purpleColor.withOpacity(0.3), width: 1.5),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: _purpleColor.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Icon(Icons.query_stats_rounded, color: _purpleColor, size: 24),
+                        ),
+                        const SizedBox(width: 16),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Kazanç & İstatistik Raporu",
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                "Aylık ve yıllık detayları inceleyin",
+                                style: TextStyle(color: _subtitleColor, fontSize: 13, fontWeight: FontWeight.w500),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white54, size: 16),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 28),
+
+              // GÜVENLİ ÇIKIŞ VE HESAP SİLME BUTONLARI
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: _cardColor.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(26),
+                  border: Border.all(color: Colors.white.withOpacity(0.06), width: 1.5),
+                ),
+                child: Column(
+                  children: [
+                    _buildSettingsTile(
+                      icon: Icons.power_settings_new_rounded,
+                      title: "Güvenli Çıkış Yap",
+                      color: _dangerColor,
+                      onTap: _handleLogout,
+                      isLast: true,
+                    ),
+                    const Divider(height: 24, color: Colors.white10),
+                    InkWell(
+                      onTap: _handleDeleteAccount,
+                      borderRadius: BorderRadius.circular(14),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                        child: Row(
                           children: [
-                            const Text("Hizmet Kategorisi", style: TextStyle(fontSize: 14, color: _subtitleColor, fontWeight: FontWeight.w700)),
-                            const SizedBox(height: 6),
-                            Text(
-                              _getServiceTypeName(selectedService),
-                              style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 18, letterSpacing: 0.3),
-                              overflow: TextOverflow.ellipsis,
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: _dangerColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: const Icon(Icons.delete_forever_rounded, color: Colors.white54, size: 22),
                             ),
+                            const SizedBox(width: 16),
+                            const Expanded(
+                              child: Text(
+                                "Hesabımı ve Verilerimi Sil",
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white54,
+                                ),
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right_rounded, color: Colors.white30, size: 20),
                           ],
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle),
-                        child: Icon(Icons.lock_rounded, color: Colors.white.withOpacity(0.4), size: 20),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 40),
-              ],
-              
-              if (!isProvider) const SizedBox(height: 20),
-
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  gradient: LinearGradient(colors: [primaryColor, primaryColor.withOpacity(0.8)]),
-                  boxShadow: [BoxShadow(color: primaryColor.withOpacity(0.4), blurRadius: 25, offset: const Offset(0, 8))],
-                ),
-                child: ElevatedButton(
-                  onPressed: isSaving ? null : _updateProfile,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent, 
-                    shadowColor: Colors.transparent,
-                    padding: const EdgeInsets.symmetric(vertical: 20), 
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))
-                  ),
-                  child: isSaving 
-                      ? const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3.5))
-                      : const Text("Değişiklikleri Kaydet", style: TextStyle(fontSize: 18, color: Colors.black, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                    ),
+                  ],
                 ),
               ),
 
-              const SizedBox(height: 24),
-
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: _dangerColor.withOpacity(0.4), width: 1.5),
-                ),
-                child: ElevatedButton(
-                  onPressed: _handleLogout,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _dangerColor.withOpacity(0.05), 
-                    elevation: 0,
-                    shadowColor: Colors.transparent, 
-                    padding: const EdgeInsets.symmetric(vertical: 18), 
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.power_settings_new_rounded, color: _dangerColor, size: 24),
-                      SizedBox(width: 10),
-                      Text("Güvenli Çıkış", style: TextStyle(fontSize: 17, color: _dangerColor, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-                    ],
-                  ),
-                ),
-              ),
-              
-              const SizedBox(height: 16),
-
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white12, width: 1.5),
-                ),
-                child: ElevatedButton(
-                  onPressed: _handleDeleteAccount,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent, 
-                    elevation: 0,
-                    shadowColor: Colors.transparent, 
-                    padding: const EdgeInsets.symmetric(vertical: 18), 
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.delete_forever_rounded, color: Colors.white54, size: 24),
-                      SizedBox(width: 10),
-                      Text("Hesabımı ve Verilerimi Sil", style: TextStyle(fontSize: 17, color: Colors.white54, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 14),
               const Text(
-                "Bu işlem tüm cihazlardan oturumunuzu kapatır, hesap ve\nharici verilerinizi kalıcı olarak siler.", 
+                "Tüm işlemler güvenli şifreleme ve sunucu koruması altındadır.",
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white30, fontSize: 12, fontWeight: FontWeight.w500)
+                style: TextStyle(color: Colors.white24, fontSize: 12, fontWeight: FontWeight.w500),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 36),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // TATLI VE CANLI İŞLEM BUTONU WIDGET'I
+  Widget _buildSweetActionButton({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color accentColor,
+    required List<Color> gradientColors,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(26),
+        splashColor: accentColor.withOpacity(0.2),
+        highlightColor: accentColor.withOpacity(0.1),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: _cardColor.withOpacity(0.75),
+            borderRadius: BorderRadius.circular(26),
+            border: Border.all(color: accentColor.withOpacity(0.25), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: accentColor.withOpacity(0.12),
+                blurRadius: 18,
+                spreadRadius: 1,
+                offset: const Offset(0, 6),
+              )
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: gradientColors,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: gradientColors.first.withOpacity(0.4),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        )
+                      ],
+                    ),
+                    child: Icon(icon, color: Colors.black, size: 24),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.06),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.arrow_forward_rounded, 
+                      color: accentColor, 
+                      size: 16
+                    ),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: -0.3,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white.withOpacity(0.5),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -920,9 +1463,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     return Container(
       decoration: BoxDecoration(
         color: readOnly ? Colors.white.withOpacity(0.03) : _cardColor.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5),
-        boxShadow: readOnly ? [] : [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10))],
+        boxShadow: readOnly ? [] : [BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 15, offset: const Offset(0, 6))],
       ),
       child: TextField(
         controller: controller,
@@ -931,26 +1474,75 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
         textInputAction: action,
         onSubmitted: onSubmitted,
         readOnly: readOnly,
-        style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: readOnly ? Colors.white54 : Colors.white),
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: readOnly ? Colors.white54 : Colors.white),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(color: _subtitleColor, fontWeight: FontWeight.w600, fontSize: 15),
+          labelStyle: const TextStyle(color: _subtitleColor, fontWeight: FontWeight.w600, fontSize: 14),
           prefixIcon: Padding(
-            padding: const EdgeInsets.only(left: 20, right: 16), 
-            child: Icon(icon, color: readOnly ? Colors.white30 : primaryColor, size: 24)
+            padding: const EdgeInsets.only(left: 18, right: 14), 
+            child: Icon(icon, color: readOnly ? Colors.white30 : primaryColor, size: 22)
           ),
           suffixIcon: readOnly ? const Padding(
             padding: EdgeInsets.only(right: 16),
-            child: Icon(Icons.lock_outline_rounded, color: Colors.white30, size: 20),
+            child: Icon(Icons.lock_outline_rounded, color: Colors.white30, size: 18),
           ) : null,
           filled: true,
           fillColor: Colors.transparent,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(24), 
+            borderRadius: BorderRadius.circular(20), 
             borderSide: readOnly ? BorderSide.none : BorderSide(color: primaryColor, width: 2)
           ),
-          contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+          contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 18),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsTile({
+    required IconData icon,
+    required String title,
+    required Color color,
+    required VoidCallback onTap,
+    bool isLast = false,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: color, size: 22),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    letterSpacing: -0.2,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: Colors.white.withOpacity(0.35),
+                size: 16,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1102,7 +1694,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               final bool isCompleted = job['status'] == 'completed';
               final bool isSelected = selectedJobs.contains(jobId);
               
-              if (jobId == -1) return const SizedBox.shrink(); // Broken data check
+              if (jobId == -1) return const SizedBox.shrink();
               
               return SlideTransition(
                 position: Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(

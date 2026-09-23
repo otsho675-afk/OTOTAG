@@ -192,7 +192,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
       if (data['status'] == 'success' && mounted) {
         setState(() => currentRadius = data['new_radius']);
         HapticFeedback.lightImpact();
-        _showTopSnackBar("Arama alanı genişletildi: $currentRadius KM");
+        _showTopSnackBar("Kapsama alanı genişletildi: $currentRadius KM. Daha fazla usta taranıyor...", isNewJob: true);
       }
     } catch (e) {
       debugPrint("Radius expand error: $e");
@@ -787,9 +787,11 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
               children: [
                 CustomPaint(size: Size(radarSize, radarSize), painter: RadarGridPainter(_primaryColor.withOpacity(0.15))),
                 
-                AnimatedBuilder(
-                  animation: _rippleController,
-                  builder: (context, child) => CustomPaint(painter: RipplePainter(_rippleController.value, _primaryColor), size: Size(radarSize, radarSize)),
+                RepaintBoundary(
+                  child: AnimatedBuilder(
+                    animation: _rippleController,
+                    builder: (context, child) => CustomPaint(painter: RipplePainter(_rippleController.value, _primaryColor), size: Size(radarSize, radarSize)),
+                  ),
                 ),
                 
                 ValueListenableBuilder<List<Offset>>(

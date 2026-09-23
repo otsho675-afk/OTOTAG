@@ -1073,8 +1073,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
             _pollInterval = 3; 
             _startTimer();
           } else {
-            if (_pollInterval < 15 && jobStatus != 'searching') {
-              _pollInterval += 2; 
+            // Akıllı Backoff: Pil ve sunucu dostu logaritmik artış
+            if (_pollInterval < 20 && jobStatus != 'searching') {
+              _pollInterval = (_pollInterval * 1.5).ceil().clamp(3, 20); 
               _startTimer();
             }
           }

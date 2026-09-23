@@ -163,7 +163,8 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTick
   String _generateListHash(List list) {
     if (list.isEmpty) return "empty";
     // CRITICAL FIX: Tüm listenin hash'ini alarak ortadaki bir işin statüsü değiştiğinde UI'ın güncellenmesini sağla
-    return list.map((e) => "${e['job_id']}_${e['status']}").join("|");
+    // PERFORMANS: Pazarlık durumunda fiyat güncellemelerini de hash'e dahil et
+    return list.map((e) => "${e['job_id']}_${e['status']}_${e['agreed_price']}").join("|");
   }
 
   Future<void> _fetchBids() async {
@@ -194,8 +195,9 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTick
               isLoading = false;
             });
           } else {
+            // Akıllı Backoff: API yığılmasını önlemek için çarpanlı artış
             if (_pollInterval < _maxPollInterval) {
-              _pollInterval += 10;
+              _pollInterval = (_pollInterval * 1.5).ceil().clamp(10, _maxPollInterval);
               _startTimer();
             }
           }
@@ -397,11 +399,12 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with SingleTick
           ),
         );
       },
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            HapticFeedback.selectionClick();
+      child: RepaintBoundary(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              HapticFeedback.selectionClick();
             if (!isCompleted && !isCancelled) {
               Navigator.push(context, PageRouteBuilder(
                 pageBuilder: (context, animation, secondaryAnimation) => JobTrackingScreen(jobId: int.parse(job['job_id'].toString()), userType: 'provider', userId: widget.providerId),

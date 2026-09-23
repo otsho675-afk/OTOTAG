@@ -1714,7 +1714,92 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       }
     );
   }
+void _showFeedbacksModal(BuildContext context, bool isDark) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
 
+    List feedbacks = [];
+    try {
+      final response = await http.get(Uri.parse("$baseUrl?action=get_feedbacks"));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'success') {
+          feedbacks = data['feedbacks'] ?? [];
+        }
+      }
+    } catch (_) {}
+
+    if (mounted) Navigator.pop(context);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.85,
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(width: 40, height: 5, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10))),
+              const SizedBox(height: 16),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text("Kullanıcı Geri Bildirimleri", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: feedbacks.isEmpty
+                  ? _buildEmptyState("Henüz geri bildirim bulunmuyor.", Icons.feedback_outlined)
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      itemCount: feedbacks.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final fb = feedbacks[index];
+                        return Material(
+                          color: isDark ? Colors.white10 : Colors.grey.shade50,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(color: Colors.amber.withOpacity(0.3)),
+                          ),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            leading: CircleAvatar(
+                              backgroundColor: Colors.amber.withOpacity(0.2),
+                              child: const Icon(Icons.person, color: Colors.orange),
+                            ),
+                            title: Text(fb['user_name']?.toString() ?? 'Bilinmeyen Kullanıcı', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 8),
+                                Text(fb['message']?.toString() ?? '', style: TextStyle(color: isDark ? Colors.white70 : Colors.black87)),
+                                const SizedBox(height: 8),
+                                Text("Tarih: ${_formatDate(fb['created_at']?.toString())}", style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+              )
+            ],
+          ),
+        );
+      }
+    );
+  }
   void _showAdManagementModal(BuildContext context, bool isDark) {
     showModalBottomSheet(
       context: context,
@@ -3681,6 +3766,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   onTap: () => _showPurchasesModal(context, isDark),
                   leading: const Icon(Icons.workspace_premium_rounded, color: Colors.orange),
                   title: const Text("Premium ve Satın Alım Takibi", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  onTap: () => _showFeedbacksModal(context, isDark),
+                  leading: const Icon(Icons.feedback_rounded, color: Colors.amber),
+                  title: const Text("Kullanıcı Geri Bildirimleri", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
                 ),
                 const Divider(height: 1),

@@ -3206,3 +3206,4 @@ class __AnimatedServiceCardState extends State<_AnimatedServiceCard> with Ticker
     );
   }
 }
+

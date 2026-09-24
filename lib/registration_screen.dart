@@ -204,8 +204,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   Future<void> _signUpWithGoogle() async {
     if (!kIsWeb) HapticFeedback.selectionClick();
     try {
-      final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
-      await googleSignIn.signOut();
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        scopes: const ['email', 'profile'],
+      );
+
+      try {
+        if (await googleSignIn.isSignedIn()) {
+          await googleSignIn.signOut();
+        }
+      } catch (_) {}
+
       final GoogleSignInAccount? account = await googleSignIn.signIn();
 
       if (!mounted) return;
@@ -221,7 +229,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         });
         _showCustomSnackBar("Google bağlandı! Şimdi zorunlu telefon ve şehir alanlarını doldurunuz.", isError: false);
       }
+    } on PlatformException catch (e) {
+      debugPrint("Google Sign Up Platform Exception: ${e.code} - ${e.message}");
+      if (!mounted) return;
+      if (e.code != 'sign_in_canceled' && e.code != 'canceled') {
+        _showCustomSnackBar("Google bağlantısı tamamlanamadı (${e.code}).", isError: true);
+      }
     } catch (e) {
+      debugPrint("Google Sign Up Error: $e");
       if (!mounted) return;
       _showCustomSnackBar("Google bağlantı hatası: $e", isError: true);
     }

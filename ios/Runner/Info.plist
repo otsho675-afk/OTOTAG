@@ -1,4 +1,3 @@
-<!-- ios/Runner/Info.plist -->
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -48,6 +47,19 @@
     <true/>
     <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
+    
+    <!-- Google Sign-In URL Şeması (iOS Çökmesini Önleyen Zorunlu Tanım) -->
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>com.googleusercontent.apps.73273804842-u0lcirptug9aotm2m6gn27g92hftt5ud</string>
+            </array>
+        </dict>
+    </array>
     
     <!-- iOS Arka Plan Bildirim & Konum Akışı İçin Zorunlu -->
     <key>UIBackgroundModes</key>

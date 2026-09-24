@@ -203,8 +203,17 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _signInWithGoogle() async {
     if (!kIsWeb) HapticFeedback.selectionClick();
     try {
-      final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
-      await googleSignIn.signOut();
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        scopes: const ['email', 'profile'],
+      );
+
+      // iOS'ta oturum açılmamışken doğrudan signOut çağrısı crash oluşturmaması için kontrol
+      try {
+        if (await googleSignIn.isSignedIn()) {
+          await googleSignIn.signOut();
+        }
+      } catch (_) {}
+
       final GoogleSignInAccount? account = await googleSignIn.signIn();
 
       if (!mounted) return;
@@ -217,7 +226,14 @@ class _LoginScreenState extends State<LoginScreen> {
           name: account.displayName ?? '',
         );
       }
+    } on PlatformException catch (e) {
+      debugPrint("Google Sign In Platform Exception: ${e.code} - ${e.message}");
+      if (!mounted) return;
+      if (e.code != 'sign_in_canceled' && e.code != 'canceled') {
+        _showCustomSnackBar("Google ile oturum açılamadı (${e.code}).", isError: true);
+      }
     } catch (e) {
+      debugPrint("Google Sign In Error: $e");
       if (!mounted) return;
       _showCustomSnackBar("Google ile giriş yapılamadı: $e", isError: true);
     }

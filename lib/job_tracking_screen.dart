@@ -341,7 +341,11 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     if (_routePoints.isEmpty) return -1;
     double minDist = double.infinity;
     int closestIndex = -1;
-    for (int i = 0; i < _routePoints.length; i++) {
+    
+    // PERFORMANS: Tüm diziyi değil, sadece önündeki ilk 60 noktayı tarar. (CPU Darboğazı çözüldü)
+    int limit = math.min(_routePoints.length, 60);
+    
+    for (int i = 0; i < limit; i++) {
       double dist = Geolocator.distanceBetween(
           currentPos.latitude, currentPos.longitude,
           _routePoints[i].latitude, _routePoints[i].longitude);
@@ -353,8 +357,20 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     return closestIndex;
   }
 
+  LatLng? _lastProcessedPosForRoute;
+
   void _updateRouteProgress(LatLng currentPos) {
     if (_routePoints.length <= 1) return;
+    
+    // PERFORMANS: Araç 15 metreden az hareket ettiyse diziyi kesme işlemi yapıp UI'ı yorma
+    if (_lastProcessedPosForRoute != null) {
+      double moveDist = Geolocator.distanceBetween(
+        _lastProcessedPosForRoute!.latitude, _lastProcessedPosForRoute!.longitude,
+        currentPos.latitude, currentPos.longitude
+      );
+      if (moveDist < 15.0 && currentSpeed < 10.0) return; 
+    }
+    _lastProcessedPosForRoute = currentPos;
     
     int closestIndex = _findClosestRoutePointIndex(currentPos);
     if (closestIndex != -1) {
@@ -384,10 +400,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       if ((distToClosest > deviationThreshold || isHeadingWrong) && !_isFetchingRoute && _routePoints.length > 2) { 
           _showTopSnackBar(isHeadingWrong ? "Ters yön algılandı. Rota güncelleniyor..." : "Rota sapması algılandı.");
           _fetchRoute();          
-      } else if (closestIndex > 0) {
+      } else if (closestIndex > 2) { 
+          // Sadece araç gerçekten 2-3 düğüm atladığında setState tetiklenir (Kasma/Donma Engellendi)
           final newRoute = List<LatLng>.from(_routePoints);
-          // Sadece geçilen noktaları siliyoruz, diziyi bozmuyoruz.
-          // Güncel konum harita çizilirken (render anında) eklenecek.
           newRoute.removeRange(0, closestIndex);
           
           if (mounted) {
@@ -1958,10 +1973,23 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     if (isIOS) {
       final Set<amaps.Polyline> applePolylines = {};
       if (_routePoints.isNotEmpty) {
+        final amapsPoints = _routePoints.map((p) => amaps.LatLng(p.latitude, p.longitude)).toList();
+        
+        // Tasarım: Arka Plan Neon Parlama Efekti
         applePolylines.add(
           amaps.Polyline(
-            polylineId: amaps.PolylineId('tracking_route'),
-            points: _routePoints.map((p) => amaps.LatLng(p.latitude, p.longitude)).toList(),
+            polylineId: amaps.PolylineId('tracking_route_glow'),
+            points: amapsPoints,
+            color: _polylineColor.withValues(alpha: 0.25),
+            width: 14, // Yumuşak ve geniş gölge
+          ),
+        );
+        
+        // Tasarım: Ana Keskin Çizgi
+        applePolylines.add(
+          amaps.Polyline(
+            polylineId: amaps.PolylineId('tracking_route_main'),
+            points: amapsPoints,
             color: _polylineColor,
             width: 5,
           ),
@@ -2009,12 +2037,33 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     } else {
       final Set<gmaps.Polyline> googlePolylines = {};
       if (_routePoints.isNotEmpty) {
+        final gmapsPoints = _routePoints.map((p) => gmaps.LatLng(p.latitude, p.longitude)).toList();
+        
+        // Tasarım: Google Maps Neon Parlama (Aura) Efekti
         googlePolylines.add(
           gmaps.Polyline(
-            polylineId: gmaps.PolylineId('tracking_route'),
-            points: _routePoints.map((p) => gmaps.LatLng(p.latitude, p.longitude)).toList(),
+            polylineId: const gmaps.PolylineId('tracking_route_glow'),
+            points: gmapsPoints,
+            color: _polylineColor.withValues(alpha: 0.3),
+            width: 12,
+            startCap: gmaps.Cap.roundCap, // Yumuşak başlangıç
+            endCap: gmaps.Cap.roundCap,   // Yumuşak bitiş
+            jointType: gmaps.JointType.round, // Dönüşlerde yumuşak kırılım
+            zIndex: 1, // Altta kalsın
+          ),
+        );
+        
+        // Tasarım: Üst Katman Net Yol Çizgisi
+        googlePolylines.add(
+          gmaps.Polyline(
+            polylineId: const gmaps.PolylineId('tracking_route_main'),
+            points: gmapsPoints,
             color: _polylineColor,
             width: 5,
+            startCap: gmaps.Cap.roundCap,
+            endCap: gmaps.Cap.roundCap,
+            jointType: gmaps.JointType.round,
+            zIndex: 2, // Üstte kalsın
           ),
         );
       }

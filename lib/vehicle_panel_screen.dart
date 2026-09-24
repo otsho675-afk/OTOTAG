@@ -62,7 +62,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     'Tümü', 'Yakıt Alımı', 'Periyodik Bakım', 'Tamir & Onarım', 
     'Lastik & Balans', 'Fren & Balata', 'Akü & Elektrik', 
     'Kasko & Poliçe', 'Detay & Yıkama', 'MTV & Harç', 
-    'Aksesuar & Parça', 'Diğer Masraf'
+    'HGS & Otoyol', 'Otopark', 'Aksesuar & Parça', 'Diğer Masraf'
   ];
 
   static const Map<String, IconData> _typeIcons = {
@@ -77,6 +77,8 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     'Detay & Yıkama': Icons.local_car_wash_rounded,
     'MTV & Harç': Icons.account_balance_rounded,
     'MTV': Icons.account_balance_rounded,
+    'HGS & Otoyol': Icons.add_road_rounded,
+    'Otopark': Icons.local_parking_rounded,
     'Aksesuar & Parça': Icons.extension_rounded,
     'Muayene': Icons.fact_check_rounded,
     'Sigorta': Icons.shield_rounded,
@@ -94,6 +96,8 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     'Detay & Yıkama': Color(0xFF00B0FF),
     'MTV & Harç': Color(0xFFE040FB),
     'MTV': Color(0xFFE040FB),
+    'HGS & Otoyol': Color(0xFFFF5722),
+    'Otopark': Color(0xFF3F51B5),
     'Aksesuar & Parça': Color(0xFF76FF03),
     'Muayene': Color(0xFF00FFA3),
     'Sigorta': Color(0xFF00E5FF),
@@ -733,28 +737,45 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
 
   Widget _buildMiniExpenseCard(String title, double amount, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF161822),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: color.withOpacity(0.2), width: 1.5),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 16, offset: const Offset(0, 6))]
+        gradient: LinearGradient(
+          colors: [const Color(0xFF161822), color.withOpacity(0.08)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+        boxShadow: [
+          BoxShadow(color: color.withOpacity(0.15), blurRadius: 20, offset: const Offset(0, 8)),
+          BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 4))
+        ]
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: color.withOpacity(0.12), shape: BoxShape.circle),
-            child: Icon(icon, color: color, size: 22),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.15), 
+                  shape: BoxShape.circle,
+                  boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 12)]
+                ),
+                child: Icon(icon, color: color, size: 24),
+              ),
+              Icon(Icons.arrow_outward_rounded, color: Colors.white24, size: 20),
+            ],
           ),
-          const SizedBox(height: 14),
-          Text(title, style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 6),
+          const SizedBox(height: 24),
+          Text(title, style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.3), overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 8),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text("${amount.toStringAsFixed(2)} ₺", style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+            child: Text("${amount.toStringAsFixed(2)} ₺", style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900, letterSpacing: -0.8)),
           ),
         ],
       ),
@@ -941,13 +962,15 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                 return Padding(
                   padding: const EdgeInsets.only(right: 8.0),
                   child: ChoiceChip(
-                    label: Text(f, style: TextStyle(color: isSelected ? Colors.black : Colors.white70, fontWeight: FontWeight.w800, fontSize: 13)),
+                    label: Text(f, style: TextStyle(color: isSelected ? Colors.black : Colors.white, fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.2)),
                     selected: isSelected,
                     selectedColor: const Color(0xFF00FFA3),
                     backgroundColor: const Color(0xFF161822),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    side: BorderSide(color: isSelected ? Colors.transparent : Colors.white.withOpacity(0.06), width: 1.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    elevation: isSelected ? 8 : 0,
+                    shadowColor: const Color(0xFF00FFA3).withOpacity(0.5),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    side: BorderSide(color: isSelected ? const Color(0xFF00FFA3) : Colors.white.withOpacity(0.1), width: 1.5),
                     onSelected: (val) {
                       if (val && selectedFilter != f) {
                         HapticFeedback.selectionClick();
@@ -981,21 +1004,35 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
           Column(
             children: [
               Container(
-                width: 44, height: 44,
+                width: 48, height: 48,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF161822), 
+                  gradient: LinearGradient(
+                    colors: [const Color(0xFF161822), color.withOpacity(0.15)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                   shape: BoxShape.circle, 
-                  border: Border.all(color: color.withOpacity(0.6), width: 2),
-                  boxShadow: [BoxShadow(color: color.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 3))]
+                  border: Border.all(color: color, width: 2.5),
+                  boxShadow: [
+                    BoxShadow(color: color.withOpacity(0.4), blurRadius: 16, offset: const Offset(0, 4)),
+                    BoxShadow(color: color.withOpacity(0.1), blurRadius: 4, spreadRadius: 2)
+                  ]
                 ),
-                child: Icon(icon, color: color, size: 20),
+                child: Icon(icon, color: color, size: 22),
               ),
               if (!isLast)
                 Expanded(
                   child: Container(
-                    width: 2, 
-                    margin: const EdgeInsets.symmetric(vertical: 8), 
-                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.08), borderRadius: BorderRadius.circular(2))
+                    width: 3, 
+                    margin: const EdgeInsets.symmetric(vertical: 6), 
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [color.withOpacity(0.6), color.withOpacity(0.05)],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                      borderRadius: BorderRadius.circular(2)
+                    )
                   )
                 ),
             ],
@@ -1126,24 +1163,64 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                               physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                               slivers: [
                                 SliverAppBar(
-                                  expandedHeight: 140.0,
+                                  expandedHeight: 160.0,
                                   floating: false,
                                   pinned: true,
-                                  backgroundColor: bgColor,
+                                  backgroundColor: bgColor.withOpacity(0.9),
                                   elevation: 0,
-                                  leading: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: IconButton(
-                                      icon: Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(color: const Color(0xFF161822), shape: BoxShape.circle, border: Border.all(color: Colors.white10)),
-                                        child: const Icon(Icons.arrow_back_ios_new_rounded, size: 14, color: Colors.white),
+                                  stretch: true,
+                                  leading: Container(
+                                    margin: const EdgeInsets.only(left: 16, top: 8, bottom: 8),
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        onTap: () {
+                                          HapticFeedback.lightImpact();
+                                          Navigator.pop(context);
+                                        },
+                                        borderRadius: BorderRadius.circular(16),
+                                        splashColor: const Color(0xFF00FFA3).withOpacity(0.2),
+                                        highlightColor: const Color(0xFF00FFA3).withOpacity(0.1),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(16),
+                                          child: BackdropFilter(
+                                            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF161822).withOpacity(0.6),
+                                                borderRadius: BorderRadius.circular(16),
+                                                border: Border.all(color: Colors.white.withOpacity(0.15), width: 1.5),
+                                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))],
+                                              ),
+                                              child: const Icon(
+                                                Icons.arrow_back_ios_new_rounded, 
+                                                size: 18, 
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                      onPressed: () => Navigator.pop(context),
                                     ),
                                   ),
                                   flexibleSpace: FlexibleSpaceBar(
-                                    titlePadding: const EdgeInsets.only(left: 64, bottom: 14, right: 16),
+                                    stretchModes: const [StretchMode.zoomBackground, StretchMode.blurBackground],
+                                    background: Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        Positioned(
+                                          right: -50, top: -50,
+                                          child: Container(
+                                            width: 200, height: 200,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              gradient: RadialGradient(colors: [const Color(0xFF00FFA3).withOpacity(0.15), Colors.transparent]),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    titlePadding: const EdgeInsets.only(left: 64, bottom: 16, right: 16),
                                     centerTitle: false,
                                     title: FittedBox(
                                       fit: BoxFit.scaleDown,
@@ -1152,20 +1229,25 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                                             decoration: BoxDecoration(
-                                              color: const Color(0xFF161822),
-                                              borderRadius: BorderRadius.circular(10),
+                                              gradient: LinearGradient(colors: [const Color(0xFF00FFA3).withOpacity(0.2), const Color(0xFF00FFA3).withOpacity(0.05)]),
+                                              borderRadius: BorderRadius.circular(12),
                                               border: Border.all(color: const Color(0xFF00FFA3), width: 1.5),
+                                              boxShadow: [BoxShadow(color: const Color(0xFF00FFA3).withOpacity(0.2), blurRadius: 12)]
                                             ),
                                             child: Text(
                                               currentVehicleData['plate']?.toString().toUpperCase() ?? '', 
-                                              style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 18, letterSpacing: 0.8)
+                                              style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 20, letterSpacing: 1.2)
                                             ),
                                           ),
                                           if ((currentVehicleData['brand_model'] ?? '').toString().isNotEmpty) ...[
-                                            const SizedBox(width: 10),
-                                            Text(currentVehicleData['brand_model'] ?? '', style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.7), fontWeight: FontWeight.w600)),
+                                            const SizedBox(width: 12),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                              decoration: BoxDecoration(color: Colors.white.withOpacity(0.08), borderRadius: BorderRadius.circular(8)),
+                                              child: Text(currentVehicleData['brand_model'] ?? '', style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                                            ),
                                           ]
                                         ],
                                       ),
@@ -1241,19 +1323,33 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                     ),
                   ),
                 ),
-            floatingActionButton: FloatingActionButton.extended(
-              onPressed: () => _showRecordSheet(),
-              backgroundColor: const Color(0xFF00FFA3),
-              elevation: 10,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              icon: const Icon(Icons.add_chart_rounded, color: Colors.black, size: 22),
-              label: const Text("İşlem Ekle", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 0.4)),
+            floatingActionButton: Container(
+              height: 56,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(color: const Color(0xFF00FFA3).withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 8)),
+                  BoxShadow(color: const Color(0xFF00FFA3).withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 4))
+                ]
+              ),
+              child: FloatingActionButton.extended(
+                onPressed: () => _showRecordSheet(),
+                backgroundColor: const Color(0xFF00FFA3),
+                elevation: 0,
+                highlightElevation: 0,
+                hoverElevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                icon: const Icon(Icons.add_task_rounded, color: Colors.black, size: 24),
+                label: const Text("Yeni İşlem Ekle", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
+              ),
             ),
           ),
         ),
       ),
     );
   }
+
+  
 }
 
 class _RecordFormSheet extends StatefulWidget {
@@ -1314,6 +1410,8 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
     {'id': 'Kasko & Poliçe', 'icon': Icons.shield_rounded, 'color': Color(0xFFB388FF)},
     {'id': 'Detay & Yıkama', 'icon': Icons.local_car_wash_rounded, 'color': Color(0xFF00B0FF)},
     {'id': 'MTV & Harç', 'icon': Icons.account_balance_rounded, 'color': Color(0xFFE040FB)},
+    {'id': 'HGS & Otoyol', 'icon': Icons.add_road_rounded, 'color': Color(0xFFFF5722)},
+    {'id': 'Otopark', 'icon': Icons.local_parking_rounded, 'color': Color(0xFF3F51B5)},
     {'id': 'Aksesuar & Parça', 'icon': Icons.extension_rounded, 'color': Color(0xFF76FF03)},
     {'id': 'Diğer Masraf', 'icon': Icons.more_horiz_rounded, 'color': Color(0xFF94A3B8)},
   ];
@@ -1421,8 +1519,14 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
         'seramik', 'boya koruma', 'cam filmi', 'ppf', 'kaplama', 'ic dis', 'motor yikama'
       ],
       'MTV & Harç': [
-        'mtv', 'motorlu tasitlar', 'vergi', 'harc', 'bandrol', 'ceza', 'radar', 'hgs',
-        'ogs', 'egzoz emisyon', 'muayene ucreti', 'gecikme zammi'
+        'mtv', 'motorlu tasitlar', 'vergi', 'harc', 'bandrol', 'ceza', 'radar',
+        'egzoz emisyon', 'muayene ucreti', 'gecikme zammi'
+      ],
+      'HGS & Otoyol': [
+        'hgs', 'ogs', 'otoyol', 'gecis', 'kopru', 'avrasya', 'otoban', 'giseler'
+      ],
+      'Otopark': [
+        'otopark', 'ispark', 'vale', 'park ucreti', 'avm otopark'
       ],
       'Aksesuar & Parça': [
         'aksesuar', 'paspas', 'bagaj havuzu', 'kilif', 'koltuk kilifi', 'spoiler',
@@ -2180,7 +2284,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                                   HapticFeedback.selectionClick();
                                   setState(() => enableNotification = val);
                                 },
-                                activeColor: const Color(0xFF00FFA3),
+                                activeThumbColor: const Color(0xFF00FFA3),
                                 activeTrackColor: const Color(0xFF00FFA3).withOpacity(0.3),
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
                                 title: const Text("Vakti Yaklaşınca Hatırlat (3 Gün Önce)", style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white)),

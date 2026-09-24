@@ -1202,62 +1202,56 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                               },
                             ),
                           ),
-                          // Sabit Gölge
-                          Positioned(
-                            bottom: 54,
-                            child: Container(
-                              width: 24,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.8),
-                                borderRadius: BorderRadius.circular(50),
-                                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 8, spreadRadius: 2)],
-                              ),
+                          // Sabit Gölge (Zoom kaymasını engellemek için merkeze alındı)
+                          Container(
+                            width: 24,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.8),
+                              borderRadius: BorderRadius.circular(50),
+                              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 8, spreadRadius: 2)],
                             ),
                           ),
-                          // Sabit Müşteri Markeri (Titreme/zıplama olmadan sabitlenmiş)
-                          Positioned(
-                            bottom: 60,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    Image.asset(
-                                      'assets/images/car_top_view.png', 
-                                      width: 65, 
-                                      height: 130,
-                                      fit: BoxFit.contain,
-                                      errorBuilder: (_, __, ___) => const Icon(Icons.directions_car_rounded, color: neonGreen, size: 50),
-                                    ),
-                                    Align(
-                                      alignment: Alignment.center,
-                                      child: Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: BoxDecoration(
-                                          color: pureBlack.withValues(alpha: 0.8), 
-                                          shape: BoxShape.circle,
-                                          border: Border.all(color: neonGreen.withValues(alpha: 0.7), width: 1.5), 
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: neonGreen.withValues(alpha: 0.3), 
-                                              blurRadius: 4, 
-                                              offset: const Offset(0, 2)
-                                            )
-                                          ]
-                                        ),
-                                        child: Icon(
-                                          selectedServiceData['icon'] as IconData,
-                                          color: neonGreen.withValues(alpha: 0.95),
-                                          size: 16,
-                                        ),
+                          // Sabit Müşteri Markeri (Zoom kaymasını engellemek için merkeze alındı)
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Image.asset(
+                                    'assets/images/car_top_view.png', 
+                                    width: 65, 
+                                    height: 130,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (_, __, ___) => const Icon(Icons.directions_car_rounded, color: neonGreen, size: 50),
+                                  ),
+                                  Align(
+                                    alignment: Alignment.center,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: pureBlack.withValues(alpha: 0.8), 
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: neonGreen.withValues(alpha: 0.7), width: 1.5), 
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: neonGreen.withValues(alpha: 0.3), 
+                                            blurRadius: 4, 
+                                            offset: const Offset(0, 2)
+                                          )
+                                        ]
+                                      ),
+                                      child: Icon(
+                                        selectedServiceData['icon'] as IconData,
+                                        color: neonGreen.withValues(alpha: 0.95),
+                                        size: 16,
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ],
-                            ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ],
                       ),

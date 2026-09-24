@@ -167,7 +167,8 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _opacityAnimation;
   Widget? _nextScreen; 
   final QuickActions quickActions = const QuickActions();
 
@@ -177,18 +178,38 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     _setupQuickActions(); 
     _checkLoginStatus(); // Oturumu arka planda kontrol et
     
+    // Toplam animasyon süresi
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2200),
+      duration: const Duration(milliseconds: 2000), 
     );
 
-    _fadeAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween<double>(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeIn)), weight: 40.0),
-      TweenSequenceItem(tween: ConstantTween<double>(1.0), weight: 20.0),
-      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 0.0).chain(CurveTween(curve: Curves.easeOut)), weight: 40.0),
+    // BÜYÜME (SCALE) ANİMASYONU: Bekle -> Hafifçe Küçül -> Hızla Devasa Boyuta Büyü
+    _scaleAnimation = TweenSequence<double>([
+      // Başlangıçta sabit bekle
+      TweenSequenceItem(tween: ConstantTween<double>(1.0), weight: 60.0),
+      // Esneme payı için hafifçe küçül
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 0.85).chain(CurveTween(curve: Curves.easeInOutCubic)), 
+        weight: 15.0
+      ),
+      // Ekrana doğru hızla yaklaş ve patla (zoom in)
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.85, end: 40.0).chain(CurveTween(curve: Curves.easeInExpo)), 
+        weight: 25.0
+      ),
     ]).animate(_animationController);
     
-    // Doğrudan ana ekrana geçiş yap
+    // GÖRÜNÜRLÜK (OPACITY) ANİMASYONU: Büyüme bitene kadar tam görünür kal, sonunda kaybol
+    _opacityAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: ConstantTween<double>(1.0), weight: 85.0),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 0.0).chain(CurveTween(curve: Curves.easeOut)), 
+        weight: 15.0
+      ),
+    ]).animate(_animationController);
+    
+    // Animasyonu başlat ve bitince diğer ekrana geç
     _animationController.forward().then((_) {
       if (mounted) {
         if (!kIsWeb) HapticFeedback.lightImpact();
@@ -196,8 +217,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
           context,
           PageRouteBuilder(
             pageBuilder: (_, __, ___) => _nextScreen ?? const RoleSelectionScreen(),
-            transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
-            transitionDuration: const Duration(milliseconds: 400),
+            // Logo zaten ekranı kapladığı için ekran geçiş süresini sıfırlıyoruz
+            transitionDuration: const Duration(milliseconds: 0),
           ),
         );
       }
@@ -233,7 +254,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     ]);
   }
 
-  // Cihaz hafızasındaki oturumu kontrol eden fonksiyon
   Future<void> _checkLoginStatus() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -269,47 +289,40 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     final double logoSize = size.width > 600 ? 160 : 120;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF030305),
+      backgroundColor: const Color(0xFF030305), // veya yeşil arkaplan istiyorsanız: Color(0xFF00B050)
       body: Center(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min, 
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF00FFA3).withOpacity(0.25), 
-                      blurRadius: 50, 
-                      spreadRadius: 10
+        child: AnimatedBuilder(
+          animation: _animationController,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: _scaleAnimation.value,
+              child: Opacity(
+                opacity: _opacityAnimation.value,
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF00FFA3).withOpacity(0.25), 
+                        blurRadius: 50, 
+                        spreadRadius: 10
+                      )
+                    ]
+                  ),
+                  child: Image.asset(
+                    'assets/images/logo.png', 
+                    height: logoSize, 
+                    errorBuilder: (context, error, stackTrace) => Icon(
+                      Icons.directions_car_rounded, 
+                      color: const Color(0xFF00FFA3), 
+                      size: logoSize
                     )
-                  ]
-                ),
-                child: Image.asset(
-                  'assets/images/logo.png', 
-                  height: logoSize, 
-                  errorBuilder: (context, error, stackTrace) => Icon(
-                    Icons.directions_car_rounded, 
-                    color: const Color(0xFF00FFA3), 
-                    size: logoSize
-                  )
+                  ),
                 ),
               ),
-              const SizedBox(height: 48),
-              const SizedBox(
-                width: 26,
-                height: 26,
-                child: CircularProgressIndicator(
-                  color: Color(0xFF00FFA3),
-                  strokeWidth: 2.5,
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

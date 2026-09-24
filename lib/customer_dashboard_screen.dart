@@ -20,6 +20,11 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'notification_helper.dart'; 
+import 'package:share_plus/share_plus.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 class TurkishPlateFormatter extends TextInputFormatter {
   @override
@@ -2883,22 +2888,45 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                         ],
                       ),
                     ),
-                    // Ayarlar Butonu (Kompakt Glass)
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => _showVehicleDialog(vehicleToEdit: vehicle),
-                        borderRadius: BorderRadius.circular(14),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.05),
+                    // Sağ Üst İkonlar (Paylaş ve Ayarlar)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => _generateAndShareVehicleReport(vehicle),
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: Colors.white.withOpacity(0.07)),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: _primaryColor.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: _primaryColor.withOpacity(0.3)),
+                              ),
+                              child: const Icon(Icons.share_rounded, color: _primaryColor, size: 18),
+                            ),
                           ),
-                          child: const Icon(Icons.tune_rounded, color: Colors.white70, size: 18),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        // Ayarlar Butonu (Kompakt Glass)
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => _showVehicleDialog(vehicleToEdit: vehicle),
+                            borderRadius: BorderRadius.circular(14),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: Colors.white.withOpacity(0.07)),
+                              ),
+                              child: const Icon(Icons.tune_rounded, color: Colors.white70, size: 18),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -3086,6 +3114,449 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       }
     );
   }
+
+  Future<void> _generateAndShareVehicleReport(Map<String, dynamic> vehicle) async {
+    HapticFeedback.mediumImpact();
+    setState(() => isSaving = true);
+    _showTopSnackBar("Efsanevi Araç Karnesi hazırlanıyor...");
+
+    try {
+      // 1. Aracın işlem geçmişini çek
+      final response = await http.get(Uri.parse("$baseUrl?action=get_vehicle_records&vehicle_id=${vehicle['id']}")).timeout(apiTimeout);
+      List<dynamic> records = [];
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'success') {
+          records = data['records'] ?? [];
+        }
+      }
+
+      // 2. Verileri Hesapla
+      double totalCost = 0.0;
+      Map<String, double> categoryCosts = {};
+      for (var r in records) {
+        double cost = double.tryParse(r['cost']?.toString() ?? '0') ?? 0.0;
+        String type = r['record_type']?.toString() ?? 'Diğer';
+        totalCost += cost;
+        categoryCosts[type] = (categoryCosts[type] ?? 0.0) + cost;
+      }
+
+      final plate = vehicle['plate']?.toString().toUpperCase() ?? 'ARAÇ';
+      final brand = vehicle['brand_model'] ?? 'Bilinmiyor';
+      final engine = vehicle['engine_type'] ?? '-';
+      final year = vehicle['model_year'] ?? '-';
+      final currentKm = vehicle['current_km'] ?? '0';
+      final maintenanceKm = vehicle['maintenance_km'] ?? '10000';
+      
+      final insDateStr = vehicle['insurance_date']?.toString();
+      final inspDateStr = vehicle['inspection_date']?.toString();
+
+      // Tarih formatı için yardımcı
+      String formatDate(String? dateString) {
+        if (dateString == null || dateString.isEmpty) return "-";
+        try {
+          final dt = DateTime.parse(dateString);
+          return DateFormat('dd.MM.yyyy').format(dt);
+        } catch (_) {
+          return dateString;
+        }
+      }
+
+      // Kalan gün hesaplayıcı
+      String calculateDaysLeft(String? dateString) {
+        if (dateString == null || dateString.isEmpty) return "Veri Yok";
+        try {
+          final dt = DateTime.parse(dateString);
+          final days = dt.difference(DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day)).inDays;
+          if (days < 0) return "SÜRESİ GEÇTİ (${days.abs()} Gün)";
+          if (days == 0) return "BUGÜN SON GÜN";
+          return "$days Gün Kaldı";
+        } catch (_) {
+          return "-";
+        }
+      }
+
+      // 3. PDF Dokümanını Oluştur
+      final pdf = pw.Document(
+        theme: pw.ThemeData.withFont(
+          base: pw.Font.ttf(await rootBundle.load("assets/fonts/Roboto-Regular.ttf")),
+          bold: pw.Font.ttf(await rootBundle.load("assets/fonts/Roboto-Bold.ttf")),
+        ),
+      );
+
+      // PDFColor için özel Hex Kodları (Opaklık desteklemediği için solid renkler atandı)
+      final primaryColor = PdfColor.fromHex("#00FFA3");
+      final primaryBgColor = PdfColor.fromHex("#003321"); 
+      final primaryBorderColor = PdfColor.fromHex("#006642"); 
+      final primaryLightBgColor = PdfColor.fromHex("#001A10"); 
+      final bgColor = PdfColor.fromHex("#0A0C10");
+      final cardColor = PdfColor.fromHex("#14161C");
+      final whiteColor = PdfColor.fromHex("#FFFFFF");
+      final greyColor = PdfColor.fromHex("#A0AAB5");
+      final borderColor = PdfColor.fromHex("#252836");
+      final dangerColor = PdfColor.fromHex("#FF3366");
+      final warningColor = PdfColor.fromHex("#FFB800");
+
+      PdfColor getStatusColor(String status) {
+        if (status.contains("GEÇTİ")) return dangerColor;
+        if (status.contains("Veri Yok")) return greyColor;
+        if (status.contains("BUGÜN") || (int.tryParse(status.split(' ').first) ?? 99) <= 15) return warningColor;
+        return primaryColor;
+      }
+
+      // SAYFA 1: Premium Analiz ve Özet (Karanlık Tema)
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: pw.EdgeInsets.zero,
+          build: (pw.Context context) {
+            return pw.Container(
+              color: bgColor,
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  // HEADER EFSANE TASARIM
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(35),
+                    decoration: pw.BoxDecoration(
+                      color: cardColor,
+                      border: pw.Border(bottom: pw.BorderSide(color: primaryColor, width: 4))
+                    ),
+                    child: pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: pw.CrossAxisAlignment.center,
+                      children: [
+                        pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text("OTOTAG PRO", style: pw.TextStyle(fontSize: 32, color: primaryColor, fontWeight: pw.FontWeight.bold, letterSpacing: 2.5)),
+                            pw.SizedBox(height: 6),
+                            pw.Text("KAPSAMLI ARAÇ KARNESİ VE DİJİTAL ANALİZ RAPORU", style: pw.TextStyle(fontSize: 10, color: whiteColor, letterSpacing: 1.2)),
+                          ],
+                        ),
+                        pw.Container(
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: pw.BoxDecoration(
+                            color: primaryBgColor,
+                            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+                            border: pw.Border.all(color: primaryBorderColor)
+                          ),
+                          child: pw.Column(
+                            children: [
+                              pw.Text("Rapor Tarihi", style: pw.TextStyle(fontSize: 8, color: greyColor)),
+                              pw.SizedBox(height: 3),
+                              pw.Text(DateFormat('dd.MM.yyyy HH:mm').format(DateTime.now()), style: pw.TextStyle(fontSize: 12, color: primaryColor, fontWeight: pw.FontWeight.bold)),
+                            ]
+                          )
+                        )
+                      ]
+                    )
+                  ),
+                  
+                  // BODY
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(35),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        // ARAÇ KİMLİĞİ
+                        pw.Text("ARAÇ KİMLİK BİLGİLERİ", style: pw.TextStyle(fontSize: 14, color: greyColor, fontWeight: pw.FontWeight.bold)),
+                        pw.SizedBox(height: 10),
+                        pw.Container(
+                          padding: const pw.EdgeInsets.all(20),
+                          decoration: pw.BoxDecoration(
+                            color: cardColor, 
+                            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)),
+                            border: pw.Border.all(color: borderColor, width: 1.5)
+                          ),
+                          child: pw.Row(
+                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                            children: [
+                              pw.Column(
+                                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                children: [
+                                  pw.Text("Plaka", style: pw.TextStyle(fontSize: 10, color: greyColor)),
+                                  pw.SizedBox(height: 4),
+                                  pw.Text(plate, style: pw.TextStyle(fontSize: 22, color: whiteColor, fontWeight: pw.FontWeight.bold, letterSpacing: 1.5)),
+                                ]
+                              ),
+                              pw.Container(width: 1.5, height: 45, color: borderColor),
+                              pw.Column(
+                                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                children: [
+                                  pw.Text("Marka / Model", style: pw.TextStyle(fontSize: 10, color: greyColor)),
+                                  pw.SizedBox(height: 4),
+                                  pw.Text(brand, style: pw.TextStyle(fontSize: 16, color: whiteColor, fontWeight: pw.FontWeight.bold)),
+                                ]
+                              ),
+                              pw.Container(width: 1.5, height: 45, color: borderColor),
+                              pw.Column(
+                                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                children: [
+                                  pw.Text("Motor / Yıl", style: pw.TextStyle(fontSize: 10, color: greyColor)),
+                                  pw.SizedBox(height: 4),
+                                  pw.Text("$engine / $year", style: pw.TextStyle(fontSize: 16, color: whiteColor, fontWeight: pw.FontWeight.bold)),
+                                ]
+                              ),
+                            ]
+                          )
+                        ),
+                        pw.SizedBox(height: 25),
+
+                        // YENİ: MUAYENE VE SİGORTA DURUMU
+                        pw.Text("KRİTİK TARİHLER VE BAKIM DURUMU", style: pw.TextStyle(fontSize: 14, color: greyColor, fontWeight: pw.FontWeight.bold)),
+                        pw.SizedBox(height: 10),
+                        pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            // Sigorta
+                            pw.Expanded(
+                              child: pw.Container(
+                                padding: const pw.EdgeInsets.all(15),
+                                decoration: pw.BoxDecoration(
+                                  color: cardColor, 
+                                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)), 
+                                  border: pw.Border.all(color: borderColor)
+                                ),
+                                child: pw.Column(
+                                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                  children: [
+                                    pw.Text("Trafik Sigortası", style: pw.TextStyle(fontSize: 11, color: greyColor)),
+                                    pw.SizedBox(height: 6),
+                                    pw.Text(formatDate(insDateStr), style: pw.TextStyle(fontSize: 16, color: whiteColor, fontWeight: pw.FontWeight.bold)),
+                                    pw.SizedBox(height: 4),
+                                    pw.Text(calculateDaysLeft(insDateStr), style: pw.TextStyle(fontSize: 12, color: getStatusColor(calculateDaysLeft(insDateStr)), fontWeight: pw.FontWeight.bold)),
+                                  ]
+                                )
+                              )
+                            ),
+                            pw.SizedBox(width: 15),
+                            // Muayene
+                            pw.Expanded(
+                              child: pw.Container(
+                                padding: const pw.EdgeInsets.all(15),
+                                decoration: pw.BoxDecoration(
+                                  color: cardColor, 
+                                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)), 
+                                  border: pw.Border.all(color: borderColor)
+                                ),
+                                child: pw.Column(
+                                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                  children: [
+                                    pw.Text("Araç Muayenesi", style: pw.TextStyle(fontSize: 11, color: greyColor)),
+                                    pw.SizedBox(height: 6),
+                                    pw.Text(formatDate(inspDateStr), style: pw.TextStyle(fontSize: 16, color: whiteColor, fontWeight: pw.FontWeight.bold)),
+                                    pw.SizedBox(height: 4),
+                                    pw.Text(calculateDaysLeft(inspDateStr), style: pw.TextStyle(fontSize: 12, color: getStatusColor(calculateDaysLeft(inspDateStr)), fontWeight: pw.FontWeight.bold)),
+                                  ]
+                                )
+                              )
+                            ),
+                            pw.SizedBox(width: 15),
+                            // Kilometre
+                            pw.Expanded(
+                              child: pw.Container(
+                                padding: const pw.EdgeInsets.all(15),
+                                decoration: pw.BoxDecoration(
+                                  color: cardColor, 
+                                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)), 
+                                  border: pw.Border.all(color: borderColor)
+                                ),
+                                child: pw.Column(
+                                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                  children: [
+                                    pw.Text("Güncel / Hedef KM", style: pw.TextStyle(fontSize: 11, color: greyColor)),
+                                    pw.SizedBox(height: 6),
+                                    pw.Text("$currentKm KM", style: pw.TextStyle(fontSize: 16, color: whiteColor, fontWeight: pw.FontWeight.bold)),
+                                    pw.SizedBox(height: 4),
+                                    pw.Text("Hedef: $maintenanceKm KM", style: pw.TextStyle(fontSize: 11, color: primaryColor, fontWeight: pw.FontWeight.bold)),
+                                  ]
+                                )
+                              )
+                            )
+                          ]
+                        ),
+                        pw.SizedBox(height: 25),
+
+                        // FİNANSAL ÖZET
+                        pw.Text("FİNANSAL ANALİZ VE GİDER DAĞILIMI", style: pw.TextStyle(fontSize: 14, color: greyColor, fontWeight: pw.FontWeight.bold)),
+                        pw.SizedBox(height: 10),
+                        pw.Container(
+                          padding: const pw.EdgeInsets.symmetric(vertical: 20, horizontal: 25),
+                          decoration: pw.BoxDecoration(
+                            color: primaryLightBgColor,
+                            border: pw.Border.all(color: primaryColor, width: 1.5),
+                            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12))
+                          ),
+                          child: pw.Row(
+                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                            children: [
+                              pw.Column(
+                                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                children: [
+                                  pw.Text("TOPLAM ARAÇ HARCAMASI", style: pw.TextStyle(fontSize: 12, color: primaryColor, fontWeight: pw.FontWeight.bold)),
+                                  pw.SizedBox(height: 4),
+                                  pw.Text("Tüm bakım, onarım ve diğer giderler dahildir.", style: pw.TextStyle(fontSize: 10, color: greyColor)),
+                                ]
+                              ),
+                              pw.Text("${totalCost.toStringAsFixed(2)} ₺", style: pw.TextStyle(fontSize: 28, color: primaryColor, fontWeight: pw.FontWeight.bold)),
+                            ]
+                          )
+                        ),
+                        pw.SizedBox(height: 25),
+
+                        // GİDER ÇUBUKLARI
+                        ...(categoryCosts.entries.toList()..sort((a, b) => b.value.compareTo(a.value))).map((e) {
+                          final double percentage = totalCost > 0 ? (e.value / totalCost) : 0;
+                          return pw.Container(
+                            margin: const pw.EdgeInsets.only(bottom: 18),
+                            child: pw.Column(
+                              crossAxisAlignment: pw.CrossAxisAlignment.start,
+                              children: [
+                                pw.Row(
+                                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    pw.Text(e.key.toUpperCase(), style: pw.TextStyle(fontSize: 12, color: whiteColor, fontWeight: pw.FontWeight.bold)),
+                                    pw.Text("${e.value.toStringAsFixed(2)} ₺  |  %${(percentage * 100).toStringAsFixed(1)}", style: pw.TextStyle(fontSize: 12, color: whiteColor, fontWeight: pw.FontWeight.bold)),
+                                  ]
+                                ),
+                                pw.SizedBox(height: 8),
+                                pw.Stack(
+                                  children: [
+                                    pw.Container(height: 12, width: double.infinity, decoration: pw.BoxDecoration(color: cardColor, borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)))),
+                                    pw.Container(height: 12, width: 450 * percentage, decoration: pw.BoxDecoration(color: primaryColor, borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)))),
+                                  ]
+                                )
+                              ]
+                            )
+                          );
+                        }).toList(),
+                      ]
+                    )
+                  ),
+                  pw.Spacer(),
+                  // FOOTER
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 20, horizontal: 35),
+                    color: cardColor,
+                    child: pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Text("Bu rapor OTOTAG mobil uygulaması tarafından oluşturulmuştur.", style: pw.TextStyle(fontSize: 9, color: greyColor)),
+                        pw.Text("Sayfa 1 / 2", style: pw.TextStyle(fontSize: 9, color: primaryColor, fontWeight: pw.FontWeight.bold)),
+                      ]
+                    )
+                  )
+                ],
+              ),
+            );
+          },
+        ),
+      );
+
+      // SAYFA 2: Detaylı Geçmiş Tablosu (Beyaz Tema - Okunabilirlik için)
+      pdf.addPage(
+        pw.MultiPage(
+          pageTheme: pw.PageTheme(
+            pageFormat: PdfPageFormat.a4,
+            margin: const pw.EdgeInsets.all(35),
+            buildBackground: (context) => pw.Container(color: whiteColor),
+          ),
+          build: (pw.Context context) {
+            return [
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text("DETAYLI İŞLEM GEÇMİŞİ", style: pw.TextStyle(fontSize: 20, color: PdfColor.fromHex("#111111"), fontWeight: pw.FontWeight.bold)),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: pw.BoxDecoration(color: PdfColor.fromHex("#F0F0F0"), borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4))),
+                    child: pw.Text(plate, style: pw.TextStyle(fontSize: 14, color: PdfColor.fromHex("#333333"), fontWeight: pw.FontWeight.bold)),
+                  )
+                ]
+              ),
+              pw.SizedBox(height: 10),
+              pw.Divider(color: PdfColor.fromHex("#DDDDDD"), thickness: 2),
+              pw.SizedBox(height: 20),
+              pw.Table(
+                border: pw.TableBorder.all(color: PdfColor.fromHex("#E0E0E0")),
+                columnWidths: {
+                  0: const pw.FlexColumnWidth(2.5), // Tarih
+                  1: const pw.FlexColumnWidth(3.5), // Tür
+                  2: const pw.FlexColumnWidth(6.5), // Açıklama
+                  3: const pw.FlexColumnWidth(2.5), // Tutar
+                },
+                children: [
+                  // Tablo Başlığı
+                  pw.TableRow(
+                    decoration: pw.BoxDecoration(color: PdfColor.fromHex("#F8F9FA")),
+                    children: [
+                      pw.Padding(padding: const pw.EdgeInsets.all(10), child: pw.Text("TARİH", style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex("#555555")))),
+                      pw.Padding(padding: const pw.EdgeInsets.all(10), child: pw.Text("İŞLEM TÜRÜ", style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex("#555555")))),
+                      pw.Padding(padding: const pw.EdgeInsets.all(10), child: pw.Text("AÇIKLAMA", style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex("#555555")))),
+                      pw.Padding(padding: const pw.EdgeInsets.all(10), child: pw.Text("TUTAR (₺)", style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex("#555555")), textAlign: pw.TextAlign.right)),
+                    ],
+                  ),
+                  // Veri Satırları
+                  ...records.map((r) {
+                    double cost = double.tryParse(r['cost']?.toString() ?? '0') ?? 0.0;
+                    return pw.TableRow(
+                      decoration: pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(color: PdfColor.fromHex("#F0F0F0")))),
+                      children: [
+                        pw.Padding(padding: const pw.EdgeInsets.all(10), child: pw.Text(formatDate(r['created_at']?.toString()), style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex("#333333")))),
+                        pw.Padding(padding: const pw.EdgeInsets.all(10), child: pw.Text(r['record_type']?.toString() ?? '-', style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex("#333333")))),
+                        pw.Padding(padding: const pw.EdgeInsets.all(10), child: pw.Text(r['description']?.toString() ?? '-', style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex("#333333")))),
+                        pw.Padding(padding: const pw.EdgeInsets.all(10), child: pw.Text(cost.toStringAsFixed(2), style: pw.TextStyle(fontSize: 11, color: PdfColor.fromHex("#111111"), fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
+                      ],
+                    );
+                  }).toList(),
+                  if(records.isEmpty)
+                    pw.TableRow(
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(20), 
+                          child: pw.Text("Araca ait herhangi bir işlem geçmişi bulunmamaktadır.", style: pw.TextStyle(fontSize: 12, color: PdfColor.fromHex("#888888"))),
+                        ),
+                        pw.Container(), pw.Container(), pw.Container(),
+                      ]
+                    )
+                ],
+              ),
+            ];
+          },
+          footer: (pw.Context context) {
+            return pw.Container(
+              alignment: pw.Alignment.centerRight,
+              margin: const pw.EdgeInsets.only(top: 15),
+              child: pw.Text(
+                "Sayfa ${context.pageNumber} / ${context.pagesCount}",
+                style: pw.TextStyle(fontSize: 10, color: PdfColor.fromHex("#999999")),
+              ),
+            );
+          },
+        ),
+      );
+
+      // 4. Dosyayı Kaydet ve Paylaş
+      if (kIsWeb) {
+        _showTopSnackBar("Web sürümünde PDF paylaşımı henüz desteklenmiyor.", isError: true);
+        return;
+      }
+      
+      final output = await getTemporaryDirectory();
+      final file = File("${output.path}/${plate}_Arac_Karnesi.pdf");
+      await file.writeAsBytes(await pdf.save());
+
+      await Share.shareXFiles([XFile(file.path)], text: '🚗 $plate Araç Karnesi ektedir. Ototag ile aracımı kolayca takip ediyorum!');
+      _showTopSnackBar("Araç Karnesi başarıyla oluşturuldu.");
+      
+    } catch (e) {
+      debugPrint("PDF Hatası: $e");
+      _showTopSnackBar("Araç karnesi oluşturulurken hata meydana geldi.", isError: true);
+    } finally {
+      if (mounted) setState(() => isSaving = false);
+    }
+  }
 }
 
 class _AnimatedServiceCard extends StatefulWidget {
@@ -3206,4 +3677,3 @@ class __AnimatedServiceCardState extends State<_AnimatedServiceCard> with Ticker
     );
   }
 }
-

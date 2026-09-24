@@ -76,18 +76,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _fetchAllData();
   }
 
+  // Hata durumunda yükleniyor durumunun takılı kalması engellendi[cite: 1]
   Future<void> _fetchAllData() async {
+    if (!mounted) return;
     setState(() => isLoading = true);
-    await Future.wait([
-      _fetchDashboardData(),
-      _fetchAllUsers(),
-      _fetchTickets(),
-      _fetchAds(),
-      _fetchPartListings(),
-      _fetchPurchases(),
-    ]);
-    if (mounted) {
-      setState(() => isLoading = false);
+    try {
+      await Future.wait([
+        _fetchDashboardData(),
+        _fetchAllUsers(),
+        _fetchTickets(),
+        _fetchAds(),
+        _fetchPartListings(),
+        _fetchPurchases(),
+      ]);
+    } catch (e) {
+      debugPrint("Veri yükleme hatası: $e");
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
@@ -368,6 +375,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           await http.post(Uri.parse("$baseUrl?action=admin_delete_job"), headers: {"Content-Type": "application/x-www-form-urlencoded"}, body: {"job_id": id.toString()});
         } else if (type == 'users') {
           await http.post(Uri.parse("$baseUrl?action=admin_delete_user"), headers: {"Content-Type": "application/x-www-form-urlencoded"}, body: {"user_id": id.toString()});
+        } else if (type == 'tickets') {
+          await http.post(Uri.parse("$baseUrl?action=admin_delete_ticket"), headers: {"Content-Type": "application/x-www-form-urlencoded"}, body: {"ticket_id": id.toString()});
         }
       } catch (e) {
         debugPrint("Silme hatası: $e");
@@ -1512,6 +1521,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           content: Text("$title kopyalandı: $value", style: const TextStyle(fontWeight: FontWeight.bold)), 
           duration: const Duration(seconds: 1),
           backgroundColor: Colors.blueGrey,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ));
       },
       borderRadius: BorderRadius.circular(12),
@@ -2468,61 +2479,90 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
         surfaceTintColor: Colors.transparent,
       ),
       body: SafeArea(
+        bottom: false,
         child: isLoading 
             ? const Center(child: CircularProgressIndicator(color: Colors.blueAccent))
-            : IndexedStack(
-                index: _selectedIndex,
-                children: [
-                  _buildOverviewTab(cardColor, isDark),
-                  _buildPendingTab(cardColor),
-                  _buildUsersTab(cardColor, isDark),
-                  _buildHistoryAndListingsTab(cardColor, isDark),
-                  _buildTicketsTab(cardColor, isDark),
-                  _buildSettingsTab(cardColor, isDark),
-                ],
+            : RefreshIndicator(
+                onRefresh: _fetchAllData,
+                color: Colors.blueAccent,
+                backgroundColor: cardColor,
+                child: IndexedStack(
+                  index: _selectedIndex,
+                  children: [
+                    _buildOverviewTab(cardColor, isDark),
+                    _buildPendingTab(cardColor),
+                    _buildUsersTab(cardColor, isDark),
+                    _buildHistoryAndListingsTab(cardColor, isDark),
+                    _buildTicketsTab(cardColor, isDark),
+                    _buildSettingsTab(cardColor, isDark),
+                  ],
+                ),
               ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            _selectedIndex = index;
-            userSearchQuery = "";
-            jobSearchQuery = ""; 
-            ticketSearchQuery = "";
-            partSearchQuery = "";
-            _userSearchCtrl.clear();
-            _jobSearchCtrl.clear();
-            _ticketSearchCtrl.clear();
-            _partSearchCtrl.clear();
-          });
-        },
-        backgroundColor: cardColor,
-        indicatorColor: Colors.blue.withOpacity(0.2),
-        labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
-        animationDuration: const Duration(milliseconds: 400),
-        destinations: [
-          const NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard_rounded, color: Colors.blue), label: "Genel"),
-          NavigationDestination(
-            icon: pendingProviders.isNotEmpty 
-              ? Badge(label: Text('${pendingProviders.length}'), child: const Icon(Icons.how_to_reg_outlined))
-              : const Icon(Icons.how_to_reg_outlined),
-            selectedIcon: pendingProviders.isNotEmpty 
-              ? Badge(label: Text('${pendingProviders.length}'), child: const Icon(Icons.how_to_reg_rounded, color: Colors.blue))
-              : const Icon(Icons.how_to_reg_rounded, color: Colors.blue),
-            label: "Onaylar",
+      extendBody: true,
+      bottomNavigationBar: Container(
+        margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(32),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 30, offset: const Offset(0, 10))
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(32),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: NavigationBar(
+              height: 65,
+              selectedIndex: _selectedIndex,
+              onDestinationSelected: (index) {
+                setState(() {
+                  _selectedIndex = index;
+                  isJobSelectionMode = false;
+                  isUserSelectionMode = false;
+                  isTicketSelectionMode = false;
+                  selectedJobs.clear();
+                  selectedUsers.clear();
+                  selectedTickets.clear();
+                  userSearchQuery = "";
+                  jobSearchQuery = ""; 
+                  ticketSearchQuery = "";
+                  partSearchQuery = "";
+                  _userSearchCtrl.clear();
+                  _jobSearchCtrl.clear();
+                  _ticketSearchCtrl.clear();
+                  _partSearchCtrl.clear();
+                });
+              },
+              backgroundColor: cardColor.withOpacity(isDark ? 0.6 : 0.85),
+              indicatorColor: Colors.blueAccent.withOpacity(0.2),
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
+              animationDuration: const Duration(milliseconds: 400),
+              destinations: [
+                const NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard_rounded, color: Colors.blueAccent), label: "Genel"),
+                NavigationDestination(
+                  icon: pendingProviders.isNotEmpty 
+                    ? Badge(label: Text('${pendingProviders.length}'), child: const Icon(Icons.how_to_reg_outlined))
+                    : const Icon(Icons.how_to_reg_outlined),
+                  selectedIcon: pendingProviders.isNotEmpty 
+                    ? Badge(label: Text('${pendingProviders.length}'), child: const Icon(Icons.how_to_reg_rounded, color: Colors.blueAccent))
+                    : const Icon(Icons.how_to_reg_rounded, color: Colors.blueAccent),
+                  label: "Onaylar",
+                ),
+                const NavigationDestination(icon: Icon(Icons.people_outline), selectedIcon: Icon(Icons.people_rounded, color: Colors.blueAccent), label: "Üyeler"),
+                const NavigationDestination(icon: Icon(Icons.history_outlined), selectedIcon: Icon(Icons.history_rounded, color: Colors.blueAccent), label: "İşlemler"),
+                NavigationDestination(
+                  icon: allTickets.where((t) => t is Map && t['status'] == 'open').isNotEmpty
+                    ? Badge(label: Text('${allTickets.where((t) => t is Map && t['status'] == 'open').length}'), child: const Icon(Icons.support_agent_outlined))
+                    : const Icon(Icons.support_agent_outlined),
+                  selectedIcon: const Icon(Icons.support_agent_rounded, color: Colors.blueAccent), 
+                  label: "Şikayet"
+                ),
+                const NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings_rounded, color: Colors.blueAccent), label: "Ayarlar"),
+              ],
+            ),
           ),
-          const NavigationDestination(icon: Icon(Icons.people_outline), selectedIcon: Icon(Icons.people_rounded, color: Colors.blue), label: "Üyeler"),
-          const NavigationDestination(icon: Icon(Icons.history_outlined), selectedIcon: Icon(Icons.history_rounded, color: Colors.blue), label: "İşlemler"),
-          NavigationDestination(
-            icon: allTickets.where((t) => t is Map && t['status'] == 'open').isNotEmpty
-              ? Badge(label: Text('${allTickets.where((t) => t is Map && t['status'] == 'open').length}'), child: const Icon(Icons.support_agent_outlined))
-              : const Icon(Icons.support_agent_outlined),
-            selectedIcon: const Icon(Icons.support_agent_rounded, color: Colors.blue), 
-            label: "Şikayet"
-          ),
-          const NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings_rounded, color: Colors.blue), label: "Ayarlar"),
-        ],
+        ),
       ),
     );
   }
@@ -2604,7 +2644,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
 
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2685,7 +2725,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
     
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
       itemCount: pendingProviders.length,
       separatorBuilder: (_, __) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
@@ -2784,16 +2824,18 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
   }
 
   Widget _buildUsersTab(Color cardColor, bool isDark) {
+    // Arama performansı optimize edildi
+    final String searchLower = userSearchQuery.toLowerCase();
     List filteredUsers = allUsers.where((user) {
       if (user is! Map) return false;
       final int userId = int.tryParse(user['id']?.toString() ?? '0') ?? 0;
       if (hiddenUsers.contains(userId)) return false; 
 
-      final name = (user['name'] ?? '').toString().toLowerCase();
-      final phone = (user['phone'] ?? '').toString().toLowerCase();
-      final search = userSearchQuery.toLowerCase();
-      
-      final matchesSearch = name.contains(search) || phone.contains(search);
+      if (searchLower.isNotEmpty) {
+        final name = (user['name'] ?? '').toString().toLowerCase();
+        final phone = (user['phone'] ?? '').toString().toLowerCase();
+        if (!name.contains(searchLower) && !phone.contains(searchLower)) return false;
+      }
       
       bool matchesType = false;
       if (userFilter == 'all') {
@@ -2808,7 +2850,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
         matchesType = user['user_type'] == userFilter;
       }
       
-      return matchesSearch && matchesType;
+      return matchesType;
     }).toList();
 
     return Column(
@@ -2924,7 +2966,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
             ? _buildEmptyState("Arama kriterlerine uygun kullanıcı bulunamadı.", Icons.search_off_rounded)
             : ListView.separated(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                 cacheExtent: 2000,
                 itemCount: filteredUsers.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
@@ -3177,7 +3219,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
               ? _buildEmptyState("Arama kriterine uygun ilan bulunamadı.", Icons.inventory_2_rounded)
               : ListView.separated(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                   itemCount: filteredParts.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
@@ -3372,7 +3414,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
             ? _buildEmptyState("Arama kriterine uygun işlem bulunamadı.", Icons.history_rounded)
             : ListView.separated(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                 cacheExtent: 2000,
                 itemCount: filteredJobs.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
@@ -3602,7 +3644,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
             ? _buildEmptyState("Arama kriterine uygun şikayet bulunamadı.", Icons.support_agent_rounded)
             : ListView.separated(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                 cacheExtent: 2000,
                 itemCount: filteredTickets.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
@@ -3707,7 +3749,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
 
   Widget _buildSettingsTab(Color cardColor, bool isDark) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
       physics: const AlwaysScrollableScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3887,7 +3929,11 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
           gradient: LinearGradient(colors: gradientColors, begin: Alignment.topLeft, end: Alignment.bottomRight),
-          boxShadow: [BoxShadow(color: gradientColors.last.withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 6))],
+          border: Border.all(color: Colors.white.withOpacity(0.2), width: 1.5),
+          boxShadow: [
+            BoxShadow(color: gradientColors.last.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8)),
+            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 5, offset: const Offset(0, 2))
+          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

@@ -7,6 +7,8 @@ list(APPEND FLUTTER_PLUGIN_LIST
   firebase_core
   flutter_tts
   geolocator_windows
+  printing
+  share_plus
   url_launcher_windows
 )
 

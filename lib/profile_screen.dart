@@ -894,6 +894,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   }
 
   void _handleLogout() {
+    HapticFeedback.mediumImpact();
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -1176,62 +1177,69 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ÜST KULLANICI ÖZET KARTI
+              // ÜST KULLANICI ÖZET KARTI (ÇIKIŞ YAP BUTONU İLE ENTEGRE DİZAYN)
               Container(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(22),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [_cardColor.withValues(alpha: 0.9), _cardColorLight.withValues(alpha: 0.8)],
+                    colors: [_cardColor.withValues(alpha: 0.95), _cardColorLight.withValues(alpha: 0.85)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(32),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.5),
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.5),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.4),
-                      blurRadius: 25,
+                      color: Colors.black.withValues(alpha: 0.45),
+                      blurRadius: 28,
                       offset: const Offset(0, 10),
                     )
                   ],
                 ),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
+                    // Parlayan Canlı Avatar
                     RepaintBoundary(
                       child: AnimatedBuilder(
                         animation: _pulseController,
                         builder: (context, child) {
                           return Container(
-                            padding: const EdgeInsets.all(18),
+                            width: 66,
+                            height: 66,
                             decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [primaryColor, _secondaryColor], 
+                              gradient: const LinearGradient(
+                                colors: [_primaryColor, _secondaryColor], 
                                 begin: Alignment.topLeft, 
                                 end: Alignment.bottomRight
                               ),
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: primaryColor.withValues(alpha: 0.35 + (_pulseController.value * 0.2)), 
-                                  blurRadius: 25, 
-                                  spreadRadius: _pulseController.value * 4, 
-                                  offset: const Offset(0, 6)
+                                  color: _primaryColor.withValues(alpha: 0.35 + (_pulseController.value * 0.25)), 
+                                  blurRadius: 22, 
+                                  spreadRadius: _pulseController.value * 3, 
+                                  offset: const Offset(0, 4)
                                 ),
                               ]
                             ),
-                            child: Icon(
-                              isProvider ? Icons.engineering_rounded : Icons.person_rounded, 
-                              size: 40, 
-                              color: Colors.black
+                            child: Center(
+                              child: Icon(
+                                isProvider ? Icons.engineering_rounded : Icons.person_rounded, 
+                                size: 34, 
+                                color: Colors.black
+                              ),
                             ),
                           );
                         }
                       ),
                     ),
-                    const SizedBox(width: 20),
+                    const SizedBox(width: 18),
+                    // Kullanıcı Bilgisi
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             profile['name']?.toString().isNotEmpty == true 
@@ -1239,48 +1247,95 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                               : "Kullanıcı",
                             style: const TextStyle(
                               color: Colors.white, 
-                              fontSize: 22, 
+                              fontSize: 20, 
                               fontWeight: FontWeight.w900, 
                               letterSpacing: -0.5
                             ),
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 5),
                           Row(
                             children: [
-                              Icon(Icons.phone_iphone_rounded, color: Colors.white.withValues(alpha: 0.5), size: 16),
+                              Icon(Icons.phone_android_rounded, color: Colors.white.withValues(alpha: 0.5), size: 15),
                               const SizedBox(width: 6),
-                              Text(
-                                profile['phone']?.toString().isNotEmpty == true 
-                                  ? profile['phone'].toString() 
-                                  : "Telefon yok",
-                                style: const TextStyle(
-                                  color: _subtitleColor, 
-                                  fontSize: 14, 
-                                  fontWeight: FontWeight.w600
+                              Expanded(
+                                child: Text(
+                                  profile['phone']?.toString().isNotEmpty == true 
+                                    ? profile['phone'].toString() 
+                                    : "Telefon yok",
+                                  style: const TextStyle(
+                                    color: _subtitleColor, 
+                                    fontSize: 13, 
+                                    fontWeight: FontWeight.w600
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: primaryColor.withValues(alpha: 0.12),
+                              color: _primaryColor.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: primaryColor.withValues(alpha: 0.3), width: 1),
+                              border: Border.all(color: _primaryColor.withValues(alpha: 0.3), width: 1),
                             ),
                             child: Text(
                               isProvider ? "Usta / Hizmet Veren" : "Müşteri Hesabı",
-                              style: TextStyle(
-                                color: primaryColor, 
-                                fontSize: 12, 
+                              style: const TextStyle(
+                                color: _primaryColor, 
+                                fontSize: 11, 
                                 fontWeight: FontWeight.w800, 
                                 letterSpacing: 0.2
                               ),
                             ),
                           ),
                         ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    // KART İÇİ ÇIKIŞ YAP BUTONU (ÖZEL CAM VE NEON DİZAYN)
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _handleLogout,
+                        borderRadius: BorderRadius.circular(16),
+                        splashColor: _dangerColor.withValues(alpha: 0.3),
+                        highlightColor: Colors.transparent,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _dangerColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: _dangerColor.withValues(alpha: 0.35), width: 1.2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: _dangerColor.withValues(alpha: 0.15),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              )
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.logout_rounded, color: _dangerColor, size: 20),
+                              SizedBox(height: 4),
+                              Text(
+                                "Çıkış Yap",
+                                style: TextStyle(
+                                  color: _dangerColor,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 11,
+                                  letterSpacing: -0.2
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -1581,56 +1636,44 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
               const SizedBox(height: 28),
 
-              // GÜVENLİ ÇIKIŞ VE HESAP SİLME
+              // HESABI SİL KARTI
               Container(
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: _cardColor.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(26),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.06), width: 1.5),
+                  color: _cardColor.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.06), width: 1.2),
                 ),
-                child: Column(
-                  children: [
-                    _buildSettingsTile(
-                      icon: Icons.power_settings_new_rounded,
-                      title: "Güvenli Çıkış Yap",
-                      color: _dangerColor,
-                      onTap: _handleLogout,
-                      isLast: true,
-                    ),
-                    const Divider(height: 24, color: Colors.white10),
-                    InkWell(
-                      onTap: _handleDeleteAccount,
-                      borderRadius: BorderRadius.circular(14),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: _dangerColor.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: const Icon(Icons.delete_forever_rounded, color: Colors.white54, size: 22),
-                            ),
-                            const SizedBox(width: 16),
-                            const Expanded(
-                              child: Text(
-                                "Hesabımı ve Verilerimi Sil",
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white54,
-                                ),
-                              ),
-                            ),
-                            const Icon(Icons.chevron_right_rounded, color: Colors.white30, size: 20),
-                          ],
+                child: InkWell(
+                  onTap: _handleDeleteAccount,
+                  borderRadius: BorderRadius.circular(14),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: _dangerColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(Icons.delete_forever_rounded, color: _dangerColor, size: 22),
                         ),
-                      ),
+                        const SizedBox(width: 16),
+                        const Expanded(
+                          child: Text(
+                            "Hesabımı ve Verilerimi Kalıcı Sil",
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white60,
+                            ),
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right_rounded, color: Colors.white30, size: 20),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
 
@@ -1797,55 +1840,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             borderSide: readOnly ? BorderSide.none : BorderSide(color: primaryColor, width: 2)
           ),
           contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 18),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSettingsTile({
-    required IconData icon,
-    required String title,
-    required Color color,
-    required VoidCallback onTap,
-    bool isLast = false,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(icon, color: color, size: 22),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    letterSpacing: -0.2,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                color: Colors.white.withValues(alpha: 0.35),
-                size: 16,
-              ),
-            ],
-          ),
         ),
       ),
     );

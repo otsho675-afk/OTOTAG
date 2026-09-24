@@ -71,6 +71,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final String baseUrl = "https://eliteagency.sbs/api.php";
   final Duration apiTimeout = const Duration(seconds: 20);
 
+  static const String _iosGoogleClientId = '73273804842-u0lcirptug9aotm2m6gn27g92hftt5ud.apps.googleusercontent.com';
+
   @override
   void initState() {
     super.initState();
@@ -204,10 +206,10 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!kIsWeb) HapticFeedback.selectionClick();
     try {
       final GoogleSignIn googleSignIn = GoogleSignIn(
+        clientId: (!kIsWeb && Platform.isIOS) ? _iosGoogleClientId : null,
         scopes: const ['email', 'profile'],
       );
 
-      // iOS'ta oturum açılmamışken doğrudan signOut çağrısı crash oluşturmaması için kontrol
       try {
         if (await googleSignIn.isSignedIn()) {
           await googleSignIn.signOut();

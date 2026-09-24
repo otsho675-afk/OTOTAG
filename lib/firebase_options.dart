@@ -57,22 +57,24 @@ class DefaultFirebaseOptions {
     projectId: 'ototag-d6a69',
     storageBucket: 'ototag-d6a69.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBs-CulXRiRMzM1juZ8y4r2s9r6ggCHmPw',
     appId: '1:73273804842:ios:b10a373555eae071f41b53',
     messagingSenderId: '73273804842',
     projectId: 'ototag-d6a69',
     storageBucket: 'ototag-d6a69.firebasestorage.app',
+    androidClientId: '73273804842-jilr0kvgokhl04f81se2hdfrm8mukg6s.apps.googleusercontent.com',
+    iosClientId: '73273804842-u0lcirptug9aotm2m6gn27g92hftt5ud.apps.googleusercontent.com',
     iosBundleId: 'com.oto.tag',
   );
-
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyBs-CulXRiRMzM1juZ8y4r2s9r6ggCHmPw',
     appId: '1:73273804842:ios:e46107293fcdc4c0f41b53',
     messagingSenderId: '73273804842',
     projectId: 'ototag-d6a69',
     storageBucket: 'ototag-d6a69.firebasestorage.app',
+    androidClientId: '73273804842-jilr0kvgokhl04f81se2hdfrm8mukg6s.apps.googleusercontent.com',
+    iosClientId: '73273804842-9k0u96pmj3mflgnu91ls8hmiiujiuubp.apps.googleusercontent.com',
     iosBundleId: 'com.example.otoTamirApp',
   );
 

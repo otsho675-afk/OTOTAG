@@ -101,6 +101,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   final Duration _apiTimeout = const Duration(seconds: 25); 
 
+  static const String _iosGoogleClientId = '73273804842-u0lcirptug9aotm2m6gn27g92hftt5ud.apps.googleusercontent.com';
+
   static const Color neonGreen = Color(0xFF00FFA3);
   static const Color pureBlack = Color(0xFF030305);
   static const Color panelBlack = Color(0xFF111115);
@@ -205,6 +207,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     if (!kIsWeb) HapticFeedback.selectionClick();
     try {
       final GoogleSignIn googleSignIn = GoogleSignIn(
+        clientId: (!kIsWeb && Platform.isIOS) ? _iosGoogleClientId : null,
         scopes: const ['email', 'profile'],
       );
 

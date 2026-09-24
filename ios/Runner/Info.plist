@@ -48,7 +48,11 @@
     <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
     
-    <!-- Google Sign-In URL Şeması (iOS Çökmesini Önleyen Zorunlu Tanım) -->
+    <!-- Google Sign-In iOS Client ID (Native Çökmeyi Önleyen Anahtar) -->
+    <key>GIDClientID</key>
+    <string>73273804842-u0lcirptug9aotm2m6gn27g92hftt5ud.apps.googleusercontent.com</string>
+
+    <!-- Google Sign-In URL Şeması -->
     <key>CFBundleURLTypes</key>
     <array>
         <dict>

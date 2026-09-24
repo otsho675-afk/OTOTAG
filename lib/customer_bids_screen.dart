@@ -391,13 +391,24 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
             }
           }
 
-          // Teklif sayısında veya içeriğinde (fiyat vb.) değişiklik varsa animasyonu tetikle
-          bool isUpdated = jsonEncode(bids) != jsonEncode(newBidsList);
+          // Hızlı ve hafif karşılaştırma (CPU yükü ve frame drop önlendi)
           bool isLengthChanged = bids.length != newBidsList.length;
+          bool isContentChanged = false;
           
-          if (isUpdated) {
-            if (isLengthChanged) {
-              if (newBidsList.length > bids.length) HapticFeedback.heavyImpact();
+          if (!isLengthChanged) {
+            for (int i = 0; i < bids.length; i++) {
+              if (bids[i]['bid_id']?.toString() != newBidsList[i]['bid_id']?.toString() ||
+                  bids[i]['amount']?.toString() != newBidsList[i]['amount']?.toString() ||
+                  bids[i]['last_bidder']?.toString() != newBidsList[i]['last_bidder']?.toString()) {
+                isContentChanged = true;
+                break;
+              }
+            }
+          }
+
+          if (isLengthChanged || isContentChanged) {
+            if (isLengthChanged && newBidsList.length > bids.length) {
+              HapticFeedback.heavyImpact();
               _listAnimController.forward(from: 0.0);
             }
             setState(() => bids = newBidsList);
@@ -626,7 +637,10 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
           );
         }
       ),
-    ).whenComplete(() => _isDialogActive = false);
+    ).whenComplete(() {
+      _isDialogActive = false;
+      counterController.dispose();
+    });
   }
 
   Future<void> _acceptBid(int bidId, int providerId, String amount) async {
@@ -1223,9 +1237,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
   }
 
   Widget _buildBidCard(Map bid, int index, bool isSmallScreen) {
-        final int bidId = int.parse(bid['bid_id'].toString());
-        final int providerId = int.parse(bid['provider_id'].toString());
-        final double priceVal = double.tryParse(bid['amount'].toString()) ?? 0;
+        final int bidId = int.tryParse(bid['bid_id']?.toString() ?? '0') ?? 0;
+        final int providerId = int.tryParse(bid['provider_id']?.toString() ?? '0') ?? 0;
+        final double priceVal = double.tryParse(bid['amount']?.toString() ?? '0') ?? 0;
         final String displayPrice = priceVal > 0 ? "${priceVal.toStringAsFixed(0)} ₺" : "Belirtilmedi";
         final String providerName = bid['provider_name'] ?? 'Bilinmeyen Usta';
         final String rating = bid['average_rating']?.toString() ?? '5.0';

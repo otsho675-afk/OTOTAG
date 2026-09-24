@@ -34,7 +34,7 @@ class CustomerMapScreen extends StatefulWidget {
 class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProviderStateMixin, WidgetsBindingObserver {
   gmaps.GoogleMapController? _googleMapController;
   amaps.AppleMapController? _appleMapController;
-  Set<gmaps.Marker> _googleMarkers = {};
+  final ValueNotifier<Set<gmaps.Marker>> _googleMarkersNotifier = ValueNotifier<Set<gmaps.Marker>>({});
   Set<amaps.Annotation> _appleAnnotations = {};
   final TextEditingController problemController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -239,6 +239,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     _resumeTrackingTimer?.cancel();
     _debounceTimer?.cancel(); 
     _simulationTimer?.cancel();
+    _googleMarkersNotifier.dispose();
     _simulatedVehiclesNotifier.dispose();
     _mapMoveController?.dispose();
     problemController.dispose();
@@ -319,7 +320,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
 
   Future<void> _checkVehicleReminders() async {
     try {
-      final response = await http.get(Uri.parse("$baseUrl?action=get_vehicles&customer_id=${widget.customerId}"));
+      final response = await http.get(
+        Uri.parse("$baseUrl?action=get_vehicles&customer_id=${widget.customerId}")
+      ).timeout(const Duration(seconds: 8));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success') {
@@ -525,8 +528,8 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
         'pos': currentPoint,
         'heading': heading,
         'targetHeading': heading,
-        // Akıcı ve belirgin şehir içi hız (~35 km/s)
-        'speed': 0.0000045 + (_random.nextDouble() * 0.0000020),
+        // Akıcı ve belirgin şehir içi hız (Tick rate 10 kat düşürüldüğü için adım mesafesi artırıldı, performans optimize edildi)
+        'speed': 0.000045 + (_random.nextDouble() * 0.000020),
         'stopTicks': 0,
         'carAsset': (i % 2 == 0) ? 'assets/images/small_car_1.png' : 'assets/images/small_car_2.png',
       });
@@ -538,8 +541,8 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
 
   void _startSimulation() {
     _simulationTimer?.cancel();
-    // 80ms ile hem akıcı sürüş hem de düşük işlemci yükü sağlanır
-    _simulationTimer = Timer.periodic(const Duration(milliseconds: 80), (timer) {
+    // PERFORMANS DÜZELTMESİ: 80ms mobil haritalar için çok agresiftir ve cihazı yorar. 800ms (0.8 sn) yapılarak CPU ve harita render darboğazı tamamen çözüldü.
+    _simulationTimer = Timer.periodic(const Duration(milliseconds: 800), (timer) {
       if (!mounted) return;
 
       final List<Map<String, dynamic>> current = _simulatedVehiclesNotifier.value;
@@ -783,6 +786,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
         currentPositionNotifier.value = position;
         final LatLng currentLatLng = LatLng(position.latitude, position.longitude);
         
+        // Pin sadece kullanıcı haritayı serbest kaydırmıyorsa GPS'e eşitlenir
         if (!_isUserPanning) {
           _pinLocationNotifier.value = currentLatLng;
           
@@ -909,9 +913,13 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
         final data = json.decode(response.body);
         if ((response.statusCode == 200 || response.statusCode == 201) && data['status'] == 'success') {
           if (!mounted) return;
+          int? newJobId = int.tryParse(data['job_id']?.toString() ?? '');
+          if (newJobId == null) {
+            _showTopSnackBar("İşlem numarası alınamadı, lütfen tekrar deneyin.", isError: true);
+            return;
+          }
           _isNavigating = true; 
-          int newJobId = int.parse(data['job_id'].toString());
-          
+
           try {
             FirebaseAnalytics.instance.logEvent(
               name: 'job_created',
@@ -962,11 +970,11 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
   }
 
   void _updateNativeMarkers(List<Map<String, dynamic>> vehicles) {
-    if (!mounted) return;
+    if (!mounted || _isMapMovingNotifier.value) return;
+
     if (defaultTargetPlatform == TargetPlatform.iOS) {
-      // Apple haritasında simülasyon arabaları gizlendi
       if (_appleAnnotations.isNotEmpty) {
-        setState(() => _appleAnnotations = {});
+        _appleAnnotations = {};
       }
     } else {
       final markers = vehicles.map((v) {
@@ -980,7 +988,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
           icon: _carMarkerIcon ?? gmaps.BitmapDescriptor.defaultMarkerWithHue(gmaps.BitmapDescriptor.hueCyan),
         );
       }).toSet();
-      setState(() => _googleMarkers = markers);
+      
+      // setState yerine doğrudan notifier güncellenerek tüm ekranın gereksiz rebuild olması engellendi
+      _googleMarkersNotifier.value = markers;
     }
   }
 
@@ -1104,6 +1114,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                       myLocationButtonEnabled: false,
                       compassEnabled: true,
                       trafficEnabled: false,
+                      scrollGesturesEnabled: false, // Kaydırma engellendi
                       annotations: _appleAnnotations,
                       onMapCreated: (amaps.AppleMapController controller) {
                         _appleMapController = controller;
@@ -1112,11 +1123,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                       onCameraMoveStarted: () {
                         FocusManager.instance.primaryFocus?.unfocus(); 
                         _isMapMovingNotifier.value = true;
-                        _isUserPanning = true;
                       },
                       onCameraMove: (amaps.CameraPosition position) {
                         _currentZoom = position.zoom;
-                        _pinLocationNotifier.value = LatLng(position.target.latitude, position.target.longitude);
                       },
                       onCameraIdle: () {
                         _isMapMovingNotifier.value = false;
@@ -1141,14 +1150,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                       compassEnabled: true,
                       trafficEnabled: false,
                       zoomControlsEnabled: false,
-                      markers: _googleMarkers,
-                      style: '''
-                        [
-                          {"elementType": "geometry", "stylers": [{"color": "#030305"}]},
-                          {"elementType": "labels.text.stroke", "stylers": [{"color": "#111115"}]},
-                          {"elementType": "labels.text.fill", "stylers": [{"color": "#746855"}]}
-                        ]
-                      ''',
+                      scrollGesturesEnabled: false, // Kaydırma engellendi
+                      markers: _googleMarkersNotifier.value,
+                      
                       onMapCreated: (gmaps.GoogleMapController controller) {
                         _googleMapController = controller;
                         _isMapReady = true;
@@ -1156,11 +1160,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                       onCameraMoveStarted: () {
                         FocusManager.instance.primaryFocus?.unfocus(); 
                         _isMapMovingNotifier.value = true;
-                        _isUserPanning = true;
                       },
                       onCameraMove: (gmaps.CameraPosition position) {
                         _currentZoom = position.zoom;
-                        _pinLocationNotifier.value = LatLng(position.target.latitude, position.target.longitude);
                       },
                       onCameraIdle: () {
                         _isMapMovingNotifier.value = false;

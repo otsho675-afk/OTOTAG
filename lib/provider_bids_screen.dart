@@ -206,9 +206,12 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
 
   String _generateListHash(List list) {
     if (list.isEmpty) return "empty";
-    // CRITICAL FIX: Tüm listenin hash'ini alarak ortadaki bir işin statüsü değiştiğinde UI'ın güncellenmesini sağla
-    // PERFORMANS: Pazarlık durumunda fiyat güncellemelerini de hash'e dahil et
-    return list.map((e) => "${e['job_id']}_${e['status']}_${e['agreed_price']}").join("|");
+    final StringBuffer sb = StringBuffer();
+    for (int i = 0; i < list.length; i++) {
+      final e = list[i];
+      sb.write("${e['job_id'] ?? e['id']}_${e['status']}_${e['agreed_price']};");
+    }
+    return sb.toString();
   }
 
   Future<void> _fetchBids() async {
@@ -450,8 +453,10 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
             onTap: () {
               HapticFeedback.selectionClick();
               if (!isCompleted && !isCancelled) {
+                final int targetJobId = int.tryParse(job['job_id']?.toString() ?? job['id']?.toString() ?? '0') ?? 0;
+                if (targetJobId == 0) return;
                 Navigator.push(context, PageRouteBuilder(
-                  pageBuilder: (context, animation, secondaryAnimation) => JobTrackingScreen(jobId: int.tryParse(job['job_id']?.toString() ?? '0') ?? 0, userType: 'provider', userId: widget.providerId),
+                  pageBuilder: (context, animation, secondaryAnimation) => JobTrackingScreen(jobId: targetJobId, userType: 'provider', userId: widget.providerId),
                   transitionsBuilder: (context, animation, secondaryAnimation, child) => FadeTransition(opacity: animation, child: child),
                 ));
               } else {
@@ -522,7 +527,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
-                                    job['service_type'].toString().toUpperCase(), 
+                                    (job['service_type']?.toString() ?? 'DİĞER').toUpperCase(), 
                                     style: TextStyle(fontSize: isSmallScreen ? 11 : 13, color: textGray, fontWeight: FontWeight.w700, letterSpacing: 0.3),
                                     overflow: TextOverflow.ellipsis,
                                   ),

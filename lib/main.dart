@@ -258,6 +258,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         if (!kIsWeb) {
           OneSignal.login(userId.toString()); // Bildirim bağlantısını tazele
         }
+        // Motorun ve izinlerin (Örn. konum servisleri) tam bağlanması için ufak bir gecikme
+        await Future.delayed(const Duration(milliseconds: 300));
+        
         if (userType == 'customer') {
           _nextScreen = CustomerDashboardScreen(customerId: userId);
         } else if (userType == 'provider') {

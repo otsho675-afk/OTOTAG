@@ -614,6 +614,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         }
       )
     ).then((_) {
+      priceController.dispose();
+      timeController.dispose();
       if (mounted) setState(() => _isModalOpen = false);
     });
   }
@@ -1285,7 +1287,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             setState(() {
               if (!_isModalOpen) {
                 _showJobCard = true; 
-                _currentJobIndex = fetchedJobs.indexWhere((j) => int.parse(j['id'].toString()) == newJobId);
+                _currentJobIndex = fetchedJobs.indexWhere((j) => (int.tryParse(j['id']?.toString() ?? '0') ?? 0) == newJobId);
+                if (_currentJobIndex == -1) _currentJobIndex = 0;
               }
               _flitchingJobId = newJobId;
             });
@@ -1304,7 +1307,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             }
           }
 
-          if (jsonEncode(jobList) != jsonEncode(fetchedJobs)) {
+          bool listChanged = jobList.length != fetchedJobs.length ||
+              !setEquals(knownJobIds, currentJobIds);
+
+          if (listChanged) {
             setState(() {
               jobList = fetchedJobs;
               knownJobIds = currentJobIds; 
@@ -2129,13 +2135,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                               ),
                               zoom: 15.0,
                             ),
-                            style: '''
-                              [
-                                {"elementType": "geometry", "stylers": [{"color": "#030305"}]},
-                                {"elementType": "labels.text.stroke", "stylers": [{"color": "#111115"}]},
-                                {"elementType": "labels.text.fill", "stylers": [{"color": "#746855"}]}
-                              ]
-                            ''',
+                            
                             myLocationEnabled: true,
                             myLocationButtonEnabled: false,
                             compassEnabled: true,
@@ -2448,7 +2448,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                             final String distance = job['distance'] != null ? _parseDouble(job['distance']).toStringAsFixed(1) : "0.0";
                             
                             final String probDesc = job['problem_description']?.toString() ?? '';
-                            final bool isFlashing = int.parse(job['id'].toString()) == _flitchingJobId;
+                            final int parsedCurrentId = int.tryParse(job['id']?.toString() ?? '0') ?? 0;
+                            final bool isFlashing = parsedCurrentId == _flitchingJobId;
                             
                             return AnimatedBuilder(
                               animation: _pageController,
@@ -2464,7 +2465,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                     onTap: () {
                                       HapticFeedback.lightImpact();
                                       setState(() => _showJobCard = false);
-                                      _showBidDialog(int.parse(job['id'].toString()), serviceName, probDesc, distance, serviceType);
+                                      _showBidDialog(parsedCurrentId, serviceName, probDesc, distance, serviceType);
                                     },
                                     child: Container(
                                       margin: const EdgeInsets.symmetric(horizontal: 4),

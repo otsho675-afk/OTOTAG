@@ -152,7 +152,6 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
           scheduledDate: DateTime.now().add(const Duration(seconds: 4))
         );
       } else {
-        // Tarih ileri bir tarihe güncellendiyse eski uyarıları anında iptal et
         await notificationHelper.cancelNotification(vId ^ "sigorta_gecmis".hashCode);
         await notificationHelper.cancelNotification(vId ^ "sigorta_yaklasan".hashCode);
         
@@ -168,7 +167,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
       }
     }
 
-    // Muayene Bildirimi (Doğrudan girilen tarihi baz alır)
+    // Muayene Bildirimi
     if (_effectiveInspectionDate != null) {
       final int daysLeft = _effectiveInspectionDate!.difference(nowNormalized).inDays;
       final int notifBaseId = (vId.hashCode & 0x7FFFFFFF);
@@ -1083,164 +1082,174 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     const textColor = Colors.white;
     final displayRecords = _filteredRecordsList;
 
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Scaffold(
-        backgroundColor: bgColor,
-        body: isLoading 
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF00FFA3), strokeWidth: 3.5))
-          : Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 750), 
-                child: Stack(
-                  children: [
-                    Positioned(
-                      top: -100,
-                      left: -100,
-                      child: Container(
-                        width: 350,
-                        height: 350,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: RadialGradient(colors: [const Color(0xFF00FFA3).withOpacity(0.07), Colors.transparent]),
-                        ),
-                      ),
-                    ),
-                    RefreshIndicator(
-                      onRefresh: () async {
-                        HapticFeedback.lightImpact();
-                        await _fetchRecords();
-                      },
-                      color: const Color(0xFF00FFA3),
-                      backgroundColor: const Color(0xFF161822),
-                      child: FadeTransition(
-                        opacity: _fadeController,
-                        child: CustomScrollView(
-                          physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-                          slivers: [
-                            SliverAppBar(
-                              expandedHeight: 140.0,
-                              floating: false,
-                              pinned: true,
-                              backgroundColor: bgColor,
-                              elevation: 0,
-                              leading: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: IconButton(
-                                  icon: Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(color: const Color(0xFF161822), shape: BoxShape.circle, border: Border.all(color: Colors.white10)),
-                                    child: const Icon(Icons.arrow_back_ios_new_rounded, size: 14, color: Colors.white),
-                                  ),
-                                  onPressed: () => Navigator.pop(context),
-                                ),
-                              ),
-                              flexibleSpace: FlexibleSpaceBar(
-                                titlePadding: const EdgeInsets.only(left: 64, bottom: 14, right: 16),
-                                centerTitle: false,
-                                title: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.bottomLeft,
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF161822),
-                                          borderRadius: BorderRadius.circular(10),
-                                          border: Border.all(color: const Color(0xFF00FFA3), width: 1.5),
-                                        ),
-                                        child: Text(
-                                          currentVehicleData['plate']?.toString().toUpperCase() ?? '', 
-                                          style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 18, letterSpacing: 0.8)
-                                        ),
-                                      ),
-                                      if ((currentVehicleData['brand_model'] ?? '').toString().isNotEmpty) ...[
-                                        const SizedBox(width: 10),
-                                        Text(currentVehicleData['brand_model'] ?? '', style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.7), fontWeight: FontWeight.w600)),
-                                      ]
-                                    ],
-                                  ),
-                                ),
-                              ),
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyH, control: true): () {
+          _showRecordSheet();
+        }
+      },
+      child: Focus(
+        autofocus: true,
+        child: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Scaffold(
+            backgroundColor: bgColor,
+            body: isLoading 
+              ? const Center(child: CircularProgressIndicator(color: Color(0xFF00FFA3), strokeWidth: 3.5))
+              : Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 750), 
+                    child: Stack(
+                      children: [
+                        Positioned(
+                          top: -100,
+                          left: -100,
+                          child: Container(
+                            width: 350,
+                            height: 350,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(colors: [const Color(0xFF00FFA3).withOpacity(0.07), Colors.transparent]),
                             ),
-                            SliverToBoxAdapter(
-                              child: SafeArea(
-                                top: false,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                  children: [
-                                    const SizedBox(height: 8),
-                                    _buildExpenseCards(),
-                                    const SizedBox(height: 10),
-                                    _buildVerticalSummary(),
-                                    Padding(
-                                      padding: const EdgeInsets.fromLTRB(16, 24, 16, 14),
+                          ),
+                        ),
+                        RefreshIndicator(
+                          onRefresh: () async {
+                            HapticFeedback.lightImpact();
+                            await _fetchRecords();
+                          },
+                          color: const Color(0xFF00FFA3),
+                          backgroundColor: const Color(0xFF161822),
+                          child: FadeTransition(
+                            opacity: _fadeController,
+                            child: CustomScrollView(
+                              physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                              slivers: [
+                                SliverAppBar(
+                                  expandedHeight: 140.0,
+                                  floating: false,
+                                  pinned: true,
+                                  backgroundColor: bgColor,
+                                  elevation: 0,
+                                  leading: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: IconButton(
+                                      icon: Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(color: const Color(0xFF161822), shape: BoxShape.circle, border: Border.all(color: Colors.white10)),
+                                        child: const Icon(Icons.arrow_back_ios_new_rounded, size: 14, color: Colors.white),
+                                      ),
+                                      onPressed: () => Navigator.pop(context),
+                                    ),
+                                  ),
+                                  flexibleSpace: FlexibleSpaceBar(
+                                    titlePadding: const EdgeInsets.only(left: 64, bottom: 14, right: 16),
+                                    centerTitle: false,
+                                    title: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.bottomLeft,
                                       child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Row(
-                                            children: [
-                                              Container(width: 4, height: 22, decoration: BoxDecoration(color: const Color(0xFF00FFA3), borderRadius: BorderRadius.circular(8))),
-                                              const SizedBox(width: 10),
-                                              const Text("İşlem Geçmişi", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: textColor, letterSpacing: -0.5)),
-                                            ],
-                                          ),
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                            decoration: BoxDecoration(color: const Color(0xFF00FFA3).withOpacity(0.12), borderRadius: BorderRadius.circular(12)),
-                                            child: Text("${records.length} Kayıt", style: const TextStyle(color: Color(0xFF00FFA3), fontWeight: FontWeight.w900, fontSize: 13)),
-                                          )
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF161822),
+                                              borderRadius: BorderRadius.circular(10),
+                                              border: Border.all(color: const Color(0xFF00FFA3), width: 1.5),
+                                            ),
+                                            child: Text(
+                                              currentVehicleData['plate']?.toString().toUpperCase() ?? '', 
+                                              style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 18, letterSpacing: 0.8)
+                                            ),
+                                          ),
+                                          if ((currentVehicleData['brand_model'] ?? '').toString().isNotEmpty) ...[
+                                            const SizedBox(width: 10),
+                                            Text(currentVehicleData['brand_model'] ?? '', style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.7), fontWeight: FontWeight.w600)),
+                                          ]
                                         ],
                                       ),
                                     ),
-                                    _buildFilterAndSearchBar(),
-                                    const SizedBox(height: 20),
-                                    if (displayRecords.isEmpty)
-                                      Padding(
-                                        padding: const EdgeInsets.all(40),
-                                        child: Center(
-                                          child: Column(
+                                  ),
+                                ),
+                                SliverToBoxAdapter(
+                                  child: SafeArea(
+                                    top: false,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        const SizedBox(height: 8),
+                                        _buildExpenseCards(),
+                                        const SizedBox(height: 10),
+                                        _buildVerticalSummary(),
+                                        Padding(
+                                          padding: const EdgeInsets.fromLTRB(16, 24, 16, 14),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
-                                              Icon(Icons.history_toggle_off_rounded, size: 64, color: Colors.white.withOpacity(0.2)),
-                                              const SizedBox(height: 16),
-                                              Text(
-                                                records.isEmpty ? "Henüz bu araca ait işlem eklenmedi." : "Arama veya filtreye uygun kayıt bulunamadı.", 
-                                                textAlign: TextAlign.center, 
-                                                style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 15, fontWeight: FontWeight.bold)
+                                              Row(
+                                                children: [
+                                                  Container(width: 4, height: 22, decoration: BoxDecoration(color: const Color(0xFF00FFA3), borderRadius: BorderRadius.circular(8))),
+                                                  const SizedBox(width: 10),
+                                                  const Text("İşlem Geçmişi", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: textColor, letterSpacing: -0.5)),
+                                                ],
                                               ),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                                decoration: BoxDecoration(color: const Color(0xFF00FFA3).withOpacity(0.12), borderRadius: BorderRadius.circular(12)),
+                                                child: Text("${records.length} Kayıt", style: const TextStyle(color: Color(0xFF00FFA3), fontWeight: FontWeight.w900, fontSize: 13)),
+                                              )
                                             ],
                                           ),
                                         ),
-                                      )
-                                    else
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                                        child: Column(
-                                          children: List.generate(displayRecords.length, (index) => _buildTimelineItem(displayRecords[index], index == displayRecords.length - 1)),
-                                        ),
-                                      ),
-                                    const SizedBox(height: 100), 
-                                  ],
+                                        _buildFilterAndSearchBar(),
+                                        const SizedBox(height: 20),
+                                        if (displayRecords.isEmpty)
+                                          Padding(
+                                            padding: const EdgeInsets.all(40),
+                                            child: Center(
+                                              child: Column(
+                                                children: [
+                                                  Icon(Icons.history_toggle_off_rounded, size: 64, color: Colors.white.withOpacity(0.2)),
+                                                  const SizedBox(height: 16),
+                                                  Text(
+                                                    records.isEmpty ? "Henüz bu araca ait işlem eklenmedi." : "Arama veya filtreye uygun kayıt bulunamadı.", 
+                                                    textAlign: TextAlign.center, 
+                                                    style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 15, fontWeight: FontWeight.bold)
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          )
+                                        else
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                                            child: Column(
+                                              children: List.generate(displayRecords.length, (index) => _buildTimelineItem(displayRecords[index], index == displayRecords.length - 1)),
+                                            ),
+                                          ),
+                                        const SizedBox(height: 100), 
+                                      ],
+                                    ),
+                                  ),
                                 ),
-                              ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
+            floatingActionButton: FloatingActionButton.extended(
+              onPressed: () => _showRecordSheet(),
+              backgroundColor: const Color(0xFF00FFA3),
+              elevation: 10,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              icon: const Icon(Icons.add_chart_rounded, color: Colors.black, size: 22),
+              label: const Text("İşlem Ekle", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 0.4)),
             ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => _showRecordSheet(),
-          backgroundColor: const Color(0xFF00FFA3),
-          elevation: 10,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          icon: const Icon(Icons.add_chart_rounded, color: Colors.black, size: 22),
-          label: const Text("İşlem Ekle", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 0.4)),
+          ),
         ),
       ),
     );
@@ -1278,6 +1287,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
   final Duration _uploadTimeout = const Duration(seconds: 60);
   
   late String selectedType;
+  late TextEditingController smartNoteController;
   late TextEditingController descController;
   late TextEditingController costController;
   late TextEditingController currentKmController;
@@ -1290,6 +1300,9 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
   bool isSaving = false;
   bool enableNotification = true; 
   bool isEditing = false;
+  final FocusNode _smartNoteFocus = FocusNode();
+
+  List<Map<String, dynamic>> parsedEntities = [];
   
   final List<Map<String, dynamic>> operationTypes = const [
     {'id': 'Yakıt Alımı', 'icon': Icons.local_gas_station_rounded, 'color': Color(0xFFFF9100)},
@@ -1311,6 +1324,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
     isEditing = widget.recordToEdit != null;
     final r = widget.recordToEdit;
 
+    smartNoteController = TextEditingController();
     selectedType = r?['record_type']?.toString() ?? 'Yakıt Alımı';
     descController = TextEditingController(text: r?['description']?.toString() ?? '');
     costController = TextEditingController(text: r?['cost'] != null ? r!['cost'].toString() : '');
@@ -1323,10 +1337,12 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
 
   @override
   void dispose() {
+    smartNoteController.dispose();
     descController.dispose();
     costController.dispose();
     currentKmController.dispose();
     maintenanceKmController.dispose();
+    _smartNoteFocus.dispose();
     super.dispose();
   }
 
@@ -1351,6 +1367,268 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       elevation: 15,
     ));
+  }
+  
+  void _processSmartNote({String? manualText}) {
+    HapticFeedback.mediumImpact();
+    final rawNote = (manualText ?? smartNoteController.text).trim();
+    if (rawNote.isEmpty) return;
+
+    if (manualText != null) {
+      smartNoteController.text = manualText;
+    }
+
+    final note = rawNote.toLowerCase()
+        .replaceAll('ı', 'i')
+        .replaceAll('ğ', 'g')
+        .replaceAll('ü', 'u')
+        .replaceAll('ş', 's')
+        .replaceAll('ö', 'o')
+        .replaceAll('ç', 'c');
+
+    List<Map<String, dynamic>> detected = [];
+
+    // 1. KATEGORİ VE MARKA/PARÇA ANALİZİ (Ağırlıklı Sözlük Algoritması)
+    final Map<String, List<String>> categoryKeywords = {
+      'Yakıt Alımı': [
+        'yakit', 'benzin', 'mazot', 'motorin', 'lpg', 'otogaz', 'dizel', 'depo', 'litre', 'lt',
+        'opet', 'shell', 'bp', 'petrol ofisi', 'po', 'total', 'lukoil', 'aytemiz', 'tp', 'sunpet'
+      ],
+      'Periyodik Bakım': [
+        'bakim', 'yag', 'filtre', 'hava filtresi', 'yag filtresi', 'polen', 'yakit filtresi',
+        'antifriz', 'buji', 'triger', 'v kayisi', 'periyodik', 'castrol', 'motul', 'mobil 1',
+        'liqui moly', 'shell helix', 'elf', 'total quartz', '5w30', '5w40', '0w20', '10w40'
+      ],
+      'Lastik & Balans': [
+        'lastik', 'balans', 'rot', 'jant', 'kislik', 'yazlik', '4 mevsim', 'dort mevsim',
+        'michelin', 'continental', 'goodyear', 'bridgestone', 'pirelli', 'lassa', 'petlas',
+        'hankook', 'dunlop', 'patlak', 'yama', 'sibop', 'stepne'
+      ],
+      'Fren & Balata': [
+        'fren', 'balata', 'disk', 'on balata', 'arka balata', 'el freni', 'kaliper',
+        'fren hidroligi', 'brembo', 'ferodo', 'trw', 'bosch fren', 'abs'
+      ],
+      'Akü & Elektrik': [
+        'aku', 'varta', 'inci aku', 'mutlu aku', 'yiğit aku', 'alternator', 'mars',
+        'dinamo', 'sigorta kutusu', 'far', 'ampul', 'led', 'xenon', 'zenon', 'kablo'
+      ],
+      'Kasko & Poliçe': [
+        'kasko', 'police', 'trafik sigortasi', 'sigorta', 'allianz', 'anadolu sigorta',
+        'aksigorta', 'sompo', 'axa', 'hdi', 'mapfre', 'neova', 'turkiye sigorta'
+      ],
+      'Detay & Yıkama': [
+        'yikama', 'kuafor', 'oto kuafor', 'detay', 'detayli temizlik', 'pasta', 'cila',
+        'seramik', 'boya koruma', 'cam filmi', 'ppf', 'kaplama', 'ic dis', 'motor yikama'
+      ],
+      'MTV & Harç': [
+        'mtv', 'motorlu tasitlar', 'vergi', 'harc', 'bandrol', 'ceza', 'radar', 'hgs',
+        'ogs', 'egzoz emisyon', 'muayene ucreti', 'gecikme zammi'
+      ],
+      'Aksesuar & Parça': [
+        'aksesuar', 'paspas', 'bagaj havuzu', 'kilif', 'koltuk kilifi', 'spoiler',
+        'multimedya', 'ekran', 'teyp', 'hoparlor', 'amfi', 'subwoofer', 'silecek',
+        'koku', 'body kit', 'difuzor', 'panjur'
+      ],
+      'Tamir & Onarım': [
+        'tamir', 'ariza', 'onarim', 'motor', 'sanziman', 'debriyaj', 'baski balata',
+        'volant', 'amortisor', 'salincak', 'rotil', 'turbo', 'enjektor', 'conta',
+        'ust kapak', 'silindir', 'radyator', 'su pompasi', 'devirdaim', 'cekici'
+      ],
+    };
+
+    String bestCategory = selectedType;
+    int maxMatches = 0;
+    categoryKeywords.forEach((cat, keywords) {
+      int score = 0;
+      for (var kw in keywords) {
+        if (note.contains(kw)) score += kw.split(' ').length;
+      }
+      if (score > maxMatches) {
+        maxMatches = score;
+        bestCategory = cat;
+      }
+    });
+
+    selectedType = bestCategory;
+    detected.add({'icon': Icons.category_rounded, 'label': selectedType, 'color': const Color(0xFF00FFA3)});
+
+    // 2. TUTAR VE MATEMATİKSEL İŞLEMLER (Litre x Fiyat veya Kalem Toplama)
+    double calculatedTotalCost = 0.0;
+
+    // Litre x Birim Fiyat (Örn: 45 litre aldım litresi 43.5 TL)
+    final unitPriceMatch = RegExp(r'(\d+(?:[.,]\d+)?)\s*(?:lt|litre).*?(?:litresi|fiyati|birim)\s*(\d+(?:[.,]\d+)?)', caseSensitive: false).firstMatch(note);
+    if (unitPriceMatch != null) {
+      double l = double.tryParse(unitPriceMatch.group(1)!.replaceAll(',', '.')) ?? 0;
+      double p = double.tryParse(unitPriceMatch.group(2)!.replaceAll(',', '.')) ?? 0;
+      if (l > 0 && p > 0) calculatedTotalCost = l * p;
+    }
+
+    // "15 bin", "3.5k", "2 bin tl"
+    if (calculatedTotalCost == 0) {
+      final binRegex = RegExp(r'(\d+(?:[.,]\d+)?)\s*(?:bin|k)\s*(?:tl|lira|₺)?', caseSensitive: false);
+      final binMatches = binRegex.allMatches(note);
+      if (binMatches.isNotEmpty) {
+        for (var bm in binMatches) {
+          double val = double.tryParse(bm.group(1)!.replaceAll(',', '.')) ?? 0;
+          if (val > 0 && val < 500) {
+            calculatedTotalCost += val * 1000;
+          }
+        }
+      }
+    }
+
+    // Ayrı Kalemlerin Toplamı (Örn: yağ 1200, filtre 800, işçilik 600)
+    if (calculatedTotalCost == 0) {
+      final multiCostRegex = RegExp(r'(?:[a-zçğıöşü]+\s*[:=]?\s*)(\d{3,6})\s*(?:tl|lira|₺)?', caseSensitive: false);
+      final costMatches = multiCostRegex.allMatches(note).toList();
+      if (costMatches.length >= 2) {
+        for (var cm in costMatches) {
+          double val = double.tryParse(cm.group(1)!) ?? 0;
+          if (val > 50 && val < 100000) {
+            calculatedTotalCost += val;
+          }
+        }
+      }
+    }
+
+    // Standart Tekil Tutar Bulma
+    if (calculatedTotalCost == 0) {
+      final directCostRegex = RegExp(r'(?:tutar[ıi]?|ucret[ıi]?|maliyet[ıi]?|hesap)?\s*[:=]?\s*(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?|\d+)\s*(?:tl|lira|₺|harcadim|verdim|tuttu|tutar)', caseSensitive: false);
+      final dMatch = directCostRegex.firstMatch(note);
+      if (dMatch != null) {
+        String clean = dMatch.group(1)!.replaceAll('.', '').replaceAll(',', '.');
+        calculatedTotalCost = double.tryParse(clean) ?? 0.0;
+      }
+    }
+
+    if (calculatedTotalCost > 0) {
+      costController.text = calculatedTotalCost % 1 == 0 ? calculatedTotalCost.toInt().toString() : calculatedTotalCost.toStringAsFixed(2);
+      detected.add({'icon': Icons.payments_rounded, 'label': "${costController.text} ₺", 'color': const Color(0xFFFFD600)});
+    }
+
+    // 3. GÜNCEL KM VE AKILLI KM ANALİZİ
+    int? parsedKm;
+    // "142 binde", "142 bin km"
+    final kmBinMatch = RegExp(r'(\d+)\s*(?:bin|k)\s*(?:de|da|km|kilometre|\b)', caseSensitive: false).firstMatch(note);
+    if (kmBinMatch != null) {
+      int val = int.tryParse(kmBinMatch.group(1)!) ?? 0;
+      if (val >= 10 && val <= 999 && val != (calculatedTotalCost ~/ 1000)) {
+        parsedKm = val * 1000;
+      }
+    }
+
+    // "km: 145000", "145.200 km"
+    if (parsedKm == null) {
+      final kmRegex = RegExp(r'(?:km|kilometre|guncel)?\s*[:=]?\s*(\d{1,3}(?:\.\d{3})+|\d{4,7})\s*(?:km|kilometre|\x27?de|\x27?da|\b)', caseSensitive: false);
+      final kmMatches = kmRegex.allMatches(note);
+      for (var m in kmMatches) {
+        String rawVal = m.group(1)!.replaceAll('.', '');
+        int? val = int.tryParse(rawVal);
+        if (val != null && val >= 500 && val != calculatedTotalCost.toInt()) {
+          parsedKm = val;
+          break;
+        }
+      }
+    }
+
+    if (parsedKm != null) {
+      currentKmController.text = parsedKm.toString();
+      detected.add({'icon': Icons.speed_rounded, 'label': "$parsedKm KM", 'color': const Color(0xFF00E5FF)});
+    }
+
+    // 4. SONRAKİ BAKIM HEDEF KM (Bağıl Toplama veya Kesin Hedef)
+    final nextKmRelative = RegExp(r'(\d{1,2}(?:\.\d{3})?|\d{4,5})\s*(?:km|kilometre)?\s*(?:sonra|sonraya|dahil)', caseSensitive: false).firstMatch(note);
+    if (nextKmRelative != null) {
+      int offset = int.tryParse(nextKmRelative.group(1)!.replaceAll('.', '')) ?? 0;
+      if (offset >= 1000 && offset <= 60000) {
+        int base = parsedKm ?? int.tryParse(currentKmController.text) ?? widget.currentKm;
+        maintenanceKmController.text = (base + offset).toString();
+        detected.add({'icon': Icons.build_circle_rounded, 'label': "Hedef: ${maintenanceKmController.text} KM", 'color': const Color(0xFFF59E0B)});
+      }
+    } else {
+      final nextExactMatch = RegExp(r'(?:sonraki|hedef|gelecek)\s*(?:bakim|km)?\s*[:=]?\s*(\d{4,7})', caseSensitive: false).firstMatch(note);
+      if (nextExactMatch != null) {
+        maintenanceKmController.text = nextExactMatch.group(1)!;
+        detected.add({'icon': Icons.build_circle_rounded, 'label': "Hedef: ${maintenanceKmController.text} KM", 'color': const Color(0xFFF59E0B)});
+      }
+    }
+
+    // 5. İŞLEM TARİHİ VE BAĞIL ZAMAN HESAPLAMA
+    DateTime now = DateTime.now();
+    DateTime recordDate = selectedRecordDate;
+
+    if (note.contains('bugun')) {
+      recordDate = now;
+    } else if (note.contains('onceki gun') || note.contains('evvelsi gun')) {
+      recordDate = now.subtract(const Duration(days: 2));
+    } else if (note.contains('dun')) {
+      recordDate = now.subtract(const Duration(days: 1));
+    } else if (RegExp(r'(\d+)\s*gun\s*once').hasMatch(note)) {
+      int days = int.tryParse(RegExp(r'(\d+)\s*gun\s*once').firstMatch(note)!.group(1)!) ?? 0;
+      recordDate = now.subtract(Duration(days: days));
+    } else if (note.contains('gecen hafta') || note.contains('1 hafta once')) {
+      recordDate = now.subtract(const Duration(days: 7));
+    } else {
+      // 12.05 veya 12/05/2024
+      final dMatch = RegExp(r'\b(\d{1,2})[./-](\d{1,2})(?:[./-](\d{2,4}))?\b').firstMatch(rawNote);
+      if (dMatch != null) {
+        int day = int.tryParse(dMatch.group(1)!) ?? 1;
+        int month = int.tryParse(dMatch.group(2)!) ?? 1;
+        int year = dMatch.group(3) != null ? (int.tryParse(dMatch.group(3)!) ?? now.year) : now.year;
+        if (year < 100) year += 2000;
+        try {
+          recordDate = DateTime(year, month, day, now.hour, now.minute);
+        } catch (_) {}
+      }
+    }
+    selectedRecordDate = recordDate;
+
+    // 6. GELECEK BİTİŞ / HATIRLATMA TARİHİ HESAPLAMA
+    DateTime? nextDate;
+    if (note.contains('1 yil sonra') || note.contains('1 sene sonra') || note.contains('seneye') || note.contains('gelecek yil')) {
+      nextDate = recordDate.add(const Duration(days: 365));
+    } else if (note.contains('2 yil sonra') || note.contains('iki yil sonra')) {
+      nextDate = recordDate.add(const Duration(days: 730));
+    } else if (note.contains('6 ay sonra') || note.contains('alti ay sonra')) {
+      nextDate = DateTime(recordDate.year, recordDate.month + 6, recordDate.day);
+    } else if (note.contains('3 ay sonra') || note.contains('uc ay sonra')) {
+      nextDate = DateTime(recordDate.year, recordDate.month + 3, recordDate.day);
+    } else if (bestCategory == 'Kasko & Poliçe' && (note.contains('police') || note.contains('sigorta') || note.contains('kasko'))) {
+      nextDate = recordDate.add(const Duration(days: 365));
+    }
+
+    if (nextDate != null) {
+      selectedNextDate = nextDate;
+      detected.add({'icon': Icons.event_rounded, 'label': "Bitiş: ${DateFormat('dd.MM.yyyy').format(nextDate)}", 'color': const Color(0xFFB388FF)});
+    }
+
+    // 7. YAKIT LİTRESİ, İSTASYON VE AÇIKLAMA ZENGİNLEŞTİRME
+    String extraFuel = "";
+    final litreFound = RegExp(r'(\d+(?:[.,]\d+)?)\s*(?:lt|litre)', caseSensitive: false).firstMatch(note);
+    if (litreFound != null) extraFuel = "${litreFound.group(1)} Lt";
+
+    String stationName = "";
+    final stations = ['Shell', 'Opet', 'BP', 'Petrol Ofisi', 'Total', 'Aytemiz', 'Lukoil', 'TP'];
+    for (var s in stations) {
+      if (note.contains(s.toLowerCase())) {
+        stationName = s;
+        break;
+      }
+    }
+
+    if (descController.text.isEmpty || descController.text == smartNoteController.text) {
+      List<String> tags = [];
+      if (stationName.isNotEmpty) tags.add(stationName);
+      if (extraFuel.isNotEmpty) tags.add(extraFuel);
+      
+      String prefix = tags.isNotEmpty ? "[${tags.join(' • ')}] " : "";
+      descController.text = "$prefix$rawNote";
+    }
+
+    parsedEntities = detected;
+    _showCustomSnackBar("Akıllı Asistan analiz etti ve tüm alanları doldurdu!");
+    FocusScope.of(context).unfocus();
+    setState(() {});
   }
 
   String _getNextDateLabel(String type) {
@@ -1633,7 +1911,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
         ),
         constraints: BoxConstraints(
           maxWidth: 650,
-          maxHeight: screenHeight * 0.85, 
+          maxHeight: screenHeight * 0.90, 
         ),
         decoration: BoxDecoration(
           color: const Color(0xFF13151F).withOpacity(0.98), 
@@ -1694,6 +1972,130 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        
+                        // Akıllı Doğal Dil Asistanı Paneli
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [const Color(0xFF00FFA3).withOpacity(0.12), const Color(0xFF161822)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(22),
+                            border: Border.all(color: const Color(0xFF00FFA3).withOpacity(0.35), width: 1.5),
+                          ),
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(color: const Color(0xFF00FFA3).withOpacity(0.15), shape: BoxShape.circle),
+                                    child: const Icon(Icons.auto_awesome_rounded, color: Color(0xFF00FFA3), size: 16),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text("Yapay Zeka Destekli Akıllı Asistan", style: TextStyle(color: Color(0xFF00FFA3), fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.2)),
+                                  const Spacer(),
+                                  if (smartNoteController.text.isNotEmpty)
+                                    GestureDetector(
+                                      onTap: () {
+                                        HapticFeedback.selectionClick();
+                                        smartNoteController.clear();
+                                        parsedEntities.clear();
+                                        setState(() {});
+                                      },
+                                      child: const Text("Temizle", style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold)),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: smartNoteController,
+                                      focusNode: _smartNoteFocus,
+                                      style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                                      onSubmitted: (_) => _processSmartNote(),
+                                      decoration: InputDecoration(
+                                        hintText: "Örn: Dün Opet'te 45 lt mazot aldım 1950 TL km 142000",
+                                        hintStyle: TextStyle(color: Colors.white.withOpacity(0.35), fontSize: 13),
+                                        border: InputBorder.none,
+                                        isDense: true,
+                                        contentPadding: EdgeInsets.zero,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  ElevatedButton.icon(
+                                    onPressed: _processSmartNote,
+                                    icon: const Icon(Icons.flash_on_rounded, size: 16),
+                                    label: const Text("Çözümle"),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF00FFA3),
+                                      foregroundColor: Colors.black,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                      minimumSize: Size.zero,
+                                      elevation: 0,
+                                      textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
+                                    ),
+                                  )
+                                ],
+                              ),
+
+                              // Algılanan Varlık Rozetleri (Live Tags)
+                              if (parsedEntities.isNotEmpty) ...[
+                                const SizedBox(height: 12),
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 6,
+                                  children: parsedEntities.map((e) => Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: (e['color'] as Color).withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: (e['color'] as Color).withOpacity(0.5), width: 1),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(e['icon'] as IconData, size: 13, color: e['color'] as Color),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          e['label'].toString(),
+                                          style: TextStyle(color: e['color'] as Color, fontWeight: FontWeight.w800, fontSize: 11),
+                                        ),
+                                      ],
+                                    ),
+                                  )).toList(),
+                                ),
+                              ],
+
+                              const SizedBox(height: 12),
+                              // Hızlı Şablon Butonları
+                              SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                physics: const BouncingScrollPhysics(),
+                                child: Row(
+                                  children: [
+                                    _buildQuickChip("⛽ 45 Lt Mazot (Opet)", "Bugün Opet'ten 45 litre mazot aldım 1950 TL"),
+                                    _buildQuickChip("🔧 Castrol 5W-30 Bakım", "Dün 4800 TL Castrol yağ ve filtre bakımı yapıldı 10 bin km sonra"),
+                                    _buildQuickChip("🛞 4 Michelin Lastik", "Dün 9500 TL 4 Michelin lastik ve balans yapıldı 2 yıl sonra"),
+                                    _buildQuickChip("🛡️ Allianz Kasko", "Bugün 13500 TL Allianz kasko yenilendi 1 yıl sonra"),
+                                    _buildQuickChip("🛑 Brembo Ön Balata", "Bugün 2800 TL ön fren balataları değişti"),
+                                    _buildQuickChip("⚡ Varta 72Ah Akü", "Bugün 3400 TL Varta akü takıldı 2 yıl sonra garanti"),
+                                  ],
+                                ),
+                              )
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
                         Text("İşlem Kategorisi", style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 10),
                         SingleChildScrollView(
@@ -1871,6 +2273,25 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickChip(String label, String templateText) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8.0),
+      child: InkWell(
+        onTap: () => _processSmartNote(manualText: templateText),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.04),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withOpacity(0.08)),
+          ),
+          child: Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w700)),
         ),
       ),
     );

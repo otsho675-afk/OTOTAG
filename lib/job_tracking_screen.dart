@@ -857,6 +857,16 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     double west = math.min(customerLng, providerLng);
     double east = math.max(customerLng, providerLng);
 
+    // CRASH FIX: Konumlar aynı/çok yakın olduğunda harita SDK çökmesini önleyen delta tamponu
+    if ((north - south).abs() < 0.0015) {
+      north += 0.0015;
+      south -= 0.0015;
+    }
+    if ((east - west).abs() < 0.0015) {
+      east += 0.0015;
+      west -= 0.0015;
+    }
+
     if (defaultTargetPlatform == TargetPlatform.iOS && _appleMapController != null) {
       _appleMapController!.animateCamera(
         amaps.CameraUpdate.newLatLngBounds(
@@ -1005,7 +1015,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       if (!mounted) return;
 
       if (response.statusCode == 200 && data['status'] != 'error') {
-        String currentDataHash = jsonEncode(data);
+        // PERFORMANS: Gereksiz jsonEncode yükü kaldırıldı, anlık hafif hash üretimi yapıldı
+        final String currentDataHash = "${data['status']}_${data['agreed_price']}_${data['provider_live_lat']}_${data['provider_live_lng']}_${data['provider_heading']}_${data['is_rated']}";
         bool isSearching = (data['status']?.toString().trim().toLowerCase() ?? 'matched') == 'searching';
         if (_lastStatusHash == currentDataHash && !isSearching) {
           if (mounted) setState(() => _isFetchingStatus = false);
@@ -1423,7 +1434,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           );
         }
       ),
-    );
+    ).whenComplete(() => counterController.dispose());
   }
 
   Future<void> _verifyCode() async {
@@ -1677,7 +1688,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           );
         }
       ),
-    );
+    ).whenComplete(() {
+      subjectController.dispose();
+      messageController.dispose();
+    });
   }
 
   void _showRatingDialog() {
@@ -2032,13 +2046,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           ),
           zoom: 14.5,
         ),
-        style: '''
-          [
-            {"elementType": "geometry", "stylers": [{"color": "#030305"}]},
-            {"elementType": "labels.text.stroke", "stylers": [{"color": "#111115"}]},
-            {"elementType": "labels.text.fill", "stylers": [{"color": "#746855"}]}
-          ]
-        ''',
+       
         polylines: googlePolylines,
         markers: googleMarkers,
         myLocationEnabled: true,

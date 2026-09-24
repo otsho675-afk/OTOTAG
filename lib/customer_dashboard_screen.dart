@@ -1,6 +1,7 @@
 // customer_dashboard_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart'; 
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:ui';
@@ -18,7 +19,68 @@ import 'spare_parts_market.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
-import 'notification_helper.dart'; // CRITICAL FIX: Eksik bildirim sınıfı eklendi
+import 'notification_helper.dart'; 
+
+class TurkishPlateFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    String text = newValue.text
+        .toUpperCase()
+        .replaceAll('İ', 'I')
+        .replaceAll(RegExp(r'[^A-Z0-9]'), '');
+        
+    if (text.isEmpty) return newValue.copyWith(text: '');
+
+    final StringBuffer sb = StringBuffer();
+    int i = 0;
+
+    // 1. İl Kodu (İlk 2 hane rakam - Örn: 42)
+    while (i < text.length && i < 2) {
+      if (RegExp(r'[0-9]').hasMatch(text[i])) {
+        sb.write(text[i]);
+        i++;
+      } else {
+        break;
+      }
+    }
+
+    // 2. Harf Grubu (1 - 3 harf - Örn: BAG)
+    if (i < text.length) {
+      if (sb.length == 2) sb.write(' ');
+      int letterCount = 0;
+      while (i < text.length && letterCount < 3) {
+        if (RegExp(r'[A-Z]').hasMatch(text[i])) {
+          sb.write(text[i]);
+          i++;
+          letterCount++;
+        } else {
+          break;
+        }
+      }
+    }
+
+    // 3. Rakam Grubu (2 - 4 hane rakam - Örn: 403)
+    if (i < text.length) {
+      sb.write(' ');
+      int digitCount = 0;
+      while (i < text.length && digitCount < 4) {
+        if (RegExp(r'[0-9]').hasMatch(text[i])) {
+          sb.write(text[i]);
+          i++;
+          digitCount++;
+        } else {
+          i++;
+        }
+      }
+    }
+
+    final formatted = sb.toString();
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
 
 class CustomerDashboardScreen extends StatefulWidget {
   final int customerId;
@@ -67,7 +129,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       : 'customer_premium_monthly'; 
   String _premiumPriceDisplay = "Fiyat Hesaplanıyor...";
 
-  // Yenilenmiş Siber Tasarım Paleti
   static const Color _bgColor = Color(0xFF030305);
   static const Color _cardColor = Color(0xFF111115);
   static const Color _primaryColor = Color(0xFF00FFA3);
@@ -75,7 +136,54 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   static const Color _textColor = Colors.white;
   static const Color _subtitleColor = Colors.white54;
 
-  // Muayene ve Sigorta bitiş tarihlerini kullanıcının girdiği orijinal haliyle baz alır
+  // Dünya ve Türkiye Pazarındaki Popüler Marka ve Modeller
+  static const Map<String, List<String>> carBrandsModels = {
+    "Alfa Romeo": ["Giulia", "Stelvio", "Tonale", "Giulietta", "MiTo", "159", "156", "147"],
+    "Aston Martin": ["DB11", "DBX", "Vantage", "DBS"],
+    "Audi": ["A1", "A3", "A4", "A5", "A6", "A7", "A8", "Q2", "Q3", "Q5", "Q7", "Q8", "TT", "R8", "e-tron"],
+    "BMW": ["1 Serisi", "2 Serisi", "3 Serisi", "4 Serisi", "5 Serisi", "6 Serisi", "7 Serisi", "8 Serisi", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "Z4", "i3", "i4", "i8", "iX"],
+    "Chery": ["Tiggo 7 Pro", "Tiggo 8 Pro", "Omoda 5"],
+    "Chevrolet": ["Aveo", "Captiva", "Cruze", "Kalos", "Lacetti", "Spark", "Trax", "Camaro", "Corvette"],
+    "Chrysler": ["300C", "Voyager", "PT Cruiser"],
+    "Citroën": ["C-Elysée", "C1", "C3", "C3 Aircross", "C4", "C4 Cactus", "C4 Picasso", "C5", "C5 Aircross", "Berlingo", "Ami"],
+    "Dacia": ["Duster", "Sandero", "Sandero Stepway", "Logan", "Jogger", "Spring", "Dokker", "Lodgy"],
+    "DS Automobiles": ["DS 3", "DS 4", "DS 7", "DS 9"],
+    "Ferrari": ["488", "F8", "Roma", "Portofino", "SF90"],
+    "Fiat": ["Egea", "Fiorino", "Doblo", "Panda", "500", "500L", "500X", "Linea", "Punto", "Albea", "Ducato"],
+    "Ford": ["Fiesta", "Focus", "Mondeo", "Puma", "Kuga", "EcoSport", "Tourneo Courier", "Transit Courier", "Tourneo Custom", "Transit", "Mustang", "Ranger"],
+    "Honda": ["Civic", "City", "Accord", "Jazz", "HR-V", "CR-V", "ZR-V"],
+    "Hyundai": ["i10", "i20", "i30", "Elantra", "Accent Blue", "Tucson", "Kona", "Bayon", "Santa Fe", "IONIQ 5", "IONIQ 6", "H-100", "Staria"],
+    "Isuzu": ["D-Max", "N-Series"],
+    "Iveco": ["Daily"],
+    "Jaguar": ["XE", "XF", "XJ", "E-Pace", "F-Pace", "I-Pace", "F-Type"],
+    "Jeep": ["Renegade", "Compass", "Cherokee", "Grand Cherokee", "Wrangler", "Avenger"],
+    "Kia": ["Picanto", "Rio", "Ceed", "Cerato", "Stonic", "Niro", "Sportage", "Sorento", "EV6", "EV9", "Bongo"],
+    "Lada": ["Niva", "Samara", "Vega"],
+    "Land Rover": ["Range Rover", "Range Rover Sport", "Range Rover Evoque", "Range Rover Velar", "Discovery", "Discovery Sport", "Defender"],
+    "Lexus": ["CT", "IS", "ES", "LS", "UX", "NX", "RX", "LC"],
+    "Maserati": ["Ghibli", "Levante", "Quattroporte", "Grecale", "MC20"],
+    "Mazda": ["Mazda2", "Mazda3", "Mazda6", "CX-3", "CX-5", "CX-30", "MX-5"],
+    "Mercedes-Benz": ["A Serisi", "B Serisi", "C Serisi", "CLA", "CLS", "E Serisi", "G Serisi", "GLA", "GLB", "GLC", "GLE", "GLS", "S Serisi", "Vito", "Sprinter", "EQA", "EQB", "EQC", "EQE", "EQS", "X Serisi", "Citan"],
+    "MG": ["ZS", "HS", "MG4", "Marvel R", "MG5"],
+    "Mini": ["Cooper", "Clubman", "Countryman"],
+    "Mitsubishi": ["Space Star", "Lancer", "ASX", "Eclipse Cross", "Outlander", "L200"],
+    "Nissan": ["Micra", "Juke", "Qashqai", "X-Trail", "Navara", "Note", "Almera"],
+    "Opel": ["Corsa", "Astra", "Insignia", "Crossland", "Mokka", "Grandland", "Combo", "Zafira", "Vectra"],
+    "Peugeot": ["208", "301", "308", "408", "508", "2008", "3008", "5008", "Rifter", "Partner", "Bipper", "Boxer"],
+    "Porsche": ["911", "Taycan", "Panamera", "Macan", "Cayenne", "718 Boxster", "718 Cayman"],
+    "Renault": ["Clio", "Taliant", "Megane", "Fluence", "Symbol", "Kadjar", "Captur", "Austral", "Koleos", "Zoe", "Kangoo", "Master", "Trafic", "Express", "Laguna", "Latitude", "Toros", "R9", "R19"],
+    "Seat": ["Ibiza", "Leon", "Arona", "Ateca", "Tarraco", "Toledo", "Cordoba"],
+    "Skoda": ["Fabia", "Scala", "Octavia", "Superb", "Kamiq", "Karoq", "Kodiaq", "Yeti", "Roomster", "Felicia"],
+    "Smart": ["Fortwo", "Forfour"],
+    "Subaru": ["XV", "Forester", "Outback", "BRZ", "Impreza", "Levorg"],
+    "Suzuki": ["Swift", "Vitara", "Jimny", "S-Cross", "Alto", "Ignis", "Baleno"],
+    "Togg": ["T10X", "T10F"],
+    "Toyota": ["Yaris", "Corolla", "Corolla Cross", "Auris", "C-HR", "RAV4", "Hilux", "Land Cruiser", "Camry", "Proace City", "Avensis", "Verso"],
+    "Volkswagen": ["Polo", "Golf", "Passat", "Jetta", "T-Roc", "T-Cross", "Taigo", "Tiguan", "Touareg", "Caddy", "Transporter", "Amarok", "Arteon", "Bora", "Scirocco", "Crafter", "Caravelle"],
+    "Volvo": ["S60", "S90", "V60", "V90", "XC40", "XC60", "XC90", "C40 Recharge", "C30", "S40", "V40"],
+    "Diğer Marka": ["Diğer Model"]
+  };
+
   static DateTime getInspectionExpiryDate(DateTime inspDate, [String? brandModel]) {
     return inspDate;
   }
@@ -94,6 +202,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   @override
   void initState() {
     super.initState();
+    _vehiclePageController = PageController(viewportFraction: _lastViewportFraction);
     WidgetsBinding.instance.addObserver(this); 
     _fadeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))..forward();
     
@@ -102,7 +211,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     
     if (!kIsWeb) {
       OneSignal.login(widget.customerId.toString());
-      // iOS için zorunlu bildirim izni talebi eklendi
       OneSignal.Notifications.requestPermission(true);
       
       _inAppPurchase = InAppPurchase.instance;
@@ -141,7 +249,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       await _inAppPurchase.restorePurchases();
       _showTopSnackBar("Satın alımlarınız kontrol ediliyor...");
       
-      // Bekleme süresi tanıyarak profil verilerini tekrar çekip UI'ı güncelle
       Future.delayed(const Duration(seconds: 3), () {
         if (mounted) _fetchProfile();
       });
@@ -152,12 +259,25 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     }
   }
 
+  double _lastViewportFraction = 0.88;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    double screenWidth = MediaQuery.sizeOf(context).width;
-    double viewportFraction = screenWidth > 600 ? 0.6 : 0.88;
-    _vehiclePageController = PageController(viewportFraction: viewportFraction);
+    final double screenWidth = MediaQuery.sizeOf(context).width;
+    final double newFraction = screenWidth > 600 ? 0.6 : 0.88;
+
+    if (!mounted) return;
+
+    if (!identical(_lastViewportFraction, newFraction)) {
+      _lastViewportFraction = newFraction;
+      final int lastIndex = selectedVehicleIndex.value;
+      _vehiclePageController.dispose();
+      _vehiclePageController = PageController(
+        initialPage: lastIndex < vehicles.length ? lastIndex : 0,
+        viewportFraction: newFraction,
+      );
+    }
   }
 
   void _showScrollableDatePicker({
@@ -253,7 +373,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       width: width,
       height: height,
       fit: fit,
-      // RAM Optimizasyonu: Yüksek çözünürlüklü resimlerin cihaz belleğini (Heap) şişirip uygulamayı çökertmesini engeller
       cacheWidth: (width != null && width.isFinite) ? (width * 3).round() : 800,
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
@@ -293,7 +412,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     } catch (e) {
       debugPrint("Fetch all data error: $e");
     } finally {
-      if (mounted) setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+        _startAdTimer();
+      }
     }
   }
 
@@ -312,17 +434,19 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   void _startAdTimer() {
     _adScrollTimer?.cancel();
-    if (ads.length > 1) {
-      _adScrollTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
-        if (_adPageController.hasClients && mounted) {
-          int nextPage = currentAdIndex.value + 1;
-          if (nextPage >= ads.length + 1) nextPage = 0;
+    final int totalItems = ads.length + 1;
+    if (totalItems > 1) {
+      _adScrollTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+        if (!mounted || !_adPageController.hasClients) return;
+        try {
+          final int currentPage = _adPageController.page?.round() ?? currentAdIndex.value;
+          final int nextPage = (currentPage + 1) % totalItems;
           _adPageController.animateToPage(
             nextPage,
-            duration: const Duration(milliseconds: 800),
-            curve: Curves.fastOutSlowIn,
+            duration: const Duration(milliseconds: 700),
+            curve: Curves.easeInOutCubic,
           );
-        }
+        } catch (_) {}
       });
     }
   }
@@ -424,7 +548,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
             }
           } else {
             if (purchaseDetails.pendingCompletePurchase) {
-              // Store tarafında askıda kalmaması için işlemi mutlaka tamamla
               await _inAppPurchase.completePurchase(purchaseDetails);
             }
             if (mounted) {
@@ -867,7 +990,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     if (!mounted) return;
 
     try {
-      await Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/login', (route) => false);
+      if (mounted) {
+        await Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/login', (route) => false);
+      }
     } catch (e) {
       if (!mounted) return;
       try {
@@ -947,117 +1072,129 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       final data = json.decode(response.body);
 
       if (response.statusCode == 200 && data['status'] == 'success') {
-        final fetchedVehicles = List<Map<String, dynamic>>.from(data['vehicles'] ?? []);
+        List<Map<String, dynamic>> fetchedVehicles = [];
+        if (data['vehicles'] != null) {
+          try {
+            fetchedVehicles = List<Map<String, dynamic>>.from(data['vehicles'].map((e) => Map<String, dynamic>.from(e)));
+          } catch (e) {
+             debugPrint("Veri dönüşüm hatası: $e");
+          }
+        }
         
         if (mounted) {
           setState(() {
             vehicles = fetchedVehicles;
-            if (selectedVehicleIndex.value >= vehicles.length) selectedVehicleIndex.value = 0;
+            if (vehicles.isEmpty || selectedVehicleIndex.value >= vehicles.length) {
+              selectedVehicleIndex.value = 0;
+            }
           });
         }
 
-        // --- EKLENEN KISIM: Ana ekrana girildiğinde tüm araçların tarihlerini kontrol et ve bildirim kur ---
         if (!kIsWeb) {
-          DateTime now = DateTime.now();
-          for (var v in fetchedVehicles) {
-            final plate = v['plate']?.toString().toUpperCase() ?? 'ARAÇ';
-            final int vId = int.tryParse(v['id']?.toString() ?? '0') ?? 0;
-            
-            final insDate = DateTime.tryParse(v['insurance_date']?.toString() ?? '');
-            final inspDate = DateTime.tryParse(v['inspection_date']?.toString() ?? '');
-
-            // Sigorta Kontrolü
-            if (insDate != null) {
-              final effectiveInsDate = getInsuranceExpiryDate(insDate);
-              final int daysLeft = effectiveInsDate.difference(DateTime(now.year, now.month, now.day)).inDays;
-              if (daysLeft < 0) {
-                try {
-                  await notificationHelper.cancelNotification(vId.hashCode ^ "sigorta_yaklasan".hashCode);
-                  await notificationHelper.cancelNotification(vId.hashCode ^ "sigorta".hashCode);
-                } catch (_) {}
-                await notificationHelper.scheduleNotification(
-                  id: vId.hashCode ^ "sigorta_gecmis".hashCode,
-                  title: "⚠️ Sigorta Süresi Geçti!",
-                  body: "$plate plakalı aracınızın trafik sigortası ${daysLeft.abs()} gün önce bitti. Lütfen yenileyin.",
-                  scheduledDate: now.add(const Duration(seconds: 4))
-                );
-              } else if (daysLeft <= 15) {
-                try {
-                  await notificationHelper.cancelNotification(vId.hashCode ^ "sigorta_gecmis".hashCode);
-                  await notificationHelper.cancelNotification(vId.hashCode ^ "sigorta".hashCode);
-                } catch (_) {}
-                await notificationHelper.scheduleNotification(
-                  id: vId.hashCode ^ "sigorta_yaklasan".hashCode,
-                  title: "Trafik Sigortası Hatırlatması",
-                  body: "$plate plakalı aracınızın trafik sigortası bitişine $daysLeft gün kaldı.",
-                  scheduledDate: now.add(const Duration(seconds: 4))
-                );
-              } else {
-                // İleri tarihe güncellendiğinde geçmiş/yaklaşan uyarılarını hemen iptal et
-                try {
-                  await notificationHelper.cancelNotification(vId.hashCode ^ "sigorta_gecmis".hashCode);
-                  await notificationHelper.cancelNotification(vId.hashCode ^ "sigorta_yaklasan".hashCode);
-                } catch (_) {}
-                DateTime notifyDate = effectiveInsDate.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
-                if (notifyDate.isAfter(now)) {
-                  await notificationHelper.scheduleNotification(
-                    id: vId.hashCode ^ "sigorta".hashCode,
-                    title: "Trafik Sigortası Hatırlatması",
-                    body: "$plate plakalı aracınızın trafik sigortası bitişine 3 gün kaldı.",
-                    scheduledDate: notifyDate
-                  );
-                }
-              }
-            }
-
-            // Muayene Kontrolü (Doğrudan kullanıcının seçtiği tarihi baz alır)
-            if (inspDate != null) {
-              final int daysLeft = inspDate.difference(DateTime(now.year, now.month, now.day)).inDays;
-              final int notifBaseId = (vId.hashCode & 0x7FFFFFFF);
+          Future.microtask(() async {
+            if (!mounted) return;
+            try {
+              DateTime now = DateTime.now();
+              for (var v in fetchedVehicles) {
+              final plate = v['plate']?.toString().toUpperCase() ?? 'ARAÇ';
+              final int vId = int.tryParse(v['id']?.toString() ?? '0') ?? 0;
               
-              if (daysLeft < 0) {
-                try {
-                  await notificationHelper.cancelNotification(notifBaseId ^ 101);
-                  await notificationHelper.cancelNotification(notifBaseId ^ 102);
-                } catch (_) {}
-                await notificationHelper.scheduleNotification(
-                  id: notifBaseId ^ 100,
-                  title: "⚠️ Araç Muayenesi Gecikti!",
-                  body: "$plate plakalı aracınızın muayene süresi ${daysLeft.abs()} gün önce bitti. Lütfen yenileyin.",
-                  scheduledDate: now.add(const Duration(seconds: 3))
-                );
-              } else if (daysLeft <= 15) {
-                try {
-                  await notificationHelper.cancelNotification(notifBaseId ^ 100);
-                  await notificationHelper.cancelNotification(notifBaseId ^ 102);
-                } catch (_) {}
-                await notificationHelper.scheduleNotification(
-                  id: notifBaseId ^ 101,
-                  title: "Araç Muayenesi Hatırlatması",
-                  body: "$plate plakalı aracınızın muayene süresinin dolmasına $daysLeft gün kaldı.",
-                  scheduledDate: now.add(const Duration(seconds: 3))
-                );
-              } else {
-                try {
-                  await notificationHelper.cancelNotification(notifBaseId ^ 100);
-                  await notificationHelper.cancelNotification(notifBaseId ^ 101);
-                } catch (_) {}
-                DateTime notifyDate = inspDate.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
-                if (notifyDate.isAfter(now)) {
+              final insDate = DateTime.tryParse(v['insurance_date']?.toString() ?? '');
+              final inspDate = DateTime.tryParse(v['inspection_date']?.toString() ?? '');
+
+              if (insDate != null) {
+                final effectiveInsDate = getInsuranceExpiryDate(insDate);
+                final int daysLeft = effectiveInsDate.difference(DateTime(now.year, now.month, now.day)).inDays;
+                if (daysLeft < 0) {
+                  try {
+                    await notificationHelper.cancelNotification(vId.hashCode ^ "sigorta_yaklasan".hashCode);
+                    await notificationHelper.cancelNotification(vId.hashCode ^ "sigorta".hashCode);
+                  } catch (_) {}
                   await notificationHelper.scheduleNotification(
-                    id: notifBaseId ^ 102,
-                    title: "Araç Muayenesi Hatırlatması",
-                    body: "$plate plakalı aracınızın muayene süresinin dolmasına 3 gün kaldı.",
-                    scheduledDate: notifyDate
+                    id: vId.hashCode ^ "sigorta_gecmis".hashCode,
+                    title: "⚠️ Sigorta Süresi Geçti!",
+                    body: "$plate plakalı aracınızın trafik sigortası ${daysLeft.abs()} gün önce bitti. Lütfen yenileyin.",
+                    scheduledDate: now.add(const Duration(seconds: 4))
                   );
+                } else if (daysLeft <= 15) {
+                  try {
+                    await notificationHelper.cancelNotification(vId.hashCode ^ "sigorta_gecmis".hashCode);
+                    await notificationHelper.cancelNotification(vId.hashCode ^ "sigorta".hashCode);
+                  } catch (_) {}
+                  await notificationHelper.scheduleNotification(
+                    id: vId.hashCode ^ "sigorta_yaklasan".hashCode,
+                    title: "Trafik Sigortası Hatırlatması",
+                    body: "$plate plakalı aracınızın trafik sigortası bitişine $daysLeft gün kaldı.",
+                    scheduledDate: now.add(const Duration(seconds: 4))
+                  );
+                } else {
+                  try {
+                    await notificationHelper.cancelNotification(vId.hashCode ^ "sigorta_gecmis".hashCode);
+                    await notificationHelper.cancelNotification(vId.hashCode ^ "sigorta_yaklasan".hashCode);
+                  } catch (_) {}
+                  DateTime notifyDate = effectiveInsDate.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
+                  if (notifyDate.isAfter(now)) {
+                    await notificationHelper.scheduleNotification(
+                      id: vId.hashCode ^ "sigorta".hashCode,
+                      title: "Trafik Sigortası Hatırlatması",
+                      body: "$plate plakalı aracınızın trafik sigortası bitişine 3 gün kaldı.",
+                      scheduledDate: notifyDate
+                    );
+                  }
+                }
+              }
+
+              if (inspDate != null) {
+                final int daysLeft = inspDate.difference(DateTime(now.year, now.month, now.day)).inDays;
+                final int notifBaseId = (vId.hashCode & 0x7FFFFFFF);
+                
+                if (daysLeft < 0) {
+                  try {
+                    await notificationHelper.cancelNotification(notifBaseId ^ 101);
+                    await notificationHelper.cancelNotification(notifBaseId ^ 102);
+                  } catch (_) {}
+                  await notificationHelper.scheduleNotification(
+                    id: notifBaseId ^ 100,
+                    title: "⚠️ Araç Muayenesi Gecikti!",
+                    body: "$plate plakalı aracınızın muayene süresi ${daysLeft.abs()} gün önce bitti. Lütfen yenileyin.",
+                    scheduledDate: now.add(const Duration(seconds: 3))
+                  );
+                } else if (daysLeft <= 15) {
+                  try {
+                    await notificationHelper.cancelNotification(notifBaseId ^ 100);
+                    await notificationHelper.cancelNotification(notifBaseId ^ 102);
+                  } catch (_) {}
+                  await notificationHelper.scheduleNotification(
+                    id: notifBaseId ^ 101,
+                    title: "Araç Muayenesi Hatırlatması",
+                    body: "$plate plakalı aracınızın muayene süresinin dolmasına $daysLeft gün kaldı.",
+                    scheduledDate: now.add(const Duration(seconds: 3))
+                  );
+                } else {
+                  try {
+                    await notificationHelper.cancelNotification(notifBaseId ^ 100);
+                    await notificationHelper.cancelNotification(notifBaseId ^ 101);
+                  } catch (_) {}
+                  DateTime notifyDate = inspDate.subtract(const Duration(days: 3)).copyWith(hour: 9, minute: 0);
+                  if (notifyDate.isAfter(now)) {
+                    await notificationHelper.scheduleNotification(
+                      id: notifBaseId ^ 102,
+                      title: "Araç Muayenesi Hatırlatması",
+                      body: "$plate plakalı aracınızın muayene süresinin dolmasına 3 gün kaldı.",
+                      scheduledDate: notifyDate
+                    );
+                  }
                 }
               }
             }
-          }
+            } catch (notifErr) {
+              debugPrint("Bildirim ayarlanırken hata oluştu: $notifErr");
+            }
+          });
         }
-        // ---------------------------------------------------------------------------------------------
       }
     } catch (e) {
+      debugPrint("fetchVehicles hatası: $e");
       if (mounted) {
         _showTopSnackBar("Araçlar yüklenemedi.", isError: true);
       }
@@ -1066,6 +1203,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   Future<void> _saveVehicle({
     int? vehicleId, required String plate, required String brandModel,
+    String? engineType, String? modelYear, // YENİ
     DateTime? insDate, DateTime? inspDate, required int cKm, required int mKm,
   }) async {
     if (mounted) setState(() => isSaving = true);
@@ -1074,9 +1212,15 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
     Map<String, String> body = {
       "customer_id": widget.customerId.toString(),
-      "plate": plate.toUpperCase(), "brand_model": brandModel,
-      "current_km": cKm.toString(), "maintenance_km": mKm.toString(),
+      "plate": plate.toUpperCase(), 
+      "brand_model": brandModel,
+      "current_km": cKm.toString(), 
+      "maintenance_km": mKm.toString(),
     };
+    
+    // YENİ VERİLER
+    if (engineType != null && engineType.isNotEmpty) body["engine_type"] = engineType;
+    if (modelYear != null && modelYear.isNotEmpty) body["model_year"] = modelYear;
     if (insDate != null) body["insurance_date"] = DateFormat('yyyy-MM-dd').format(insDate);
     if (inspDate != null) body["inspection_date"] = DateFormat('yyyy-MM-dd').format(inspDate);
     if (isEditing) body["vehicle_id"] = vehicleId.toString();
@@ -1098,7 +1242,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
           }
         } catch(e) {}
         
-        // Bildirimler ve tarih geçerlilikleri _fetchVehicles içerisinde senkron ve hatasız kurulur
         await _fetchVehicles();
       } else {
         if (mounted) _showTopSnackBar(data['message'] ?? "İşlem başarısız.", isError: true);
@@ -1267,12 +1410,46 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     final isEditing = vehicleToEdit != null;
 
     TextEditingController plateCtrl = TextEditingController(text: vehicleToEdit?['plate'] ?? '');
-    TextEditingController brandCtrl = TextEditingController(text: vehicleToEdit?['brand_model'] ?? '');
     TextEditingController cKmCtrl = TextEditingController(text: vehicleToEdit?['current_km']?.toString() ?? '0');
     TextEditingController mKmCtrl = TextEditingController(text: vehicleToEdit?['maintenance_km']?.toString() ?? '10000');
+    TextEditingController engineCtrl = TextEditingController(text: vehicleToEdit?['engine_type'] ?? '');
+    
+    // Model Yılı değişkeni
+    String? selectedYear = vehicleToEdit?['model_year']?.toString();
+    List<String> getYearsList() {
+      int currentYear = DateTime.now().year;
+      return List.generate(45, (index) => (currentYear + 1 - index).toString()); 
+    }
 
     DateTime? tempIns = DateTime.tryParse(vehicleToEdit?['insurance_date']?.toString() ?? '');
     DateTime? tempInsp = DateTime.tryParse(vehicleToEdit?['inspection_date']?.toString() ?? '');
+
+    String? selectedBrand;
+    String? selectedModel;
+
+    if (isEditing && vehicleToEdit['brand_model'] != null) {
+      String bm = vehicleToEdit['brand_model'].toString().trim();
+      for (var brand in carBrandsModels.keys) {
+        if (bm.startsWith(brand)) {
+          selectedBrand = brand;
+          String potentialModel = bm.substring(brand.length).trim();
+          if (carBrandsModels[brand]!.contains(potentialModel)) {
+            selectedModel = potentialModel;
+          }
+          break;
+        }
+      }
+      if (selectedBrand == null) {
+        selectedBrand = "Diğer Marka";
+        selectedModel = "Diğer Model";
+      }
+    }
+
+    List<String> getSortedBrands() {
+      var keys = carBrandsModels.keys.toList();
+      keys.sort();
+      return keys;
+    }
 
     showModalBottomSheet(
       context: context,
@@ -1343,14 +1520,103 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                         ),
                         const SizedBox(height: 24),
                         
+                        _buildInputField(
+                          plateCtrl, 
+                          "Araç Plakası", 
+                          Icons.pin_rounded, 
+                          isPlate: true,
+                          hint: "Örn: 42 BAG 403"
+                        ),
+                        const SizedBox(height: 12),
+                        
                         Row(
                           children: [
-                            Expanded(child: _buildInputField(plateCtrl, "Plaka", Icons.pin_rounded, isCapital: true)),
+                            Expanded(
+                              child: _buildSelectableField(
+                                label: "Marka",
+                                value: selectedBrand,
+                                icon: Icons.directions_car_rounded,
+                                enabled: true,
+                                onTap: () {
+                                  _openSearchSelectionModal(
+                                    context: context,
+                                    title: "Marka Seçin",
+                                    items: getSortedBrands(),
+                                    selectedItem: selectedBrand,
+                                    onSelect: (val) {
+                                      setModalState(() {
+                                        selectedBrand = val;
+                                        selectedModel = null;
+                                      });
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
                             const SizedBox(width: 12),
-                            Expanded(child: _buildInputField(brandCtrl, "Marka & Model", Icons.directions_car_rounded)),
+                            Expanded(
+                              child: _buildSelectableField(
+                                label: "Model",
+                                value: selectedModel,
+                                icon: Icons.car_repair_rounded,
+                                enabled: selectedBrand != null,
+                                onTap: () {
+                                  if (selectedBrand == null) return;
+                                  _openSearchSelectionModal(
+                                    context: context,
+                                    title: "$selectedBrand Modeli Seçin",
+                                    items: carBrandsModels[selectedBrand] ?? [],
+                                    selectedItem: selectedModel,
+                                    onSelect: (val) {
+                                      setModalState(() {
+                                        selectedModel = val;
+                                      });
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 12),
+                        
+                        // YENİ: Motor Seçeneği ve Model Yılı Alanları
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildInputField(
+                                engineCtrl, 
+                                "Motor / Yakıt", 
+                                Icons.settings_input_component_rounded,
+                                hint: "Örn: 1.6 Dizel"
+                              )
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildSelectableField(
+                                label: "Model Yılı",
+                                value: selectedYear,
+                                icon: Icons.calendar_today_rounded,
+                                enabled: true,
+                                onTap: () {
+                                  _openSearchSelectionModal(
+                                    context: context,
+                                    title: "Model Yılı Seçin",
+                                    items: getYearsList(),
+                                    selectedItem: selectedYear,
+                                    onSelect: (val) {
+                                      setModalState(() {
+                                        selectedYear = val;
+                                      });
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
                         Row(
                           children: [
                             Expanded(
@@ -1385,7 +1651,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                         children: [
                           Expanded(child: _buildInputField(cKmCtrl, "Güncel KM", Icons.speed_rounded, isNumber: true)),
                           const SizedBox(width: 12),
-                          Expanded(child: _buildInputField(mKmCtrl, "Bakım KM", Icons.build_circle_rounded, isNumber: true)),
+                          Expanded(child: _buildInputField(mKmCtrl, "Bakım Hedefi KM", Icons.build_circle_rounded, isNumber: true)),
                         ],
                       ),
                       const SizedBox(height: 32),
@@ -1409,14 +1675,19 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                           Expanded(
                             child: ElevatedButton(
                               onPressed: isSaving ? null : () async {
-                                if (plateCtrl.text.trim().isEmpty || brandCtrl.text.trim().isEmpty) {
-                                  return _showTopSnackBar("Plaka ve model bilgisi zorunludur.", isError: true);
+                                if (plateCtrl.text.trim().isEmpty || selectedBrand == null || selectedModel == null) {
+                                  return _showTopSnackBar("Plaka, Marka ve Model bilgisi zorunludur.", isError: true);
                                 }
                                 Navigator.pop(context);
+                                
+                                String finalBrandModel = "$selectedBrand $selectedModel";
+                                
                                 await _saveVehicle(
                                   vehicleId: isEditing ? int.tryParse(vehicleToEdit['id']?.toString() ?? '') : null,
                                   plate: plateCtrl.text.trim(), 
-                                  brandModel: brandCtrl.text.trim(),
+                                  brandModel: finalBrandModel,
+                                  engineType: engineCtrl.text.trim(), // YENİ
+                                  modelYear: selectedYear,            // YENİ
                                   insDate: tempIns, 
                                   inspDate: tempInsp,
                                   cKm: int.tryParse(cKmCtrl.text.trim()) ?? 0, 
@@ -1448,10 +1719,196 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     ),
     ).whenComplete(() {
       _isVehicleModalOpen = false;
+      plateCtrl.dispose();
+      cKmCtrl.dispose();
+      mKmCtrl.dispose();
+      engineCtrl.dispose();
     });
   }
 
-  Widget _buildInputField(TextEditingController controller, String label, IconData icon, {bool isNumber = false, bool isCapital = false}) {
+  Widget _buildSelectableField({
+    required String label,
+    required String? value,
+    required IconData icon,
+    required VoidCallback onTap,
+    required bool enabled,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 6),
+          child: Text(label, style: const TextStyle(color: _subtitleColor, fontSize: 13, fontWeight: FontWeight.w600)),
+        ),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: enabled ? onTap : null,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              height: 56,
+              decoration: BoxDecoration(
+                color: enabled ? Colors.white.withOpacity(0.03) : Colors.white.withOpacity(0.01),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: enabled ? _primaryColor.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(icon, color: enabled ? _primaryColor : Colors.grey, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      value ?? (enabled ? "Seçiniz" : "Önce Marka"),
+                      style: TextStyle(
+                        color: value != null ? Colors.white : Colors.white38,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Icon(Icons.search_rounded, color: enabled ? Colors.white54 : Colors.white12, size: 18),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _openSearchSelectionModal({
+    required BuildContext context,
+    required String title,
+    required List<String> items,
+    required String? selectedItem,
+    required ValueChanged<String> onSelect,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        String filter = "";
+        return StatefulBuilder(
+          builder: (modalCtx, setModalState) {
+            final filteredItems = items
+                .where((item) => item.toLowerCase().contains(filter.toLowerCase()))
+                .toList();
+
+            return BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.75,
+                decoration: BoxDecoration(
+                  color: _cardColor,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                ),
+                child: SafeArea(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(8))),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
+                            IconButton(
+                              icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                              onPressed: () => Navigator.pop(ctx),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.04),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.white.withOpacity(0.06)),
+                          ),
+                          child: TextField(
+                            autofocus: true,
+                            style: const TextStyle(color: Colors.white, fontSize: 14),
+                            decoration: InputDecoration(
+                              hintText: "Hemen ara...",
+                              hintStyle: TextStyle(color: Colors.white.withOpacity(0.35)),
+                              prefixIcon: const Icon(Icons.search_rounded, color: _primaryColor, size: 20),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            onChanged: (val) {
+                              setModalState(() {
+                                filter = val;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      const Divider(color: Colors.white10, height: 1),
+                      Expanded(
+                        child: filteredItems.isEmpty
+                            ? Center(
+                                child: Text(
+                                  "Sonuç bulunamadı",
+                                  style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 14),
+                                ),
+                              )
+                            : ListView.builder(
+                                physics: const BouncingScrollPhysics(),
+                                itemCount: filteredItems.length,
+                                itemBuilder: (itemCtx, index) {
+                                  final item = filteredItems[index];
+                                  final isSelected = item == selectedItem;
+
+                                  return ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+                                    title: Text(
+                                      item,
+                                      style: TextStyle(
+                                        color: isSelected ? _primaryColor : Colors.white,
+                                        fontWeight: isSelected ? FontWeight.w900 : FontWeight.w500,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                    trailing: isSelected
+                                        ? const Icon(Icons.check_circle_rounded, color: _primaryColor, size: 20)
+                                        : null,
+                                    onTap: () {
+                                      HapticFeedback.selectionClick();
+                                      onSelect(item);
+                                      Navigator.pop(ctx);
+                                    },
+                                  );
+                                },
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildInputField(TextEditingController controller, String label, IconData icon, {bool isNumber = false, bool isCapital = false, bool isPlate = false, String? hint}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1467,10 +1924,13 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
           ),
           child: TextField(
             controller: controller,
-            keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-            textCapitalization: isCapital ? TextCapitalization.characters : TextCapitalization.none,
+            keyboardType: isPlate ? TextInputType.visiblePassword : (isNumber ? TextInputType.number : TextInputType.text),
+            textCapitalization: (isCapital || isPlate) ? TextCapitalization.characters : TextCapitalization.none,
+            inputFormatters: isPlate ? [TurkishPlateFormatter()] : null,
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
             decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: TextStyle(color: Colors.white.withOpacity(0.25), fontSize: 14),
               prefixIcon: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12), 
                 child: Container(
@@ -1922,218 +2382,232 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     final Size size = MediaQuery.sizeOf(context);
     final double horizontalPadding = size.width > 600 ? 32.0 : 16.0;
 
-    return Scaffold(
-      backgroundColor: _bgColor,
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: Image.asset('assets/images/logo.png', height: 28, fit: BoxFit.contain), 
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        leadingWidth: 64,
-        iconTheme: const IconThemeData(color: _textColor),
-        leading: IconButton(
-          tooltip: 'Çıkış Yap',
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: _dangerColor.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.power_settings_new_rounded, color: _dangerColor, size: 20),
-          ),
-          onPressed: _showLogoutDialog,
-        ),
-        actions: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              IconButton(
-                icon: Icon(Icons.notifications_rounded, color: unreadCount > 0 ? _primaryColor : _textColor, size: 26),
-                onPressed: _showNotificationsDialog,
-              ),
-              if (unreadCount > 0)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: _dangerColor, 
-                      shape: BoxShape.circle,
-                      border: Border.all(color: _bgColor, width: 2)
-                    ),
-                    child: Text(
-                      unreadCount > 9 ? "9+" : unreadCount.toString(), 
-                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)
-                    ),
-                  ),
-                )
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 12.0, left: 4.0),
-            child: GestureDetector(
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen(userId: widget.customerId, userType: 'customer'))),
-              child: Container(
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyH, control: true): () {
+          if (vehicles.length >= 3 && !isPremium) {
+            _showPremiumModal();
+          } else {
+            _showVehicleDialog();
+          }
+        }
+      },
+      child: Focus(
+        autofocus: true,
+        child: Scaffold(
+          backgroundColor: _bgColor,
+          extendBodyBehindAppBar: true,
+          appBar: AppBar(
+            title: Image.asset('assets/images/logo.png', height: 28, fit: BoxFit.contain), 
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            centerTitle: true,
+            leadingWidth: 64,
+            iconTheme: const IconThemeData(color: _textColor),
+            leading: IconButton(
+              tooltip: 'Çıkış Yap',
+              icon: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: _primaryColor.withOpacity(0.1), 
-                  shape: BoxShape.circle, 
+                  color: _dangerColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.person_rounded, color: _primaryColor, size: 20),
+                child: const Icon(Icons.power_settings_new_rounded, color: _dangerColor, size: 20),
               ),
+              onPressed: _showLogoutDialog,
             ),
-          )
-        ],
-        flexibleSpace: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-            child: Container(color: Colors.transparent),
-          ),
-        ),
-      ),
-      body: isLoading 
-        ? const Center(child: CircularProgressIndicator(color: _primaryColor, strokeWidth: 3))
-        : Stack(
-            children: [
-              Positioned(
-                top: MediaQuery.of(context).size.height * 0.1,
-                right: -MediaQuery.of(context).size.width * 0.2,
-                child: Container(
-                  width: MediaQuery.of(context).size.width,
-                  height: MediaQuery.of(context).size.width,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [_primaryColor.withOpacity(0.05), Colors.transparent],
+            actions: [
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.notifications_rounded, color: unreadCount > 0 ? _primaryColor : _textColor, size: 26),
+                    onPressed: _showNotificationsDialog,
+                  ),
+                  if (unreadCount > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: _dangerColor, 
+                          shape: BoxShape.circle,
+                          border: Border.all(color: _bgColor, width: 2)
+                        ),
+                        child: Text(
+                          unreadCount > 9 ? "9+" : unreadCount.toString(), 
+                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)
+                        ),
+                      ),
+                    )
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(right: 12.0, left: 4.0),
+                child: GestureDetector(
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen(userId: widget.customerId, userType: 'customer'))),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: _primaryColor.withOpacity(0.1), 
+                      shape: BoxShape.circle, 
                     ),
+                    child: const Icon(Icons.person_rounded, color: _primaryColor, size: 20),
                   ),
                 ),
+              )
+            ],
+            flexibleSpace: ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                child: Container(color: Colors.transparent),
               ),
-              SafeArea(
-                child: FadeTransition(
-                  opacity: _fadeController,
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      return RefreshIndicator(
-                        color: _primaryColor,
-                        backgroundColor: _cardColor,
-                        onRefresh: _fetchAllDataConcurrently,
-                        child: SingleChildScrollView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 24.0),
-                          child: Center(
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 900),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  _buildTopSection(),
-                                  const SizedBox(height: 24),
-                                  _buildSparePartsBanner(context), 
-                                  const SizedBox(height: 32),
-                                  if (activeJobId != null) ...[
-                                    Container(
-                                      margin: const EdgeInsets.only(bottom: 24),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(20),
-                                        color: _dangerColor.withOpacity(0.1),
-                                        border: Border.all(color: _dangerColor.withOpacity(0.3))
-                                      ),
-                                      child: Material(
-                                        color: Colors.transparent,
-                                        child: ListTile(
-                                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                          leading: const Icon(Icons.warning_rounded, color: _dangerColor, size: 32),
-                                          title: const Text("Devam Eden İşleminiz Var", style: TextStyle(color: _dangerColor, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: -0.3)),
-                                          subtitle: const Padding(
-                                            padding: EdgeInsets.only(top: 4.0),
-                                            child: Text("Mevcut işlemi tamamlamadan yeni talep oluşturamazsınız.", style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w500, fontSize: 13)),
+            ),
+          ),
+          body: isLoading 
+            ? const Center(child: CircularProgressIndicator(color: _primaryColor, strokeWidth: 3))
+            : Stack(
+                children: [
+                  Positioned(
+                    top: MediaQuery.of(context).size.height * 0.1,
+                    right: -MediaQuery.of(context).size.width * 0.2,
+                    child: Container(
+                      width: MediaQuery.of(context).size.width,
+                      height: MediaQuery.of(context).size.width,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [_primaryColor.withOpacity(0.05), Colors.transparent],
+                        ),
+                      ),
+                    ),
+                  ),
+                  SafeArea(
+                    child: FadeTransition(
+                      opacity: _fadeController,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          return RefreshIndicator(
+                            color: _primaryColor,
+                            backgroundColor: _cardColor,
+                            onRefresh: _fetchAllDataConcurrently,
+                            child: SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 24.0),
+                              child: Center(
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(maxWidth: 900),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      _buildTopSection(),
+                                      const SizedBox(height: 24),
+                                      _buildSparePartsBanner(context), 
+                                      const SizedBox(height: 32),
+                                      if (activeJobId != null) ...[
+                                        Container(
+                                          margin: const EdgeInsets.only(bottom: 24),
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(20),
+                                            color: _dangerColor.withOpacity(0.1),
+                                            border: Border.all(color: _dangerColor.withOpacity(0.3))
                                           ),
-                                          trailing: Container(
-                                            padding: const EdgeInsets.all(8),
-                                            decoration: BoxDecoration(color: _dangerColor.withOpacity(0.1), shape: BoxShape.circle),
-                                            child: const Icon(Icons.arrow_forward_ios_rounded, color: _dangerColor, size: 16)
+                                          child: Material(
+                                            color: Colors.transparent,
+                                            child: ListTile(
+                                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                              leading: const Icon(Icons.warning_rounded, color: _dangerColor, size: 32),
+                                              title: const Text("Devam Eden İşleminiz Var", style: TextStyle(color: _dangerColor, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: -0.3)),
+                                              subtitle: const Padding(
+                                                padding: EdgeInsets.only(top: 4.0),
+                                                child: Text("Mevcut işlemi tamamlamadan yeni talep oluşturamazsınız.", style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w500, fontSize: 13)),
+                                              ),
+                                              trailing: Container(
+                                                padding: const EdgeInsets.all(8),
+                                                decoration: BoxDecoration(color: _dangerColor.withOpacity(0.1), shape: BoxShape.circle),
+                                                child: const Icon(Icons.arrow_forward_ios_rounded, color: _dangerColor, size: 16)
+                                              ),
+                                              onTap: () {
+                                                if (activeJobStatus == 'searching') {
+                                                  Navigator.push(context, MaterialPageRoute(builder: (_) => CustomerBidsScreen(jobId: activeJobId!, customerId: widget.customerId))).then((_) => _checkActiveJob());
+                                                } else {
+                                                  Navigator.push(context, MaterialPageRoute(builder: (_) => JobTrackingScreen(jobId: activeJobId!, userType: 'customer', userId: widget.customerId))).then((_) => _checkActiveJob());
+                                                }
+                                              },
+                                            ),
                                           ),
-                                          onTap: () {
-                                            if (activeJobStatus == 'searching') {
-                                              Navigator.push(context, MaterialPageRoute(builder: (_) => CustomerBidsScreen(jobId: activeJobId!, customerId: widget.customerId))).then((_) => _checkActiveJob());
-                                            } else {
-                                              Navigator.push(context, MaterialPageRoute(builder: (_) => JobTrackingScreen(jobId: activeJobId!, userType: 'customer', userId: widget.customerId))).then((_) => _checkActiveJob());
-                                            }
-                                          },
                                         ),
-                                      ),
-                                    ),
-                                  ],
-                                  Row(
-                                    children: [
-                                      Container(width: 5, height: 24, decoration: BoxDecoration(color: _primaryColor, borderRadius: BorderRadius.circular(10))),
-                                      const SizedBox(width: 12),
-                                      const Text("Hızlı Hizmet Çağır", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: -0.5)),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 16),
-                                  _buildServiceCards(context, constraints),
-                                  const SizedBox(height: 32),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
+                                      ],
                                       Row(
                                         children: [
                                           Container(width: 5, height: 24, decoration: BoxDecoration(color: _primaryColor, borderRadius: BorderRadius.circular(10))),
                                           const SizedBox(width: 12),
-                                          const Text("Garajım", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: -0.5)),
+                                          const Text("Hızlı Hizmet Çağır", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: -0.5)),
                                         ],
                                       ),
-                                      Container(
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(12),
-                                          color: Colors.white.withOpacity(0.05),
-                                          border: Border.all(color: Colors.white.withOpacity(0.1))
-                                        ),
-                                        child: ElevatedButton.icon(
-                                          onPressed: () {
-                                            if (vehicles.length >= 3 && !isPremium) {
-                                              _showPremiumModal();
-                                            } else {
-                                              _showVehicleDialog();
-                                            }
-                                          },
-                                          icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
-                                          label: const Text("Araç Ekle", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
-                                          style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                                        ),
+                                      const SizedBox(height: 16),
+                                      _buildServiceCards(context, constraints),
+                                      const SizedBox(height: 32),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Container(width: 5, height: 24, decoration: BoxDecoration(color: _primaryColor, borderRadius: BorderRadius.circular(10))),
+                                              const SizedBox(width: 12),
+                                              const Text("Garajım", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: -0.5)),
+                                            ],
+                                          ),
+                                          Container(
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(12),
+                                              color: Colors.white.withOpacity(0.05),
+                                              border: Border.all(color: Colors.white.withOpacity(0.1))
+                                            ),
+                                            child: ElevatedButton.icon(
+                                              onPressed: () {
+                                                if (vehicles.length >= 3 && !isPremium) {
+                                                  _showPremiumModal();
+                                                } else {
+                                                  _showVehicleDialog();
+                                                }
+                                              },
+                                              icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+                                              label: const Text("Araç Ekle", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+                                              style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                                            ),
+                                          ),
+                                        ],
                                       ),
+                                      const SizedBox(height: 16),
+                                      if (vehicles.isEmpty)
+                                        _buildEmptyVehiclesCard(_cardColor, _textColor, _subtitleColor)
+                                      else ...[
+                                        SlideTransition(
+                                          position: Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+                                            CurvedAnimation(parent: _fadeController, curve: Curves.easeOutBack)
+                                          ),
+                                          child: _buildVehicleCarousel(context, _cardColor, _textColor, _subtitleColor),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        _buildCarouselIndicators(),
+                                      ],
+                                      const SizedBox(height: 32),
                                     ],
                                   ),
-                                  const SizedBox(height: 16),
-                                  if (vehicles.isEmpty)
-                                    _buildEmptyVehiclesCard(_cardColor, _textColor, _subtitleColor)
-                                  else ...[
-                                    SlideTransition(
-                                      position: Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
-                                        CurvedAnimation(parent: _fadeController, curve: Curves.easeOutBack)
-                                      ),
-                                      child: _buildVehicleCarousel(context, _cardColor, _textColor, _subtitleColor),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    _buildCarouselIndicators(),
-                                  ],
-                                  const SizedBox(height: 32),
-                                ],
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                      );
-                    }
+                          );
+                        }
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
+        ),
+      ),
     );
   }
 
@@ -2200,9 +2674,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   }
 
   Widget _buildVehicleCarousel(BuildContext context, Color cardColor, Color textColor, Color subtitleColor) {
-    final screenHeight = MediaQuery.sizeOf(context).height;
     return SizedBox(
-      height: screenHeight * 0.4 < 310 ? 310 : screenHeight * 0.4, 
+      height: 255, 
       child: PageView.builder(
         controller: _vehiclePageController,
         physics: const BouncingScrollPhysics(),
@@ -2218,7 +2691,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
               return AnimatedScale(
                 duration: const Duration(milliseconds: 400),
                 curve: Curves.easeOutQuart,
-                scale: isSelected ? 1.0 : 0.92,
+                scale: isSelected ? 1.0 : 0.94,
                 child: Container(
                   margin: const EdgeInsets.only(right: 12),
                   child: _buildModernVehicleCard(vehicle, cardColor, textColor, subtitleColor, isSelected),
@@ -2241,33 +2714,54 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
     return Container(
       decoration: BoxDecoration(
-        color: cardColor,
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF141622),
+            Color(0xFF0C0E14),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: isSelected ? _primaryColor.withOpacity(0.5) : Colors.white.withOpacity(0.05), width: isSelected ? 2 : 1.0),
+        border: Border.all(
+          color: isSelected ? _primaryColor.withOpacity(0.55) : Colors.white.withOpacity(0.08),
+          width: isSelected ? 1.6 : 1.0,
+        ),
         boxShadow: [
-          if (isSelected) BoxShadow(color: _primaryColor.withOpacity(0.1), blurRadius: 20, spreadRadius: -5, offset: const Offset(0, 5))
-          else BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 5))
+          BoxShadow(
+            color: isSelected ? _primaryColor.withOpacity(0.14) : Colors.black45,
+            blurRadius: 18,
+            spreadRadius: isSelected ? 1 : 0,
+            offset: const Offset(0, 6),
+          ),
         ],
       ),
       child: Stack(
         children: [
+          // Arka plan soft neon ışıma
           Positioned(
-            right: -20,
-            top: -20,
+            top: -30,
+            right: -30,
             child: Container(
-              width: 140, 
-              height: 140,
+              width: 120,
+              height: 120,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: _primaryColor.withOpacity(0.03),
+                gradient: RadialGradient(
+                  colors: [
+                    _primaryColor.withOpacity(0.08),
+                    Colors.transparent,
+                  ],
+                ),
               ),
-            )
+            ),
           ),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // ÜST KISIM: Plaka, Başlık ve Ayar Butonu
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2276,98 +2770,230 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Gerçek Plaka Tasarımı
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                             decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: Colors.grey.shade300, width: 2),
-                              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 5, offset: const Offset(0, 2))],
+                              color: const Color(0xFFF8F9FA),
+                              borderRadius: BorderRadius.circular(7),
+                              border: Border.all(color: const Color(0xFF2B2D42), width: 1.5),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.35),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                  decoration: BoxDecoration(color: const Color(0xFF0F318A), borderRadius: BorderRadius.circular(2)),
-                                  child: const Text("TR", style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF0F318A),
+                                    borderRadius: BorderRadius.circular(2.5),
+                                  ),
+                                  child: const Text(
+                                    "TR",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 8.5,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
                                 ),
-                                const SizedBox(width: 8),
-                                Flexible(child: Text(vehicle['plate'] ?? '', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1.0), overflow: TextOverflow.ellipsis)),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    vehicle['plate'] ?? '',
+                                    style: const TextStyle(
+                                      color: Color(0xFF111111),
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 14.5,
+                                      letterSpacing: 1.0,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          Text(vehicle['brand_model'] ?? '', style: TextStyle(fontSize: 14, color: subtitleColor, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          const SizedBox(height: 6),
+                          Text(
+                            vehicle['brand_model'] ?? '',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.3,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          // Kompakt Yıl & Motor Rozetleri
+                          Row(
+                            children: [
+                              if (vehicle['model_year'] != null && vehicle['model_year'].toString().isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  margin: const EdgeInsets.only(right: 5),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: Colors.white.withOpacity(0.08)),
+                                  ),
+                                  child: Text(
+                                    vehicle['model_year'].toString(),
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              if (vehicle['engine_type'] != null && vehicle['engine_type'].toString().isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: _primaryColor.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: _primaryColor.withOpacity(0.25)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.local_gas_station_rounded, color: _primaryColor, size: 10),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        vehicle['engine_type'],
+                                        style: const TextStyle(
+                                          color: _primaryColor,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    InkWell(
-                      onTap: () => _showVehicleDialog(vehicleToEdit: vehicle),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(12)),
-                        child: const Icon(Icons.settings_rounded, color: Colors.white70, size: 20),
+                    // Ayarlar Butonu (Kompakt Glass)
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => _showVehicleDialog(vehicleToEdit: vehicle),
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: Colors.white.withOpacity(0.07)),
+                          ),
+                          child: const Icon(Icons.tune_rounded, color: Colors.white70, size: 18),
+                        ),
                       ),
-                    )
+                    ),
                   ],
                 ),
-                
+
+                // ORTA KISIM: Derli Toplu Araba Rozeti (Boşluklar daraltıldı)
                 Expanded(
                   child: Center(
                     child: Container(
-                      padding: const EdgeInsets.all(16),
+                      width: 50,
+                      height: 50,
                       decoration: BoxDecoration(
-                        color: _primaryColor.withOpacity(0.05),
                         shape: BoxShape.circle,
+                        color: const Color(0xFF161824),
+                        border: Border.all(color: _primaryColor.withOpacity(0.3), width: 1.2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _primaryColor.withOpacity(0.15),
+                            blurRadius: 12,
+                            spreadRadius: -1,
+                          ),
+                        ],
                       ),
-                      child: const Icon(Icons.directions_car_rounded, size: 52, color: _primaryColor),
+                      child: const Icon(
+                        Icons.directions_car_filled_rounded,
+                        size: 26,
+                        color: _primaryColor,
+                      ),
                     ),
                   ),
                 ),
-                
+
+                // DURUM KUTULARI: 3'lü Mini Kartlar
+                Row(
+                  children: [
+                    Expanded(child: _buildCompactStatItem("Sigorta", insDate, Icons.shield_rounded, isDate: true)),
+                    const SizedBox(width: 6),
+                    Expanded(child: _buildCompactStatItem("Muayene", inspDate, Icons.fact_check_rounded, isDate: true)),
+                    const SizedBox(width: 6),
+                    Expanded(child: _buildCompactStatItem("Bakım", null, Icons.build_circle_rounded, currentKm: cKm, targetKm: mKm)),
+                  ],
+                ),
+
+                const SizedBox(height: 10),
+
+                // ALT BUTON: Kompakt Neon Buton
                 Container(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.02),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.05))
+                    borderRadius: BorderRadius.circular(14),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF00FFA3), Color(0xFF00D688)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _primaryColor.withOpacity(0.24),
+                        blurRadius: 12,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => VehiclePanelScreen(
+                          vehicle: vehicle,
+                          customerId: widget.customerId,
+                        ),
+                      ),
+                    ).then((_) => _fetchVehicles()),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      padding: const EdgeInsets.symmetric(vertical: 10.5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _buildCompactStatItem("Sigorta", insDate, Icons.shield_rounded, isDate: true),
-                        Container(width: 1.5, height: 28, color: Colors.white.withOpacity(0.1), margin: const EdgeInsets.symmetric(horizontal: 12)),
-                        _buildCompactStatItem("Muayene", inspDate, Icons.fact_check_rounded, isDate: true),
-                        Container(width: 1.5, height: 28, color: Colors.white.withOpacity(0.1), margin: const EdgeInsets.symmetric(horizontal: 12)),
-                        _buildCompactStatItem("Bakım", null, Icons.build_circle_rounded, currentKm: cKm, targetKm: mKm),
+                        Text(
+                          "Yönetim Paneli",
+                          style: TextStyle(
+                            color: Color(0xFF05160E),
+                            fontWeight: FontWeight.w900,
+                            fontSize: 13,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                        SizedBox(width: 5),
+                        Icon(Icons.arrow_forward_rounded, color: Color(0xFF05160E), size: 16),
                       ],
                     ),
                   ),
                 ),
-                
-                const SizedBox(height: 12),
-
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: _primaryColor,
-                  ),
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => VehiclePanelScreen(vehicle: vehicle, customerId: widget.customerId))).then((_) => _fetchVehicles()),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent, 
-                      shadowColor: Colors.transparent, 
-                      padding: const EdgeInsets.symmetric(vertical: 12), 
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
-                    ),
-                    child: const Text("Yönetim Paneli", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.5)),
-                  ),
-                )
               ],
             ),
           ),
@@ -2395,19 +3021,45 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       valueText = remainingKm < 0 ? "${remainingKm.abs()}KM Geçti" : "${remainingKm}KM";
     }
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          children: [
-            Icon(icon, color: statusColor, size: 14),
-            const SizedBox(width: 4),
-            Text(title, style: const TextStyle(color: _subtitleColor, fontSize: 11, fontWeight: FontWeight.w600)),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Text(valueText, style: TextStyle(color: statusColor, fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.035),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: statusColor, size: 13),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  title,
+                  style: const TextStyle(color: _subtitleColor, fontSize: 11, fontWeight: FontWeight.w600),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              valueText,
+              style: TextStyle(
+                color: statusColor,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.2,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

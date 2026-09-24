@@ -93,7 +93,7 @@ void main() async {
       
       // 4. Gelen bildirime tıklandığında ne olacağını belirler
       OneSignal.Notifications.addClickListener((event) {
-        debugPrint('BİLDİRİME TIKLANDI: \${event.notification.title}');
+        debugPrint('BİLDİRİME TIKLANDI: ${event.notification.title}');
         // Yönlendirme mantığını buraya ekleyebilirsiniz
       });
 
@@ -152,6 +152,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Inter', 
       ),
+      
       home: const SplashScreen(),
     );
   }
@@ -167,14 +168,14 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-  Widget? _nextScreen; // Oturum durumuna göre gidilecek ekran
+  Widget? _nextScreen; 
   final QuickActions quickActions = const QuickActions();
 
   @override
   void initState() {
     super.initState();
-    _setupQuickActions(); // Hızlı eylemleri (Quick Actions) başlat
-    _checkLoginStatus(); // Uygulama açılırken oturumu kontrol et
+    _setupQuickActions(); 
+    _checkLoginStatus(); // Oturumu arka planda kontrol et
     
     _animationController = AnimationController(
       vsync: this,
@@ -182,31 +183,18 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     );
 
     _fadeAnimation = TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 0.0, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeIn)),
-        weight: 40.0,
-      ),
-      TweenSequenceItem(
-        tween: ConstantTween<double>(1.0),
-        weight: 20.0,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1.0, end: 0.0)
-            .chain(CurveTween(curve: Curves.easeOut)),
-        weight: 40.0,
-      ),
+      TweenSequenceItem(tween: Tween<double>(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeIn)), weight: 40.0),
+      TweenSequenceItem(tween: ConstantTween<double>(1.0), weight: 20.0),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 0.0).chain(CurveTween(curve: Curves.easeOut)), weight: 40.0),
     ]).animate(_animationController);
     
+    // Doğrudan ana ekrana geçiş yap
     _animationController.forward().then((_) {
       if (mounted) {
-        if (!kIsWeb) {
-           HapticFeedback.lightImpact(); 
-        }
+        if (!kIsWeb) HapticFeedback.lightImpact();
         Navigator.pushReplacement(
           context,
           PageRouteBuilder(
-            // Eğer _nextScreen doluysa direkt içeri al, boşsa Role Seçimine at
             pageBuilder: (_, __, ___) => _nextScreen ?? const RoleSelectionScreen(),
             transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
             transitionDuration: const Duration(milliseconds: 400),
@@ -217,18 +205,16 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 
   void _setupQuickActions() {
-    if (kIsWeb) return; // Web'de çalışıyorsa kısayol eklemeye çalışıp uygulamanın çökmesini engeller
+    if (kIsWeb) return; 
     
     quickActions.initialize((String shortcutType) async {
       final prefs = await SharedPreferences.getInstance();
       final int? userId = prefs.getInt('logged_in_user_id');
       final String? userType = prefs.getString('logged_in_user_type');
 
-      // Sadece müşteri giriş yapmışsa kısayollar çalışsın
       if (userId != null && userType == 'customer') {
         if (shortcutType == 'action_mechanic') {
           debugPrint("Hızlı Eylem: Tamirci Çağır tetiklendi!");
-          // İleride buraya harita/talep ekranına yönlendirme kodunuzu ekleyebilirsiniz.
         } else if (shortcutType == 'action_tow') {
           debugPrint("Hızlı Eylem: Çekici Çağır tetiklendi!");
         } else if (shortcutType == 'action_tire') {
@@ -256,9 +242,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       
       if (userId != null && userType != null) {
         if (!kIsWeb) {
-          OneSignal.login(userId.toString()); // Bildirim bağlantısını tazele
+          OneSignal.login(userId.toString()); 
         }
-        // Motorun ve izinlerin (Örn. konum servisleri) tam bağlanması için ufak bir gecikme
         await Future.delayed(const Duration(milliseconds: 300));
         
         if (userType == 'customer') {

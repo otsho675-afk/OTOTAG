@@ -8,7 +8,8 @@ import 'dart:io';
 import 'package:onesignal_flutter/onesignal_flutter.dart'; 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:in_app_update/in_app_update.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import 'customer_dashboard_screen.dart';
 import 'provider_map_screen.dart';
@@ -55,7 +56,7 @@ class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, required this.userType});
 
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
@@ -76,7 +77,6 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!kIsWeb) {
       HttpOverrides.global = CustomHttpOverrides();
     }
-    _checkForUpdates();
     _loadSavedPhone();
   }
 
@@ -104,9 +104,11 @@ class _LoginScreenState extends State<LoginScreen> {
         }
         savedPhone = buffer.toString();
       }
-      setState(() {
-        _phoneController.text = savedPhone!;
-      });
+      if (mounted) {
+        setState(() {
+          _phoneController.text = savedPhone!;
+        });
+      }
     }
   }
 
@@ -115,15 +117,144 @@ class _LoginScreenState extends State<LoginScreen> {
     await prefs.setString('saved_phone_${widget.userType}', phone);
   }
 
-  Future<void> _checkForUpdates() async {
-    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return; 
+  Future<void> _handleOAuthLogin({
+    required String provider,
+    required String oauthId,
+    required String email,
+    required String name,
+  }) async {
+    if (isLoggingIn) return;
+    setState(() => isLoggingIn = true);
+
     try {
-      final updateInfo = await InAppUpdate.checkForUpdate();
-      if (updateInfo.updateAvailability == UpdateAvailability.updateAvailable) {
-        await InAppUpdate.performImmediateUpdate(); 
+      final response = await http.post(
+        Uri.parse("$baseUrl?action=oauth_login"),
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+          "Accept": "application/json",
+          "User-Agent": "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36"
+        },
+        body: {
+          "oauth_provider": provider,
+          "oauth_id": oauthId,
+          "email": email,
+          "user_type": widget.userType,
+        },
+      ).timeout(apiTimeout);
+
+      if (!mounted) return;
+
+      Map<String, dynamic> data = {};
+      try {
+        data = json.decode(response.body);
+      } catch (e) {
+        debugPrint("JSON Parse Hatası. Sunucu yanıtı: ${response.body}");
+        _showCustomSnackBar("Sunucuyla bağlantı kurulamadı (${response.statusCode}). Lütfen tekrar deneyin.", isError: true);
+        return;
+      }
+
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        int userId = int.parse(data['user_id'].toString());
+        if (!kIsWeb) OneSignal.login(userId.toString());
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt('logged_in_user_id', userId);
+        await prefs.setString('logged_in_user_type', data['user_type']);
+
+        if (!mounted) return;
+
+        if (data['user_type'] == 'customer') {
+          Navigator.pushReplacement(context, MaterialPageRoute(
+            builder: (context) => CustomerDashboardScreen(customerId: userId),
+          ));
+        } else {
+          _showProviderLocationDisclosure(userId);
+        }
+      } else if (data['status'] == 'needs_completion' || data['status'] == 'not_registered') {
+        _showCustomSnackBar(
+          provider == 'google' 
+            ? "Google hesabınız bağlandı. Telefon numarası ve şehir zorunludur." 
+            : "Apple hesabınız bağlandı. Telefon numarası ve şehir zorunludur.",
+          isError: false
+        );
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => RegistrationScreen(
+              userType: widget.userType,
+              oauthProvider: provider,
+              oauthId: oauthId,
+              oauthEmail: email,
+              initialName: name,
+            ),
+          ),
+        );
+      } else {
+        _showCustomSnackBar(data['message'] ?? "Giriş başarısız oldu.", isError: true);
       }
     } catch (e) {
-      debugPrint("Güncelleme kontrolü iptal edildi veya başarısız: $e");
+      if (!mounted) return;
+      _showCustomSnackBar("Bağlantı hatası oluştu, tekrar deneyiniz.", isError: true);
+    } finally {
+      if (mounted) setState(() => isLoggingIn = false);
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    if (!kIsWeb) HapticFeedback.selectionClick();
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+      await googleSignIn.signOut();
+      final GoogleSignInAccount? account = await googleSignIn.signIn();
+
+      if (!mounted) return;
+
+      if (account != null) {
+        await _handleOAuthLogin(
+          provider: 'google',
+          oauthId: account.id,
+          email: account.email,
+          name: account.displayName ?? '',
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _showCustomSnackBar("Google ile giriş yapılamadı: $e", isError: true);
+    }
+  }
+
+  Future<void> _signInWithApple() async {
+    if (!kIsWeb) HapticFeedback.selectionClick();
+    
+    if (!kIsWeb && Platform.isAndroid) {
+      _showCustomSnackBar("Apple ile giriş yalnızca iOS cihazlarda desteklenmektedir.", isError: true);
+      return;
+    }
+
+    try {
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      if (!mounted) return;
+
+      String fullName = [
+        credential.givenName ?? '',
+        credential.familyName ?? ''
+      ].join(' ').trim();
+
+      await _handleOAuthLogin(
+        provider: 'apple',
+        oauthId: credential.userIdentifier ?? '',
+        email: credential.email ?? '',
+        name: fullName,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _showCustomSnackBar("Apple ile giriş yapılamadı veya iptal edildi.", isError: true);
     }
   }
 
@@ -154,26 +285,7 @@ class _LoginScreenState extends State<LoginScreen> {
     Map<String, String> requestBody = {};
 
     try {
-      bool isCustomerForm = widget.userType == 'customer';
-      bool looksLikePhone = RegExp(r'[0-9]').hasMatch(rawInput);
-
-      if (looksLikePhone) {
-        sanitizedInput = rawInput.replaceAll(RegExp(r'\D'), ''); 
-        if (sanitizedInput.startsWith('90') && sanitizedInput.length == 12) {
-          sanitizedInput = sanitizedInput.substring(2);
-        }
-        if (sanitizedInput.length == 10 && sanitizedInput.startsWith('5')) {
-          sanitizedInput = '0$sanitizedInput';
-        }
-        if (sanitizedInput.length != 11 || !sanitizedInput.startsWith('05')) {
-          if (!kIsWeb) HapticFeedback.vibrate();
-          _showCustomSnackBar('Lütfen telefon numaranızı kontrol ediniz.', isError: true);
-          setState(() => isLoggingIn = false);
-          return;
-        }
-      }
-      
-      bool wasAdminCall = false;
+      bool wasAdminCall = rawInput.trim().toLowerCase() == 'admin';
 
       final Map<String, String> requestHeaders = {
         "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
@@ -181,11 +293,26 @@ class _LoginScreenState extends State<LoginScreen> {
         "User-Agent": "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36"
       };
 
-      if (isCustomerForm && !looksLikePhone && rawInput.toLowerCase() == 'admin') {
-        wasAdminCall = true;
+      if (wasAdminCall) {
         targetUrl = "$baseUrl?action=admin_login";
-        requestBody = {"username": sanitizedInput, "password": pass};
+        requestBody = {"username": "admin", "password": pass};
       } else {
+        bool looksLikePhone = RegExp(r'[0-9]').hasMatch(rawInput);
+        if (looksLikePhone) {
+          sanitizedInput = rawInput.replaceAll(RegExp(r'\D'), ''); 
+          if (sanitizedInput.startsWith('90') && sanitizedInput.length == 12) {
+            sanitizedInput = sanitizedInput.substring(2);
+          }
+          if (sanitizedInput.length == 10 && sanitizedInput.startsWith('5')) {
+            sanitizedInput = '0$sanitizedInput';
+          }
+          if (sanitizedInput.length != 11 || !sanitizedInput.startsWith('05')) {
+            if (!kIsWeb) HapticFeedback.vibrate();
+            _showCustomSnackBar('Lütfen telefon numaranızı kontrol ediniz.', isError: true);
+            setState(() => isLoggingIn = false);
+            return;
+          }
+        }
         targetUrl = "$baseUrl?action=login";
         requestBody = {"phone": sanitizedInput, "password": pass, "user_type": widget.userType};
       }
@@ -220,6 +347,10 @@ class _LoginScreenState extends State<LoginScreen> {
           await _savePhone(_phoneController.text);
         }
 
+        final prefs = await SharedPreferences.getInstance();
+
+        if (!mounted) return;
+
         if (wasAdminCall || data['user_type'] == 'admin') {
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const AdminDashboardScreen()));
         } else {
@@ -229,10 +360,10 @@ class _LoginScreenState extends State<LoginScreen> {
             OneSignal.login(userId.toString());
           }
 
-          // KULLANICI OTURUMUNU CİHAZ HAFIZASINA KAYDET (Beni Hatırla)
-          final prefs = await SharedPreferences.getInstance();
           await prefs.setInt('logged_in_user_id', userId);
           await prefs.setString('logged_in_user_type', data['user_type']);
+
+          if (!mounted) return;
 
           if (data['user_type'] == 'customer') {
             Navigator.pushReplacement(context, MaterialPageRoute(
@@ -248,7 +379,6 @@ class _LoginScreenState extends State<LoginScreen> {
         _showCustomSnackBar(errorMsg, isError: true);
       }
     } catch (e) {
-      debugPrint("Giriş İstek Hatası: $e");
       if (!mounted) return;
       if (!kIsWeb) HapticFeedback.vibrate();
       _showCustomSnackBar('İnternet bağlantınızı kontrol edip tekrar deneyiniz.', isError: true);
@@ -261,24 +391,26 @@ class _LoginScreenState extends State<LoginScreen> {
     final prefs = await SharedPreferences.getInstance();
     bool hasSeenDisclosure = prefs.getBool('seen_location_disclosure') ?? false;
 
+    if (!mounted) return;
+
     if (hasSeenDisclosure) {
-      if (!mounted) return;
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ProviderMapScreen(providerId: userId)));
       return;
     }
 
-    if (!mounted) return;
-    
     showDialog(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black.withOpacity(0.85),
-      builder: (context) {
+      barrierColor: Colors.black.withValues(alpha: 0.85),
+      builder: (dialogContext) {
         return BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
           child: AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32), side: BorderSide(color: Colors.white.withOpacity(0.1))),
-            backgroundColor: const Color(0xFF111115).withOpacity(0.95),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(32), 
+              side: BorderSide(color: Colors.white.withValues(alpha: 0.1))
+            ),
+            backgroundColor: const Color(0xFF111115).withValues(alpha: 0.95),
             elevation: 24,
             insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
             title: Column(
@@ -286,9 +418,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF00FFA3).withOpacity(0.1), 
+                    color: const Color(0xFF00FFA3).withValues(alpha: 0.1), 
                     shape: BoxShape.circle,
-                    boxShadow: [BoxShadow(color: const Color(0xFF00FFA3).withOpacity(0.2), blurRadius: 20)]
+                    boxShadow: [BoxShadow(color: const Color(0xFF00FFA3).withValues(alpha: 0.2), blurRadius: 20)]
                   ),
                   child: const Icon(Icons.location_on_rounded, color: Color(0xFF00FFA3), size: 36),
                 ),
@@ -309,7 +441,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: TextButton(
                       onPressed: () {
                         if (!kIsWeb) HapticFeedback.selectionClick();
-                        Navigator.pop(context);
+                        Navigator.pop(dialogContext);
+                        if (!mounted) return;
                         Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ProviderMapScreen(providerId: userId)));
                       }, 
                       style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
@@ -323,15 +456,16 @@ class _LoginScreenState extends State<LoginScreen> {
                         backgroundColor: const Color(0xFF00FFA3),
                         foregroundColor: Colors.black,
                         elevation: 10,
-                        shadowColor: const Color(0xFF00FFA3).withOpacity(0.5),
+                        shadowColor: const Color(0xFF00FFA3).withValues(alpha: 0.5),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))
                       ),
                       onPressed: () async {
                         if (!kIsWeb) HapticFeedback.selectionClick();
                         await prefs.setBool('seen_location_disclosure', true); 
+                        if (!dialogContext.mounted) return;
+                        Navigator.pop(dialogContext);
                         if (!mounted) return;
-                        Navigator.pop(context);
                         Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ProviderMapScreen(providerId: userId)));
                       },
                       child: const Text("Kabul Et", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
@@ -354,7 +488,7 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
             child: Icon(isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded, color: Colors.white, size: 24),
           ),
           const SizedBox(width: 16),
@@ -377,7 +511,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 20,
-      duration: const Duration(seconds: 2), // 2 saniye kuralı uygulandı
+      duration: const Duration(seconds: 3),
     ));
   }
 
@@ -388,15 +522,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.8),
-      builder: (context) {
+      barrierColor: Colors.black.withValues(alpha: 0.8),
+      builder: (dialogContext) {
         return StatefulBuilder(
-          builder: (context, setStateDialog) {
+          builder: (stfContext, setStateDialog) {
             return BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
               child: AlertDialog(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32), side: BorderSide(color: Colors.white.withOpacity(0.1))),
-                backgroundColor: const Color(0xFF111115).withOpacity(0.95),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(32), 
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.1))
+                ),
+                backgroundColor: const Color(0xFF111115).withValues(alpha: 0.95),
                 elevation: 24,
                 insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
                 title: Column(
@@ -404,9 +541,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF00FFA3).withOpacity(0.1), 
+                        color: const Color(0xFF00FFA3).withValues(alpha: 0.1), 
                         shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: const Color(0xFF00FFA3).withOpacity(0.2), blurRadius: 20)]
+                        boxShadow: [BoxShadow(color: const Color(0xFF00FFA3).withValues(alpha: 0.2), blurRadius: 20)]
                       ),
                       child: const Icon(Icons.manage_search_rounded, color: Color(0xFF00FFA3), size: 36),
                     ),
@@ -426,8 +563,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white54, letterSpacing: 0),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
                     filled: true,
-                    fillColor: Colors.white.withOpacity(0.05),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: Color(0xFF00FFA3), width: 1.5)),
+                    fillColor: Colors.white.withValues(alpha: 0.05),
+                    focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(24)), borderSide: BorderSide(color: Color(0xFF00FFA3), width: 1.5)),
                     contentPadding: const EdgeInsets.symmetric(vertical: 20)
                   ),
                 ),
@@ -439,7 +576,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: TextButton(
                           onPressed: isChecking ? null : () {
                             if (!kIsWeb) HapticFeedback.selectionClick();
-                            Navigator.pop(context);
+                            Navigator.pop(dialogContext);
                           }, 
                           style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
                           child: const Text("İptal", style: TextStyle(color: Colors.white54, fontWeight: FontWeight.w700, fontSize: 15))
@@ -450,10 +587,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF00FFA3),
-                            disabledBackgroundColor: const Color(0xFF00FFA3).withOpacity(0.5),
+                            disabledBackgroundColor: const Color(0xFF00FFA3).withValues(alpha: 0.5),
                             foregroundColor: Colors.black,
                             elevation: 10,
-                            shadowColor: const Color(0xFF00FFA3).withOpacity(0.5),
+                            shadowColor: const Color(0xFF00FFA3).withValues(alpha: 0.5),
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))
                           ),
@@ -473,12 +610,13 @@ class _LoginScreenState extends State<LoginScreen> {
                               ).timeout(apiTimeout);
                               
                               final data = json.decode(res.body);
+                              if (!dialogContext.mounted) return;
                               if (res.statusCode == 200) {
                                 String statusText = data['account_status'] == 'pending' 
                                     ? "⏳ Başvurunuz inceleniyor." 
                                     : "✅ Başvurunuz onaylandı.";
+                                Navigator.pop(dialogContext);
                                 if (!mounted) return;
-                                Navigator.pop(context);
                                 _showCustomSnackBar("${data['name']}:\n$statusText", isError: data['account_status'] == 'pending');
                               } else {
                                 if (!mounted) return;
@@ -488,7 +626,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               if (!mounted) return;
                               _showCustomSnackBar("Bağlantı hatası oluştu.", isError: true);
                             } finally {
-                              if (mounted) setStateDialog(() => isChecking = false);
+                              if (stfContext.mounted) {
+                                setStateDialog(() => isChecking = false);
+                              }
                             }
                           },
                           child: isChecking 
@@ -520,14 +660,14 @@ class _LoginScreenState extends State<LoginScreen> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       decoration: BoxDecoration(
-        color: focusNode.hasFocus ? Colors.white.withOpacity(0.08) : Colors.white.withOpacity(0.03),
+        color: focusNode.hasFocus ? Colors.white.withValues(alpha: 0.08) : Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: focusNode.hasFocus ? const Color(0xFF00FFA3) : Colors.white.withOpacity(0.05),
+          color: focusNode.hasFocus ? const Color(0xFF00FFA3) : Colors.white.withValues(alpha: 0.05),
           width: focusNode.hasFocus ? 1.5 : 1.0
         ),
         boxShadow: focusNode.hasFocus ? [
-          BoxShadow(color: const Color(0xFF00FFA3).withOpacity(0.1), blurRadius: 15, spreadRadius: 1)
+          BoxShadow(color: const Color(0xFF00FFA3).withValues(alpha: 0.1), blurRadius: 15, spreadRadius: 1)
         ] : [],
       ),
       child: ClipRRect(
@@ -547,7 +687,7 @@ class _LoginScreenState extends State<LoginScreen> {
             decoration: InputDecoration(
               labelText: label,
               labelStyle: TextStyle(
-                color: focusNode.hasFocus ? const Color(0xFF00FFA3) : Colors.white.withOpacity(0.5), 
+                color: focusNode.hasFocus ? const Color(0xFF00FFA3) : Colors.white.withValues(alpha: 0.5), 
                 fontSize: 14, 
                 fontWeight: FontWeight.w500
               ),
@@ -595,12 +735,12 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Scaffold(
         backgroundColor: const Color(0xFF030305),
         extendBodyBehindAppBar: true,
-        resizeToAvoidBottomInset: false, // KLAVYE HATASINI ÖNLEMEK İÇİN EKLENDİ
+        resizeToAvoidBottomInset: false,
         appBar: AppBar(
           leading: IconButton(
             icon: Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), shape: BoxShape.circle),
               child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: Colors.white),
             ),
             onPressed: () {
@@ -610,12 +750,10 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           title: GestureDetector(
             onLongPress: () {
-              if (isCustomer) {
-                if (!kIsWeb) HapticFeedback.heavyImpact();
-                _phoneController.text = "admin";
-                FocusScope.of(context).requestFocus(_passwordFocus);
-                _showCustomSnackBar("Admin girişi aktif edildi, şifrenizi giriniz.");
-              }
+              if (!kIsWeb) HapticFeedback.heavyImpact();
+              _phoneController.text = "admin";
+              FocusScope.of(context).requestFocus(_passwordFocus);
+              _showCustomSnackBar("Admin girişi aktif edildi, şifrenizi giriniz.");
             },
             child: Image.asset('assets/images/logo.png', height: 32, fit: BoxFit.contain),
           ), 
@@ -634,7 +772,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
-                    colors: [const Color(0xFF00FFA3).withOpacity(0.12), Colors.transparent],
+                    colors: [const Color(0xFF00FFA3).withValues(alpha: 0.12), Colors.transparent],
                     stops: const [0.1, 0.8],
                   ),
                 ),
@@ -677,7 +815,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     color: const Color(0xFF00FFA3),
                                     shape: BoxShape.circle,
                                     boxShadow: [
-                                      BoxShadow(color: const Color(0xFF00FFA3).withOpacity(0.35), blurRadius: 40, spreadRadius: 5, offset: const Offset(0, 10))
+                                      BoxShadow(color: const Color(0xFF00FFA3).withValues(alpha: 0.35), blurRadius: 40, spreadRadius: 5, offset: const Offset(0, 10))
                                     ]
                                   ),
                                   child: Icon(isCustomer ? Icons.person_rounded : Icons.engineering_rounded, size: 42, color: Colors.black),
@@ -693,7 +831,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               Text(
                                 "Devam etmek için bilgilerinizi giriniz", 
                                 textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 15, color: Colors.white.withOpacity(0.5), fontWeight: FontWeight.w500)
+                                style: TextStyle(fontSize: 15, color: Colors.white.withValues(alpha: 0.5), fontWeight: FontWeight.w500)
                               ),
                               const SizedBox(height: 48),
                               
@@ -729,7 +867,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   borderRadius: BorderRadius.circular(24),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: isLoggingIn ? Colors.transparent : const Color(0xFF00FFA3).withOpacity(0.25), 
+                                      color: isLoggingIn ? Colors.transparent : const Color(0xFF00FFA3).withValues(alpha: 0.25), 
                                       blurRadius: 30, 
                                       offset: const Offset(0, 10)
                                     )
@@ -739,7 +877,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   onPressed: isLoggingIn ? null : _login,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF00FFA3), 
-                                    disabledBackgroundColor: const Color(0xFF00FFA3).withOpacity(0.6),
+                                    disabledBackgroundColor: const Color(0xFF00FFA3).withValues(alpha: 0.6),
                                     foregroundColor: Colors.black,
                                     elevation: 0,
                                     padding: const EdgeInsets.symmetric(vertical: 22),
@@ -749,6 +887,76 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ? const SizedBox(width: 26, height: 26, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3)) 
                                     : const Text("Giriş Yap", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
                                 ),
+                              ),
+                              const SizedBox(height: 24),
+                              Row(
+                                children: [
+                                  Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.12), thickness: 1)),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                    child: Text(
+                                      "veya şununla devam et",
+                                      style: TextStyle(color: Colors.white.withValues(alpha: 0.45), fontSize: 13, fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                  Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.12), thickness: 1)),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: isLoggingIn ? null : _signInWithGoogle,
+                                      borderRadius: BorderRadius.circular(20),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(alpha: 0.04),
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                                        ),
+                                        child: const Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.g_mobiledata_rounded, color: Colors.white, size: 28),
+                                            SizedBox(width: 8),
+                                            Text(
+                                              "Google",
+                                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: isLoggingIn ? null : _signInWithApple,
+                                      borderRadius: BorderRadius.circular(20),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(alpha: 0.04),
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                                        ),
+                                        child: const Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.apple_rounded, color: Colors.white, size: 24),
+                                            SizedBox(width: 8),
+                                            Text(
+                                              "Apple",
+                                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 28),
                               
@@ -795,7 +1003,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(20), 
-                                      side: BorderSide(color: const Color(0xFF00FFA3).withOpacity(0.3))
+                                      side: BorderSide(color: const Color(0xFF00FFA3).withValues(alpha: 0.3))
                                     )
                                   ),
                                   label: Text(
@@ -814,7 +1022,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     style: TextButton.styleFrom(
                                       foregroundColor: Colors.white70,
                                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: Colors.white.withOpacity(0.1)))
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: Colors.white.withValues(alpha: 0.1)))
                                     ),
                                     label: const Text("Kayıt Durumunu Sorgula", style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
                                   ),

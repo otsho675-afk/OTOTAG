@@ -12,7 +12,20 @@
           "package_name": "com.oto.tag"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "73273804842-jilr0kvgokhl04f81se2hdfrm8mukg6s.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.oto.tag",
+            "certificate_hash": "20ffb8f6181f90fe59ac56e58bbd292640e6afe7"
+          }
+        },
+        {
+          "client_id": "73273804842-vq4fqlr07t8rhlgpituoka7nvnqltfba.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAe0-AOWSavOYIVqJcQWsdUDJ3mvVNxY9o"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "73273804842-vq4fqlr07t8rhlgpituoka7nvnqltfba.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "73273804842-9k0u96pmj3mflgnu91ls8hmiiujiuubp.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.otoTamirApp"
+              }
+            }
+          ]
         }
       }
     }

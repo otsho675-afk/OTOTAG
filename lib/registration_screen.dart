@@ -1,12 +1,16 @@
-// registration_screen.dart
+// Dosya: registration_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:ui';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+
 import 'customer_dashboard_screen.dart';
 import 'provider_map_screen.dart';
 import 'login_screen.dart';
@@ -17,7 +21,7 @@ class SmartIbanFormatter extends TextInputFormatter {
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
     var text = newValue.text.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
     if (text.isNotEmpty && !text.startsWith('TR')) {
-      text = 'TR' + text.replaceAll('TR', '');
+      text = 'TR${text.replaceAll('TR', '')}';
     } else if (text.isEmpty) {
       text = 'TR';
     }
@@ -35,7 +39,7 @@ class SmartIbanFormatter extends TextInputFormatter {
   }
 }
 
-// Akıllı Telefon Formatlayıcı (Kayıt ekranı için)
+// Akıllı Telefon Formatlayıcı
 class SmartPhoneFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
@@ -57,10 +61,22 @@ class SmartPhoneFormatter extends TextInputFormatter {
 
 class RegistrationScreen extends StatefulWidget {
   final String userType;
-  const RegistrationScreen({super.key, required this.userType});
+  final String? oauthProvider;
+  final String? oauthId;
+  final String? oauthEmail;
+  final String? initialName;
+
+  const RegistrationScreen({
+    super.key, 
+    required this.userType,
+    this.oauthProvider,
+    this.oauthId,
+    this.oauthEmail,
+    this.initialName,
+  });
 
   @override
-  _RegistrationScreenState createState() => _RegistrationScreenState();
+  State<RegistrationScreen> createState() => _RegistrationScreenState();
 }
 
 class _RegistrationScreenState extends State<RegistrationScreen> {
@@ -69,7 +85,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _ibanController = TextEditingController();
   
-  // Odak Yönetimi İçin FocusNode'lar
   final FocusNode _nameFocus = FocusNode();
   final FocusNode _phoneFocus = FocusNode();
   final FocusNode _passwordFocus = FocusNode();
@@ -79,6 +94,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   String? _selectedCity;
   bool isRegistering = false;
   bool _obscurePassword = true; 
+
+  String? _currentOauthProvider;
+  String? _currentOauthId;
+  String? _currentOauthEmail;
 
   final Duration _apiTimeout = const Duration(seconds: 25); 
 
@@ -102,6 +121,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   void initState() {
     super.initState();
     _ibanController.text = 'TR';
+    _currentOauthProvider = widget.oauthProvider;
+    _currentOauthId = widget.oauthId;
+    _currentOauthEmail = widget.oauthEmail;
+
+    if (widget.initialName != null && widget.initialName!.isNotEmpty) {
+      _nameController.text = widget.initialName!;
+    }
   }
 
   @override
@@ -145,13 +171,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   void _showCustomSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
             child: Icon(isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded, color: Colors.white, size: 22),
           ),
           const SizedBox(width: 14),
@@ -165,7 +192,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           ),
         ],
       ),
-      backgroundColor: isError ? alertRed : neonGreen.withOpacity(0.95),
+      backgroundColor: isError ? alertRed : neonGreen.withValues(alpha: 0.95),
       behavior: SnackBarBehavior.floating,
       margin: const EdgeInsets.all(20),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -174,16 +201,80 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     ));
   }
 
+  Future<void> _signUpWithGoogle() async {
+    if (!kIsWeb) HapticFeedback.selectionClick();
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+      await googleSignIn.signOut();
+      final GoogleSignInAccount? account = await googleSignIn.signIn();
+
+      if (!mounted) return;
+
+      if (account != null) {
+        setState(() {
+          _currentOauthProvider = 'google';
+          _currentOauthId = account.id;
+          _currentOauthEmail = account.email;
+          if (account.displayName != null && account.displayName!.isNotEmpty) {
+            _nameController.text = account.displayName!;
+          }
+        });
+        _showCustomSnackBar("Google bağlandı! Şimdi zorunlu telefon ve şehir alanlarını doldurunuz.", isError: false);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _showCustomSnackBar("Google bağlantı hatası: $e", isError: true);
+    }
+  }
+
+  Future<void> _signUpWithApple() async {
+    if (!kIsWeb) HapticFeedback.selectionClick();
+    
+    if (!kIsWeb && Platform.isAndroid) {
+      _showCustomSnackBar("Apple ile bağlantı yalnızca iOS cihazlarda desteklenmektedir.", isError: true);
+      return;
+    }
+
+    try {
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      if (!mounted) return;
+
+      String fullName = [
+        credential.givenName ?? '',
+        credential.familyName ?? ''
+      ].join(' ').trim();
+
+      setState(() {
+        _currentOauthProvider = 'apple';
+        _currentOauthId = credential.userIdentifier ?? '';
+        _currentOauthEmail = credential.email ?? '';
+        if (fullName.isNotEmpty) {
+          _nameController.text = fullName;
+        }
+      });
+      _showCustomSnackBar("Apple bağlandı! Şimdi zorunlu telefon ve şehir alanlarını doldurunuz.", isError: false);
+    } catch (e) {
+      if (!mounted) return;
+      _showCustomSnackBar("Apple bağlantısı başarısız veya iptal edildi.", isError: true);
+    }
+  }
+
   void _showCityPickerModal() {
     HapticFeedback.selectionClick();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) {
+      builder: (modalContext) {
         String searchQuery = "";
         return StatefulBuilder(
-          builder: (context, setModalState) {
+          builder: (stfContext, setModalState) {
             List<String> filteredCities = _cities
                 .where((city) => city.toLowerCase().contains(searchQuery.toLowerCase()))
                 .toList();
@@ -191,11 +282,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             return BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
               child: Container(
-                height: MediaQuery.of(context).size.height * 0.75,
+                height: MediaQuery.of(modalContext).size.height * 0.75,
                 decoration: BoxDecoration(
-                  color: panelBlack.withOpacity(0.95),
+                  color: panelBlack.withValues(alpha: 0.95),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                  border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.5),
                 ),
                 child: SafeArea(
                   child: Column(
@@ -214,7 +305,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           children: [
                             Container(
                               padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(color: neonGreen.withOpacity(0.1), shape: BoxShape.circle),
+                              decoration: BoxDecoration(color: neonGreen.withValues(alpha: 0.1), shape: BoxShape.circle),
                               child: const Icon(Icons.location_city_rounded, color: neonGreen, size: 20),
                             ),
                             const SizedBox(width: 12),
@@ -227,9 +318,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: Container(
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.04),
+                            color: Colors.white.withValues(alpha: 0.04),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.white.withOpacity(0.08)),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                           ),
                           child: TextField(
                             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
@@ -256,8 +347,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                 physics: const BouncingScrollPhysics(),
                                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                                 itemCount: filteredCities.length,
-                                separatorBuilder: (_, __) => Divider(color: Colors.white.withOpacity(0.04), height: 1),
-                                itemBuilder: (context, index) {
+                                separatorBuilder: (_, __) => Divider(color: Colors.white.withValues(alpha: 0.04), height: 1),
+                                itemBuilder: (itemContext, index) {
                                   final city = filteredCities[index];
                                   final isSelected = _selectedCity == city;
                                   return Material(
@@ -278,7 +369,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                         setState(() {
                                           _selectedCity = city;
                                         });
-                                        Navigator.pop(context);
+                                        Navigator.pop(modalContext);
                                       },
                                     ),
                                   );
@@ -299,19 +390,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   Future<void> _register() async {
     HapticFeedback.lightImpact();
     FocusScope.of(context).unfocus(); 
-    TextInput.finishAutofillContext(); // Otomatik doldurma verisini kaydet
+    TextInput.finishAutofillContext();
 
+    String rawName = _nameController.text.trim();
     String rawPhone = _phoneController.text.trim();
+    String rawPass = _passwordController.text.trim();
 
-    if (_nameController.text.trim().isEmpty || rawPhone.isEmpty || _passwordController.text.trim().isEmpty) {
+    if (rawName.isEmpty) {
       HapticFeedback.vibrate();
-      _showCustomSnackBar('Lütfen temel bilgileri doldurun.', isError: true);
-      return;
-    }
-
-    if (_passwordController.text.trim().length < 6) {
-      HapticFeedback.vibrate();
-      _showCustomSnackBar('Şifreniz en az 6 karakter olmalıdır.', isError: true);
+      _showCustomSnackBar('Lütfen ad ve soyadınızı giriniz.', isError: true);
       return;
     }
 
@@ -322,35 +409,50 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     if (sanitizedPhone.length == 10 && sanitizedPhone.startsWith('5')) {
       sanitizedPhone = '0$sanitizedPhone';
     }
-    if (sanitizedPhone.length != 11 || !sanitizedPhone.startsWith('05')) {
+    if (sanitizedPhone.isEmpty || sanitizedPhone.length != 11 || !sanitizedPhone.startsWith('05')) {
       HapticFeedback.vibrate();
-      _showCustomSnackBar('Geçerli bir telefon numarası girin (Örn: 05XX...).', isError: true);
+      _showCustomSnackBar('Telefon numarası kesinlikle zorunludur (Örn: 05XX...).', isError: true);
       return;
     }
 
-    if (_selectedCity == null) {
+    if (_selectedCity == null || _selectedCity!.isEmpty) {
       HapticFeedback.vibrate();
-      _showCustomSnackBar('Lütfen bulunduğunuz şehri seçin.', isError: true);
+      _showCustomSnackBar('Lütfen bulunduğunuz şehri seçiniz (Zorunludur).', isError: true);
       return;
     }
-    
+
+    if (_currentOauthId == null && rawPass.length < 6) {
+      HapticFeedback.vibrate();
+      _showCustomSnackBar('Şifreniz en az 6 karakter olmalıdır.', isError: true);
+      return;
+    }
+
     if (widget.userType == 'provider') {
-      if (_selectedService == 'wash' && (_driverLicense == null || _vehiclePhoto == null || _equipmentPhoto == null)) {
+      if (_selectedService.isEmpty || _selectedService == 'none') {
         HapticFeedback.vibrate();
-        _showCustomSnackBar('Lütfen istenen tüm belgeleri yükleyin.', isError: true);
+        _showCustomSnackBar('Usta kaydı için hizmet kategorisi seçimi zorunludur.', isError: true);
         return;
       }
-      if (_selectedService != 'wash' && _taxPlate == null) {
+
+      String cleanIban = _ibanController.text.replaceAll(' ', '').toUpperCase();
+      if (cleanIban.length != 26 || !cleanIban.startsWith('TR')) {
         HapticFeedback.vibrate();
-        _showCustomSnackBar('Lütfen vergi levhasını yükleyin.', isError: true);
+        _showCustomSnackBar('Usta kaydı için geçerli bir 26 haneli TR IBAN zorunludur.', isError: true);
         return;
       }
-      
-      String cleanIban = _ibanController.text.replaceAll(' ', '');
-      if (cleanIban.length != 26) {
-        HapticFeedback.vibrate();
-        _showCustomSnackBar('IBAN numarası eksik veya hatalı.', isError: true);
-        return;
+
+      if (_selectedService == 'wash') {
+        if (_driverLicense == null || _vehiclePhoto == null || _equipmentPhoto == null) {
+          HapticFeedback.vibrate();
+          _showCustomSnackBar('Oto yıkama için ehliyet, araç ve ekipman fotoğraflarının tamamı zorunludur.', isError: true);
+          return;
+        }
+      } else {
+        if (_taxPlate == null) {
+          HapticFeedback.vibrate();
+          _showCustomSnackBar('Usta kaydı için vergi levhası yüklenmesi zorunludur.', isError: true);
+          return;
+        }
       }
     }
 
@@ -359,13 +461,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     try {
       if (widget.userType == 'provider') {
         var request = http.MultipartRequest('POST', Uri.parse("$baseUrl?action=register"));
-        request.fields['name'] = _nameController.text.trim();
+        request.fields['name'] = rawName;
         request.fields['phone'] = sanitizedPhone;
-        request.fields['password'] = _passwordController.text.trim();
+        request.fields['password'] = rawPass.isNotEmpty ? rawPass : 'oauth_temp_pass';
         request.fields['user_type'] = widget.userType;
         request.fields['service_category'] = _selectedService;
-        request.fields['iban'] = _ibanController.text.replaceAll(' ', '');
+        request.fields['iban'] = _ibanController.text.replaceAll(' ', '').toUpperCase();
         request.fields['city'] = _selectedCity!;
+        request.fields['oauth_provider'] = _currentOauthProvider ?? '';
+        request.fields['oauth_id'] = _currentOauthId ?? '';
+        request.fields['email'] = _currentOauthEmail ?? '';
 
         if (_selectedService == 'wash') {
           request.files.add(http.MultipartFile.fromBytes('driver_license', await _driverLicense!.readAsBytes(), filename: _driverLicense!.name));
@@ -383,13 +488,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           Uri.parse("$baseUrl?action=register"),
           headers: {"Content-Type": "application/x-www-form-urlencoded"},
           body: {
-            "name": _nameController.text.trim(),
+            "name": rawName,
             "phone": sanitizedPhone,
-            "password": _passwordController.text.trim(),
+            "password": rawPass.isNotEmpty ? rawPass : 'oauth_temp_pass',
             "user_type": widget.userType,
             "service_category": 'none',
             "iban": '',
             "city": _selectedCity!,
+            "oauth_provider": _currentOauthProvider ?? '',
+            "oauth_id": _currentOauthId ?? '',
+            "email": _currentOauthEmail ?? '',
           },
         ).timeout(_apiTimeout);
         _handleResponse(response.body, response.statusCode);
@@ -409,26 +517,29 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       final data = json.decode(responseBody);
       if (!mounted) return;
 
-      if (statusCode == 201 && data['status'] == 'success') {
+      if ((statusCode == 200 || statusCode == 201) && data['status'] == 'success') {
         HapticFeedback.mediumImpact();
         if (data['account_status'] == 'pending') {
           String trackingCode = data['tracking_code']?.toString() ?? "";
           showDialog(
             context: context,
             barrierDismissible: false,
-            builder: (context) {
+            builder: (dialogContext) {
               return BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                 child: AlertDialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: BorderSide(color: Colors.white.withOpacity(0.08))),
-                  backgroundColor: panelBlack.withOpacity(0.98),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28), 
+                    side: BorderSide(color: Colors.white.withValues(alpha: 0.08))
+                  ),
+                  backgroundColor: panelBlack.withValues(alpha: 0.98),
                   elevation: 0,
                   title: Column(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: neonGreen.withOpacity(0.1), 
+                          color: neonGreen.withValues(alpha: 0.1), 
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(Icons.check_circle_outline_rounded, color: neonGreen, size: 36),
@@ -441,7 +552,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text("Belgeleriniz alındı. Yönetici onayının ardından giriş yapabilirsiniz.", textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withOpacity(0.7), fontWeight: FontWeight.w500, height: 1.4, fontSize: 14)),
+                        Text("Belgeleriniz alındı. Yönetici onayının ardından giriş yapabilirsiniz.", textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontWeight: FontWeight.w500, height: 1.4, fontSize: 14)),
                         const SizedBox(height: 24),
                         const Text("Başvuru Takip Numaranız", style: TextStyle(fontWeight: FontWeight.w700, color: neonGreen, fontSize: 13)),
                         const SizedBox(height: 8),
@@ -449,9 +560,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.03), 
+                            color: Colors.white.withValues(alpha: 0.03), 
                             borderRadius: BorderRadius.circular(18), 
-                            border: Border.all(color: neonGreen.withOpacity(0.3), width: 1.5)
+                            border: Border.all(color: neonGreen.withValues(alpha: 0.3), width: 1.5)
                           ),
                           child: Center(
                             child: FittedBox(
@@ -482,7 +593,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         ),
                         onPressed: () {
                           HapticFeedback.selectionClick();
-                          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen(userType: widget.userType)));
+                          Navigator.pushReplacement(dialogContext, MaterialPageRoute(builder: (context) => LoginScreen(userType: widget.userType)));
                         },
                         child: const Text("Tamam, Anladım", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
                       ),
@@ -528,10 +639,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       decoration: BoxDecoration(
-        color: focusNode.hasFocus ? Colors.white.withOpacity(0.06) : Colors.white.withOpacity(0.03),
+        color: focusNode.hasFocus ? Colors.white.withValues(alpha: 0.06) : Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: focusNode.hasFocus ? neonGreen : Colors.white.withOpacity(0.05),
+          color: focusNode.hasFocus ? neonGreen : Colors.white.withValues(alpha: 0.05),
           width: focusNode.hasFocus ? 1.5 : 1.0,
         ),
       ),
@@ -559,7 +670,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ),
               prefixIcon: Padding(
                 padding: const EdgeInsets.only(left: 16, right: 12), 
-                child: Icon(icon, color: focusNode.hasFocus ? neonGreen : neonGreen.withOpacity(0.7), size: 20)
+                child: Icon(icon, color: focusNode.hasFocus ? neonGreen : neonGreen.withValues(alpha: 0.7), size: 20)
               ),
               suffixIcon: isPasswordField 
                   ? Padding(
@@ -594,9 +705,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   Widget _buildCitySelectorTile() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
+        color: Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Material(
         color: Colors.transparent,
@@ -640,9 +751,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   Widget _buildGlassDropdown(String label, IconData icon, String? value, List<DropdownMenuItem<String>> items, Function(String?) onChanged) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
+        color: Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
@@ -681,9 +792,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       padding: const EdgeInsets.only(bottom: 14),
       child: Container(
         decoration: BoxDecoration(
-          color: isSelected ? neonGreen.withOpacity(0.06) : Colors.white.withOpacity(0.03),
+          color: isSelected ? neonGreen.withValues(alpha: 0.06) : Colors.white.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isSelected ? neonGreen.withOpacity(0.4) : Colors.white.withOpacity(0.05), width: 1.5),
+          border: Border.all(color: isSelected ? neonGreen.withValues(alpha: 0.4) : Colors.white.withValues(alpha: 0.05), width: 1.5),
         ),
         child: Material(
           color: Colors.transparent,
@@ -704,7 +815,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Container(
                           width: 44, height: 44,
-                          color: neonGreen.withOpacity(0.2),
+                          color: neonGreen.withValues(alpha: 0.2),
                           child: const Icon(Icons.image, color: neonGreen, size: 20),
                         ),
                       ),
@@ -713,7 +824,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
+                        color: Colors.white.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(Icons.upload_file_rounded, color: Colors.white70, size: 22),
@@ -782,7 +893,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         leading: IconButton(
           icon: Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.08), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.08), shape: BoxShape.circle),
             child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.white),
           ),
           onPressed: () {
@@ -797,7 +908,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         flexibleSpace: ClipRect(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-            child: Container(color: pureBlack.withOpacity(0.4)),
+            child: Container(color: pureBlack.withValues(alpha: 0.4)),
           ),
         ),
       ),
@@ -812,7 +923,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [neonGreen.withOpacity(0.08), Colors.transparent],
+                  colors: [neonGreen.withValues(alpha: 0.08), Colors.transparent],
                   stops: const [0.1, 0.8],
                 ),
               ),
@@ -828,16 +939,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     horizontal: isTablet ? 0.0 : 20.0, 
                     vertical: 16.0
                   ),
-                  child: AutofillGroup( // Otomatik doldurma grubu eklendi
+                  child: AutofillGroup(
                     child: Column(
                       children: [
                         const SizedBox(height: 10),
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: neonGreen.withOpacity(0.1),
+                            color: neonGreen.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
-                            border: Border.all(color: neonGreen.withOpacity(0.25), width: 1.5),
+                            border: Border.all(color: neonGreen.withValues(alpha: 0.25), width: 1.5),
                           ),
                           child: Icon(isCustomer ? Icons.person_add_rounded : Icons.handyman_rounded, size: 36, color: neonGreen),
                         ),
@@ -851,6 +962,87 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           "Lütfen bilgilerinizi eksiksiz ve doğru doldurunuz", 
                           style: TextStyle(fontSize: 13, color: textGray, fontWeight: FontWeight.w500)
                         ),
+                        
+                        // HIZLI SOSYAL KAYIT SEÇENEKLERİ
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: InkWell(
+                                onTap: _signUpWithGoogle,
+                                borderRadius: BorderRadius.circular(16),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.04),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.g_mobiledata_rounded, color: Colors.white, size: 28),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        "Google ile Kaydol",
+                                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: InkWell(
+                                onTap: _signUpWithApple,
+                                borderRadius: BorderRadius.circular(16),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.04),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.apple_rounded, color: Colors.white, size: 20),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        "Apple ile Kaydol",
+                                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        if (_currentOauthProvider != null) ...[
+                          const SizedBox(height: 14),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: neonGreen.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: neonGreen.withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(_currentOauthProvider == 'google' ? Icons.g_mobiledata_rounded : Icons.apple_rounded, color: neonGreen, size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  "${_currentOauthProvider!.toUpperCase()} Bağlandı (Telefon & Şehir Zorunlu)",
+                                  style: const TextStyle(color: neonGreen, fontSize: 12, fontWeight: FontWeight.w800),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 28),
                     
                         _buildSectionHeader("Temel Bilgiler", Icons.badge_rounded),
@@ -869,7 +1061,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         _buildGlassTextField(
                           controller: _phoneController, 
                           focusNode: _phoneFocus,
-                          label: "Telefon Numarası (Örn: 0535...)", 
+                          label: "Telefon Numarası (Zorunlu - Örn: 0535...)", 
                           icon: Icons.phone_android_rounded, 
                           isPasswordField: false, 
                           type: TextInputType.phone,
@@ -884,7 +1076,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         _buildGlassTextField(
                           controller: _passwordController, 
                           focusNode: _passwordFocus,
-                          label: "Şifre (En az 6 karakter)", 
+                          label: _currentOauthProvider != null ? "Şifre (Opsiyonel)" : "Şifre (En az 6 karakter)", 
                           icon: Icons.lock_outline_rounded, 
                           isPasswordField: true,
                           autofillHints: const [AutofillHints.newPassword],
@@ -900,16 +1092,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         ),
                     
                         const SizedBox(height: 24),
-                        _buildSectionHeader("Bölge & Konum", Icons.map_rounded),
+                        _buildSectionHeader("Bölge & Konum (Zorunlu)", Icons.map_rounded),
                         _buildCitySelectorTile(),
                     
                         if (!isCustomer) ...[
                           const SizedBox(height: 24),
-                          _buildSectionHeader("Banka & Uzmanlık", Icons.account_balance_wallet_rounded),
+                          _buildSectionHeader("Banka & Uzmanlık (Zorunlu)", Icons.account_balance_wallet_rounded),
                           _buildGlassTextField(
                             controller: _ibanController, 
                             focusNode: _ibanFocus,
-                            label: "IBAN Numarası", 
+                            label: "IBAN Numarası (26 Haneli Zorunlu)", 
                             icon: Icons.account_balance_rounded, 
                             isPasswordField: false, 
                             type: TextInputType.text,
@@ -942,7 +1134,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                             }
                           ),
                           const SizedBox(height: 24),
-                          _buildSectionHeader("Yetki ve Doğrulama Belgeleri", Icons.verified_user_rounded),
+                          _buildSectionHeader("Yetki ve Doğrulama Belgeleri (Zorunlu)", Icons.verified_user_rounded),
                           
                           if (_selectedService == 'wash') ...[
                             _buildFilePicker("Ehliyet Fotoğrafı", _driverLicense, 'driver_license'),

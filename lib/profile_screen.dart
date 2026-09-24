@@ -1,13 +1,18 @@
-// profile_screen.dart
+// Dosya: profile_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:ui';
+import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:flutter/foundation.dart'; 
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+
 import 'provider_profile_screen.dart';
 import 'main.dart'; 
-import 'package:flutter/foundation.dart'; 
 
 class ProfileScreen extends StatefulWidget {
   final int userId;
@@ -20,7 +25,7 @@ class ProfileScreen extends StatefulWidget {
   });
 
   @override
-  _ProfileScreenState createState() => _ProfileScreenState();
+  State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMixin {
@@ -29,6 +34,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
   bool isLoading = true;
   bool isSaving = false;
+  bool isLinkingOAuth = false;
   bool isDeletingAccount = false;
   
   Map<String, dynamic> profile = {};
@@ -51,7 +57,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   late AnimationController _pulseController;
   late AnimationController _listAnimController;
 
-  // Modern Tasarım Renk Paleti
   static const Color _bgColor = Color(0xFF030305);
   static const Color _cardColor = Color(0xFF111115);
   static const Color _cardColorLight = Color(0xFF181820);
@@ -120,7 +125,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -146,8 +151,8 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           ],
         ),
         backgroundColor: isNewAlert 
-          ? _secondaryColor.withOpacity(0.95) 
-          : (isError ? _dangerColor : _primaryColor.withOpacity(0.95)),
+          ? _secondaryColor.withValues(alpha: 0.95) 
+          : (isError ? _dangerColor : _primaryColor.withValues(alpha: 0.95)),
         behavior: SnackBarBehavior.floating,
         margin: EdgeInsets.only(
           bottom: MediaQuery.of(context).size.height * 0.05,
@@ -156,7 +161,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 20,
-        duration: const Duration(seconds: 2),
+        duration: const Duration(seconds: 3),
       )
     );
   }
@@ -206,6 +211,136 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
         setState(() => isLoading = false);
         _showCustomSnackBar("Bağlantı hatası: İnternet bağlantınızı kontrol edin.", isError: true);
       }
+    }
+  }
+
+  Future<void> _linkGoogleAccount() async {
+    if (isLinkingOAuth) return;
+    HapticFeedback.selectionClick();
+    setState(() => isLinkingOAuth = true);
+
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+      await googleSignIn.signOut();
+      final GoogleSignInAccount? account = await googleSignIn.signIn();
+
+      if (!mounted || account == null) {
+        setState(() => isLinkingOAuth = false);
+        return;
+      }
+
+      final response = await _httpClient.post(
+        Uri.parse("$baseUrl?action=link_oauth"),
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: {
+          "user_id": widget.userId.toString(),
+          "oauth_provider": "google",
+          "oauth_id": account.id,
+          "email": account.email,
+        },
+      ).timeout(_apiTimeout);
+
+      if (!mounted) return;
+      final data = json.decode(response.body);
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        setState(() {
+          profile['oauth_provider'] = 'google';
+          profile['email'] = account.email;
+        });
+        _showCustomSnackBar("Google hesabınız başarıyla bağlandı!");
+      } else {
+        _showCustomSnackBar(data['message'] ?? "Hesap bağlanamadı.", isError: true);
+      }
+    } catch (e) {
+      if (mounted) _showCustomSnackBar("Google bağlantı hatası oluştu.", isError: true);
+    } finally {
+      if (mounted) setState(() => isLinkingOAuth = false);
+    }
+  }
+
+  Future<void> _linkAppleAccount() async {
+    if (isLinkingOAuth) return;
+    HapticFeedback.selectionClick();
+
+    if (!kIsWeb && Platform.isAndroid) {
+      _showCustomSnackBar("Apple ile bağlantı yalnızca iOS cihazlarda desteklenmektedir.", isError: true);
+      return;
+    }
+
+    setState(() => isLinkingOAuth = true);
+
+    try {
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      if (!mounted) {
+        setState(() => isLinkingOAuth = false);
+        return;
+      }
+
+      final response = await _httpClient.post(
+        Uri.parse("$baseUrl?action=link_oauth"),
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: {
+          "user_id": widget.userId.toString(),
+          "oauth_provider": "apple",
+          "oauth_id": credential.userIdentifier ?? '',
+          "email": credential.email ?? '',
+        },
+      ).timeout(_apiTimeout);
+
+      if (!mounted) return;
+      final data = json.decode(response.body);
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        setState(() {
+          profile['oauth_provider'] = 'apple';
+          if (credential.email != null && credential.email!.isNotEmpty) {
+            profile['email'] = credential.email;
+          }
+        });
+        _showCustomSnackBar("Apple hesabınız başarıyla bağlandı!");
+      } else {
+        _showCustomSnackBar(data['message'] ?? "Apple hesabı bağlanamadı.", isError: true);
+      }
+    } catch (e) {
+      if (mounted) _showCustomSnackBar("Apple bağlantısı iptal edildi veya başarısız oldu.", isError: true);
+    } finally {
+      if (mounted) setState(() => isLinkingOAuth = false);
+    }
+  }
+
+  Future<void> _unlinkSocialAccount() async {
+    HapticFeedback.selectionClick();
+    setState(() => isLinkingOAuth = true);
+
+    try {
+      final response = await _httpClient.post(
+        Uri.parse("$baseUrl?action=unlink_oauth"),
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: {
+          "user_id": widget.userId.toString(),
+        },
+      ).timeout(_apiTimeout);
+
+      if (!mounted) return;
+      final data = json.decode(response.body);
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        setState(() {
+          profile['oauth_provider'] = null;
+          profile['oauth_id'] = null;
+        });
+        _showCustomSnackBar("Sosyal hesap bağlantısı kaldırıldı.");
+      } else {
+        _showCustomSnackBar(data['message'] ?? "İşlem başarısız.", isError: true);
+      }
+    } catch (e) {
+      if (mounted) _showCustomSnackBar("Bağlantı hatası oluştu.", isError: true);
+    } finally {
+      if (mounted) setState(() => isLinkingOAuth = false);
     }
   }
 
@@ -283,6 +418,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
         body: {
           "user_id": widget.userId.toString(),
           "name": _nameController.text.trim(),
+          "phone": _phoneController.text.trim(),
           "service_category": widget.userType == 'provider' ? selectedService : 'none',
           "iban": widget.userType == 'provider' ? _ibanController.text.trim() : '',
         },
@@ -305,7 +441,12 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           _showCustomSnackBar(data['message'] ?? "Güncelleme tamamlanamadı.", isError: true);
         }
       } else {
-        _showCustomSnackBar("Sunucu hatası: Güncellenemedi.", isError: true);
+        try {
+          final data = json.decode(response.body);
+          _showCustomSnackBar(data['message'] ?? "Sunucu hatası: Güncellenemedi.", isError: true);
+        } catch (_) {
+          _showCustomSnackBar("Sunucu hatası: Güncellenemedi.", isError: true);
+        }
       }
     } catch (e) {
       if (mounted) _showCustomSnackBar("Bağlantı koptu, tekrar deneyin.", isError: true);
@@ -314,7 +455,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     }
   }
 
-  // PROFİL DÜZENLEME MODALI (TATLI & RESPONSIVE)
   void _showEditProfileDialog() {
     showModalBottomSheet(
       context: context,
@@ -334,9 +474,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   top: 20
                 ),
                 decoration: BoxDecoration(
-                  color: _cardColor.withOpacity(0.98),
+                  color: _cardColor.withValues(alpha: 0.98),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                  border: Border.all(color: _primaryColor.withOpacity(0.3), width: 1.5),
+                  border: Border.all(color: _primaryColor.withValues(alpha: 0.3), width: 1.5),
                 ),
                 child: SingleChildScrollView(
                   child: Column(
@@ -357,7 +497,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: _primaryColor.withOpacity(0.15),
+                              color: _primaryColor.withValues(alpha: 0.15),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(Icons.badge_rounded, color: _primaryColor, size: 24),
@@ -389,7 +529,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                           borderRadius: BorderRadius.circular(20),
                           gradient: const LinearGradient(colors: [_primaryColor, _secondaryColor]),
                           boxShadow: [
-                            BoxShadow(color: _primaryColor.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 5))
+                            BoxShadow(color: _primaryColor.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 5))
                           ]
                         ),
                         child: ElevatedButton(
@@ -427,7 +567,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => StatefulBuilder(
+      builder: (modalCtx) => StatefulBuilder(
         builder: (context, setModalState) {
           return SafeArea(
             child: BackdropFilter(
@@ -435,9 +575,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               child: Container(
                 padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 24, left: 20, right: 20, top: 20),
                 decoration: BoxDecoration(
-                  color: _cardColor.withOpacity(0.98),
+                  color: _cardColor.withValues(alpha: 0.98),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                  border: Border.all(color: Colors.blueAccent.withOpacity(0.3), width: 1.5),
+                  border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.3), width: 1.5),
                 ),
                 child: SingleChildScrollView(
                   child: Column(
@@ -451,7 +591,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                         children: [
                           Container(
                             padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(color: Colors.blueAccent.withOpacity(0.15), shape: BoxShape.circle),
+                            decoration: BoxDecoration(color: Colors.blueAccent.withValues(alpha: 0.15), shape: BoxShape.circle),
                             child: const Icon(Icons.lock_rounded, color: Colors.blueAccent, size: 24),
                           ),
                           const SizedBox(width: 12),
@@ -478,7 +618,8 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                             ).timeout(_apiTimeout);
                             final data = json.decode(response.body);
                             if (response.statusCode == 200 && data['status'] == 'success') {
-                              Navigator.pop(context);
+                              if (!modalCtx.mounted) return;
+                              Navigator.pop(modalCtx);
                               _showCustomSnackBar("Şifreniz başarıyla değiştirildi.");
                             } else {
                               _showCustomSnackBar(data['message'] ?? "Şifre değiştirilemedi.", isError: true);
@@ -486,7 +627,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                           } catch (_) {
                             _showCustomSnackBar("Bağlantı hatası.", isError: true);
                           } finally {
-                            setModalState(() => isUpdating = false);
+                            if (mounted) setModalState(() => isUpdating = false);
                           }
                         },
                         style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent, padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
@@ -512,7 +653,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => StatefulBuilder(
+      builder: (modalCtx) => StatefulBuilder(
         builder: (context, setModalState) {
           return SafeArea(
             child: BackdropFilter(
@@ -520,9 +661,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               child: Container(
                 padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 24, left: 20, right: 20, top: 20),
                 decoration: BoxDecoration(
-                  color: _cardColor.withOpacity(0.98),
+                  color: _cardColor.withValues(alpha: 0.98),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                  border: Border.all(color: _warningColor.withOpacity(0.3), width: 1.5),
+                  border: Border.all(color: _warningColor.withValues(alpha: 0.3), width: 1.5),
                 ),
                 child: SingleChildScrollView(
                   child: Column(
@@ -536,7 +677,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                         children: [
                           Container(
                             padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(color: _warningColor.withOpacity(0.15), shape: BoxShape.circle),
+                            decoration: BoxDecoration(color: _warningColor.withValues(alpha: 0.15), shape: BoxShape.circle),
                             child: const Icon(Icons.favorite_rounded, color: _warningColor, size: 24),
                           ),
                           const SizedBox(width: 12),
@@ -569,7 +710,8 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                             ).timeout(_apiTimeout);
                             final data = json.decode(response.body);
                             if (response.statusCode == 200 && data['status'] == 'success') {
-                              Navigator.pop(context);
+                              if (!modalCtx.mounted) return;
+                              Navigator.pop(modalCtx);
                               _showCustomSnackBar("Geri bildiriminiz için çok teşekkürler!");
                             } else {
                               _showCustomSnackBar("Gönderilemedi.", isError: true);
@@ -577,7 +719,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                           } catch (_) {
                             _showCustomSnackBar("Bağlantı hatası.", isError: true);
                           } finally {
-                            setModalState(() => isSending = false);
+                            if (mounted) setModalState(() => isSending = false);
                           }
                         },
                         style: ElevatedButton.styleFrom(backgroundColor: _warningColor, padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
@@ -608,7 +750,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => StatefulBuilder(
+      builder: (modalCtx) => StatefulBuilder(
         builder: (context, setModalState) {
           return SafeArea(
             child: BackdropFilter(
@@ -619,11 +761,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   left: 20, right: 20, top: 20
                 ),
                 decoration: BoxDecoration(
-                  color: _cardColor.withOpacity(0.98),
+                  color: _cardColor.withValues(alpha: 0.98),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                  border: Border.all(color: _dangerColor.withOpacity(0.3), width: 1.5),
+                  border: Border.all(color: _dangerColor.withValues(alpha: 0.3), width: 1.5),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 40, offset: const Offset(0, -10))
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 40, offset: const Offset(0, -10))
                   ],
                 ),
                 child: SingleChildScrollView(
@@ -646,7 +788,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: _dangerColor.withOpacity(0.15),
+                            color: _dangerColor.withValues(alpha: 0.15),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(Icons.support_agent_rounded, color: _dangerColor, size: 36),
@@ -680,7 +822,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
-                            BoxShadow(color: _dangerColor.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 5))
+                            BoxShadow(color: _dangerColor.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 5))
                           ],
                         ),
                         child: ElevatedButton(
@@ -705,7 +847,8 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                               
                               if (mounted) {
                                 if (response.statusCode == 200) {
-                                  Navigator.pop(context);
+                                  if (!modalCtx.mounted) return;
+                                  Navigator.pop(modalCtx);
                                   _showCustomSnackBar("Şikayetiniz yönetime başarıyla iletildi.");
                                 } else {
                                   _showCustomSnackBar("Şikayet gönderilemedi.", isError: true);
@@ -757,17 +900,17 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       builder: (dialogContext) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: AlertDialog(
-          backgroundColor: _cardColor.withOpacity(0.95),
+          backgroundColor: _cardColor.withValues(alpha: 0.95),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24), 
-            side: BorderSide(color: Colors.white.withOpacity(0.1), width: 1.5)
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 1.5)
           ),
           elevation: 40,
           title: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: _dangerColor.withOpacity(0.15), shape: BoxShape.circle),
+                decoration: BoxDecoration(color: _dangerColor.withValues(alpha: 0.15), shape: BoxShape.circle),
                 child: const Icon(Icons.logout_rounded, color: _dangerColor, size: 28),
               ),
               const SizedBox(width: 12),
@@ -837,16 +980,16 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           return BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: AlertDialog(
-              backgroundColor: _cardColor.withOpacity(0.95),
+              backgroundColor: _cardColor.withValues(alpha: 0.95),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(24),
-                side: BorderSide(color: _dangerColor.withOpacity(0.3), width: 1.5)
+                side: BorderSide(color: _dangerColor.withValues(alpha: 0.3), width: 1.5)
               ),
               title: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: _dangerColor.withOpacity(0.15), shape: BoxShape.circle),
+                    decoration: BoxDecoration(color: _dangerColor.withValues(alpha: 0.15), shape: BoxShape.circle),
                     child: const Icon(Icons.delete_forever_rounded, color: _dangerColor, size: 28),
                   ),
                   const SizedBox(width: 12),
@@ -941,16 +1084,16 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                       "Hesabım", 
                       style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 24, letterSpacing: -0.5)
                     ),
-                    backgroundColor: _bgColor.withOpacity(0.65),
+                    backgroundColor: _bgColor.withValues(alpha: 0.65),
                     elevation: 0,
                     centerTitle: true,
                     iconTheme: const IconThemeData(color: Colors.white),
                     bottom: TabBar(
                       labelColor: _primaryColor,
-                      unselectedLabelColor: Colors.white.withOpacity(0.4),
+                      unselectedLabelColor: Colors.white.withValues(alpha: 0.4),
                       indicatorColor: _primaryColor,
                       indicatorWeight: 4,
-                      dividerColor: Colors.white.withOpacity(0.05),
+                      dividerColor: Colors.white.withValues(alpha: 0.05),
                       indicatorSize: TabBarIndicatorSize.label,
                       labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: -0.2),
                       tabs: [
@@ -976,7 +1119,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: RadialGradient(
-                            colors: [_primaryColor.withOpacity(0.12), Colors.transparent],
+                            colors: [_primaryColor.withValues(alpha: 0.12), Colors.transparent],
                           ),
                         ),
                       ),
@@ -990,7 +1133,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: RadialGradient(
-                            colors: [_purpleColor.withOpacity(0.08), Colors.transparent],
+                            colors: [_purpleColor.withValues(alpha: 0.08), Colors.transparent],
                           ),
                         ),
                       ),
@@ -1017,9 +1160,12 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
   }
 
-  // YENİLENMİŞ, TATLI BUTONLU PROFİL SEKMESİ
   Widget _buildProfileTab(BuildContext tabContext, bool isProvider, Color primaryColor, BoxConstraints constraints) {
     double horizontalPadding = constraints.maxWidth > 650 ? constraints.maxWidth * 0.15 : 20;
+
+    final String? linkedProvider = profile['oauth_provider']?.toString().toLowerCase();
+    final bool isGoogleLinked = linkedProvider == 'google';
+    final bool isAppleLinked = linkedProvider == 'apple';
 
     return SingleChildScrollView(
       padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 24),
@@ -1035,15 +1181,15 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [_cardColor.withOpacity(0.9), _cardColorLight.withOpacity(0.8)],
+                    colors: [_cardColor.withValues(alpha: 0.9), _cardColorLight.withValues(alpha: 0.8)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(32),
-                  border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.5),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.4),
+                      color: Colors.black.withValues(alpha: 0.4),
                       blurRadius: 25,
                       offset: const Offset(0, 10),
                     )
@@ -1051,7 +1197,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 ),
                 child: Row(
                   children: [
-                    // Parlayan Avatar
                     RepaintBoundary(
                       child: AnimatedBuilder(
                         animation: _pulseController,
@@ -1067,7 +1212,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: primaryColor.withOpacity(0.35 + (_pulseController.value * 0.2)), 
+                                  color: primaryColor.withValues(alpha: 0.35 + (_pulseController.value * 0.2)), 
                                   blurRadius: 25, 
                                   spreadRadius: _pulseController.value * 4, 
                                   offset: const Offset(0, 6)
@@ -1084,7 +1229,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                       ),
                     ),
                     const SizedBox(width: 20),
-                    // Kullanıcı Bilgisi
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1104,7 +1248,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                           const SizedBox(height: 6),
                           Row(
                             children: [
-                              Icon(Icons.phone_iphone_rounded, color: Colors.white.withOpacity(0.5), size: 16),
+                              Icon(Icons.phone_iphone_rounded, color: Colors.white.withValues(alpha: 0.5), size: 16),
                               const SizedBox(width: 6),
                               Text(
                                 profile['phone']?.toString().isNotEmpty == true 
@@ -1122,9 +1266,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: primaryColor.withOpacity(0.12),
+                              color: primaryColor.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: primaryColor.withOpacity(0.3), width: 1),
+                              border: Border.all(color: primaryColor.withValues(alpha: 0.3), width: 1),
                             ),
                             child: Text(
                               isProvider ? "Usta / Hizmet Veren" : "Müşteri Hesabı",
@@ -1138,6 +1282,171 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                           ),
                         ],
                       ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 28),
+
+              // HESAP BAĞLANTILARI (GOOGLE & APPLE) KARTI
+              Row(
+                children: [
+                  Container(
+                    width: 5,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: primaryColor,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    "Sosyal Hesap Bağlantıları",
+                    style: TextStyle(
+                      fontSize: 19, 
+                      fontWeight: FontWeight.w900, 
+                      color: Colors.white, 
+                      letterSpacing: -0.4
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: _cardColor.withValues(alpha: 0.8),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.5),
+                ),
+                child: Column(
+                  children: [
+                    // GOOGLE BAĞLANTI SATIRI
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(Icons.g_mobiledata_rounded, color: Colors.white, size: 28),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Google Hesabı",
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                isGoogleLinked
+                                    ? (profile['email']?.toString().isNotEmpty == true 
+                                        ? profile['email'].toString() 
+                                        : "Bağlandı (Google ile Giriş Aktif)")
+                                    : "Bağlı değil",
+                                style: TextStyle(
+                                  color: isGoogleLinked ? primaryColor : _subtitleColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (isGoogleLinked)
+                          TextButton(
+                            onPressed: isLinkingOAuth ? null : _unlinkSocialAccount,
+                            style: TextButton.styleFrom(
+                              backgroundColor: _dangerColor.withValues(alpha: 0.15),
+                              foregroundColor: _dangerColor,
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text("Kaldır", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+                          )
+                        else
+                          ElevatedButton.icon(
+                            onPressed: isLinkingOAuth ? null : _linkGoogleAccount,
+                            icon: const Icon(Icons.link_rounded, size: 16),
+                            label: const Text("Bağla", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              foregroundColor: Colors.black,
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                            ),
+                          ),
+                      ],
+                    ),
+
+                    const Divider(height: 24, color: Colors.white10),
+
+                    // APPLE BAĞLANTI SATIRI
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(Icons.apple_rounded, color: Colors.white, size: 24),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Apple Hesabı",
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                isAppleLinked ? "Bağlandı (Apple ile Giriş Aktif)" : "Bağlı değil",
+                                style: TextStyle(
+                                  color: isAppleLinked ? primaryColor : _subtitleColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (isAppleLinked)
+                          TextButton(
+                            onPressed: isLinkingOAuth ? null : _unlinkSocialAccount,
+                            style: TextButton.styleFrom(
+                              backgroundColor: _dangerColor.withValues(alpha: 0.15),
+                              foregroundColor: _dangerColor,
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text("Kaldır", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+                          )
+                        else
+                          ElevatedButton.icon(
+                            onPressed: isLinkingOAuth ? null : _linkAppleAccount,
+                            icon: const Icon(Icons.link_rounded, size: 16),
+                            label: const Text("Bağla", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              foregroundColor: Colors.black,
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                            ),
+                          ),
+                      ],
                     ),
                   ],
                 ),
@@ -1171,7 +1480,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
               const SizedBox(height: 18),
 
-              // TATLI VE ÇOK GÖRÜNÜR İŞLEM BUTONLARI (2'Lİ GRID MENÜ)
+              // 2'Lİ GRID MENÜ
               GridView.count(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -1180,7 +1489,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 crossAxisSpacing: 14,
                 mainAxisSpacing: 14,
                 children: [
-                  // 1. PROFİLİ DÜZENLE
                   _buildSweetActionButton(
                     icon: Icons.manage_accounts_rounded,
                     title: "Profili Düzenle",
@@ -1190,7 +1498,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                     onTap: _showEditProfileDialog,
                   ),
 
-                  // 2. GEÇMİŞİM SEKMESİNE GEÇİŞ
                   _buildSweetActionButton(
                     icon: Icons.receipt_long_rounded,
                     title: "Geçmişim",
@@ -1202,7 +1509,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                     },
                   ),
 
-                  // 3. ŞİFREMİ DEĞİŞTİR
                   _buildSweetActionButton(
                     icon: Icons.lock_reset_rounded,
                     title: "Şifre Değiştir",
@@ -1212,7 +1518,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                     onTap: _showChangePasswordDialog,
                   ),
 
-                  // 4. GERİ BİLDİRİM GÖNDER
                   _buildSweetActionButton(
                     icon: Icons.mark_chat_unread_rounded,
                     title: "Geri Bildirim",
@@ -1226,7 +1531,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
               if (isProvider) ...[
                 const SizedBox(height: 14),
-                // USTA İÇİN RAPOR BUTONU KISAYOLU
                 InkWell(
                   onTap: () => DefaultTabController.of(tabContext).animateTo(2),
                   borderRadius: BorderRadius.circular(24),
@@ -1234,19 +1538,19 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [_purpleColor.withOpacity(0.2), _cardColor],
+                        colors: [_purpleColor.withValues(alpha: 0.2), _cardColor],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                       ),
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: _purpleColor.withOpacity(0.3), width: 1.5),
+                      border: Border.all(color: _purpleColor.withValues(alpha: 0.3), width: 1.5),
                     ),
                     child: Row(
                       children: [
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: _purpleColor.withOpacity(0.2),
+                            color: _purpleColor.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: const Icon(Icons.query_stats_rounded, color: _purpleColor, size: 24),
@@ -1277,13 +1581,13 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
               const SizedBox(height: 28),
 
-              // GÜVENLİ ÇIKIŞ VE HESAP SİLME BUTONLARI
+              // GÜVENLİ ÇIKIŞ VE HESAP SİLME
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: _cardColor.withOpacity(0.7),
+                  color: _cardColor.withValues(alpha: 0.7),
                   borderRadius: BorderRadius.circular(26),
-                  border: Border.all(color: Colors.white.withOpacity(0.06), width: 1.5),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.06), width: 1.5),
                 ),
                 child: Column(
                   children: [
@@ -1305,7 +1609,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: _dangerColor.withOpacity(0.1),
+                                color: _dangerColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               child: const Icon(Icons.delete_forever_rounded, color: Colors.white54, size: 22),
@@ -1344,7 +1648,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
   }
 
-  // TATLI VE CANLI İŞLEM BUTONU WIDGET'I
   Widget _buildSweetActionButton({
     required IconData icon,
     required String title,
@@ -1358,17 +1661,17 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(26),
-        splashColor: accentColor.withOpacity(0.2),
-        highlightColor: accentColor.withOpacity(0.1),
+        splashColor: accentColor.withValues(alpha: 0.2),
+        highlightColor: accentColor.withValues(alpha: 0.1),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: _cardColor.withOpacity(0.75),
+            color: _cardColor.withValues(alpha: 0.75),
             borderRadius: BorderRadius.circular(26),
-            border: Border.all(color: accentColor.withOpacity(0.25), width: 1.5),
+            border: Border.all(color: accentColor.withValues(alpha: 0.25), width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: accentColor.withOpacity(0.12),
+                color: accentColor.withValues(alpha: 0.12),
                 blurRadius: 18,
                 spreadRadius: 1,
                 offset: const Offset(0, 6),
@@ -1393,7 +1696,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                       borderRadius: BorderRadius.circular(18),
                       boxShadow: [
                         BoxShadow(
-                          color: gradientColors.first.withOpacity(0.4),
+                          color: gradientColors.first.withValues(alpha: 0.4),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         )
@@ -1404,7 +1707,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.06),
+                      color: Colors.white.withValues(alpha: 0.06),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -1435,7 +1738,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white.withOpacity(0.5),
+                      color: Colors.white.withValues(alpha: 0.5),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -1462,10 +1765,10 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   ) {
     return Container(
       decoration: BoxDecoration(
-        color: readOnly ? Colors.white.withOpacity(0.03) : _cardColor.withOpacity(0.6),
+        color: readOnly ? Colors.white.withValues(alpha: 0.03) : _cardColor.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5),
-        boxShadow: readOnly ? [] : [BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 15, offset: const Offset(0, 6))],
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.5),
+        boxShadow: readOnly ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 15, offset: const Offset(0, 6))],
       ),
       child: TextField(
         controller: controller,
@@ -1518,7 +1821,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
+                  color: color.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(icon, color: color, size: 22),
@@ -1538,7 +1841,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               ),
               Icon(
                 Icons.arrow_forward_ios_rounded,
-                color: Colors.white.withOpacity(0.35),
+                color: Colors.white.withValues(alpha: 0.35),
                 size: 16,
               ),
             ],
@@ -1557,7 +1860,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
         children: [
           Container(
             decoration: BoxDecoration(
-              color: _historyPage > 1 ? primaryColor.withOpacity(0.15) : Colors.white.withOpacity(0.05),
+              color: _historyPage > 1 ? primaryColor.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(16),
             ),
             child: IconButton(
@@ -1574,14 +1877,14 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             decoration: BoxDecoration(
               color: _cardColor,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
             ),
             child: Text("Sayfa $_historyPage / $_totalHistoryPages", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
           ),
           const SizedBox(width: 16),
           Container(
             decoration: BoxDecoration(
-              color: _historyPage < _totalHistoryPages ? primaryColor.withOpacity(0.15) : Colors.white.withOpacity(0.05),
+              color: _historyPage < _totalHistoryPages ? primaryColor.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(16),
             ),
             child: IconButton(
@@ -1605,8 +1908,8 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           children: [
             Container(
               padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle),
-              child: Icon(Icons.history_toggle_off_rounded, size: 80, color: Colors.white.withOpacity(0.3)),
+              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), shape: BoxShape.circle),
+              child: Icon(Icons.history_toggle_off_rounded, size: 80, color: Colors.white.withValues(alpha: 0.3)),
             ),
             const SizedBox(height: 24),
             const Text("İşlem Geçmişi Boş", style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
@@ -1637,7 +1940,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 },
                 icon: Icon(isSelectionMode ? Icons.close_rounded : Icons.checklist_rtl_rounded, color: primaryColor, size: 20),
                 label: Text(isSelectionMode ? "Vazgeç" : "Seç & Sil", style: TextStyle(color: primaryColor, fontWeight: FontWeight.w900, fontSize: 15)),
-                style: TextButton.styleFrom(backgroundColor: primaryColor.withOpacity(0.15), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                style: TextButton.styleFrom(backgroundColor: primaryColor.withValues(alpha: 0.15), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
               )
             ],
           ),
@@ -1651,9 +1954,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 margin: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 16),
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 decoration: BoxDecoration(
-                  color: _dangerColor.withOpacity(0.15), 
+                  color: _dangerColor.withValues(alpha: 0.15), 
                   borderRadius: BorderRadius.circular(20), 
-                  border: Border.all(color: _dangerColor.withOpacity(0.4), width: 1.5)
+                  border: Border.all(color: _dangerColor.withValues(alpha: 0.4), width: 1.5)
                 ),
                 child: Row(
                   children: [
@@ -1671,7 +1974,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _dangerColor, 
                         elevation: 10,
-                        shadowColor: _dangerColor.withOpacity(0.4),
+                        shadowColor: _dangerColor.withValues(alpha: 0.4),
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), 
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
                       ),
@@ -1720,17 +2023,17 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                     duration: const Duration(milliseconds: 300),
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: isSelected ? primaryColor.withOpacity(0.15) : _cardColor.withOpacity(0.6),
+                      color: isSelected ? primaryColor.withValues(alpha: 0.15) : _cardColor.withValues(alpha: 0.6),
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
                         color: isSelected 
                           ? primaryColor 
-                          : (isCompleted ? primaryColor.withOpacity(0.15) : _dangerColor.withOpacity(0.15)), 
+                          : (isCompleted ? primaryColor.withValues(alpha: 0.15) : _dangerColor.withValues(alpha: 0.15)), 
                         width: isSelected ? 2.0 : 1.5
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: isSelected ? primaryColor.withOpacity(0.2) : Colors.black.withOpacity(0.3), 
+                          color: isSelected ? primaryColor.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.3), 
                           blurRadius: isSelected ? 20 : 15, 
                           offset: const Offset(0, 8)
                         )
@@ -1748,9 +2051,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                         Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: isCompleted ? primaryColor.withOpacity(0.15) : _dangerColor.withOpacity(0.15), 
+                            color: isCompleted ? primaryColor.withValues(alpha: 0.15) : _dangerColor.withValues(alpha: 0.15), 
                             borderRadius: BorderRadius.circular(18),
-                            boxShadow: [BoxShadow(color: isCompleted ? primaryColor.withOpacity(0.4) : _dangerColor.withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 6))]
+                            boxShadow: [BoxShadow(color: isCompleted ? primaryColor.withValues(alpha: 0.4) : _dangerColor.withValues(alpha: 0.4), blurRadius: 15, offset: const Offset(0, 6))]
                           ),
                           child: Icon(isCompleted ? Icons.verified_rounded : Icons.cancel_rounded, color: isCompleted ? primaryColor : _dangerColor, size: 28),
                         ),
@@ -1773,7 +2076,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.08),
+                                  color: Colors.white.withValues(alpha: 0.08),
                                   borderRadius: BorderRadius.circular(12)
                                 ),
                                 child: Text(
@@ -1787,11 +2090,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                         ),
                         if (!isSelectionMode && !isProvider && job['provider_id'] != null)
                           Container(
-                            decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle),
+                            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), shape: BoxShape.circle),
                             child: PopupMenuButton<String>(
-                              icon: Icon(Icons.more_vert_rounded, color: Colors.white.withOpacity(0.9), size: 24),
+                              icon: Icon(Icons.more_vert_rounded, color: Colors.white.withValues(alpha: 0.9), size: 24),
                               color: _cardColor,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: Colors.white.withOpacity(0.1))),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
                               onSelected: (val) {
                                 final pId = int.tryParse(job['provider_id']?.toString() ?? '-1') ?? -1;
                                 if (val == 'profile' && pId != -1) {
@@ -1902,12 +2205,12 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           return Container(
             padding: EdgeInsets.all(isMain ? 28 : 24),
             decoration: BoxDecoration(
-              color: _cardColor.withOpacity(0.7),
+              color: _cardColor.withValues(alpha: 0.7),
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: cardColor.withOpacity(isMain ? 0.5 : 0.2), width: isMain ? 2.0 : 1.5),
+              border: Border.all(color: cardColor.withValues(alpha: isMain ? 0.5 : 0.2), width: isMain ? 2.0 : 1.5),
               boxShadow: [
                 BoxShadow(
-                  color: cardColor.withOpacity(0.15 + (_pulseController.value * 0.15)), 
+                  color: cardColor.withValues(alpha: 0.15 + (_pulseController.value * 0.15)), 
                   blurRadius: isMain ? 40 : 25, 
                   spreadRadius: isMain ? 5 : 2,
                   offset: const Offset(0, 12)
@@ -1919,9 +2222,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 Container(
                   padding: EdgeInsets.all(isMain ? 20 : 14),
                   decoration: BoxDecoration(
-                    color: cardColor.withOpacity(0.15), 
+                    color: cardColor.withValues(alpha: 0.15), 
                     shape: BoxShape.circle,
-                    boxShadow: [BoxShadow(color: cardColor.withOpacity(0.6), blurRadius: 15, offset: const Offset(0, 6))]
+                    boxShadow: [BoxShadow(color: cardColor.withValues(alpha: 0.6), blurRadius: 15, offset: const Offset(0, 6))]
                   ),
                   child: Icon(icon, color: cardColor, size: isMain ? 36 : 28),
                 ),

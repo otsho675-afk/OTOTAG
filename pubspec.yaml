@@ -1,7 +1,7 @@
 name: ototag
 description: Oto Eslestirme Sistemi
 publish_to: 'none'
-version: 1.0.0+30
+version: 1.0.0+31
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -36,6 +36,9 @@ dependencies:
   firebase_crashlytics: ^5.4.0
   quick_actions: ^1.1.1
   apple_maps_flutter: ^1.4.0
+  upgrader: ^13.7.0
+  google_sign_in: ^6.2.1
+  sign_in_with_apple: ^6.1.1
 
 dev_dependencies:
   flutter_test:

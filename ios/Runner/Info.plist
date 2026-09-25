@@ -1,3 +1,4 @@
+<!-- Dosya: ios/Runner/Info.plist -->
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -48,6 +49,10 @@
     <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
     
+    <!-- App Store Connect İhracat Uyumluluğu Uyarısını Kapatma -->
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
+
     <!-- Google Sign-In iOS Client ID (Native Çökmeyi Önleyen Anahtar) -->
     <key>GIDClientID</key>
     <string>73273804842-u0lcirptug9aotm2m6gn27g92hftt5ud.apps.googleusercontent.com</string>
@@ -86,6 +91,8 @@
     <string>Aracınızın arıza durumunu veya yedek parça fotoğraflarını çekmek için kamera izni gereklidir.</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>Garajınıza araç ruhsatı ve hasar fotoğrafları yükleyebilmek için galeri erişimi gereklidir.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Çekilen veya indirilen fotoğrafları galerinize kaydedebilmek için depolama izni gereklidir.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Sohbet ekranında sorunla ilgili video çekip gönderebilmeniz için mikrofon erişimi gereklidir.</string>
 

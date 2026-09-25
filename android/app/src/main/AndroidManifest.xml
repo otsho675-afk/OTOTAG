@@ -22,7 +22,13 @@
     <!-- Google Play İncelemesinde Reddedilmeyi Önleyen İzin Kaldırma Kuralları -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" tools:node="remove" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" tools:node="remove" />
-    
+
+    <!-- Google Play Fotoğraf/Video Politikası İçin Kaldırılan İzinler -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove" />
 
     <!-- Kamera İzni -->
     <uses-permission android:name="android.permission.CAMERA"/>
@@ -44,8 +50,7 @@
     <application
         android:label="Oto Sistem"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
-        android:requestLegacyExternalStorage="true">
+        android:icon="@mipmap/ic_launcher">
 
         <!-- Android 14+ Arka Plan Konum Servisi Zorunlu Tanımı -->
         <service

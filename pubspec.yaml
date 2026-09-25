@@ -1,7 +1,7 @@
 name: ototag
 description: Oto Eslestirme Sistemi
 publish_to: 'none'
-version: 1.0.0+34
+version: 1.0.0+35
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -45,6 +45,7 @@ dependencies:
   path_provider: ^2.1.6
   open_filex: ^4.7.0
   share_plus: ^12.0.2
+  pusher_channels_flutter: ^2.6.0
 
 dev_dependencies:
   flutter_test:

@@ -102,7 +102,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   
   bool isLoading = true;
   bool isSaving = false;
-  bool _isPolling = false; 
+   
   
   int? activeJobId;
   String? activeJobStatus;
@@ -118,7 +118,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   List<dynamic> notifications = [];
   int unreadCount = 0;
 
-  Timer? _notifTimer;
   Timer? _adScrollTimer;
   bool _isNotifModalOpen = false;
   bool _isVehicleModalOpen = false;
@@ -126,6 +125,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   final String baseUrl = "https://eliteagency.sbs/api.php";
   final String baseMediaUrl = "https://eliteagency.sbs/";
   final Duration apiTimeout = const Duration(seconds: 15);
+  final http.Client _httpClient = http.Client(); // Port tükenmesini önleyen bağlantı havuzu
   
   late final InAppPurchase _inAppPurchase;
   StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
@@ -211,7 +211,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     WidgetsBinding.instance.addObserver(this); 
     _fadeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))..forward();
     
-    _fetchAllDataConcurrently(); 
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) _fetchAllDataConcurrently(); 
+    });
     _startTimers();
     
     if (!kIsWeb) {
@@ -425,16 +427,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   }
 
   void _startTimers() {
-    _notifTimer?.cancel();
-    _notifTimer = Timer.periodic(const Duration(seconds: 15), (_) async {
-      if (_isPolling || !mounted) return;
-      _isPolling = true;
-      try {
-        await Future.wait([_fetchNotifications(), _checkActiveJob()]);
-      } finally {
-        if (mounted) _isPolling = false;
-      }
-    });
+    // Polling iptal edildi. Bildirimler ve iş durumu Pusher ile anlık yönetilir.
   }
 
   void _startAdTimer() {
@@ -459,18 +452,17 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
-      _notifTimer?.cancel();
       _adScrollTimer?.cancel();
     } else if (state == AppLifecycleState.resumed) {
       _startTimers();
       _startAdTimer();
+      _fetchAllDataConcurrently();
     }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _notifTimer?.cancel();
     _adScrollTimer?.cancel();
     _purchaseSubscription?.cancel();
     _fadeController.dispose();
@@ -478,12 +470,16 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     _adPageController.dispose();
     selectedVehicleIndex.dispose();
     currentAdIndex.dispose();
+    _httpClient.close(); // Bellek sızıntısını ve açık soketleri temizler
     super.dispose();
   }
 
   Future<void> _fetchAds() async {
     try {
-      final res = await http.get(Uri.parse("$baseUrl?action=get_ads")).timeout(apiTimeout);
+      final res = await _httpClient.get(
+        Uri.parse("$baseUrl?action=get_ads"),
+        headers: {"Connection": "close", "Cache-Control": "no-cache"}
+      ).timeout(apiTimeout);
       if (res.statusCode == 200) {
         final data = json.decode(res.body);
         if (data['status'] == 'success' && mounted) {
@@ -502,7 +498,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   Future<void> _fetchProfile() async {
     try {
-      final res = await http.get(Uri.parse("$baseUrl?action=get_profile&user_id=${widget.customerId}")).timeout(apiTimeout);
+      final res = await _httpClient.get(
+        Uri.parse("$baseUrl?action=get_profile&user_id=${widget.customerId}"),
+        headers: {"Connection": "close", "Cache-Control": "no-cache"}
+      ).timeout(apiTimeout);
       if (res.statusCode == 200) {
         final data = json.decode(res.body);
         if (data['status'] == 'success' && mounted) {
@@ -520,7 +519,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   Future<void> _checkActiveJob() async {
     try {
-      final res = await http.get(Uri.parse("$baseUrl?action=check_active_job&user_id=${widget.customerId}&user_type=customer")).timeout(apiTimeout);
+      final res = await _httpClient.get(
+        Uri.parse("$baseUrl?action=check_active_job&user_id=${widget.customerId}&user_type=customer"),
+        headers: {"Connection": "close", "Cache-Control": "no-cache"}
+      ).timeout(apiTimeout);
       final data = json.decode(res.body);
       if (data['status'] == 'success' && data['has_active'] == true && mounted) {
         setState(() { 
@@ -566,7 +568,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   Future<bool> _activatePremium(PurchaseDetails purchaseDetails) async {
     try {
-      final response = await http.post(
+      final response = await _httpClient.post(
         Uri.parse("$baseUrl?action=activate_premium"),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {
@@ -629,7 +631,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   Future<void> _fetchNotifications() async {
     try {
-      final response = await http.get(Uri.parse("$baseUrl?action=get_notifications&user_id=${widget.customerId}")).timeout(apiTimeout);
+      final response = await _httpClient.get(
+        Uri.parse("$baseUrl?action=get_notifications&user_id=${widget.customerId}"),
+        headers: {"Connection": "close", "Cache-Control": "no-cache"}
+      ).timeout(apiTimeout);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success' && mounted) {
@@ -646,7 +651,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   Future<void> _markNotificationsRead() async {
     try {
-      await http.post(
+      await _httpClient.post(
         Uri.parse("$baseUrl?action=mark_notif_read"),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {"user_id": widget.customerId.toString()}
@@ -659,7 +664,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   Future<void> _deleteNotification(int notificationId) async {
     try {
-      final response = await http.post(
+      final response = await _httpClient.post(
         Uri.parse("$baseUrl?action=delete_notification"),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {
@@ -681,7 +686,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   Future<void> _clearAllNotifications() async {
     try {
-      final response = await http.post(
+      final response = await _httpClient.post(
         Uri.parse("$baseUrl?action=clear_all_notifications"),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {"user_id": widget.customerId.toString()}
@@ -978,7 +983,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   }
 
   Future<void> _performLogout() async {
-    _notifTimer?.cancel();
     _adScrollTimer?.cancel();
 
     if (!kIsWeb) {
@@ -1073,7 +1077,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   Future<void> _fetchVehicles() async {
     try {
-      final response = await http.get(Uri.parse("$baseUrl?action=get_vehicles&customer_id=${widget.customerId}")).timeout(apiTimeout);
+      final response = await _httpClient.get(
+        Uri.parse("$baseUrl?action=get_vehicles&customer_id=${widget.customerId}"),
+        headers: {"Connection": "close", "Cache-Control": "no-cache"}
+      ).timeout(apiTimeout);
       final data = json.decode(response.body);
 
       if (response.statusCode == 200 && data['status'] == 'success') {
@@ -1231,7 +1238,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     if (isEditing) body["vehicle_id"] = vehicleId.toString();
 
     try {
-      final response = await http.post(Uri.parse("$baseUrl?action=$action"), headers: {"Content-Type": "application/x-www-form-urlencoded"}, body: body).timeout(apiTimeout);
+      final response = await _httpClient.post(Uri.parse("$baseUrl?action=$action"), headers: {"Content-Type": "application/x-www-form-urlencoded"}, body: body).timeout(apiTimeout);
       final data = json.decode(response.body);
       
       if ((response.statusCode == 403 || response.statusCode == 429) && data['status'] == 'limit_reached') {
@@ -1260,7 +1267,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   Future<void> _deleteVehicle(int vehicleId) async {
     try {
-      final response = await http.post(Uri.parse("$baseUrl?action=delete_vehicle"), headers: {"Content-Type": "application/x-www-form-urlencoded"}, body: {"vehicle_id": vehicleId.toString(), "customer_id": widget.customerId.toString()}).timeout(apiTimeout);
+      final response = await _httpClient.post(Uri.parse("$baseUrl?action=delete_vehicle"), headers: {"Content-Type": "application/x-www-form-urlencoded"}, body: {"vehicle_id": vehicleId.toString(), "customer_id": widget.customerId.toString()}).timeout(apiTimeout);
       final data = json.decode(response.body);
       if (data['status'] == 'success') {
         if (mounted) _showTopSnackBar("Araç garajınızdan silindi.");
@@ -3122,7 +3129,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
     try {
       // 1. Aracın işlem geçmişini çek
-      final response = await http.get(Uri.parse("$baseUrl?action=get_vehicle_records&vehicle_id=${vehicle['id']}")).timeout(apiTimeout);
+      final response = await _httpClient.get(Uri.parse("$baseUrl?action=get_vehicle_records&vehicle_id=${vehicle['id']}")).timeout(apiTimeout);
       List<dynamic> records = [];
       if (response.statusCode == 200) {
         final data = json.decode(response.body);

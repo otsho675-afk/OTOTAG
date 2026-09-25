@@ -8,6 +8,7 @@ import 'dart:async';
 import 'dart:ui';
 import 'dart:math' as math;
 import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:pusher_channels_flutter/pusher_channels_flutter.dart';
 import 'job_tracking_screen.dart';
 import 'provider_profile_screen.dart';
 import 'customer_dashboard_screen.dart';
@@ -25,11 +26,9 @@ class CustomerBidsScreen extends StatefulWidget {
 
 class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProviderStateMixin, WidgetsBindingObserver {
   List bids = [];
-  Timer? _timer;
   Timer? _radiusTimer;
   Timer? _blipTimer;
   int currentRadius = 10;
-  int _maxRadiusWaitCycles = 0; 
   
   int _bestMatchIndex = -1;
   int _cheapestIndex = -1;
@@ -39,11 +38,11 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
   bool isCancelling = false;
   bool _isDialogActive = false;
   bool _isFetching = false;
-  bool _isNavigating = false; // CRITICAL FIX: Tanımsız değişken (Undefined name) hatasını çözer
+  bool _isNavigating = false; 
   final http.Client _httpClient = http.Client();
+  PusherChannelsFlutter pusher = PusherChannelsFlutter.getInstance();
   
   final String baseUrl = "https://eliteagency.sbs/api.php";
-  int _pollInterval = 3; // SÜPER HIZLI EŞLEŞME: Sunucu ve MySQL çökmesini önlemek için 3 saniye yapıldı.
 
   late final AnimationController _radarController;
   late final AnimationController _rippleController;
@@ -101,22 +100,12 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
   }
 
   void _startTimers() {
-    _startPolling();
+    _initWebSocket(); // WebSocket Başlat (Polling Yok)
+    _fetchBids(); // Sayfa açılırken ilk veriyi al
+    // NOT: _radiusTimer devre dışı bırakıldı. Kapsam genişletme ve iptal mantığı
+    // artık sunucu tarafında bir CronJob veya arka plan işlemi olarak asenkron yürüyecek.
+    // Mobil uygulama bu olayları doğrudan pusher soket üzerinden anlık dinleyecek.
     _radiusTimer?.cancel();
-    _radiusTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (bids.isEmpty) {
-        if (currentRadius < 50) {
-          _expandSearchRadius();
-        } else {
-                    _maxRadiusWaitCycles++;
-                    if (_maxRadiusWaitCycles >= 1) { 
-                      _handleNoProvidersFound();
-                    }
-                  }
-      } else {
-        _maxRadiusWaitCycles = 0; 
-      }
-    });
 
     _blipTimer?.cancel();
     _blipTimer = Timer.periodic(const Duration(milliseconds: 600), (_) {
@@ -131,37 +120,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     });
   }
 
-  Future<void> _handleNoProvidersFound() async {
-    if (_isNavigating) return; // CRITICAL FIX: Çifte tetiklenmeyi engelle
-    _isNavigating = true;
-    _cleanupTimers();
-    if (mounted) setState(() => isCancelling = true);
-    bool cancelSuccess = false;
-    try {
-      final response = await http.post(
-        Uri.parse("$baseUrl?action=cancel_job"),
-        headers: {"Content-Type": "application/x-www-form-urlencoded"},
-        body: {"job_id": widget.jobId.toString()},
-      ).timeout(const Duration(seconds: 5));
-      if (response.statusCode == 200) cancelSuccess = true;
-    } catch (e) {
-      debugPrint("Timeout cancel error: $e");
-    }
-    
-    if (!mounted) return;
-    
-    if (cancelSuccess) {
-      _showTopSnackBar("Çevrenizde uygun usta bulunamadı. Lütfen daha sonra tekrar deneyin.", isError: true);
-    } else {
-      _showTopSnackBar("Bağlantı zayıf, talep sonlandırılıyor...", isError: true);
-    }
-    
-    Navigator.pushAndRemoveUntil(
-      context, 
-      MaterialPageRoute(builder: (_) => CustomerDashboardScreen(customerId: widget.customerId)), 
-      (route) => false
-    );
-  }
+  
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -179,12 +138,16 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
         _rippleController.repeat();
         _pulseController.repeat(reverse: true);
         _toolOrbitController.repeat();
+        
+        // Uygulama uyutulduğunda kopan WS bağlantısını canlandır ve 
+        // kaçırılmış olabilecek teklifleri delta paket eşitlemesiyle güncelle
+        pusher.connect();
+        _fetchBids();
       }
     }
   }
 
   void _cleanupTimers() {
-    _timer?.cancel();
     _radiusTimer?.cancel();
     _blipTimer?.cancel();
     _statusTextTimer?.cancel();
@@ -194,6 +157,8 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _cleanupTimers();
+    pusher.unsubscribe(channelName: "job_${widget.jobId}");
+    pusher.disconnect();
     _httpClient.close();
     _radarController.dispose();
     _rippleController.dispose();
@@ -204,28 +169,56 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     super.dispose();
   }
 
-  void _startPolling() {
-    _timer?.cancel();
-    _timer = Timer.periodic(Duration(seconds: _pollInterval), (_) => _fetchBids());
-  }
-
-  Future<void> _expandSearchRadius() async {
+  Future<void> _initWebSocket() async {
     try {
-      final response = await http.post(
-        Uri.parse("$baseUrl?action=expand_search_radius"),
-        headers: {"Content-Type": "application/x-www-form-urlencoded"},
-        body: {"job_id": widget.jobId.toString()},
+      await pusher.init(
+        apiKey: "7197ebfa7d2e68b962dd", 
+        cluster: "eu",
+        onAuthorizer: (String channelName, String socketId, dynamic options) async {
+          // Private kanal güvenlik doğrulaması
+          final response = await _httpClient.post(
+            Uri.parse("$baseUrl?action=pusher_auth"),
+            // TODO: Mevcut oturumdaki (SharedPreferences) gerçek Token'i Buraya Enjekte Edin
+            headers: {"Authorization": "Bearer YOUR_JWT_TOKEN_HERE"}, 
+            body: {"socket_id": socketId, "channel_name": channelName},
+          );
+          return json.decode(response.body);
+        },
+        onEvent: (event) {
+          if (event.eventName == "bid_update") {
+            if (mounted) {
+              final data = json.decode(event.data.toString());
+              
+              // HTTP isteği yok, doğrudan payload'u belleğe gömüyoruz
+              if (data['bid'] != null) {
+                setState(() {
+                  var newBid = data['bid'];
+                  int idx = bids.indexWhere((b) => b['bid_id'].toString() == newBid['bid_id'].toString());
+                  if (idx >= 0) {
+                    bids[idx] = newBid;
+                  } else {
+                    bids.insert(0, newBid);
+                  }
+                });
+              } else {
+                _fetchBids();
+              }
+            }
+          } else if (event.eventName == "status_update") {
+            if (mounted) _fetchBids();
+          }
+        },
       );
-      final data = json.decode(response.body);
-      if (data['status'] == 'success' && mounted) {
-        setState(() => currentRadius = data['new_radius']);
-        HapticFeedback.lightImpact();
-        _showTopSnackBar("Kapsama alanı genişletildi: $currentRadius KM. Daha fazla usta taranıyor...", isNewJob: true);
-      }
+      await pusher.subscribe(channelName: "private-job_${widget.jobId}");
+      await pusher.connect();
     } catch (e) {
-      debugPrint("Radius expand error: $e");
+      debugPrint("Pusher error: $e");
     }
   }
+
+  
+
+  
 
   void _showTopSnackBar(String message, {bool isError = false, bool isNewJob = false}) {
     if (!mounted) return;
@@ -270,7 +263,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
       final response = await _httpClient.get(
         Uri.parse("$baseUrl?action=get_bids&job_id=${widget.jobId}&_t=$timestamp"),
         headers: {"Connection": "keep-alive", "Cache-Control": "no-cache"}
-      ).timeout(const Duration(seconds: 3));
+      ).timeout(const Duration(seconds: 15)); // Sunucu yüksek yük altındayken uygulamanın sürekli iptal/tekrar yapmasını önler
       
       if (!mounted) return;
 
@@ -299,7 +292,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
         if (directStatus == null || directStatus == 'success' || directStatus == 'searching') {
           final statusRes = await _httpClient.get(
             Uri.parse("$baseUrl?action=get_job_status&job_id=${widget.jobId}&_t=$timestamp")
-          ).timeout(const Duration(seconds: 3));
+          ).timeout(const Duration(seconds: 15)); // Retry Storm (Yeniden Deneme Fırtınası) oluşmasını engeller
 
           if (statusRes.statusCode == 200) {
             final statusData = json.decode(statusRes.body);
@@ -427,7 +420,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     HapticFeedback.mediumImpact();
     setState(() => isProcessing = true);
     try {
-      final response = await http.post(
+      final response = await _httpClient.post(
         Uri.parse("$baseUrl?action=counter_bid"),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {
@@ -440,7 +433,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
       final data = json.decode(response.body);
       if (data['status'] == 'success') {
         _showTopSnackBar("Karşı teklifiniz ustaya iletildi.", isNewJob: true);
-        _pollInterval = 3;
+        
         _fetchBids();
       } else {
         _showTopSnackBar(data['message'] ?? "İşlem başarısız.", isError: true);
@@ -648,7 +641,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     HapticFeedback.mediumImpact();
     setState(() => isProcessing = true);
     try {
-      final response = await http.post(
+      final response = await _httpClient.post(
         Uri.parse("$baseUrl?action=accept_bid"),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {
@@ -738,7 +731,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
 
     if (mounted) setState(() => isCancelling = true);
     try {
-      final response = await http.post(
+      final response = await _httpClient.post(
         Uri.parse("$baseUrl?action=cancel_job"),
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: {"job_id": widget.jobId.toString()},

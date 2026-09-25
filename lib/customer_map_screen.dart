@@ -83,6 +83,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
   AnimationController? _mapMoveController; 
   
   final String baseUrl = "https://eliteagency.sbs/api.php";
+  final http.Client _httpClient = http.Client(); // Port tükenmesini (Socket Exhaustion) engelleyen bağlantı havuzu
   late final String googleApiKey;
   bool _isMapReady = false;
 
@@ -254,6 +255,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     _mapRotationNotifier.dispose(); 
     _googleMapController?.dispose();
     _appleMapController = null;
+    _httpClient.close(); // Uygulama arka plana atıldığında açık soketleri (portları) serbest bırakır
     super.dispose();
   }
 
@@ -273,7 +275,8 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     try {
       if (mounted) setState(() => _isAddressLoading = true);
       final url = Uri.parse('https://maps.googleapis.com/maps/api/geocode/json?latlng=${pos.latitude},${pos.longitude}&language=tr&key=$googleApiKey');
-      final response = await http.get(url);
+      // Google API gecikmelerinin cihazı kilitlemesini önlemek için timeout eklendi ve socket havuzuna bağlandı
+      final response = await _httpClient.get(url).timeout(const Duration(seconds: 5));
       
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -320,9 +323,11 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
 
   Future<void> _checkVehicleReminders() async {
     try {
-      final response = await http.get(
-        Uri.parse("$baseUrl?action=get_vehicles&customer_id=${widget.customerId}")
-      ).timeout(const Duration(seconds: 8));
+      // Yüksek trafikte kopmaları engellemek için timeout süresi artırıldı ve bağlantı havuza alındı
+      final response = await _httpClient.get(
+        Uri.parse("$baseUrl?action=get_vehicles&customer_id=${widget.customerId}"),
+        headers: {"Connection": "keep-alive"}
+      ).timeout(const Duration(seconds: 15));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success') {
@@ -893,9 +898,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     }
 
     try {
-      final response = await http.post(
+      final response = await _httpClient.post(
         Uri.parse("$baseUrl?action=create_job"),
-        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        headers: {"Content-Type": "application/x-www-form-urlencoded", "Connection": "keep-alive"},
         body: {
           "customer_id": widget.customerId.toString(),
           "service_type": selectedService,

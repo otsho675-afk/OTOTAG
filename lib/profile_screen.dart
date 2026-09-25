@@ -177,7 +177,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
         futures.add(_httpClient.get(Uri.parse("$baseUrl?action=get_earnings&provider_id=${widget.userId}")).timeout(_apiTimeout));
       }
 
-      final responses = await Future.wait(futures);
+      // 350K Optimizasyonu: Eşzamanlı 3 istek sunucuyu DDoS'lar. İstekleri sırayla (Sequential) atarak sunucu soketlerini rahatlatıyoruz.
+      final responses = <http.Response>[];
+      for (var future in futures) {
+        responses.add(await future);
+      }
 
       if (!mounted) return;
 
@@ -1994,8 +1998,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               if (jobId == -1) return const SizedBox.shrink();
               
               return SlideTransition(
+                // 350K Optimizasyonu: Flutter UI çökmesini (Interval out of bounds) önledik.
                 position: Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
-                  CurvedAnimation(parent: _listAnimController, curve: Interval(index * 0.1, 1.0, curve: Curves.easeOutQuart))
+                  CurvedAnimation(parent: _listAnimController, curve: Interval((index * 0.1).clamp(0.0, 0.9), 1.0, curve: Curves.easeOutQuart))
                 ),
                 child: GestureDetector(
                   onLongPress: () {

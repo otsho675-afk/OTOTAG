@@ -23,9 +23,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
   List filteredBids = [];
   String selectedFilter = 'Tümü';
   
-  Timer? _timer;
-  int _pollInterval = 10; 
-  final int _maxPollInterval = 60; 
+   
   
   bool isLoading = true;
   bool _isFetching = false;
@@ -73,22 +71,14 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
     WidgetsBinding.instance.addObserver(this); 
     _fadeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800))..forward();
     _fetchBids();
-    _startTimer();
   }
 
-  void _startTimer() {
-    _timer?.cancel();
-    _timer = Timer.periodic(Duration(seconds: _pollInterval), (_) {
-      _fetchBids();
-    });
-  }
+  // Polling kapalı
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused) {
-      _timer?.cancel(); 
-    } else if (state == AppLifecycleState.resumed) {
-      _startTimer(); 
+    if (state == AppLifecycleState.resumed) {
+      _fetchBids();
     }
   }
 
@@ -96,7 +86,6 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
   void dispose() {
     WidgetsBinding.instance.removeObserver(this); 
     _httpClient.close();
-    _timer?.cancel();
     _fadeController.dispose();
     super.dispose();
   }
@@ -337,7 +326,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
           children: [
             Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: Colors.white.withValues(alpha:0.2), shape: BoxShape.circle),
               child: Icon(isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded, color: Colors.white, size: 20),
             ),
             const SizedBox(width: 14),
@@ -385,8 +374,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
           String newHash = _generateListHash(newBids);
           
           if (oldHash != newHash || isLoading) {
-            _pollInterval = 10;
-            _startTimer();
+            
             
             setState(() {
               bids = newBids;
@@ -394,11 +382,6 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
               _applyFilter();
               isLoading = false;
             });
-          } else {
-            if (_pollInterval < _maxPollInterval) {
-              _pollInterval = (_pollInterval * 1.5).ceil().clamp(10, _maxPollInterval);
-              _startTimer();
-            }
           }
         } else {
           if (mounted && isLoading) setState(() => isLoading = false);
@@ -420,8 +403,6 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
 
   Future<void> _onRefresh() async {
     HapticFeedback.mediumImpact();
-    _pollInterval = 10; 
-    _startTimer();
     await _fetchBids();
   }
 
@@ -450,14 +431,14 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
                 curve: Curves.easeOutCubic,
                 padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 20, vertical: isSmallScreen ? 10 : 12),
                 decoration: BoxDecoration(
-                  color: isSelected ? neonGreen : Colors.white.withOpacity(0.03),
+                  color: isSelected ? neonGreen : Colors.white.withValues(alpha:0.03),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: isSelected ? neonGreen : Colors.white.withOpacity(0.1), 
+                    color: isSelected ? neonGreen : Colors.white.withValues(alpha:0.1), 
                     width: 1.5
                   ),
                   boxShadow: isSelected 
-                      ? [BoxShadow(color: neonGreen.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 4))] 
+                      ? [BoxShadow(color: neonGreen.withValues(alpha:0.3), blurRadius: 12, offset: const Offset(0, 4))] 
                       : [],
                 ),
                 child: Row(
@@ -509,10 +490,10 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
             margin: EdgeInsets.fromLTRB(16, isSmallScreen ? 8 : 12, 16, 8),
             padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
             decoration: BoxDecoration(
-              color: panelBlack.withOpacity(0.85),
+              color: panelBlack.withValues(alpha:0.85),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5),
-              boxShadow: [BoxShadow(color: pureBlack.withOpacity(0.5), blurRadius: 20, offset: const Offset(0, 10))],
+              border: Border.all(color: Colors.white.withValues(alpha:0.05), width: 1.5),
+              boxShadow: [BoxShadow(color: pureBlack.withValues(alpha:0.5), blurRadius: 20, offset: const Offset(0, 10))],
             ),
             child: Column(
               children: [
@@ -555,7 +536,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
                         ),
                       ),
                     ),
-                    Container(width: 1.5, height: 60, color: Colors.white.withOpacity(0.1)),
+                    Container(width: 1.5, height: 60, color: Colors.white.withValues(alpha:0.1)),
                     Expanded(
                       child: InkWell(
                         onTap: () {
@@ -590,7 +571,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
                                 children: [
                                   const Icon(Icons.trending_up_rounded, color: goldAccent, size: 12),
                                   const SizedBox(width: 4),
-                                  Text("Sıralamak İçin Dokun", style: TextStyle(color: goldAccent.withOpacity(0.8), fontWeight: FontWeight.w800, fontSize: isSmallScreen ? 10 : 11)),
+                                  Text("Sıralamak İçin Dokun", style: TextStyle(color: goldAccent.withValues(alpha:0.8), fontWeight: FontWeight.w800, fontSize: isSmallScreen ? 10 : 11)),
                                 ],
                               ),
                             ],
@@ -916,15 +897,15 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
               decoration: BoxDecoration(
                 color: panelBlack,
                 shape: BoxShape.circle,
-                border: Border.all(color: neonGreen.withOpacity(0.35), width: 2),
+                border: Border.all(color: neonGreen.withValues(alpha:0.35), width: 2),
                 boxShadow: [
                   BoxShadow(
-                    color: neonGreen.withOpacity(0.15),
+                    color: neonGreen.withValues(alpha:0.15),
                     blurRadius: 28,
                     spreadRadius: 4,
                   ),
                   BoxShadow(
-                    color: pureBlack.withOpacity(0.8),
+                    color: pureBlack.withValues(alpha:0.8),
                     blurRadius: 15,
                     offset: const Offset(0, 8),
                   ),
@@ -986,7 +967,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
                   ),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   elevation: 6,
-                  shadowColor: neonGreen.withOpacity(0.4),
+                  shadowColor: neonGreen.withValues(alpha:0.4),
                 ),
               ),
           ],

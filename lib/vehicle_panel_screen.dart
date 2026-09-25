@@ -245,10 +245,10 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
       ),
       backgroundColor: isError ? const Color(0xFFFF3366) : const Color(0xFF00FFA3).withOpacity(0.95),
       behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.all(20),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       elevation: 15,
-      duration: const Duration(seconds: 4),
+      duration: const Duration(seconds: 2),
     ));
   }
 
@@ -297,7 +297,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: BorderSide(color: Colors.white.withOpacity(0.1))),
           title: const Text("İşlem Kaydını Sil", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
           content: const Text("Bu işlem geçmişi kaydı kalıcı olarak silinecektir. Emin misiniz?", style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.4)),
-          actionsPadding: const EdgeInsets.all(20),
+          actionsPadding: const EdgeInsets.all(12),
           actions: [
             Row(
               children: [
@@ -316,7 +316,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFFF3366), 
                       elevation: 0, 
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
                     ),
                     onPressed: () {
@@ -421,7 +421,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
             filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
+                constraints: const BoxConstraints(maxWidth: 320),
                 child: AlertDialog(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(28),
@@ -464,7 +464,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                       ),
                     )).toList(),
                   ),
-                  actionsPadding: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
+                  actionsPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
                   actions: [
                     SizedBox(
                       width: double.infinity,
@@ -477,7 +477,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                           backgroundColor: const Color(0xFF00FFA3), 
                           foregroundColor: Colors.black,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), 
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
                           elevation: 0,
                         ),
                         child: const Text("Anladım", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
@@ -631,7 +631,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                                   backgroundColor: const Color(0xFF00FFA3).withOpacity(0.12),
                                   foregroundColor: const Color(0xFF00FFA3),
                                   elevation: 0,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Color(0xFF00FFA3))),
                                 ),
                               ),
@@ -650,7 +650,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                                   backgroundColor: const Color(0xFFFF3366).withOpacity(0.12),
                                   foregroundColor: const Color(0xFFFF3366),
                                   elevation: 0,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Color(0xFFFF3366))),
                                 ),
                               ),
@@ -1461,7 +1461,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
       ),
       backgroundColor: isError ? const Color(0xFFFF3366) : const Color(0xFF00FFA3).withOpacity(0.95),
       behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.all(20),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       elevation: 15,
     ));

@@ -9,6 +9,7 @@ import 'dart:io';
 import 'dart:ui';
 import 'package:image_picker/image_picker.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:pusher_channels_flutter/pusher_channels_flutter.dart';
 
 class ChatScreen extends StatefulWidget {
   final int jobId;
@@ -36,10 +37,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   
   // Mesajları ters sırada tutacağız (reverse: true için)
   List messages = [];
-  Timer? _timer;
   bool isUploading = false;
+  PusherChannelsFlutter pusher = PusherChannelsFlutter.getInstance();
   bool _isFetching = false;
   bool _isTyping = false; 
+  final http.Client _httpClient = http.Client(); // Yüksek trafikte socket tüketimini önleyen bağlantı havuzu
 
   @override
   void initState() {
@@ -62,29 +64,79 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     });
   }
 
+  Future<void> _initWebSocket() async {
+    try {
+      await pusher.init(
+        apiKey: "7197ebfa7d2e68b962dd",
+        cluster: "eu",
+        onAuthorizer: (String channelName, String socketId, dynamic options) async {
+          final response = await _httpClient.post(
+            Uri.parse("$baseUrl?action=pusher_auth"), 
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: {
+              'socket_id': socketId, 
+              'channel_name': channelName,
+              'user_id': widget.currentUserId.toString(), 
+            },
+          );
+          return jsonDecode(response.body);
+        },
+        onConnectionStateChange: (currentState, previousState) {
+          if (currentState == 'CONNECTED' && mounted) {
+            _fetchMessages(); 
+          }
+        },
+        onEvent: (event) {
+          if (event.eventName == "new_message") {
+            if (mounted) {
+              try {
+                final data = json.decode(event.data.toString());
+                if (data['message'] != null) {
+                  setState(() {
+                    messages.insert(0, data['message']);
+                  });
+                  _markAsRead(); 
+                } else {
+                  _fetchMessages();
+                }
+              } catch (e) {
+                _fetchMessages();
+              }
+            }
+          }
+        },
+      );
+      await pusher.subscribe(channelName: "private-chat_${widget.jobId}");
+      await pusher.connect();
+    } catch (e) {
+      debugPrint("Pusher error: $e");
+    }
+  }
+
   void _startPolling() {
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 3), (_) {
-      if (!_isFetching && mounted) {
-        _fetchMessages();
-      }
-    });
+    _initWebSocket();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      _timer?.cancel();
+      pusher.disconnect();
     } else if (state == AppLifecycleState.resumed) {
-      _startPolling();
+      pusher.connect();
+      // Uygulama uyandığında WebSocket kopukluğu sırasında kaçırılan mesajları senkronize et
+      _fetchMessages();
     }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _timer?.cancel();
+    pusher.unsubscribe(channelName: "private-chat_${widget.jobId}");
+    pusher.disconnect();
     _msgController.dispose();
+    _httpClient.close(); // Bellek sızıntısını ve açık bağlantıları sonlandırır
     super.dispose();
   }
 
@@ -93,7 +145,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _isFetching = true;
     
     try {
-      final response = await http.get(Uri.parse(
+      final response = await _httpClient.get(Uri.parse(
           "$baseUrl?action=get_messages&job_id=${widget.jobId}&user_id=${widget.currentUserId}&receiver_id=${widget.receiverId}"));
       
       if (response.statusCode == 200 && mounted) {
@@ -131,7 +183,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   Future<void> _markAsRead() async {
     try {
-      await http.post(
+      await _httpClient.post(
         Uri.parse("$baseUrl?action=mark_read"),
         body: {
           'job_id': widget.jobId.toString(),

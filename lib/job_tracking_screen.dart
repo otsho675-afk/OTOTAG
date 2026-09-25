@@ -14,6 +14,7 @@ import 'package:apple_maps_flutter/apple_maps_flutter.dart' as amaps;
 import 'package:geolocator/geolocator.dart';
 import 'dart:math' as math;
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:pusher_channels_flutter/pusher_channels_flutter.dart';
 import 'provider_map_screen.dart'; 
 import 'customer_dashboard_screen.dart';
 import 'chat_screen.dart';
@@ -99,12 +100,11 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   final ValueNotifier<double> _mapRotation = ValueNotifier<double>(0.0);
   int _selectedRating = 5;
 
-  Timer? _timer;
   Timer? _resumeTrackingTimer;
   StreamSubscription<Position>? _positionStream; 
   final String _baseUrl = "https://eliteagency.sbs/api.php";
   final Duration _apiTimeout = const Duration(seconds: 12);
-  int _pollInterval = 3; 
+  PusherChannelsFlutter pusher = PusherChannelsFlutter.getInstance();
   int unreadMessageCount = 0;
   bool _isFirstMessageCheck = true; 
   
@@ -612,12 +612,61 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     }
   }
 
+  Future<void> _initWebSocket() async {
+    try {
+      await pusher.init(
+        apiKey: "7197ebfa7d2e68b962dd", 
+        cluster: "eu",
+        onEvent: (event) {
+          if (event.eventName == "status_update" || event.eventName == "bid_update") {
+            if (mounted) _fetchJobStatus();
+          } else if (event.eventName == "new_message") {
+            if (mounted) _checkUnreadMessages();
+          } else if (event.eventName == "location_update" && widget.userType == 'customer') {
+            final data = json.decode(event.data);
+            if (data['lat'] != null && data['lng'] != null && mounted) {
+              setState(() {
+                providerLat = double.parse(data['lat'].toString());
+                providerLng = double.parse(data['lng'].toString());
+                double apiProvHeading = double.parse(data['heading'].toString());
+                
+                LatLng newPos = LatLng(providerLat, providerLng);
+                if (_animatedProviderPos.value == null) {
+                  _animatedProviderPos.value = newPos;
+                  _targetProviderPos = newPos;
+                  _animatedHeading.value = apiProvHeading;
+                  _targetHeading = apiProvHeading;
+                } else if (_targetProviderPos != newPos || _targetHeading != apiProvHeading) {
+                  double distDrift = Geolocator.distanceBetween(
+                    _targetProviderPos!.latitude, _targetProviderPos!.longitude,
+                    newPos.latitude, newPos.longitude
+                  );
+                  _oldProviderPos = _animatedProviderPos.value;
+                  _targetProviderPos = newPos;
+                  _oldHeading = _animatedHeading.value;
+                  _targetHeading = _oldProviderPos != null && distDrift > 5.0 ? _calculateBearing(_oldProviderPos!, _targetProviderPos!) : apiProvHeading;
+                  
+                  if (!kIsWeb) _slideController.forward(from: 0.0);
+                }
+              });
+            }
+          }
+        },
+      );
+      await pusher.subscribe(channelName: "job_${widget.jobId}");
+      if (widget.userType == 'customer' && providerId != null) {
+        await pusher.subscribe(channelName: "user_location_$providerId");
+      }
+      await pusher.connect();
+    } catch (e) {
+      debugPrint("Pusher error: $e");
+    }
+  }
+
   void _startTimer() {
-    _timer?.cancel();
-    _timer = Timer.periodic(Duration(seconds: _pollInterval), (_) {
-      _fetchJobStatus();
-      _checkUnreadMessages();
-    }); 
+    _initWebSocket();
+    // İlk yüklemede fetch et
+    _fetchJobStatus();
     _checkUnreadMessages();
   }
 
@@ -765,9 +814,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       if (defaultTargetPlatform == TargetPlatform.android) {
         locationSettings = AndroidSettings(
           accuracy: LocationAccuracy.bestForNavigation,
-          distanceFilter: 2, 
+          distanceFilter: 5, // 350K Optimizasyonu: Ufak titreşimleri (2m) dikkate alma, pili ve CPU'yu koru
           forceLocationManager: true,
-          intervalDuration: const Duration(seconds: 2),
+          intervalDuration: const Duration(seconds: 4), // 2 saniyeden 4 saniyeye çıkarıldı, donmalar biter
           foregroundNotificationConfig: const ForegroundNotificationConfig(
             notificationText: "Oto TAG canlı takip aktif.",
             notificationTitle: "Görev Takip Ediliyor",
@@ -778,7 +827,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         locationSettings = AppleSettings(
           accuracy: LocationAccuracy.bestForNavigation,
           activityType: ActivityType.automotiveNavigation,
-          distanceFilter: 2,
+          distanceFilter: 5, // 350K Optimizasyonu: Ufak titreşimleri filtrele
           pauseLocationUpdatesAutomatically: false,
           showBackgroundLocationIndicator: true, 
         );
@@ -796,12 +845,13 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         if (!mounted) return; 
         _processNewPosition(position);
 
-        bool timeElapsed = lastApiPostTime == null || DateTime.now().difference(lastApiPostTime!).inSeconds >= 10;
+        // 350K Yük Koruması: DB isteklerini hafifletiyoruz. (Anlık canlılık Pusher üzerinden zaten kesintisiz akar)
+        bool timeElapsed = lastApiPostTime == null || DateTime.now().difference(lastApiPostTime!).inSeconds >= 20;
         bool distanceMoved = _lastSentPosition == null || 
             Geolocator.distanceBetween(
               _lastSentPosition!.latitude, _lastSentPosition!.longitude, 
               position.latitude, position.longitude
-            ) > 20; 
+            ) > 50; 
 
         bool shouldUpdateApi = timeElapsed && distanceMoved;
 
@@ -828,11 +878,11 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      _timer?.cancel();
+      pusher.disconnect();
       _resumeTrackingTimer?.cancel();
       _rerouteTimer?.cancel();
     } else if (state == AppLifecycleState.resumed) {
-      _startTimer();
+      pusher.connect();
       _startReroutingEngine();
     }
   }
@@ -840,9 +890,11 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    pusher.unsubscribe(channelName: "job_${widget.jobId}");
+    if (providerId != null) pusher.unsubscribe(channelName: "user_location_$providerId");
+    pusher.disconnect();
     _rerouteTimer?.cancel();
     _httpClient.close();
-    _timer?.cancel();
     _resumeTrackingTimer?.cancel();
     _positionStream?.cancel(); 
     _flutterTts.stop();
@@ -948,7 +1000,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       final data = json.decode(response.body);
       if (data['status'] == 'success') {
         if (mounted) {
-          _timer?.cancel();
+          
           _positionStream?.cancel(); 
           if (_isNavigating) return;
           _isNavigating = true;
@@ -1013,7 +1065,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       final response = await _httpClient.get(Uri.parse("$_baseUrl?action=get_job_status&job_id=${widget.jobId}&_t=$timestamp")).timeout(_apiTimeout);
       
       if (response.statusCode == 401) {
-        _timer?.cancel();
+        
         _positionStream?.cancel();
         _showTopSnackBar("Oturum süresi doldu veya yetkisiz erişim. Lütfen giriş yapın.", isError: true);
         return;
@@ -1042,7 +1094,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         String newJobStatus = data['status']?.toString().trim().toLowerCase() ?? 'matched';
 
         if (newJobStatus == 'cancelled') {
-            _timer?.cancel();
+            
             _positionStream?.cancel(); 
             if (_isNavigating) return;
             _isNavigating = true;
@@ -1059,13 +1111,11 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         setState(() {
           if (jobStatus != newJobStatus) {
             jobStatus = newJobStatus;
-            _pollInterval = 3; 
             _startTimer();
           } else {
             // Akıllı Backoff: Pil ve sunucu dostu logaritmik artış
-            if (_pollInterval < 20 && jobStatus != 'searching') {
-              _pollInterval = (_pollInterval * 1.5).ceil().clamp(3, 20); 
-              _startTimer();
+            if (jobStatus != 'searching') {
+              // WebSocket kullanıldığı için gereksiz HTTP polling backoff döngüsü kaldırıldı.
             }
           }
 
@@ -1174,7 +1224,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
           if (jobStatus != 'searching' && jobStatus != 'cancelled' && widget.userType == 'provider') {
              if (providerId != 0 && providerId != widget.userId) {
-                  _timer?.cancel();
+                  
                   _positionStream?.cancel(); 
                   if (!_isNavigating) {
                     _isNavigating = true;
@@ -1211,11 +1261,11 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           }
 
           if (jobStatus == 'completed' && widget.userType == 'customer' && !isRated && !_isRatingModalOpen) {
-             _timer?.cancel(); 
+              
              _positionStream?.cancel(); 
              _showRatingDialog();
           } else if (jobStatus == 'completed') {
-             _timer?.cancel(); 
+              
              _positionStream?.cancel(); 
           }
         });
@@ -1243,7 +1293,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                  final verifyData = json.decode(verifyRes.body);
                  if (verifyData['status']?.toString().toLowerCase() != 'searching') return;
                  
-                 _timer?.cancel();
+                 
                  _positionStream?.cancel(); 
                  if (!_isNavigating) {
                     _isNavigating = true;
@@ -1273,7 +1323,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         body: {"bid_id": bidId},
       ).timeout(_apiTimeout);
       if (mounted) {
-        _timer?.cancel();
+        
         _positionStream?.cancel();
         if (_isNavigating) return;
         _isNavigating = true;

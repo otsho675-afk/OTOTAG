@@ -13,6 +13,7 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_compass/flutter_compass.dart';
+import 'package:pusher_channels_flutter/pusher_channels_flutter.dart';
 import 'dart:convert';
 import 'dart:ui' as ui;
 import 'dart:async';
@@ -44,7 +45,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   Position? currentPosition;
   StreamSubscription<Position>? _positionStream; 
   StreamSubscription<CompassEvent>? _compassStream;
-  Timer? _jobRefreshTimer; 
+  PusherChannelsFlutter pusher = PusherChannelsFlutter.getInstance();
   DateTime? _lastApiCallTime;
 
   List<Map<String, dynamic>> jobList = [];
@@ -741,21 +742,34 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     }
   }
 
+  Future<void> _initWebSocket() async {
+    try {
+      await pusher.init(
+        apiKey: "7197ebfa7d2e68b962dd",
+        cluster: "eu",
+        onEvent: (event) {
+          if (event.eventName == "new_job_created") {
+            if (isOnline && !isSuspended && currentPosition != null) {
+              _fetchNearbyJobs(isAuto: true, radius: _searchRadius.toInt());
+            }
+          }
+        },
+      );
+      await pusher.subscribe(channelName: "global_jobs");
+      await pusher.connect();
+    } catch (e) {
+      debugPrint("Pusher error: $e");
+    }
+  }
+
   void _startJobRefreshTimer() {
-    _jobRefreshTimer?.cancel();
-    // Sunucu darboğazını önlemek için dinamik aralık optimize edildi (8 sn / 12 sn)
-    final int intervalSec = jobList.isEmpty ? 8 : 12;
-    _jobRefreshTimer = Timer.periodic(Duration(seconds: intervalSec), (_) {
-      if (isOnline && !isSuspended && !isRefreshing && currentPosition != null) {
-        _fetchNearbyJobs(isAuto: true, radius: _searchRadius.toInt());
-      }
-    });
+    _initWebSocket();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      _jobRefreshTimer?.cancel(); 
+      pusher.disconnect();
       if (!isOnline) {
         _positionStream?.pause();
       }
@@ -769,7 +783,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       if (isOnline) {
         _positionStream?.resume();
       }
-      _startJobRefreshTimer();
+      pusher.connect();
       if (mounted) {
         _buttonPulseController.repeat(reverse: true);
         _pulseController.repeat(reverse: true);
@@ -1023,11 +1037,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this); 
+    pusher.unsubscribe(channelName: "global_jobs");
+    pusher.disconnect();
     _httpClient.close();
     _slideController.dispose();
     _positionStream?.cancel(); 
     _compassStream?.cancel();
-    _jobRefreshTimer?.cancel();
     _pulseController.dispose();
     _buttonPulseController.dispose();
     _mapMoveController?.dispose();
@@ -3173,7 +3188,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                           },
                                           onChangeEnd: (val) {
                                             HapticFeedback.selectionClick();
-                                            _jobRefreshTimer?.cancel();
                                             Future.delayed(const Duration(milliseconds: 500), () {
                                               if (mounted && isOnline) {
                                                 _fetchNearbyJobs(radius: val.toInt());

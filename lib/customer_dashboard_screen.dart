@@ -1119,15 +1119,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                 final int daysLeft = effectiveInsDate.difference(DateTime(now.year, now.month, now.day)).inDays;
                 if (daysLeft < 0) {
                   try {
+                    await notificationHelper.cancelNotification(vId.hashCode ^ "sigorta_gecmis".hashCode);
                     await notificationHelper.cancelNotification(vId.hashCode ^ "sigorta_yaklasan".hashCode);
                     await notificationHelper.cancelNotification(vId.hashCode ^ "sigorta".hashCode);
                   } catch (_) {}
-                  await notificationHelper.scheduleNotification(
-                    id: vId.hashCode ^ "sigorta_gecmis".hashCode,
-                    title: "⚠️ Sigorta Süresi Geçti!",
-                    body: "$plate plakalı aracınızın trafik sigortası ${daysLeft.abs()} gün önce bitti. Lütfen yenileyin.",
-                    scheduledDate: now.add(const Duration(seconds: 4))
-                  );
                 } else if (daysLeft <= 15) {
                   try {
                     await notificationHelper.cancelNotification(vId.hashCode ^ "sigorta_gecmis".hashCode);
@@ -1162,15 +1157,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                 
                 if (daysLeft < 0) {
                   try {
+                    await notificationHelper.cancelNotification(notifBaseId ^ 100);
                     await notificationHelper.cancelNotification(notifBaseId ^ 101);
                     await notificationHelper.cancelNotification(notifBaseId ^ 102);
                   } catch (_) {}
-                  await notificationHelper.scheduleNotification(
-                    id: notifBaseId ^ 100,
-                    title: "⚠️ Araç Muayenesi Gecikti!",
-                    body: "$plate plakalı aracınızın muayene süresi ${daysLeft.abs()} gün önce bitti. Lütfen yenileyin.",
-                    scheduledDate: now.add(const Duration(seconds: 3))
-                  );
                 } else if (daysLeft <= 15) {
                   try {
                     await notificationHelper.cancelNotification(notifBaseId ^ 100);

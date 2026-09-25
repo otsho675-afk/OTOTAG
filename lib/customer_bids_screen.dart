@@ -1036,17 +1036,18 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
             ),
             const SizedBox(height: 36),
             
-            // Fütüristik "TARANIYOR" Hologram Başlığı
+            // Fütüristik "TARANIYOR" Hologram Başlığı (Çökme Korumalı Kayan Işık)
             AnimatedBuilder(
               animation: _radarController,
               builder: (context, child) {
+                final double shift = (_radarController.value * 3.0) - 1.5;
                 return ShaderMask(
                   shaderCallback: (bounds) {
                     return LinearGradient(
                       colors: [Colors.white38, Colors.white, _primaryColor, Colors.white, Colors.white38],
-                      stops: [0.0, _radarController.value - 0.2, _radarController.value, _radarController.value + 0.2, 1.0],
-                      begin: const Alignment(-1.0, -0.5),
-                      end: const Alignment(1.0, 0.5),
+                      stops: const [0.0, 0.35, 0.5, 0.65, 1.0],
+                      begin: Alignment(-1.5 + shift, -0.5),
+                      end: Alignment(1.5 + shift, 0.5),
                       tileMode: TileMode.clamp,
                     ).createShader(bounds);
                   },

@@ -153,6 +153,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
 
   @override
   void dispose() {
+    _dismissTopSnackBar();
     _tabController.dispose();
     _partNameCtrl.dispose();
     _carModelCtrl.dispose();
@@ -168,32 +169,75 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
     return "${isMySale ? 'sale' : 'list'}_${item['id']}";
   }
 
+  OverlayEntry? _topSnackBarEntry;
+
+  void _dismissTopSnackBar() {
+    _topSnackBarEntry?.remove();
+    _topSnackBarEntry = null;
+  }
+
   void _showTopSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-            child: Icon(isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded, color: Colors.white, size: 22),
-          ),
-          const SizedBox(width: 14),
-          Expanded(child: Text(message, style: const TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.2))),
-        ],
-      ),
-      backgroundColor: isError ? alertRed : neonGreen,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      margin: EdgeInsets.only(
-        bottom: MediaQuery.of(context).size.height - 150,
+    _dismissTopSnackBar();
+
+    final overlay = Overlay.maybeOf(context);
+    if (overlay == null) return;
+
+    final double topPadding = MediaQuery.of(context).padding.top;
+
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: topPadding + 10,
         left: 20,
         right: 20,
+        child: Material(
+          color: Colors.transparent,
+          child: GestureDetector(
+            onTap: () => _dismissTopSnackBar(),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: isError ? alertRed : neonGreen,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.4),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+                    child: Icon(isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded, color: Colors.white, size: 22),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      message,
+                      style: const TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.2),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
-      elevation: 0,
-      duration: const Duration(seconds: 4),
-    ));
+    );
+
+    _topSnackBarEntry = entry;
+    overlay.insert(entry);
+
+    Future.delayed(const Duration(milliseconds: 2500), () {
+      if (_topSnackBarEntry == entry) {
+        _dismissTopSnackBar();
+      }
+    });
   }
 
   Future<void> _fetchAllData() async {
@@ -663,36 +707,82 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                       boxShadow: [BoxShadow(color: pureBlack.withOpacity(0.8), blurRadius: 50)],
                     ),
                     child: SafeArea(
-                      child: SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
-                            const SizedBox(height: 24),
-                            
-                            // Başlık Alanı
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(14),
-                                  decoration: BoxDecoration(color: isSelling ? neonGreen.withOpacity(0.15) : neonCyan.withOpacity(0.15), borderRadius: BorderRadius.circular(16), border: Border.all(color: isSelling ? neonGreen.withOpacity(0.3) : neonCyan.withOpacity(0.3))),
-                                  child: Icon(isSelling ? Icons.sell_rounded : Icons.search_rounded, color: isSelling ? neonGreen : neonCyan, size: 28),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Aşağı kaydırma algılayıcılı tutamaç
+                          GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onVerticalDragUpdate: (details) {
+                              if ((details.primaryDelta ?? 0) > 8) {
+                                Navigator.pop(ctx);
+                              }
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.only(top: 14, bottom: 10),
+                              color: Colors.transparent,
+                              child: Center(
+                                child: Container(
+                                  width: 48,
+                                  height: 6,
+                                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)),
                                 ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(isSelling ? "Parça Sat" : "Parça Ara", style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
-                                      const SizedBox(height: 4),
-                                      Text(widget.userCity, style: const TextStyle(fontSize: 13, color: goldAccent, fontWeight: FontWeight.w700)),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
+                          ),
+                          Flexible(
+                            child: NotificationListener<ScrollNotification>(
+                              onNotification: (notification) {
+                                if (notification is ScrollUpdateNotification) {
+                                  if (notification.metrics.pixels < -30 && (notification.scrollDelta ?? 0) < 0) {
+                                    Navigator.pop(ctx);
+                                    return true;
+                                  }
+                                } else if (notification is OverscrollNotification) {
+                                  if (notification.overscroll < -15) {
+                                    Navigator.pop(ctx);
+                                    return true;
+                                  }
+                                }
+                                return false;
+                              },
+                              child: SingleChildScrollView(
+                                physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                                padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    // Başlık Alanı
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(14),
+                                          decoration: BoxDecoration(color: isSelling ? neonGreen.withOpacity(0.15) : neonCyan.withOpacity(0.15), borderRadius: BorderRadius.circular(16), border: Border.all(color: isSelling ? neonGreen.withOpacity(0.3) : neonCyan.withOpacity(0.3))),
+                                          child: Icon(isSelling ? Icons.sell_rounded : Icons.search_rounded, color: isSelling ? neonGreen : neonCyan, size: 28),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(isSelling ? "Parça Sat" : "Parça Ara", style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
+                                              const SizedBox(height: 4),
+                                              Text(widget.userCity, style: const TextStyle(fontSize: 13, color: goldAccent, fontWeight: FontWeight.w700)),
+                                            ],
+                                          ),
+                                        ),
+                                        IconButton(
+                                          onPressed: () => Navigator.pop(ctx),
+                                          icon: Container(
+                                            padding: const EdgeInsets.all(6),
+                                            decoration: BoxDecoration(color: Colors.white.withOpacity(0.08), shape: BoxShape.circle),
+                                            child: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                             const SizedBox(height: 24),
                             
                             // Premium Toggle (Arıyorum / Satıyorum)
@@ -980,6 +1070,10 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                         ),
                       ),
                     ),
+                  )
+                ],
+              ),
+            ),
                   ),
                 ),
               ),
@@ -997,6 +1091,8 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
         Padding(padding: const EdgeInsets.only(left: 4, bottom: 8), child: Text(label, style: const TextStyle(color: textGray, fontWeight: FontWeight.w700, fontSize: 13))),
         GestureDetector(
           onTap: () {
+            // Seçim penceresi açılmadan önce açık klavye odağını temizle
+            FocusManager.instance.primaryFocus?.unfocus();
             HapticFeedback.lightImpact();
             _showSearchableBottomSheet(label, items, value, accentColor, onChanged);
           },
@@ -1017,78 +1113,119 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
   }
 
   void _showSearchableBottomSheet(String title, List<String> items, String currentValue, Color accentColor, void Function(String?) onSelected) {
+    FocusManager.instance.primaryFocus?.unfocus();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
         String searchQuery = "";
         return StatefulBuilder(
           builder: (context, setModalState) {
             List<String> filteredItems = items.where((i) => i.toLowerCase().contains(searchQuery.toLowerCase())).toList();
-            return BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-              child: Container(
-                height: MediaQuery.of(context).size.height * 0.75,
-                decoration: BoxDecoration(
-                  color: panelBlack.withOpacity(0.98),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                  border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
-                ),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 12),
-                    Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
-                    const SizedBox(height: 16),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Text("$title Seçimi", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white)),
-                    ),
-                    const SizedBox(height: 16),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Container(
-                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.04), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withOpacity(0.08))),
-                        child: TextField(
-                          autofocus: items.length > 10,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
-                          decoration: InputDecoration(
-                            hintText: "Arama yapın...",
-                            hintStyle: const TextStyle(color: textGray, fontSize: 13),
-                            prefixIcon: Icon(Icons.search_rounded, color: accentColor, size: 20),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 14),
+            final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
+            return GestureDetector(
+              onTap: () => FocusScope.of(context).unfocus(),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: GestureDetector(
+                    onTap: () {},
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 600),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        curve: Curves.easeOut,
+                        height: MediaQuery.of(context).size.height * 0.85,
+                        padding: EdgeInsets.only(bottom: bottomInset > 0 ? bottomInset + 10 : 20),
+                        decoration: BoxDecoration(
+                          color: panelBlack.withOpacity(0.98),
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                          border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
+                        ),
+                        child: SafeArea(
+                          top: false,
+                          child: Column(
+                            children: [
+                              const SizedBox(height: 12),
+                              Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
+                              const SizedBox(height: 16),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text("$title Seçimi", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white)),
+                                    IconButton(
+                                      onPressed: () {
+                                        FocusScope.of(context).unfocus();
+                                        Navigator.pop(ctx);
+                                      },
+                                      icon: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.08), shape: BoxShape.circle),
+                                        child: const Icon(Icons.close_rounded, color: Colors.white70, size: 18),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                                child: Container(
+                                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.04), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withOpacity(0.08))),
+                                  child: TextField(
+                                    autofocus: false, // Ekran açılır açılmaz klavyenin fırlamasını engeller
+                                    textInputAction: TextInputAction.search,
+                                    onSubmitted: (_) => FocusScope.of(context).unfocus(),
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+                                    decoration: InputDecoration(
+                                      hintText: "$title ara...",
+                                      hintStyle: const TextStyle(color: textGray, fontSize: 13),
+                                      prefixIcon: Icon(Icons.search_rounded, color: accentColor, size: 20),
+                                      border: InputBorder.none,
+                                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                                    ),
+                                    onChanged: (val) => setModalState(() => searchQuery = val),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Expanded(
+                                child: filteredItems.isEmpty
+                                  ? const Center(child: Text("Sonuç bulunamadı.", style: TextStyle(color: textGray)))
+                                  : ListView.separated(
+                                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag, // Listeyi kaydırınca klavyeyi otomatik gizler
+                                      physics: const BouncingScrollPhysics(),
+                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                                      itemCount: filteredItems.length,
+                                      separatorBuilder: (_, __) => Divider(color: Colors.white.withOpacity(0.04), height: 1),
+                                      itemBuilder: (context, index) {
+                                        final item = filteredItems[index];
+                                        final isSelected = item == currentValue;
+                                        return ListTile(
+                                          onTap: () {
+                                            FocusScope.of(context).unfocus();
+                                            HapticFeedback.selectionClick();
+                                            onSelected(item);
+                                            Navigator.pop(ctx);
+                                          },
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                                          title: Text(item, style: TextStyle(color: isSelected ? accentColor : Colors.white, fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600, fontSize: 15)),
+                                          trailing: isSelected ? Icon(Icons.check_circle_rounded, color: accentColor, size: 20) : null,
+                                        );
+                                      },
+                                    ),
+                              ),
+                            ],
                           ),
-                          onChanged: (val) => setModalState(() => searchQuery = val),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    Expanded(
-                      child: filteredItems.isEmpty
-                        ? const Center(child: Text("Sonuç bulunamadı.", style: TextStyle(color: textGray)))
-                        : ListView.separated(
-                            physics: const BouncingScrollPhysics(),
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                            itemCount: filteredItems.length,
-                            separatorBuilder: (_, __) => Divider(color: Colors.white.withOpacity(0.04), height: 1),
-                            itemBuilder: (context, index) {
-                              final item = filteredItems[index];
-                              final isSelected = item == currentValue;
-                              return ListTile(
-                                onTap: () {
-                                  HapticFeedback.selectionClick();
-                                  onSelected(item);
-                                  Navigator.pop(ctx);
-                                },
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                                title: Text(item, style: TextStyle(color: isSelected ? accentColor : Colors.white, fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600, fontSize: 15)),
-                                trailing: isSelected ? Icon(Icons.check_circle_rounded, color: accentColor, size: 20) : null,
-                              );
-                            },
-                          ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             );
@@ -1718,6 +1855,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
   }
 
   void _showListingDetailsModal(Map<String, dynamic> item, bool isMyListing, bool isMySale) {
+    _dismissTopSnackBar(); // İlan açıldığı anda arkada kalan veya gelen bildirimi anında temizler
     final status = item['status'];
     final bids = item['bids'] as List? ?? [];
     
@@ -1938,9 +2076,9 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                       ),
                                       
                                       if (isMyListing && item['seller_phone'] != null)
-                                        _buildPhoneContactRow("Satıcı Usta", item['seller_name'], item['seller_phone'], neonGreen),
+                                        _buildPhoneContactRow(isForSale ? "Alıcı Müşteri" : "Satıcı Usta", item['seller_name'], item['seller_phone'], neonGreen),
                                       if (isMySale && item['customer_phone'] != null)
-                                        _buildPhoneContactRow("Alıcı Müşteri", item['customer_name'], item['customer_phone'], neonGreen),
+                                        _buildPhoneContactRow(isForSale ? "Satıcı (İlan Sahibi)" : "Alıcı (Talep Sahibi)", item['customer_name'], item['customer_phone'], neonCyan),
                                       
                                       const SizedBox(height: 20),
                                       
@@ -2234,7 +2372,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              if (RegExp(r'\[(.*?)\]').allMatches(rawPartName).length > 2)
+                              if (RegExp(r'\[(.*?)\]').allMatches(rawPartName).length > 3)
                                 Row(
                                   children: [
                                     Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: neonCyan.withOpacity(0.15), borderRadius: BorderRadius.circular(4)), child: Text(RegExp(r'\[(.*?)\]').allMatches(rawPartName).elementAt(2).group(1) ?? "", style: const TextStyle(color: neonCyan, fontSize: 9, fontWeight: FontWeight.w900))),

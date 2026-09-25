@@ -138,14 +138,9 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     if (_effectiveInsuranceDate != null) {
       final int daysLeft = _effectiveInsuranceDate!.difference(nowNormalized).inDays;
       if (daysLeft < 0) {
+        await notificationHelper.cancelNotification(vId ^ "sigorta_gecmis".hashCode);
         await notificationHelper.cancelNotification(vId ^ "sigorta_yaklasan".hashCode);
         await notificationHelper.cancelNotification(vId ^ "sigorta".hashCode);
-        await notificationHelper.scheduleNotification(
-          id: vId ^ "sigorta_gecmis".hashCode,
-          title: "⚠️ Sigorta Süresi Geçti!",
-          body: "$plate plakalı aracınızın trafik sigortası ${daysLeft.abs()} gün önce bitti. Lütfen yenileyin.",
-          scheduledDate: DateTime.now().add(const Duration(seconds: 4))
-        );
       } else if (daysLeft <= 15) {
         await notificationHelper.cancelNotification(vId ^ "sigorta_gecmis".hashCode);
         await notificationHelper.cancelNotification(vId ^ "sigorta".hashCode);
@@ -177,14 +172,9 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
       final int notifBaseId = (vId.hashCode & 0x7FFFFFFF);
       
       if (daysLeft < 0) {
+        await notificationHelper.cancelNotification(notifBaseId ^ 100);
         await notificationHelper.cancelNotification(notifBaseId ^ 101);
         await notificationHelper.cancelNotification(notifBaseId ^ 102);
-        await notificationHelper.scheduleNotification(
-          id: notifBaseId ^ 100,
-          title: "⚠️ Araç Muayenesi Gecikti!",
-          body: "$plate plakalı aracınızın muayene süresi ${daysLeft.abs()} gün önce bitti. Lütfen yenileyin.",
-          scheduledDate: DateTime.now().add(const Duration(seconds: 3))
-        );
       } else if (daysLeft <= 15) {
         await notificationHelper.cancelNotification(notifBaseId ^ 100);
         await notificationHelper.cancelNotification(notifBaseId ^ 102);
@@ -1752,6 +1742,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
     required DateTime? initialDate,
     required Function(DateTime) onDateSelected,
   }) {
+    FocusScope.of(context).unfocus();
     HapticFeedback.lightImpact();
     DateTime tempPickedDate = initialDate ?? DateTime.now();
 
@@ -2032,47 +2023,75 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 14, bottom: 6),
-                  child: Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10))),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 4, 12, 12),
-                  child: Row(
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onVerticalDragEnd: (details) {
+                    if ((details.primaryVelocity ?? 0) > 180) {
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF00FFA3).withOpacity(0.12),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(isEditing ? Icons.edit_note_rounded : Icons.post_add_rounded, color: const Color(0xFF00FFA3), size: 22),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 14, bottom: 6),
+                        child: Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10))),
                       ),
-                      const SizedBox(width: 12),
-                      Text(isEditing ? "İşlemi Düzenle" : "Yeni İşlem Ekle", style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.4)),
-                      const Spacer(),
-                      IconButton(
-                        icon: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.05),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.close_rounded, color: Colors.white70, size: 18),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 4, 12, 12),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF00FFA3).withOpacity(0.12),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(isEditing ? Icons.edit_note_rounded : Icons.post_add_rounded, color: const Color(0xFF00FFA3), size: 22),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(isEditing ? "İşlemi Düzenle" : "Yeni İşlem Ekle", style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.4)),
+                            const Spacer(),
+                            IconButton(
+                              icon: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.05),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.close_rounded, color: Colors.white70, size: 18),
+                              ),
+                              onPressed: () {
+                                HapticFeedback.selectionClick();
+                                Navigator.pop(context);
+                              },
+                            )
+                          ],
                         ),
-                        onPressed: () {
-                          HapticFeedback.selectionClick();
-                          Navigator.pop(context);
-                        },
-                      )
+                      ),
                     ],
                   ),
                 ),
                 const Divider(color: Colors.white10, height: 1),
                 Flexible(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.all(20),
+                  child: NotificationListener<ScrollNotification>(
+                    onNotification: (notification) {
+                      if (notification is OverscrollNotification && notification.overscroll < -12) {
+                        Navigator.pop(context);
+                        return true;
+                      }
+                      if (notification is ScrollUpdateNotification && 
+                          notification.metrics.pixels <= 0 && 
+                          (notification.scrollDelta ?? 0) < -18) {
+                        Navigator.pop(context);
+                        return true;
+                      }
+                      return false;
+                    },
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: const EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -2216,6 +2235,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                                   selected: isSelected,
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                                   onSelected: (val) {
+                                    FocusScope.of(context).unfocus();
                                     if (val && selectedType != type['id']) {
                                       HapticFeedback.selectionClick();
                                       setState(() { selectedType = type['id']; selectedNextDate = null; });
@@ -2374,6 +2394,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                     ),
                   ),
                 ),
+              ),
               ],
             ),
           ),
@@ -2386,7 +2407,10 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
     return Padding(
       padding: const EdgeInsets.only(right: 8.0),
       child: InkWell(
-        onTap: () => _processSmartNote(manualText: templateText),
+        onTap: () {
+          FocusScope.of(context).unfocus();
+          _processSmartNote(manualText: templateText);
+        },
         borderRadius: BorderRadius.circular(12),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

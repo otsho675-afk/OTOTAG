@@ -12,6 +12,7 @@ import 'job_tracking_screen.dart';
 import 'provider_profile_screen.dart';
 import 'customer_dashboard_screen.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CustomerBidsScreen extends StatefulWidget {
   final int jobId;
@@ -172,14 +173,30 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
         apiKey: "7197ebfa7d2e68b962dd", 
         cluster: "eu",
         onAuthorizer: (String channelName, String socketId, dynamic options) async {
-          // Private kanal güvenlik doğrulaması
-          final response = await _httpClient.post(
-            Uri.parse("$baseUrl?action=pusher_auth"),
-            // TODO: Mevcut oturumdaki (SharedPreferences) gerçek Token'i Buraya Enjekte Edin
-            headers: {"Authorization": "Bearer YOUR_JWT_TOKEN_HERE"}, 
-            body: {"socket_id": socketId, "channel_name": channelName},
-          );
-          return json.decode(response.body);
+          try {
+            // 1. SharedPreferences'tan gerçek kullanıcının JWT Token'ını çekiyoruz
+            final prefs = await SharedPreferences.getInstance();
+            final String token = prefs.getString('token') ?? '';
+
+            // 2. Sunucuya gerçek token ile istek atıyoruz
+            final response = await _httpClient.post(
+              Uri.parse("$baseUrl?action=pusher_auth"),
+              headers: {"Authorization": "Bearer $token"}, 
+              body: {"socket_id": socketId, "channel_name": channelName},
+            );
+            
+            final data = json.decode(response.body);
+            
+            // 3. İOS (Swift) tarafında uygulamanın çökmesini engellemek için kontrol ekliyoruz
+            if (response.statusCode == 200 && data['auth'] != null) {
+              return data;
+            } else {
+              // Hata durumunda native SDK'nın beklentisini karşılayacak boş bir auth objesi dönüyoruz
+              return {"auth": "failed:auth_error"}; 
+            }
+          } catch (e) {
+            return {"auth": "error:exception"};
+          }
         },
         onEvent: (event) {
           if (event.eventName == "bid_update") {

@@ -47,6 +47,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   StreamSubscription<CompassEvent>? _compassStream;
   PusherChannelsFlutter pusher = PusherChannelsFlutter.getInstance();
   DateTime? _lastApiCallTime;
+  Timer? _jobPollingTimer; // Yeni iş tarama motoru eklendi
 
   List<Map<String, dynamic>> jobList = [];
   Set<int> knownJobIds = {}; 
@@ -631,15 +632,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                             "estimated_time": timeController.text.trim(), 
                                           },
                                         ).timeout(_apiTimeout);
-                                        
-                                        // Usta teklif verdiğinde müşterinin ekranına anında düşmesi için soket eklendi
-                                        if (response.statusCode == 201 || response.statusCode == 200) {
-                                           pusher.trigger(PusherEvent(
-                                              channelName: "private-job_$jobId", 
-                                              eventName: "bid_update", 
-                                              data: {"status": "new_bid"}
-                                           ));
-                                        }
 
                                         final data = json.decode(response.body);
                                         
@@ -759,7 +751,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         onEvent: (event) {
           if (event.eventName == "new_job_created") {
             if (isOnline && !isSuspended && currentPosition != null) {
-              _fetchNearbyJobs(isAuto: true, radius: _searchRadius.toInt());
+              // Veritabanı tam kaydetsin diye 1.5 saniye mühlet veriyoruz
+              Future.delayed(const Duration(milliseconds: 1500), () {
+                if (mounted) _fetchNearbyJobs(isAuto: true, radius: _searchRadius.toInt());
+              });
             }
           }
         },
@@ -773,11 +768,21 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
   void _startJobRefreshTimer() {
     _initWebSocket();
+    // 15 Saniyede bir otomatik tarama (Soket kaçırsa bile işleri bulur)
+    _jobPollingTimer?.cancel();
+    _jobPollingTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (mounted && isOnline && !isSuspended && currentPosition != null) {
+        if (!_isFetchingJobs) {
+          _fetchNearbyJobs(isAuto: true, radius: _searchRadius.toInt());
+        }
+      }
+    });
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _jobPollingTimer?.cancel();
       pusher.disconnect();
       if (!isOnline) {
         _positionStream?.pause();
@@ -791,6 +796,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       _compassStream?.resume();
       if (isOnline) {
         _positionStream?.resume();
+        _startJobRefreshTimer();
       }
       pusher.connect();
       if (mounted) {
@@ -1046,6 +1052,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this); 
+    _jobPollingTimer?.cancel();
     pusher.unsubscribe(channelName: "global_jobs");
     pusher.disconnect();
     _httpClient.close();
@@ -1509,6 +1516,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         _flitchingJobId = null;
         _fetchEarningsAndPerformance(); 
       });
+      _jobPollingTimer?.cancel();
       _positionStream?.pause();
     }
   }

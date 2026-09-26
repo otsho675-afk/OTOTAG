@@ -764,6 +764,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       await pusher.connect();
     } catch (e) {
       debugPrint("Pusher error: $e");
+      // Kopmalara karşı akıllı retry
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted && isOnline) _initWebSocket();
+      });
     }
   }
 

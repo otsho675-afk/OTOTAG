@@ -660,6 +660,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       await pusher.connect();
     } catch (e) {
       debugPrint("Pusher error: $e");
+      // Kopmalara karşı akıllı retry
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) _initWebSocket();
+      });
     }
   }
 

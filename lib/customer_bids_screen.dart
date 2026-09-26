@@ -188,6 +188,10 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
       await pusher.connect();
     } catch (e) {
       debugPrint("Pusher error: $e");
+      // Kopmalara karşı akıllı retry
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) _initWebSocket();
+      });
     }
   }
 

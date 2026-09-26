@@ -905,6 +905,8 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                     AnimatedBuilder(
                       animation: _radarController,
                       child: Container(
+                        width: radarSize,
+                        height: radarSize,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: SweepGradient(
@@ -951,7 +953,6 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                         return Transform(
                           alignment: Alignment.center,
                           transform: Matrix4.identity()
-                            ..setEntry(3, 2, 0.002)
                             ..rotateY(spin)
                             ..rotateX(math.sin(spin) * 0.22),
                           child: Container(
@@ -1002,7 +1003,6 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                               child: Transform(
                                 alignment: Alignment.center,
                                 transform: Matrix4.identity()
-                                  ..setEntry(3, 2, 0.0018)
                                   ..rotateX(0.2)
                                   ..rotateY(math.sin(toolAngle) * 0.5)
                                   ..rotateZ(math.cos(toolAngle) * 0.3)

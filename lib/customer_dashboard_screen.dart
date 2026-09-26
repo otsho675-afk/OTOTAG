@@ -1692,20 +1692,27 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                                 if (plateCtrl.text.trim().isEmpty || selectedBrand == null || selectedModel == null) {
                                   return _showTopSnackBar("Plaka, Marka ve Model bilgisi zorunludur.", isError: true);
                                 }
-                                Navigator.pop(context);
                                 
-                                String finalBrandModel = "$selectedBrand $selectedModel";
+                                // Değerleri modal kapanıp controller'lar silinmeden ÖNCE güvenli değişkenlere alıyoruz
+                                final String finalPlate = plateCtrl.text.trim();
+                                final String finalBrandModel = "$selectedBrand $selectedModel";
+                                final String finalEngineType = engineCtrl.text.trim();
+                                final int finalCKm = int.tryParse(cKmCtrl.text.trim()) ?? 0;
+                                final int finalMKm = int.tryParse(mKmCtrl.text.trim()) ?? 10000;
+                                
+                                // Şimdi modalı güvenle kapatabiliriz
+                                Navigator.pop(context);
                                 
                                 await _saveVehicle(
                                   vehicleId: isEditing ? int.tryParse(vehicleToEdit['id']?.toString() ?? '') : null,
-                                  plate: plateCtrl.text.trim(), 
+                                  plate: finalPlate, 
                                   brandModel: finalBrandModel,
-                                  engineType: engineCtrl.text.trim(), // YENİ
-                                  modelYear: selectedYear,            // YENİ
+                                  engineType: finalEngineType, 
+                                  modelYear: selectedYear,            
                                   insDate: tempIns, 
                                   inspDate: tempInsp,
-                                  cKm: int.tryParse(cKmCtrl.text.trim()) ?? 0, 
-                                  mKm: int.tryParse(mKmCtrl.text.trim()) ?? 10000,
+                                  cKm: finalCKm, 
+                                  mKm: finalMKm,
                                 );
                               },
                               style: ElevatedButton.styleFrom(

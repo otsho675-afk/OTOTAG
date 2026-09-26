@@ -1,5 +1,3 @@
-// Dosya: android/app/build.gradle.kts
-
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -11,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.oto.tag"
-    compileSdk = 36
+    compileSdk = 35
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -22,10 +20,14 @@ android {
 
     defaultConfig {
         applicationId = "com.oto.tag"
-        minSdk = flutter.minSdkVersion
+        minSdk = 21
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        ndk {
+            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86_64"))
+        }
     }
 
     signingConfigs {

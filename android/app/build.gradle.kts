@@ -9,7 +9,8 @@ plugins {
 
 android {
     namespace = "com.oto.tag"
-    compileSdk = 35
+    // Hata veren eklentilerin istediği minimum derleme sürümü 36 olarak ayarlandı
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -20,7 +21,7 @@ android {
 
     defaultConfig {
         applicationId = "com.oto.tag"
-        minSdk = 21
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

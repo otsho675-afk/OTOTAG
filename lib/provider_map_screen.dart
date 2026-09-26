@@ -1378,7 +1378,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
           debugPrint("Sunucu JSON ayrıştırma hatası");
         }
         if (data['status'] == 'success' && mounted) {
-          final List<Map<String, dynamic>> fetchedJobs = List<Map<String, dynamic>>.from(data['jobs']);
+          final List<Map<String, dynamic>> fetchedJobs = (data['jobs'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? [];
           final Set<int> currentJobIds = fetchedJobs.map((j) => int.tryParse(j['id']?.toString() ?? '0') ?? 0).toSet();
 
           final newJobs = currentJobIds.difference(knownJobIds);
@@ -2945,6 +2945,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                           _currentJobIndex = i;
                                           _flitchingJobId = null;
                                         });
+                                        if (_pageController.hasClients) {
+                                          _pageController.animateToPage(i, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+                                        }
                                       },
                                     ),
                                 },
@@ -3001,6 +3004,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                           _currentJobIndex = i;
                                           _flitchingJobId = null;
                                         });
+                                        if (_pageController.hasClients) {
+                                          _pageController.animateToPage(i, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+                                        }
                                       },
                                     ),
                                 },

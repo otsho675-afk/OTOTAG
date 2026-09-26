@@ -37,6 +37,9 @@ class CustomHttpOverrides extends HttpOverrides {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // YENİ EKLENEN KOD: Android 15 (Edge-to-Edge) Uyumluluğu
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  
   // Yerel saat dilimi veritabanını başlat (Zamanlanmış bildirimler için zorunludur)
   tz.initializeTimeZones();
 
@@ -112,7 +115,7 @@ void main() async {
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: Color(0xFF030305),
+        systemNavigationBarColor: Colors.transparent, // Edge-to-Edge için transparent yapıldı
         systemNavigationBarIconBrightness: Brightness.light,
       ),
     );
@@ -312,6 +315,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   ),
                   child: Image.asset(
                     'assets/images/logo.png', 
+                    // YENİ EKLENEN KOD: Asset resminin boyutunu kısıtladık
+                    cacheWidth: (logoSize * MediaQuery.of(context).devicePixelRatio).round(),
                     height: logoSize, 
                     errorBuilder: (context, error, stackTrace) => Icon(
                       Icons.directions_car_rounded, 
@@ -387,6 +392,8 @@ class RoleSelectionScreen extends StatelessWidget {
                                 alignment: Alignment.center,
                                 child: Image.asset(
                                   'assets/images/logo.png', 
+                                  // YENİ EKLENEN KOD: Asset resminin boyutunu kısıtladık
+                                  cacheWidth: (80 * MediaQuery.of(context).devicePixelRatio).round(),
                                   height: 80, 
                                   errorBuilder: (context, error, stackTrace) => const Icon(
                                     Icons.directions_car_rounded, 

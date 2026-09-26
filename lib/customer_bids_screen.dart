@@ -1,4 +1,3 @@
-// customer_bids_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; 
 import 'package:flutter/foundation.dart';
@@ -120,8 +119,6 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     });
   }
 
-  
-
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
@@ -216,10 +213,6 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     }
   }
 
-  
-
-  
-
   void _showTopSnackBar(String message, {bool isError = false, bool isNewJob = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).clearSnackBars();
@@ -263,7 +256,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
       final response = await _httpClient.get(
         Uri.parse("$baseUrl?action=get_bids&job_id=${widget.jobId}&_t=$timestamp"),
         headers: {"Connection": "keep-alive", "Cache-Control": "no-cache"}
-      ).timeout(const Duration(seconds: 15)); // Sunucu yüksek yük altındayken uygulamanın sürekli iptal/tekrar yapmasını önler
+      ).timeout(const Duration(seconds: 15)); 
       
       if (!mounted) return;
 
@@ -292,7 +285,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
         if (directStatus == null || directStatus == 'success' || directStatus == 'searching') {
           final statusRes = await _httpClient.get(
             Uri.parse("$baseUrl?action=get_job_status&job_id=${widget.jobId}&_t=$timestamp")
-          ).timeout(const Duration(seconds: 15)); // Retry Storm (Yeniden Deneme Fırtınası) oluşmasını engeller
+          ).timeout(const Duration(seconds: 15)); 
 
           if (statusRes.statusCode == 200) {
             final statusData = json.decode(statusRes.body);
@@ -384,7 +377,6 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
             }
           }
 
-          // Hızlı ve hafif karşılaştırma (CPU yükü ve frame drop önlendi)
           bool isLengthChanged = bids.length != newBidsList.length;
           bool isContentChanged = false;
           
@@ -433,7 +425,6 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
       final data = json.decode(response.body);
       if (data['status'] == 'success') {
         _showTopSnackBar("Karşı teklifiniz ustaya iletildi.", isNewJob: true);
-        
         _fetchBids();
       } else {
         _showTopSnackBar(data['message'] ?? "İşlem başarısız.", isError: true);
@@ -456,7 +447,6 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     double suggestedOffer = 0.0;
     if (currentAmount > 0) {
       double safeAverage = _marketAverage;
-      // Outlier (Fahiş fiyat) koruması: Ortalama, tekliften aşırı düşükse (trol teklifleri önlemek için)
       if (currentAmount > safeAverage * 3 && safeAverage > 0) {
          suggestedOffer = (safeAverage * 1.2).roundToDouble();
       } else if (currentAmount > safeAverage && safeAverage > 0) {
@@ -681,7 +671,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
   }
 
   Future<void> _cancelJob() async {
-    if (_isDialogActive || _isNavigating) return; // CRITICAL FIX: İptal edilirken tekrar basılmasını engelle
+    if (_isDialogActive || _isNavigating) return; 
     _isDialogActive = true;
     HapticFeedback.lightImpact();
 
@@ -737,10 +727,10 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
         body: {"job_id": widget.jobId.toString()},
       ).timeout(const Duration(seconds: 8));
       
-      if (!mounted) return; // FIX: Arka planda işleme düşmeyi önler
+      if (!mounted) return; 
       final data = json.decode(response.body);
       if (data['status'] == 'success' && mounted) {
-        _isNavigating = true; // State kilitlendi
+        _isNavigating = true; 
         _cleanupTimers();
         HapticFeedback.mediumImpact();
         _showTopSnackBar("Talebiniz iptal edildi.");
@@ -901,7 +891,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                       },
                     ),
                     
-                    // 3D Lazer Tarama Işını (Statik subtree önbelleğe alındı, 120 FPS akıcı dönüş)
+                    // 3D Lazer Tarama Işını
                     AnimatedBuilder(
                       animation: _radarController,
                       child: Container(
@@ -944,7 +934,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                       },
                     ),
 
-                    // Merkezdeki 3D Dönen Holografik Çekirdek (Organik Fiziksel Nabız)
+                    // Merkezdeki 3D Dönen Holografik Çekirdek
                     AnimatedBuilder(
                       animation: Listenable.merge([_pulseController, _toolOrbitController]),
                       builder: (context, child) {
@@ -978,7 +968,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                       },
                     ),
 
-                    // RADAR ETRAFINDA 3D YÖRÜNGEDE UÇUŞAN TAMİR ALETLERİ (Opacity widget kaldırıldı, donanım hızlandırmalı)
+                    // RADAR ETRAFINDA 3D YÖRÜNGEDE UÇUŞAN TAMİR ALETLERİ
                     AnimatedBuilder(
                       animation: _toolOrbitController,
                       builder: (context, child) {
@@ -1043,6 +1033,10 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                 final double shift = (_radarController.value * 3.0) - 1.5;
                 return ShaderMask(
                   shaderCallback: (bounds) {
+                    // iOS Render Bounds = 0 çökme koruması
+                    if (bounds.isEmpty || bounds.width <= 0 || bounds.height <= 0) {
+                      return const LinearGradient(colors: [Colors.transparent, Colors.transparent]).createShader(const Rect.fromLTWH(0, 0, 1, 1));
+                    }
                     return LinearGradient(
                       colors: [Colors.white38, Colors.white, _primaryColor, Colors.white, Colors.white38],
                       stops: const [0.0, 0.35, 0.5, 0.65, 1.0],
@@ -1545,14 +1539,14 @@ class BlipPainter extends CustomPainter {
       
       final currentGlowPaint = Paint()
         ..isAntiAlias = true
-        ..color = color.withOpacity(0.55 * opacity)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+        ..color = color.withOpacity(0.25 * opacity);
       final currentPaint = Paint()
         ..isAntiAlias = true
         ..color = color.withOpacity(opacity)
         ..style = PaintingStyle.fill;
         
-      canvas.drawCircle(position, 5, currentGlowPaint);
+      // iOS Impeller çökmesini önlemek için MaskFilter kaldırıldı, daha geniş opak daire çiziliyor
+      canvas.drawCircle(position, 8, currentGlowPaint);
       canvas.drawCircle(position, 2.5, currentPaint);
     }
   }

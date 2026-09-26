@@ -1276,7 +1276,8 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
               ),
 
               Positioned(
-                top: MediaQuery.paddingOf(context).top + 12,
+                // YENİ EKLENEN KOD: SafeArea kullanarak Android 15 taşmalarını engelledik
+                top: MediaQuery.paddingOf(context).top > 0 ? MediaQuery.paddingOf(context).top + 12 : 24,
                 left: 16,
                 right: 16,
                 child: Center(

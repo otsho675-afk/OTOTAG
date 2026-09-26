@@ -1886,7 +1886,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
   }
 
   void _showListingDetailsModal(Map<String, dynamic> item, bool isMyListing, bool isMySale) {
-    _dismissTopSnackBar(); // İlan açıldığı anda arkada kalan veya gelen bildirimi anında temizler
+    _dismissTopSnackBar(); 
     final status = item['status'];
     final bids = item['bids'] as List? ?? [];
     
@@ -1911,6 +1911,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
     if(matches.length > 3) extractedListingType = matches.elementAt(3).group(1) ?? "";
 
     String cleanPartName = rawPartName.replaceAll(RegExp(r'\[.*?\]'), '').trim();
+    String myBidStatus = item['my_bid_status'] ?? '';
     
     Color typeColor = isForSale ? neonGreen : goldAccent;
     String typeText = isForSale ? "SATILIK" : (isToBuy ? "ARANIYOR" : "İLAN");
@@ -2028,7 +2029,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                               return GestureDetector(
                                                 onTap: () {
                                                   HapticFeedback.lightImpact();
-                                                  _openFullScreenImage(imageUrl); // Tam Ekran Görünüm
+                                                  _openFullScreenImage(imageUrl); 
                                                 },
                                                 child: Container(
                                                   margin: const EdgeInsets.only(right: 12),
@@ -2109,7 +2110,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                         
                                         if (isMyListing && item['seller_phone'] != null)
                                           _buildPhoneContactRow(isForSale ? "Alıcı Müşteri" : "Satıcı Usta", item['seller_name'], item['seller_phone'], neonGreen),
-                                        if (isMySale && item['customer_phone'] != null)
+                                        if (!isMyListing && item['customer_phone'] != null)
                                           _buildPhoneContactRow(isForSale ? "Satıcı (İlan Sahibi)" : "Alıcı (Talep Sahibi)", item['customer_name'], item['customer_phone'], neonCyan),
                                         
                                         const SizedBox(height: 20),
@@ -2241,25 +2242,52 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                         ]
                                       ],
                                       
-                                      if (!isMyListing && !isMySale && status == 'searching') ...[
+                                      if (!isMyListing && status == 'searching') ...[
                                         const SizedBox(height: 24),
-                                        SizedBox(
-                                          width: double.infinity,
-                                          child: ElevatedButton.icon(
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: neonGreen,
-                                              elevation: 0,
-                                              padding: const EdgeInsets.symmetric(vertical: 18),
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                        if (myBidStatus == 'pending')
+                                          Container(
+                                            padding: const EdgeInsets.all(16),
+                                            decoration: BoxDecoration(color: goldAccent.withOpacity(0.1), borderRadius: BorderRadius.circular(16), border: Border.all(color: goldAccent.withOpacity(0.3))),
+                                            child: const Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Icon(Icons.access_time_rounded, color: goldAccent, size: 20),
+                                                SizedBox(width: 8),
+                                                Text("Teklifiniz değerlendiriliyor...", style: TextStyle(color: goldAccent, fontWeight: FontWeight.w900, fontSize: 14)),
+                                              ],
                                             ),
-                                            icon: Icon(isForSale ? Icons.shopping_cart_checkout_rounded : Icons.local_offer_rounded, color: pureBlack, size: 20),
-                                            onPressed: () {
-                                              Navigator.pop(modalCtx);
-                                              _showBidDialog(listingId, isForSale, parentCtx: context);
-                                            },
-                                            label: Text(isForSale ? "Satın Alma Teklifi Ver" : "Parça Bende Var, Teklif Ver", style: const TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 15)),
-                                          ),
-                                        )
+                                          )
+                                        else if (myBidStatus == 'rejected')
+                                          Container(
+                                            padding: const EdgeInsets.all(16),
+                                            decoration: BoxDecoration(color: alertRed.withOpacity(0.1), borderRadius: BorderRadius.circular(16), border: Border.all(color: alertRed.withOpacity(0.3))),
+                                            child: const Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Icon(Icons.cancel_rounded, color: alertRed, size: 20),
+                                                SizedBox(width: 8),
+                                                Text("Teklifiniz reddedildi.", style: TextStyle(color: alertRed, fontWeight: FontWeight.w900, fontSize: 14)),
+                                              ],
+                                            ),
+                                          )
+                                        else
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: ElevatedButton.icon(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: neonGreen,
+                                                elevation: 0,
+                                                padding: const EdgeInsets.symmetric(vertical: 18),
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                              ),
+                                              icon: Icon(isForSale ? Icons.shopping_cart_checkout_rounded : Icons.local_offer_rounded, color: pureBlack, size: 20),
+                                              onPressed: () {
+                                                Navigator.pop(modalCtx);
+                                                _showBidDialog(listingId, isForSale, parentCtx: context);
+                                              },
+                                              label: Text(isForSale ? "Satın Alma Teklifi Ver" : "Parça Bende Var, Teklif Ver", style: const TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 15)),
+                                            ),
+                                          )
                                       ],
                                       const SizedBox(height: 20),
                                     ],

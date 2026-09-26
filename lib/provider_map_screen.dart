@@ -649,16 +649,18 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                             _lastBidPrice = priceController.text.trim();
                                             _lastBidTime = timeController.text.trim();
                                             
-                                            Navigator.pop(context); // Diyaloğu kapat
+                                            Navigator.of(context).pop(); 
                                             
-                                            setState(() {
-                                              jobList.removeWhere((j) => int.parse(j['id'].toString()) == jobId);
-                                              knownJobIds.remove(jobId);
-                                              _showJobCard = false;
-                                            });
+                                            Future.microtask(() {
+                                              if (!mounted) return;
+                                              setState(() {
+                                                jobList.removeWhere((j) => int.parse(j['id'].toString()) == jobId);
+                                                knownJobIds.remove(jobId);
+                                                _showJobCard = false;
+                                                _isModalOpen = false;
+                                              });
 
-                                            // Müşterinin yanıtını ve pazarlık sürecini canlı takip etmek için Takip Ekranına geç
-                                            Navigator.push(
+                                              Navigator.push(
                                               context,
                                               MaterialPageRoute(
                                                 builder: (_) => JobTrackingScreen(
@@ -669,20 +671,19 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                               ),
                                             ).then((_) {
                                               if (mounted) {
-                                                _fetchNearbyJobs(radius: _searchRadius.toInt());
-                                                _checkActiveJob();
-                                              }
+                                                  _fetchNearbyJobs(radius: _searchRadius.toInt());
+                                                  _checkActiveJob();
+                                                }
+                                              });
                                             });
                                           } else {
+                                            setDialogState(() => isSubmitting = false);
                                             _showTopSnackBar(data['message'] ?? "Teklif gönderilemedi.", isError: true);
                                           }
                                         }
                                       } catch (e) {
+                                        setDialogState(() => isSubmitting = false);
                                         if (mounted) _showTopSnackBar("Bağlantı hatası oluştu.", isError: true);
-                                      } finally {
-                                        if (mounted) {
-                                          setDialogState(() => isSubmitting = false);
-                                        }
                                       }
                                     },
                                     style: ElevatedButton.styleFrom(

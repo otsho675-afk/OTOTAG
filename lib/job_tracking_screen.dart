@@ -1389,14 +1389,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         },
       ).timeout(_apiTimeout);
       
-      // Eşleşme sağlandığında her iki tarafın ekranını anında güncellemesi için soket tetiklemesi eklendi
-      if (response.statusCode == 200) {
-        pusher.trigger(PusherEvent(
-          channelName: "private-job_${widget.jobId}", 
-          eventName: "status_update", 
-          data: {"job_status": "matched"}
-        ));
-      }
       final data = json.decode(response.body);
       if (mounted) {
         if (data['status'] == 'success') {
@@ -1495,12 +1487,14 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                               ),
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
-                                onPressed: () async {
+                                onPressed: () {
                                   FocusScope.of(context).unfocus();
                                   if (counterController.text.trim().isNotEmpty && int.tryParse(counterController.text.trim()) != null && int.parse(counterController.text.trim()) > 0) {
                                     final amount = counterController.text.trim();
-                                    Navigator.pop(context);
-                                    await _sendCounterBid(amount);
+                                    Navigator.of(context).pop();
+                                    Future.delayed(const Duration(milliseconds: 300), () {
+                                      _sendCounterBid(amount);
+                                    });
                                   } else {
                                     _showTopSnackBar("Geçerli bir tutar girin.", isError: true);
                                   }

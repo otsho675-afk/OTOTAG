@@ -356,18 +356,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
           }
 
           bool isLengthChanged = bids.length != newBidsList.length;
-          bool isContentChanged = false;
-          
-          if (!isLengthChanged) {
-            for (int i = 0; i < bids.length; i++) {
-              if (bids[i]['bid_id']?.toString() != newBidsList[i]['bid_id']?.toString() ||
-                  bids[i]['amount']?.toString() != newBidsList[i]['amount']?.toString() ||
-                  bids[i]['last_bidder']?.toString() != newBidsList[i]['last_bidder']?.toString()) {
-                isContentChanged = true;
-                break;
-              }
-            }
-          }
+          bool isContentChanged = jsonEncode(bids) != jsonEncode(newBidsList);
 
           if (isLengthChanged || isContentChanged) {
             if (isLengthChanged && newBidsList.length > bids.length) {
@@ -580,8 +569,13 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                                 ),
                                 onPressed: () {
                                   if (counterController.text.trim().isNotEmpty) {
-                                    Navigator.pop(context);
-                                    _sendCounterBid(bidId, counterController.text.trim());
+                                    FocusScope.of(context).unfocus();
+                                    final amount = counterController.text.trim();
+                                    // Önce dialog'u güvenli şekilde kapatıp ardından asenkron isteği başlatıyoruz
+                                    Navigator.of(context).pop();
+                                    Future.delayed(const Duration(milliseconds: 300), () {
+                                      _sendCounterBid(bidId, amount);
+                                    });
                                   }
                                 },
                                 child: const FittedBox(child: Text("Gönder", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16))),
@@ -605,9 +599,12 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
   }
 
   Future<void> _acceptBid(int bidId, int providerId, String amount) async {
-    if (!mounted) return;
+    if (!mounted || _isNavigating) return;
     HapticFeedback.mediumImpact();
-    setState(() => isProcessing = true);
+    setState(() {
+      isProcessing = true;
+      _isNavigating = true;
+    });
     try {
       final response = await _httpClient.post(
         Uri.parse("$baseUrl?action=accept_bid"),
@@ -633,18 +630,30 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
         
         _cleanupTimers();
         HapticFeedback.heavyImpact();
-        Navigator.pushReplacement(context, PageRouteBuilder(
+        
+        // Çökme Koruması: Önce push yap, state'i sonra temizle
+        await Navigator.pushReplacement(context, PageRouteBuilder(
           pageBuilder: (_, __, ___) => JobTrackingScreen(jobId: widget.jobId, userType: 'customer', userId: widget.customerId),
           transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
         ));
       } else {
-        _showTopSnackBar(data['message'] ?? "Teklif kabul edilemedi.", isError: true);
+        if (mounted) {
+          setState(() {
+            isProcessing = false;
+            _isNavigating = false;
+          });
+          _showTopSnackBar(data['message'] ?? "Teklif kabul edilemedi.", isError: true);
+        }
       }
     } catch (e) {
       debugPrint("[MÜŞTERİ HATA] Eşleşme hatası: $e");
-      _showTopSnackBar("Bağlantı hatası oluştu.", isError: true);
-    } finally {
-      if (mounted) setState(() => isProcessing = false);
+      if (mounted) {
+        setState(() {
+          isProcessing = false;
+          _isNavigating = false;
+        });
+        _showTopSnackBar("Bağlantı hatası oluştu.", isError: true);
+      }
     }
   }
 

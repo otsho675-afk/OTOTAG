@@ -663,11 +663,19 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     }
   }
 
+  Timer? _statusPollingTimer;
+
   void _startTimer() {
     _initWebSocket();
-    // İlk yüklemede fetch et
     _fetchJobStatus();
     _checkUnreadMessages();
+    
+    _statusPollingTimer?.cancel();
+    _statusPollingTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+      if (mounted && jobStatus == 'searching') {
+        _fetchJobStatus();
+      }
+    });
   }
 
   Future<void> _checkUnreadMessages() async {
@@ -879,10 +887,12 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       pusher.disconnect();
+      _statusPollingTimer?.cancel();
       _resumeTrackingTimer?.cancel();
       _rerouteTimer?.cancel();
     } else if (state == AppLifecycleState.resumed) {
       pusher.connect();
+      if (jobStatus == 'searching') _startTimer();
       _startReroutingEngine();
     }
   }
@@ -893,6 +903,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     pusher.unsubscribe(channelName: "job_${widget.jobId}");
     if (providerId != null) pusher.unsubscribe(channelName: "user_location_$providerId");
     pusher.disconnect();
+    _statusPollingTimer?.cancel();
     _rerouteTimer?.cancel();
     _httpClient.close();
     _resumeTrackingTimer?.cancel();

@@ -12,7 +12,7 @@ import 'job_tracking_screen.dart';
 import 'provider_profile_screen.dart';
 import 'customer_dashboard_screen.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
 
 class CustomerBidsScreen extends StatefulWidget {
   final int jobId;
@@ -99,13 +99,20 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     _startTimers();
   }
 
+  Timer? _fallbackTimer;
+
   void _startTimers() {
-    _initWebSocket(); // WebSocket Başlat (Polling Yok)
-    _fetchBids(); // Sayfa açılırken ilk veriyi al
-    // NOT: _radiusTimer devre dışı bırakıldı. Kapsam genişletme ve iptal mantığı
-    // artık sunucu tarafında bir CronJob veya arka plan işlemi olarak asenkron yürüyecek.
-    // Mobil uygulama bu olayları doğrudan pusher soket üzerinden anlık dinleyecek.
+    _initWebSocket(); 
+    _fetchBids(); 
+    
     _radiusTimer?.cancel();
+    
+    _fallbackTimer?.cancel();
+    _fallbackTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+      if (mounted && bids.isEmpty) {
+        _fetchBids();
+      }
+    });
 
     _blipTimer?.cancel();
     _blipTimer = Timer.periodic(const Duration(milliseconds: 600), (_) {
@@ -137,8 +144,6 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
         _pulseController.repeat(reverse: true);
         _toolOrbitController.repeat();
         
-        // Uygulama uyutulduğunda kopan WS bağlantısını canlandır ve 
-        // kaçırılmış olabilecek teklifleri delta paket eşitlemesiyle güncelle
         pusher.connect();
         _fetchBids();
       }
@@ -149,6 +154,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     _radiusTimer?.cancel();
     _blipTimer?.cancel();
     _statusTextTimer?.cancel();
+    _fallbackTimer?.cancel();
   }
 
   @override
@@ -172,58 +178,13 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
       await pusher.init(
         apiKey: "7197ebfa7d2e68b962dd", 
         cluster: "eu",
-        onAuthorizer: (String channelName, String socketId, dynamic options) async {
-          try {
-            // 1. SharedPreferences'tan gerçek kullanıcının JWT Token'ını çekiyoruz
-            final prefs = await SharedPreferences.getInstance();
-            final String token = prefs.getString('token') ?? '';
-
-            // 2. Sunucuya gerçek token ile istek atıyoruz
-            final response = await _httpClient.post(
-              Uri.parse("$baseUrl?action=pusher_auth"),
-              headers: {"Authorization": "Bearer $token"}, 
-              body: {"socket_id": socketId, "channel_name": channelName},
-            );
-            
-            final data = json.decode(response.body);
-            
-            // 3. İOS (Swift) tarafında uygulamanın çökmesini engellemek için kontrol ekliyoruz
-            if (response.statusCode == 200 && data['auth'] != null) {
-              return data;
-            } else {
-              // Hata durumunda native SDK'nın beklentisini karşılayacak boş bir auth objesi dönüyoruz
-              return {"auth": "failed:auth_error"}; 
-            }
-          } catch (e) {
-            return {"auth": "error:exception"};
-          }
-        },
         onEvent: (event) {
-          if (event.eventName == "bid_update") {
-            if (mounted) {
-              final data = json.decode(event.data.toString());
-              
-              // HTTP isteği yok, doğrudan payload'u belleğe gömüyoruz
-              if (data['bid'] != null) {
-                setState(() {
-                  var newBid = data['bid'];
-                  int idx = bids.indexWhere((b) => b['bid_id'].toString() == newBid['bid_id'].toString());
-                  if (idx >= 0) {
-                    bids[idx] = newBid;
-                  } else {
-                    bids.insert(0, newBid);
-                  }
-                });
-              } else {
-                _fetchBids();
-              }
-            }
-          } else if (event.eventName == "status_update") {
+          if (event.eventName == "bid_update" || event.eventName == "status_update") {
             if (mounted) _fetchBids();
           }
         },
       );
-      await pusher.subscribe(channelName: "private-job_${widget.jobId}");
+      await pusher.subscribe(channelName: "job_${widget.jobId}");
       await pusher.connect();
     } catch (e) {
       debugPrint("Pusher error: $e");

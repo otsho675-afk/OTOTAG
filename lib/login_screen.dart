@@ -134,6 +134,7 @@ class _LoginScreenState extends State<LoginScreen> {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
           "Accept": "application/json",
+          "Connection": "close", // EKLENEN KOD: Soket açık kalmasını engeller
           "User-Agent": "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36"
         },
         body: {
@@ -333,6 +334,11 @@ class _LoginScreenState extends State<LoginScreen> {
         }
         targetUrl = "$baseUrl?action=login";
         requestBody = {"phone": sanitizedInput, "password": pass, "user_type": widget.userType};
+      }
+
+      // EKLENEN KOD: Uzun beklemeleri önlemek için Connection: close başlığı eklendi
+      if (requestHeaders.containsKey("Connection") == false) {
+        requestHeaders["Connection"] = "close";
       }
 
       http.Response response = await http.post(

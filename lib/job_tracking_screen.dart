@@ -1377,6 +1377,15 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           "user_type": widget.userType
         },
       ).timeout(_apiTimeout);
+      
+      // Eşleşme sağlandığında her iki tarafın ekranını anında güncellemesi için soket tetiklemesi eklendi
+      if (response.statusCode == 200) {
+        pusher.trigger(PusherEvent(
+          channelName: "private-job_${widget.jobId}", 
+          eventName: "status_update", 
+          data: {"job_status": "matched"}
+        ));
+      }
       final data = json.decode(response.body);
       if (mounted) {
         if (data['status'] == 'success') {

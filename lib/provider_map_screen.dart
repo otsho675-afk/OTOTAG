@@ -632,6 +632,15 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                           },
                                         ).timeout(_apiTimeout);
                                         
+                                        // Usta teklif verdiğinde müşterinin ekranına anında düşmesi için soket eklendi
+                                        if (response.statusCode == 201 || response.statusCode == 200) {
+                                           pusher.trigger(PusherEvent(
+                                              channelName: "private-job_$jobId", 
+                                              eventName: "bid_update", 
+                                              data: {"status": "new_bid"}
+                                           ));
+                                        }
+
                                         final data = json.decode(response.body);
                                         
                                         if (mounted) {

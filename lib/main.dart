@@ -23,14 +23,16 @@ import 'package:quick_actions/quick_actions.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-// Android SSL El Sıkışma & Ara Sertifika Uyumlayıcı
+// Android SSL El Sıkışma & Ara Sertifika Uyumlayıcı ve Soket Optimizasyonu
 class CustomHttpOverrides extends HttpOverrides {
   @override
   HttpClient createHttpClient(SecurityContext? context) {
     return super.createHttpClient(context)
       ..badCertificateCallback = (X509Certificate cert, String host, int port) {
         return kDebugMode;
-      };
+      }
+      ..idleTimeout = const Duration(seconds: 3) // EKLENEN KOD: Boşta kalan (Askıda kalan) bağlantıları 3 saniyede serbest bırakır.
+      ..connectionTimeout = const Duration(seconds: 15); // EKLENEN KOD: İlk bağlantı süresini kısıtlar.
   }
 }
 

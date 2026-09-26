@@ -50,7 +50,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
   Timer? _debounceTimer; 
   
   bool isLoading = false;
-  bool isCreatingJob = false;
+  final ValueNotifier<bool> isCreatingJobNotifier = ValueNotifier<bool>(false);
   final ValueNotifier<bool> _isMapMovingNotifier = ValueNotifier<bool>(false);
   bool _isNavigating = false; 
   bool _isUserPanning = false; 
@@ -307,17 +307,21 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
             });
           }
         } else {
-           if (mounted) setState(() { 
-               _isAddressLoading = false; 
-               _currentAddress = "Seçilen Konum"; 
-           });
+           if (mounted) {
+             setState(() { 
+                 _isAddressLoading = false; 
+                 _currentAddress = "Seçilen Konum"; 
+             });
+           }
         }
       }
     } catch(e) {
-      if (mounted) setState(() { 
-          _isAddressLoading = false; 
-          _currentAddress = "Mevcut Konum"; 
-      });
+      if (mounted) {
+        setState(() { 
+            _isAddressLoading = false; 
+            _currentAddress = "Mevcut Konum"; 
+        });
+      }
     }
   }
 
@@ -342,14 +346,20 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
 
             if (insDate != null) {
               int days = insDate.difference(now).inDays;
-              if (days < 0) tempAlerts.add("$plate: Trafik Sigortası ${days.abs()} gün GECİKTİ!");
-              else if (days <= 15) tempAlerts.add("$plate: Trafik Sigortasına $days gün kaldı.");
+              if (days < 0) {
+                tempAlerts.add("$plate: Trafik Sigortası ${days.abs()} gün GECİKTİ!");
+              } else if (days <= 15) {
+                tempAlerts.add("$plate: Trafik Sigortasına $days gün kaldı.");
+              }
             }
 
             if (inspDate != null) {
               int days = inspDate.difference(now).inDays;
-              if (days < 0) tempAlerts.add("$plate: Muayene süresi ${days.abs()} gün GECİKTİ!");
-              else if (days <= 15) tempAlerts.add("$plate: Muayene bitimine $days gün kaldı.");
+              if (days < 0) {
+                tempAlerts.add("$plate: Muayene süresi ${days.abs()} gün GECİKTİ!");
+              } else if (days <= 15) {
+                tempAlerts.add("$plate: Muayene bitimine $days gün kaldı.");
+              }
             }
           }
 
@@ -877,14 +887,14 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
       return;
     }
 
-    setState(() => isCreatingJob = true);
+    isCreatingJobNotifier.value = true;
     FocusScope.of(context).unfocus(); 
 
     final currentPos = currentPositionNotifier.value;
     final pinPos = _pinLocationNotifier.value;
 
     if (currentPos == null && pinPos == null) {
-      setState(() => isCreatingJob = false);
+      isCreatingJobNotifier.value = false;
       _showTopSnackBar("Konum bilgisine ulaşılamıyor.", isError: true);
       return;
     }
@@ -912,7 +922,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
       );
       
       if (!mounted) return;
-      setState(() => isCreatingJob = false);
+      isCreatingJobNotifier.value = false;
       
       try {
         final data = json.decode(response.body);
@@ -950,7 +960,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
       }
     } catch (e) {
       if (mounted) {
-        setState(() => isCreatingJob = false);
+        isCreatingJobNotifier.value = false;
         _showTopSnackBar("Sunucuyla iletişim kurulamadı, lütfen internet bağlantınızı kontrol edin.", isError: true);
       }
     }
@@ -1625,55 +1635,61 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                                     child: AnimatedBuilder(
                                                       animation: _buttonPulseController,
                                                       builder: (context, child) {
-                                                        return Transform.scale(
-                                                          scale: isCreatingJob ? 0.96 : 1.0 + (_buttonPulseController.value * 0.02),
-                                                          child: Container(
-                                                            decoration: BoxDecoration(
-                                                              borderRadius: BorderRadius.circular(24),
-                                                              color: neonGreen,
-                                                              boxShadow: [
-                                                                BoxShadow(
-                                                                  color: neonGreen.withValues(alpha:0.35 + (_buttonPulseController.value * 0.35)), 
-                                                                  blurRadius: 28 + (_buttonPulseController.value * 12), 
-                                                                  spreadRadius: 2 + (_buttonPulseController.value * 5),
-                                                                  offset: const Offset(0, 8)
-                                                                )
-                                                              ],
-                                                            ),
-                                                            child: ValueListenableBuilder<bool>(
-                                                              valueListenable: _isMapMovingNotifier,
-                                                              builder: (context, isMapMoving, child) {
-                                                                return ElevatedButton(
-                                                                  onPressed: isCreatingJob ? null : _createJobRequest,
-                                                                  style: ElevatedButton.styleFrom(
-                                                                    backgroundColor: Colors.transparent, 
-                                                                    shadowColor: Colors.transparent, 
-                                                                    padding: const EdgeInsets.symmetric(vertical: 20), 
-                                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))
-                                                                  ),
-                                                                  child: isCreatingJob
-                                                                      ? const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 3.5))
-                                                                      : const FittedBox(
-                                                                          child: Row(
-                                                                            mainAxisAlignment: MainAxisAlignment.center,
-                                                                            children: [
-                                                                              Icon(
-                                                                                Icons.cell_tower_rounded, 
-                                                                                color: pureBlack, 
-                                                                                size: 26
-                                                                              ), 
-                                                                              SizedBox(width: 10), 
-                                                                              Text(
-                                                                                "USTA BUL", 
-                                                                                style: TextStyle(fontSize: 18, color: pureBlack, fontWeight: FontWeight.w900, letterSpacing: 1.5)
-                                                                              ) 
-                                                                            ],
-                                                                          ),
-                                                                        ),
-                                                                );
-                                                              }
-                                                            ),
-                                                          ),
+                                                        // Hata veren USTA BUL Butonu ValueListenableBuilder içerisine alındı
+                                                        return ValueListenableBuilder<bool>(
+                                                          valueListenable: isCreatingJobNotifier,
+                                                          builder: (context, isCreatingJob, child) {
+                                                            return Transform.scale(
+                                                              scale: isCreatingJob ? 0.96 : 1.0 + (_buttonPulseController.value * 0.02),
+                                                              child: Container(
+                                                                decoration: BoxDecoration(
+                                                                  borderRadius: BorderRadius.circular(24),
+                                                                  color: neonGreen,
+                                                                  boxShadow: [
+                                                                    BoxShadow(
+                                                                      color: neonGreen.withValues(alpha:0.35 + (_buttonPulseController.value * 0.35)), 
+                                                                      blurRadius: 28 + (_buttonPulseController.value * 12), 
+                                                                      spreadRadius: 2 + (_buttonPulseController.value * 5),
+                                                                      offset: const Offset(0, 8)
+                                                                    )
+                                                                  ],
+                                                                ),
+                                                                child: ValueListenableBuilder<bool>(
+                                                                  valueListenable: _isMapMovingNotifier,
+                                                                  builder: (context, isMapMoving, child) {
+                                                                    return ElevatedButton(
+                                                                      onPressed: isCreatingJob ? null : _createJobRequest,
+                                                                      style: ElevatedButton.styleFrom(
+                                                                        backgroundColor: Colors.transparent, 
+                                                                        shadowColor: Colors.transparent, 
+                                                                        padding: const EdgeInsets.symmetric(vertical: 20), 
+                                                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))
+                                                                      ),
+                                                                      child: isCreatingJob
+                                                                          ? const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 3.5))
+                                                                          : const FittedBox(
+                                                                              child: Row(
+                                                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                                                children: [
+                                                                                  Icon(
+                                                                                    Icons.cell_tower_rounded, 
+                                                                                    color: pureBlack, 
+                                                                                    size: 26
+                                                                                  ), 
+                                                                                  SizedBox(width: 10), 
+                                                                                  Text(
+                                                                                    "USTA BUL", 
+                                                                                    style: TextStyle(fontSize: 18, color: pureBlack, fontWeight: FontWeight.w900, letterSpacing: 1.5)
+                                                                                  ) 
+                                                                                ],
+                                                                              ),
+                                                                            ),
+                                                                    );
+                                                                  }
+                                                                ),
+                                                              ),
+                                                            );
+                                                          }
                                                         );
                                                       }
                                                     ),

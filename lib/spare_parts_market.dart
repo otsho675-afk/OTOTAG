@@ -74,12 +74,12 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
   String searchQuery = "";
   String currentCityFilter = "Tüm Şehirler";
   String currentCategoryFilter = "Tüm Kategoriler";
-  String currentSortFilter = "En Yeni"; // Yeni Eklenen Sıralama Özelliği
+  String currentSortFilter = "En Yeni"; 
   String currentConditionFilter = "Tüm Durumlar"; 
   String currentListingTypeFilter = "Tüm Satış Tipleri"; 
-  String currentModeFilter = "Tümü"; // Sadece Satılık / Sadece Aranan
-  double? minPriceFilter; // Min Fiyat
-  double? maxPriceFilter; // Max Fiyat
+  String currentModeFilter = "Tümü"; 
+  double? minPriceFilter; 
+  double? maxPriceFilter; 
 
   int marketPage = 1;
   int myListingsPage = 1;
@@ -682,6 +682,20 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
       context: context, isScrollControlled: true, useSafeArea: true, backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) {
+          
+          // Çökme Engelleyici Kilit Mekanizması (Güvenli Kapatma)
+          bool isClosing = false;
+          void safeClose() {
+            if (!isClosing) {
+              isClosing = true;
+              Future.microtask(() {
+                if (Navigator.canPop(ctx)) {
+                  Navigator.pop(ctx);
+                }
+              });
+            }
+          }
+
           final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
           Future<void> pickImages() async {
             final ImagePicker picker = ImagePicker();
@@ -715,7 +729,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                             behavior: HitTestBehavior.opaque,
                             onVerticalDragUpdate: (details) {
                               if ((details.primaryDelta ?? 0) > 8) {
-                                Navigator.pop(ctx);
+                                safeClose(); // Güvenli kapatma fonksiyonu kullanıldı
                               }
                             },
                             child: Container(
@@ -736,12 +750,12 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                               onNotification: (notification) {
                                 if (notification is ScrollUpdateNotification) {
                                   if (notification.metrics.pixels < -30 && (notification.scrollDelta ?? 0) < 0) {
-                                    Navigator.pop(ctx);
+                                    safeClose(); // Güvenli kapatma fonksiyonu kullanıldı
                                     return true;
                                   }
                                 } else if (notification is OverscrollNotification) {
                                   if (notification.overscroll < -15) {
-                                    Navigator.pop(ctx);
+                                    safeClose(); // Güvenli kapatma fonksiyonu kullanıldı
                                     return true;
                                   }
                                 }
@@ -774,7 +788,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                           ),
                                         ),
                                         IconButton(
-                                          onPressed: () => Navigator.pop(ctx),
+                                          onPressed: safeClose,
                                           icon: Container(
                                             padding: const EdgeInsets.all(6),
                                             decoration: BoxDecoration(color: Colors.white.withOpacity(0.08), shape: BoxShape.circle),
@@ -1043,7 +1057,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
         
                                     if (mounted) {
                                       if (data['status'] == 'success') {
-                                        Navigator.pop(ctx);
+                                        safeClose();
                                         _showTopSnackBar("İlanınız efsanevi bir şekilde yayınlandı! 🚀");
                                         _fetchAllData();
                                       } else {

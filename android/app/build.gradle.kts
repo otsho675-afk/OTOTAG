@@ -22,7 +22,7 @@ android {
 
     defaultConfig {
         applicationId = "com.oto.tag"
-        minSdk = flutter.minSdkVersion // EKLENDİ: Cihaz uyumluluğunu maksimuma çıkarmak için Android 6.0'a sabitlendi.
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -40,8 +40,12 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
-            isMinifyEnabled = false
-            isShrinkResources = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }
@@ -57,5 +61,5 @@ flutter {
 }
 
 dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }

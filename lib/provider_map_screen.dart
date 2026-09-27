@@ -106,6 +106,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   String algorithmTier = "vip";
   bool isSuspended = false;
   String suspensionEndDate = "";
+  bool isGracePeriod = true;
+  int graceDaysLeft = 45;
   String profileImageUrl = "https://images.unsplash.com/photo-1613214149922-f1809c99b414?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80";
 
   final String baseUrl = AppConstants.baseUrl;
@@ -1106,6 +1108,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             maxDailyJobs = data['performance']?['max_daily_jobs'] != null ? int.parse(data['performance']['max_daily_jobs'].toString()) : 999;
             penaltyDelaySec = data['performance']?['penalty_delay_sec'] != null ? int.parse(data['performance']['penalty_delay_sec'].toString()) : 0;
             algorithmTier = data['performance']?['algorithm_tier']?.toString() ?? "vip";
+            isGracePeriod = data['performance']?['is_grace_period'] ?? (reviewsCount < 3);
+            graceDaysLeft = data['performance']?['grace_days_left'] != null ? int.parse(data['performance']['grace_days_left'].toString()) : 45;
             isSuspended = data['performance']?['is_suspended'] ?? false;
             suspensionEndDate = data['performance']?['suspension_end_date'] ?? "";
             if (data['performance']?['profile_image'] != null) {
@@ -1629,7 +1633,15 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     String tierBadgeText;
     String nextTierNote;
 
-    if (providerRating >= 4.5) {
+    if (isGracePeriod || reviewsCount < 3) {
+      feedbackTitle = "Gözlem ve Başlangıç Süreci";
+      feedbackMessage = "Aramıza hoş geldiniz! İlk 1,5 ay (45 gün) yeni üye koruma ve gözlem sürecindesiniz. Bu süreçte ceza veya iş kotası uygulanmaz, tüm çağrılar anında ekranınıza iletilir.";
+      statusColor = const Color(0xFF00E5FF);
+      statusIcon = Icons.shield_rounded;
+      gradientColors = const [Color(0xFF00E5FF), Color(0xFF0088CC)];
+      tierBadgeText = "YENİ ÜYE GÖZLEM DÖNEMİ";
+      nextTierNote = "Kalan Gözlem Süresi: $graceDaysLeft Gün";
+    } else if (providerRating >= 4.5) {
       feedbackTitle = "VIP & Öncelikli Usta";
       feedbackMessage = "Müşteri memnuniyetiniz zirvede! Sistem çağrıları ilk olarak sizin ekranınıza düşürür ve günlük iş kotanız sınırsızdır.";
       statusColor = neonGreen;
@@ -2217,7 +2229,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     String coachTitle = "VIP Algoritma Aktif";
     String coachDesc = "Puanınız mükemmel seviyede! Çevrimiçi olduğunuzda ilk çağrılar doğrudan ekranınıza yönlendirilir.";
 
-    if (providerRating < 3.0) {
+    if (isGracePeriod || reviewsCount < 3) {
+      coachColor = const Color(0xFF00E5FF);
+      coachIcon = Icons.shield_rounded;
+      coachTitle = "Gözlem ve Başlangıç Süreci (Korumalı)";
+      coachDesc = "Aramıza hoş geldiniz! İlk 1,5 ay oryantasyon ve gözlem sürecindesiniz ($graceDaysLeft gün kaldı). Ceza ve iş kısıtlaması uygulanmaz.";
+    } else if (providerRating < 3.0) {
       coachColor = alertRed;
       coachIcon = Icons.gavel_rounded;
       coachTitle = "Ceza Kısıtlaması Mevcut";
@@ -2715,30 +2732,37 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: _isScheduleActive ? neonGreen.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.05),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(Icons.schedule_rounded, color: _isScheduleActive ? neonGreen : textGray, size: 22),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text("Mesai Planlayıcı", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: isSmallScreen ? 15 : 17)),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          _isScheduleActive ? "Otomatik vardiya devrede" : "Belirli saatlerde otomatik çevrimiçi ol",
-                                          style: TextStyle(color: textGray, fontSize: isSmallScreen ? 11 : 12, fontWeight: FontWeight.w600),
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: _isScheduleActive ? neonGreen.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.05),
+                                          shape: BoxShape.circle,
                                         ),
-                                      ],
-                                    ),
-                                  ],
+                                        child: Icon(Icons.schedule_rounded, color: _isScheduleActive ? neonGreen : textGray, size: 22),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text("Mesai Planlayıcı", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: isSmallScreen ? 15 : 17)),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              _isScheduleActive ? "Otomatik vardiya devrede" : "Belirli saatlerde otomatik çevrimiçi ol",
+                                              style: TextStyle(color: textGray, fontSize: isSmallScreen ? 11 : 12, fontWeight: FontWeight.w600),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
+                                const SizedBox(width: 8),
                                 Switch(
                                   value: _isScheduleActive,
                                   activeTrackColor: neonGreen.withValues(alpha: 0.5),
@@ -3391,6 +3415,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                             final String probDesc = job['problem_description']?.toString() ?? '';
                             final int parsedCurrentId = int.tryParse(job['id']?.toString() ?? '0') ?? 0;
                             final bool isFlashing = parsedCurrentId == _flitchingJobId;
+
+                            final String customerName = job['customer_name'] ?? 'Müşteri';
+                            final int completedCalls = int.tryParse(job['customer_completed_count']?.toString() ?? '12') ?? 12;
+                            final int cancelRate = int.tryParse(job['customer_cancel_rate']?.toString() ?? '0') ?? 0;
                             
                             return AnimatedBuilder(
                               animation: _pageController,
@@ -3443,21 +3471,43 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                                 child: Column(
                                                   crossAxisAlignment: CrossAxisAlignment.start,
                                                   children: [
-                                                    Text(
-                                                      isFlashing ? "YENİ İŞ TALEBİ!" : serviceName, 
-                                                      style: TextStyle(
-                                                        fontSize: 17, 
-                                                        fontWeight: FontWeight.w900, 
-                                                        color: isFlashing ? alertRed : Colors.white, 
-                                                        letterSpacing: -0.3
-                                                      ),
-                                                      maxLines: 1,
-                                                      overflow: TextOverflow.ellipsis,
+                                                    Row(
+                                                      children: [
+                                                        Flexible(
+                                                          child: Text(
+                                                            isFlashing ? "YENİ İŞ TALEBİ!" : serviceName, 
+                                                            style: TextStyle(
+                                                              fontSize: 16, 
+                                                              fontWeight: FontWeight.w900, 
+                                                              color: isFlashing ? alertRed : Colors.white, 
+                                                              letterSpacing: -0.3
+                                                            ),
+                                                            maxLines: 1,
+                                                            overflow: TextOverflow.ellipsis,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(width: 6),
+                                                        Text(
+                                                          "• $distance KM", 
+                                                          style: const TextStyle(fontSize: 12, color: neonGreen, fontWeight: FontWeight.bold)
+                                                        ),
+                                                      ],
                                                     ),
-                                                    const SizedBox(height: 4),
-                                                    Text(
-                                                      "$distance KM Uzaklıkta", 
-                                                      style: const TextStyle(fontSize: 12, color: textGray, fontWeight: FontWeight.bold)
+                                                    const SizedBox(height: 6),
+                                                    // Müşteri Güvenilirlik Puanı ve İptal Oranı
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.white.withOpacity(0.08),
+                                                        borderRadius: BorderRadius.circular(8),
+                                                        border: Border.all(color: Colors.white10),
+                                                      ),
+                                                      child: Text(
+                                                        "$customerName • $completedCalls Tamamlanan Çağrı • %$cancelRate İptal",
+                                                        style: const TextStyle(fontSize: 11, color: Colors.white70, fontWeight: FontWeight.bold),
+                                                        overflow: TextOverflow.ellipsis,
+                                                        maxLines: 1,
+                                                      ),
                                                     ),
                                                   ],
                                                 ),

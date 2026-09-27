@@ -694,6 +694,66 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
     );
   }
 
+  void _showDisputeModal(String jobId) {
+    final TextEditingController reasonController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: panelBlack,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: const BorderSide(color: goldAccent, width: 1.5)),
+        title: const Row(
+          children: [
+            Icon(Icons.gavel_rounded, color: goldAccent, size: 24),
+            SizedBox(width: 8),
+            Text("Değerlendirmeye İtiraz", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("Haksız Puan Koruması: Aracın mevcut mekanik durumu yolda giderilemeyecek boyutta ise ve müşteri bu nedenle haksız puan verdiyse lütfen gerekçenizi yazın.", style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.4)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reasonController,
+              maxLines: 3,
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+              decoration: InputDecoration(
+                hintText: "İtiraz gerekçenizi ve araç durumunu açıklayın...",
+                hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+                filled: true,
+                fillColor: pureBlack,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("İptal", style: TextStyle(color: textGray))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: goldAccent, foregroundColor: Colors.black),
+            onPressed: () async {
+              if (reasonController.text.trim().isEmpty) return;
+              Navigator.pop(ctx);
+              try {
+                await _httpClient.post(
+                  Uri.parse("$baseUrl?action=appeal_rating"),
+                  body: {
+                    "job_id": jobId,
+                    "provider_id": widget.providerId.toString(),
+                    "reason": reasonController.text.trim(),
+                  }
+                );
+                _showTopSnackBar("İtirazınız hakem heyetine iletildi. Puanınız inceleniyor.");
+              } catch (_) {}
+            },
+            child: const Text("İtirazı İlet", style: TextStyle(fontWeight: FontWeight.w900)),
+          )
+        ],
+      )
+    );
+  }
+
   Widget _buildJobCard(Map job, bool isSmallScreen, int index, bool isWideScreen) {
     final bool isCompleted = job['status'] == 'completed';
     final bool isCancelled = job['status'] == 'cancelled';
@@ -839,17 +899,43 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
                               ],
                             ),
                             const SizedBox(height: 10),
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 8 : 10, vertical: isSmallScreen ? 4 : 5),
-                              decoration: BoxDecoration(
-                                color: statusColor.withValues(alpha: 0.1), 
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: statusColor.withValues(alpha: 0.2))
-                              ),
-                              child: Text(
-                                isCompleted ? "Tamamlandı" : (isCancelled ? "İptal Edildi" : "Devam Ediyor"), 
-                                style: TextStyle(color: statusColor, fontWeight: FontWeight.w800, fontSize: isSmallScreen ? 10 : 11),
-                              ),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 8 : 10, vertical: isSmallScreen ? 4 : 5),
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withValues(alpha: 0.1), 
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: statusColor.withValues(alpha: 0.2))
+                                  ),
+                                  child: Text(
+                                    isCompleted ? "Tamamlandı" : (isCancelled ? "İptal Edildi" : "Devam Ediyor"), 
+                                    style: TextStyle(color: statusColor, fontWeight: FontWeight.w800, fontSize: isSmallScreen ? 10 : 11),
+                                  ),
+                                ),
+                                if (isCompleted) ...[
+                                  const SizedBox(width: 8),
+                                  InkWell(
+                                    onTap: () => _showDisputeModal(jobIdStr),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: goldAccent.withOpacity(0.12),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: goldAccent.withOpacity(0.3)),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.shield_outlined, color: goldAccent, size: 12),
+                                          SizedBox(width: 3),
+                                          Text("Puana İtiraz Et", style: TextStyle(color: goldAccent, fontSize: 10, fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
                             )
                           ],
                         ),

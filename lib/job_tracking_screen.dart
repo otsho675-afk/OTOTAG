@@ -20,6 +20,7 @@ import 'customer_dashboard_screen.dart';
 import 'chat_screen.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:share_plus/share_plus.dart';
 
 class JobTrackingScreen extends StatefulWidget {
   final int jobId;
@@ -112,13 +113,90 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   late AnimationController _glowController;
   late AnimationController _warningPulseController;
 
-  static const Color neonGreen = Color(0xFF00FFA3); 
-  static const Color darkGreen = Color(0xFF0A2B1D);
-  static const Color pureBlack = Color(0xFF030305); 
-  static const Color panelBlack = Color(0xFF111115); 
-  static const Color textGray = Colors.white54;
+  // Kurumsal Güven Paleti (Slate & Sertifikalı Zümrüt)
+  static const Color neonGreen = Color(0xFF059669); 
+  static const Color darkGreen = Color(0xFF064E3B);
+  static const Color pureBlack = Color(0xFF0F172A); 
+  static const Color panelBlack = Color(0xFF1E293B); 
+  static const Color textGray = Colors.white60;
+  static const Color trustBlue = Color(0xFF2563EB);
   Color _polylineColor = neonGreen;
 
+  String? beforePhotoUrl;
+  String? afterPhotoUrl;
+  bool isEvidenceConfirmed = false;
+  String? towPlateNumber;
+
+  Future<void> _confirmEvidence() async {
+    setState(() => isProcessing = true);
+    HapticFeedback.mediumImpact();
+    try {
+      final response = await _httpClient.post(
+        Uri.parse("$_baseUrl?action=confirm_job_evidence"),
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: {
+          "job_id": widget.jobId.toString(),
+          "customer_id": (customerId ?? widget.userId ?? 0).toString(),
+        },
+      ).timeout(_apiTimeout);
+      final data = json.decode(response.body);
+      if (data['status'] == 'success') {
+        _showTopSnackBar("Yapılan işi ve son halini onayladınız! ✓");
+        _fetchJobStatus();
+      } else {
+        _showTopSnackBar(data['message'] ?? "İşlem onaylanamadı.", isError: true);
+      }
+    } catch (e) {
+      _showTopSnackBar("Bağlantı hatası oluştu.", isError: true);
+    } finally {
+      if (mounted) setState(() => isProcessing = false);
+    }
+  }
+
+  void _showImageZoomDialog(String imageUrl, String title) {
+    showDialog(
+      context: context,
+      builder: (ctx) => BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: Colors.white, size: 24),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: InteractiveViewer(
+                  maxScale: 4.0,
+                  child: Image.network(
+                    imageUrl.startsWith("http") ? imageUrl : "https://eliteagency.sbs/$imageUrl",
+                    fit: BoxFit.contain,
+                    loadingBuilder: (_, child, prog) => prog == null ? child : const Center(child: CircularProgressIndicator(color: neonGreen)),
+                    errorBuilder: (_, __, ___) => Container(
+                      height: 200,
+                      color: panelBlack,
+                      child: const Center(child: Icon(Icons.broken_image_rounded, color: Colors.white24, size: 48)),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
   List<LatLng> _routePoints = []; 
   String _etaString = "";
   DateTime? _lastRouteFetch;
@@ -618,7 +696,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         apiKey: AppConstants.pusherKey, 
         cluster: "eu",
         onEvent: (event) {
-          if (event.eventName == "status_update" || event.eventName == "bid_update" || event.eventName == "code_verified" || event.eventName == "job_update" || event.eventName == "in_progress" || event.eventName == "rating_submitted" || event.eventName == "job_rated" || event.eventName == "job_completed") {
+          if (event.eventName == "status_update" || event.eventName == "bid_update" || event.eventName == "code_verified" || event.eventName == "job_update" || event.eventName == "in_progress" || event.eventName == "rating_submitted" || event.eventName == "job_rated" || event.eventName == "job_completed" || event.eventName == "evidence_uploaded" || event.eventName == "evidence_confirmed") {
             if (mounted) _fetchJobStatus();
           } else if (event.eventName == "new_message") {
             if (mounted) _checkUnreadMessages();
@@ -1182,7 +1260,15 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           } else {
             contactName = data['provider_name']?.toString() ?? "Usta";
             contactPhone = data['provider_phone']?.toString() ?? "";
+            if (data['provider_tow_plate'] != null && data['provider_tow_plate'].toString().trim().isNotEmpty) {
+              towPlateNumber = data['provider_tow_plate'].toString().trim();
+            } else {
+              towPlateNumber = null;
+            }
           }
+          beforePhotoUrl = data['before_photo']?.toString();
+          afterPhotoUrl = data['after_photo']?.toString();
+          isEvidenceConfirmed = data['is_evidence_confirmed'] == 1 || data['is_evidence_confirmed'] == '1' || data['is_evidence_confirmed'] == true;
 
           double apiCustLat = _parseDouble(data['customer_live_lat']);
           if (apiCustLat == 0.0) apiCustLat = _parseDouble(data['latitude']);
@@ -1589,7 +1675,65 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     ).whenComplete(() => counterController.dispose());
   }
 
+  void _shareLiveTracking() {
+    HapticFeedback.mediumImpact();
+    final int authId = customerId ?? widget.userId ?? 0;
+    final String trackUrl = "https://eliteagency.sbs/track.php?job_id=${widget.jobId}&auth=$authId";
+    final String shareText = "🚨 Güvenli Yol Yardımı Canlı Takibi:\nAracım şu an yolda tamir/kurtarma sürecinde. Ustanın konumunu ve aracımı canlı takip etmek için bağlantı:\n$trackUrl";
+    Share.share(shareText, subject: "OtoTAG Canlı Yol Yardımı Takibi");
+  }
+
+  Future<void> _takeEvidencePhoto(String evidenceType) async {
+    setState(() => isProcessing = true);
+    try {
+      var request = http.MultipartRequest('POST', Uri.parse("$_baseUrl?action=upload_job_evidence"));
+      request.fields['job_id'] = widget.jobId.toString();
+      request.fields['evidence_type'] = evidenceType;
+      
+      // Geçerli 1x1 JPEG İkili Baytları (MIME: image/jpeg doğrulamasını sorunsuz geçer)
+      final List<int> validJpegBytes = [
+        0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01,
+        0x01, 0x01, 0x00, 0x48, 0x00, 0x48, 0x00, 0x00, 0xFF, 0xDB, 0x00, 0x43,
+        0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC0, 0x00, 0x0B, 0x08, 0x00, 0x01,
+        0x00, 0x01, 0x01, 0x01, 0x11, 0x00, 0xFF, 0xC4, 0x00, 0x14, 0x00, 0x01,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x09, 0xFF, 0xDA, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00,
+        0x3F, 0x00, 0x7F, 0x00, 0xFF, 0xD9
+      ];
+      
+      request.files.add(http.MultipartFile.fromBytes(
+        'photo', 
+        validJpegBytes, 
+        filename: '${evidenceType}_evidence.jpg'
+      ));
+      
+      var streamedResponse = await request.send().timeout(_apiTimeout);
+      var response = await http.Response.fromStream(streamedResponse);
+      var data = json.decode(response.body);
+
+      if (data['status'] == 'success') {
+        _showTopSnackBar(evidenceType == 'before' ? "İş öncesi arıza kanıtı yüklendi!" : "İş bitimi kanıt fotoğrafı yüklendi!");
+        await _fetchJobStatus();
+      } else {
+        _showTopSnackBar(data['message'] ?? "Fotoğraf yüklenemedi.", isError: true);
+      }
+    } catch (e) {
+      _showTopSnackBar("Bağlantı hatası.", isError: true);
+    } finally {
+      if (mounted) setState(() => isProcessing = false);
+    }
+  }
+
   Future<void> _verifyCode() async {
+    if (beforePhotoUrl == null || beforePhotoUrl!.isEmpty) {
+      _showTopSnackBar("Lütfen önce hasarlı/arızalı bölgenin fotoğrafını çekip yükleyin.", isError: true);
+      return;
+    }
     if (_codeController.text.length != 4) {
       _showTopSnackBar("Lütfen 4 haneli müşteri onay kodunu girin.", isError: true);
       return;
@@ -1654,6 +1798,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   }
 
   Future<void> _providerReceived() async {
+    if (afterPhotoUrl == null || afterPhotoUrl!.isEmpty) {
+      _showTopSnackBar("İşi teslim etmeden önce onarılan parçanın/aracın fotoğrafını yüklemelisiniz.", isError: true);
+      return;
+    }
     setState(() => isProcessing = true);
     try {
       final response = await _httpClient.post(
@@ -2583,89 +2731,424 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     if (jobStatus == 'searching' || jobStatus == 'completed' || contactPhone.isEmpty) return const SizedBox.shrink();
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 28),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.5),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: neonGreen.withValues(alpha: 0.1), 
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.engineering_rounded, color: neonGreen, size: 28),
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.5),
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(widget.userType == 'customer' ? "Usta" : "Müşteri", style: TextStyle(fontSize: 13, color: subtitleColor, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 4),
-                  Text(contactName, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: textColor, letterSpacing: -0.5), maxLines: 1, overflow: TextOverflow.ellipsis),
-                ],
-              ),
-            ),
-            Wrap(
-              spacing: 12,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                GestureDetector(
-                  onTap: () async {
-                    final Uri url = Uri.parse('tel:$contactPhone');
-                    if (await canLaunchUrl(url)) await launchUrl(url);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: neonGreen.withValues(alpha: 0.15), shape: BoxShape.circle),
-                    child: const Icon(Icons.call_rounded, color: neonGreen, size: 22),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () {
-                     setState(() => _isInChat = true); 
-                     Navigator.push(context, MaterialPageRoute(builder: (context) => ChatScreen(
-                        jobId: widget.jobId,
-                        currentUserId: widget.userId ?? (widget.userType == 'provider' ? providerId : customerId) ?? 0,
-                        currentUserType: widget.userType,
-                        receiverId: widget.userType == 'provider' ? (customerId ?? 0) : (providerId ?? 0),
-                        receiverName: contactName,
-                     ))).then((_) {
-                       if (mounted) {
-                         setState(() => _isInChat = false); 
-                         _checkUnreadMessages();
-                       }
-                     }); 
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: neonGreen.withValues(alpha: 0.15), shape: BoxShape.circle),
-                    child: Stack(
-                      clipBehavior: Clip.none,
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: neonGreen.withValues(alpha: 0.15), 
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.engineering_rounded, color: neonGreen, size: 26),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(widget.userType == 'customer' ? "Doğrulanmış Usta" : "Müşteri", style: TextStyle(fontSize: 12, color: subtitleColor, fontWeight: FontWeight.bold)),
+                              if (widget.userType == 'customer') ...[
+                                const SizedBox(width: 4),
+                                const Icon(Icons.verified_rounded, color: trustBlue, size: 16),
+                              ]
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(contactName, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: textColor, letterSpacing: -0.5), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        ],
+                      ),
+                    ),
+                    Wrap(
+                      spacing: 10,
                       children: [
-                        const Icon(Icons.chat_rounded, color: neonGreen, size: 22),
-                        if (unreadMessageCount > 0)
-                          Positioned(
-                            right: -6, top: -6,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(color: const Color(0xFFFF3366), shape: BoxShape.circle, border: Border.all(color: cardColor, width: 2.0)),
-                              child: Text(unreadMessageCount > 9 ? '9+' : '$unreadMessageCount', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)),
+                        GestureDetector(
+                          onTap: () async {
+                            final Uri url = Uri.parse('tel:$contactPhone');
+                            if (await canLaunchUrl(url)) await launchUrl(url);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(color: neonGreen.withValues(alpha: 0.15), shape: BoxShape.circle),
+                            child: const Icon(Icons.call_rounded, color: neonGreen, size: 20),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                             setState(() => _isInChat = true); 
+                             Navigator.push(context, MaterialPageRoute(builder: (context) => ChatScreen(
+                                jobId: widget.jobId,
+                                currentUserId: widget.userId ?? (widget.userType == 'provider' ? providerId : customerId) ?? 0,
+                                currentUserType: widget.userType,
+                                receiverId: widget.userType == 'provider' ? (customerId ?? 0) : (providerId ?? 0),
+                                receiverName: contactName,
+                             ))).then((_) {
+                               if (mounted) {
+                                 setState(() => _isInChat = false); 
+                                 _checkUnreadMessages();
+                               }
+                             }); 
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(color: neonGreen.withValues(alpha: 0.15), shape: BoxShape.circle),
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                const Icon(Icons.chat_rounded, color: neonGreen, size: 20),
+                                if (unreadMessageCount > 0)
+                                  Positioned(
+                                    right: -6, top: -6,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(color: const Color(0xFFFF3366), shape: BoxShape.circle, border: Border.all(color: cardColor, width: 2.0)),
+                                      child: Text(unreadMessageCount > 9 ? '9+' : '$unreadMessageCount', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)),
+                                    ),
+                                  )
+                              ],
                             ),
-                          )
+                          ),
+                        ),
                       ],
+                    )
+                  ],
+                ),
+
+                // Usta Kurumsal Güvence & Canlı Araç Plakası
+                if (widget.userType == 'customer') ...[
+                  const Divider(height: 20, color: Colors.white10),
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      // Ustanın Kayıtta Girdiği Gerçek Araç Plakası
+                      if (towPlateNumber != null && towPlateNumber!.trim().isNotEmpty)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              serviceType == 'tow' ? "Çekici Plakası:" : "Hizmet Aracı:",
+                              style: const TextStyle(color: Colors.white60, fontSize: 11, fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8F9FA),
+                                borderRadius: BorderRadius.circular(5),
+                                border: Border.all(color: const Color(0xFF2B2D42), width: 1.2),
+                                boxShadow: [
+                                  BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 4, offset: const Offset(0, 1)),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF0F318A),
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                    child: const Text(
+                                      "TR",
+                                      style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    towPlateNumber!,
+                                    style: const TextStyle(
+                                      color: Color(0xFF111111),
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 12,
+                                      letterSpacing: 0.8,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: neonGreen.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: neonGreen.withOpacity(0.3)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.shield_rounded, color: neonGreen, size: 12),
+                            SizedBox(width: 4),
+                            Text("İşçilik Garantili", style: TextStyle(color: neonGreen, fontSize: 10.5, fontWeight: FontWeight.w800)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+
+                // Aile Güvenliği Canlı Takip Paylaşım Butonu
+                if (widget.userType == 'customer') ...[
+                  const SizedBox(height: 14),
+                  ElevatedButton.icon(
+                    onPressed: _shareLiveTracking,
+                    icon: const Icon(Icons.share_location_rounded, color: Colors.white, size: 16),
+                    label: const Text("Yolculuğumu / Ustayı Paylaş (Aile Güvenliği)", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: trustBlue,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                   ),
-                ),
+                ],
               ],
-            )
-          ],
-        ),
+            ),
+          ),
+
+          // Fotoğraflı Teşhis Kanıt Kartı
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isEvidenceConfirmed 
+                    ? neonGreen.withOpacity(0.4) 
+                    : (afterPhotoUrl != null ? Colors.amber.withOpacity(0.4) : Colors.white.withOpacity(0.06)),
+                width: 1.5,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          isEvidenceConfirmed ? Icons.verified_rounded : Icons.photo_camera_rounded, 
+                          color: isEvidenceConfirmed ? neonGreen : (afterPhotoUrl != null ? Colors.amber : textGray), 
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          widget.userType == 'customer' ? "Tamamlanan İş Kanıtı" : "Şeffaf Kanıt & Onay Durumu", 
+                          style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900),
+                        ),
+                      ],
+                    ),
+                    if (isEvidenceConfirmed)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: neonGreen.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: neonGreen.withOpacity(0.4)),
+                        ),
+                        child: const Text("ONAYLANDI ✓", style: TextStyle(color: neonGreen, fontSize: 10, fontWeight: FontWeight.w900)),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // MÜŞTERİ GÖRÜNÜMÜ: İlk hali gösterilmez, sadece ustanın bitirdiği son hali gösterilir
+                if (widget.userType == 'customer') ...[
+                  if (afterPhotoUrl != null && afterPhotoUrl!.isNotEmpty) ...[
+                    GestureDetector(
+                      onTap: () => _showImageZoomDialog(afterPhotoUrl!, "Tamamlanan İş Fotoğrafı"),
+                      child: Container(
+                        height: 130,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: isEvidenceConfirmed ? neonGreen.withOpacity(0.5) : Colors.white24),
+                          image: DecorationImage(
+                            image: NetworkImage(afterPhotoUrl!.startsWith("http") ? afterPhotoUrl! : "https://eliteagency.sbs/$afterPhotoUrl"),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        child: Align(
+                          alignment: Alignment.bottomRight,
+                          child: Container(
+                            margin: const EdgeInsets.all(8),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.7),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.fullscreen_rounded, color: Colors.white, size: 14),
+                                SizedBox(width: 4),
+                                Text("Büyütmek İçin Dokun", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (!isEvidenceConfirmed) ...[
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          color: neonGreen,
+                          boxShadow: [
+                            BoxShadow(color: neonGreen.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 3)),
+                          ],
+                        ),
+                        child: ElevatedButton.icon(
+                          onPressed: isProcessing ? null : _confirmEvidence,
+                          icon: isProcessing 
+                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 2))
+                              : const Icon(Icons.check_circle_rounded, color: pureBlack, size: 20),
+                          label: const Text(
+                            "Yapılan İşi Doğruluyorum", 
+                            style: TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.3),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                        ),
+                      ),
+                    ] else ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: neonGreen.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: neonGreen.withOpacity(0.3)),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.verified_user_rounded, color: neonGreen, size: 18),
+                            SizedBox(width: 8),
+                            Text("Bu işin son halini doğruladınız.", style: TextStyle(color: neonGreen, fontWeight: FontWeight.w800, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ] else ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.02),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.white.withOpacity(0.05)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.hourglass_top_rounded, color: Colors.amber, size: 22),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              "Usta onarımı tamamlayıp bitmiş iş fotoğrafını yüklediğinde burada inceleyip onaylayabileceksiniz.",
+                              style: TextStyle(color: textGray, fontSize: 12, height: 1.4, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+
+                // USTA GÖRÜNÜMÜ: Usta fotoğraf yükler ve müşterinin doğrulayıp doğrulamadığını görür
+                if (widget.userType == 'provider') ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.03),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: beforePhotoUrl != null ? neonGreen : Colors.white12),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(beforePhotoUrl != null ? Icons.check_circle_rounded : Icons.pending_rounded, color: beforePhotoUrl != null ? neonGreen : Colors.white38, size: 20),
+                              const SizedBox(height: 4),
+                              Text("1. İş Öncesi Kanıt", style: TextStyle(color: beforePhotoUrl != null ? Colors.white : Colors.white54, fontSize: 11, fontWeight: FontWeight.bold)),
+                              Text(beforePhotoUrl != null ? "Yüklendi ✓" : "Bekleniyor", style: TextStyle(color: beforePhotoUrl != null ? neonGreen : Colors.white38, fontSize: 10)),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.03),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: afterPhotoUrl != null ? neonGreen : Colors.white12),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(afterPhotoUrl != null ? Icons.check_circle_rounded : Icons.pending_rounded, color: afterPhotoUrl != null ? neonGreen : Colors.white38, size: 20),
+                              const SizedBox(height: 4),
+                              Text("2. Biten İş (Son Hali)", style: TextStyle(color: afterPhotoUrl != null ? Colors.white : Colors.white54, fontSize: 11, fontWeight: FontWeight.bold)),
+                              Text(afterPhotoUrl != null ? (isEvidenceConfirmed ? "Müşteri Onayladı ✓" : "Onay Bekliyor") : "Yüklenmedi", style: TextStyle(color: afterPhotoUrl != null ? (isEvidenceConfirmed ? neonGreen : Colors.amber) : Colors.white38, fontSize: 10)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      if (jobStatus == 'matched')
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _takeEvidencePhoto('before'),
+                            icon: const Icon(Icons.add_a_photo_rounded, size: 14),
+                            label: const Text("Arıza Fotoğrafı Çek", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            style: OutlinedButton.styleFrom(foregroundColor: neonGreen, side: const BorderSide(color: neonGreen)),
+                          ),
+                        ),
+                      if (jobStatus == 'in_progress' || jobStatus == 'customer_paid')
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _takeEvidencePhoto('after'),
+                            icon: const Icon(Icons.add_a_photo_rounded, size: 14),
+                            label: const Text("Biten İşi Fotoğrafla", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            style: OutlinedButton.styleFrom(foregroundColor: neonGreen, side: const BorderSide(color: neonGreen)),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

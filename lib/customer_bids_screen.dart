@@ -85,10 +85,11 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     "🎯 Radara yeni bir teklif sinyali yaklaşıyor...",
   ];
 
-  // Tasarım renk paleti
-  final Color _bgColor = const Color(0xFF030305);
-  final Color _primaryColor = const Color(0xFF00FFA3);
-  final Color _cardColor = const Color(0xFF111115);
+  // Kurumsal Güven Renk Paleti (Slate & Sertifikalı Zümrüt Yeşili)
+  final Color _bgColor = const Color(0xFF0F172A); // Gece Mavisi / Deep Slate
+  final Color _primaryColor = const Color(0xFF059669); // Sertifikalı Zümrüt Yeşili
+  final Color _cardColor = const Color(0xFF1E293B); // Kurumsal Slate Kartı
+  final Color _trustBlue = const Color(0xFF2563EB); // Doğrulama Kraliyet Mavisi
 
   @override
   void initState() {
@@ -1264,15 +1265,55 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     );
   }
 
+  IconData _getBadgeIcon(String iconName) {
+    switch (iconName) {
+      case 'fiber_new_rounded': return Icons.fiber_new_rounded;
+      case 'verified_rounded': return Icons.verified_rounded;
+      case 'military_tech_rounded': return Icons.military_tech_rounded;
+      case 'workspace_premium_rounded': return Icons.workspace_premium_rounded;
+      case 'star_rounded': return Icons.star_rounded;
+      case 'auto_awesome_rounded': return Icons.auto_awesome_rounded;
+      case 'shield_rounded': return Icons.shield_rounded;
+      case 'fact_check_rounded': return Icons.fact_check_rounded;
+      case 'local_fire_department_rounded': return Icons.local_fire_department_rounded;
+      case 'bolt_rounded': return Icons.bolt_rounded;
+      case 'nightlight_round': return Icons.nightlight_round;
+      case 'check_circle_rounded': return Icons.check_circle_rounded;
+      case 'car_repair_rounded': return Icons.car_repair_rounded;
+      case 'local_shipping_rounded': return Icons.local_shipping_rounded;
+      case 'tire_repair_rounded': return Icons.tire_repair_rounded;
+      case 'sync_problem_rounded': return Icons.sync_problem_rounded;
+      case 'local_car_wash_rounded': return Icons.local_car_wash_rounded;
+      case 'water_drop_rounded': return Icons.water_drop_rounded;
+      case 'build_rounded': return Icons.build_rounded;
+      case 'settings_suggest_rounded': return Icons.settings_suggest_rounded;
+      default: return Icons.verified_user_rounded;
+    }
+  }
+
+  Color _parseBadgeColor(String? colorStr, {Color fallback = const Color(0xFF00FFA3)}) {
+    if (colorStr == null || colorStr.isEmpty) return fallback;
+    try {
+      return Color(int.parse(colorStr));
+    } catch (_) {
+      return fallback;
+    }
+  }
+
   Widget _buildBidCard(Map bid, int index, bool isSmallScreen) {
-        final int bidId = int.tryParse(bid['bid_id']?.toString() ?? '0') ?? 0;
-        final int providerId = int.tryParse(bid['provider_id']?.toString() ?? '0') ?? 0;
-        final double priceVal = double.tryParse(bid['amount']?.toString() ?? '0') ?? 0;
-        final String displayPrice = priceVal > 0 ? "${priceVal.toStringAsFixed(0)} ₺" : "Belirtilmedi";
-        final String providerName = bid['provider_name'] ?? 'Bilinmeyen Usta';
-        final String rating = bid['average_rating']?.toString() ?? '5.0';
-        final String estimatedTime = bid['estimated_time']?.toString() ?? '30';
-        final String note = bid['provider_note']?.toString() ?? '';
+    final int bidId = int.tryParse(bid['bid_id']?.toString() ?? '0') ?? 0;
+    final int providerId = int.tryParse(bid['provider_id']?.toString() ?? '0') ?? 0;
+    final double priceVal = double.tryParse(bid['amount']?.toString() ?? '0') ?? 0;
+    final String displayPrice = priceVal > 0 ? "${priceVal.toStringAsFixed(0)} ₺" : "Belirtilmedi";
+    final String providerName = bid['provider_name'] ?? 'Bilinmeyen Usta';
+    final String rating = bid['average_rating']?.toString() ?? '5.0';
+    final String estimatedTime = bid['estimated_time']?.toString() ?? '15';
+    final String note = bid['provider_note']?.toString() ?? '';
+    final int completedCount = int.tryParse(bid['completed_jobs_count']?.toString() ?? '0') ?? 0;
+    final String? towPlate = (bid['tow_plate'] != null && bid['tow_plate'].toString().trim().isNotEmpty)
+        ? bid['tow_plate'].toString().trim()
+        : null;
+
     final int negCount = int.tryParse(bid['negotiation_count']?.toString() ?? '0') ?? 0;
     final String lastBidder = bid['last_bidder']?.toString() ?? 'provider';
     final bool canNegotiate = negCount < 2 && lastBidder == 'provider';
@@ -1281,31 +1322,36 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     final bool isBestMatch = index == _bestMatchIndex;
     final bool isCheapest = index == _cheapestIndex;
 
+    final List rawBadges = (bid['badges'] is List) ? bid['badges'] : [];
+
     double startAnim = (index * 0.1).clamp(0.0, 1.0);
     double endAnim = (startAnim + 0.35).clamp(0.0, 1.0);
 
     return SlideTransition(
       position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero).animate(
-        CurvedAnimation(parent: _listAnimController, curve: Interval(startAnim, endAnim, curve: Curves.easeOutBack))
+        CurvedAnimation(parent: _listAnimController, curve: Interval(startAnim, endAnim, curve: Curves.easeOutBack)),
       ),
       child: Container(
-        padding: EdgeInsets.all(isSmallScreen ? 16 : 20), 
+        padding: EdgeInsets.all(isSmallScreen ? 14 : 18),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.03),
+          color: const Color(0xFF1E293B).withOpacity(0.95),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isBestMatch ? const Color(0xFFF59E0B).withOpacity(0.5) : (isCheapest ? const Color(0xFF3B82F6).withOpacity(0.5) : Colors.white.withOpacity(0.05)), 
-            width: (isBestMatch || isCheapest) ? 2 : 1
+            color: isBestMatch
+                ? const Color(0xFFF59E0B).withOpacity(0.8)
+                : (isCheapest ? const Color(0xFF3B82F6).withOpacity(0.8) : Colors.white.withOpacity(0.08)),
+            width: (isBestMatch || isCheapest) ? 1.8 : 1.2,
           ),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 8)),
-            if (isBestMatch) BoxShadow(color: const Color(0xFFF59E0B).withOpacity(0.1), blurRadius: 30, spreadRadius: -5),
-            if (isCheapest) BoxShadow(color: const Color(0xFF3B82F6).withOpacity(0.1), blurRadius: 30, spreadRadius: -5),
+            BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 16, offset: const Offset(0, 8)),
+            if (isBestMatch) BoxShadow(color: const Color(0xFFF59E0B).withOpacity(0.15), blurRadius: 28),
           ],
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 GestureDetector(
                   onTap: () {
@@ -1313,63 +1359,182 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                     Navigator.push(context, MaterialPageRoute(builder: (_) => ProviderProfileScreen(providerId: providerId)));
                   },
                   child: Container(
-                    padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
+                    width: isSmallScreen ? 50 : 58,
+                    height: isSmallScreen ? 50 : 58,
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.05),
                       shape: BoxShape.circle,
-                      border: Border.all(color: isBestMatch ? const Color(0xFFF59E0B) : (isCheapest ? const Color(0xFF3B82F6) : Colors.white.withOpacity(0.1))),
+                      border: Border.all(
+                        color: isBestMatch ? const Color(0xFFF59E0B) : Colors.white.withOpacity(0.2),
+                        width: 1.5,
+                      ),
                     ),
-                    child: Icon(Icons.person_rounded, color: Colors.white, size: isSmallScreen ? 22 : 26),
+                    child: Icon(Icons.person_rounded, color: Colors.white, size: isSmallScreen ? 28 : 32),
                   ),
                 ),
-                SizedBox(width: isSmallScreen ? 12 : 16),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(providerName, style: TextStyle(fontSize: isSmallScreen ? 15 : 17, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.3), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              providerName,
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 16 : 18,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                letterSpacing: -0.3,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Icon(Icons.verified_rounded, color: _trustBlue, size: 18),
+                          if (towPlate != null) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8F9FA),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: const Color(0xFF2B2D42), width: 1.0),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF0F318A),
+                                      borderRadius: BorderRadius.circular(1.5),
+                                    ),
+                                    child: const Text("TR", style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900)),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    towPlate,
+                                    style: const TextStyle(color: Color(0xFF111111), fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 0.5),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                       const SizedBox(height: 8),
+
                       Wrap(
-                        spacing: 8,
+                        spacing: 6,
+                        runSpacing: 6,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF59E0B).withOpacity(0.15), 
-                              borderRadius: BorderRadius.circular(8), 
-                              border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.3))
+                              color: const Color(0xFFF59E0B).withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.4)),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 14),
-                                const SizedBox(width: 4),
+                                const SizedBox(width: 3),
                                 Text(rating, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: Color(0xFFF59E0B))),
                               ],
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF3B82F6).withOpacity(0.15), 
-                              borderRadius: BorderRadius.circular(8), 
-                              border: Border.all(color: const Color(0xFF3B82F6).withOpacity(0.3))
+                              color: const Color(0xFF059669).withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFF059669).withOpacity(0.4)),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.timer_rounded, color: Color(0xFF3B82F6), size: 14),
-                                const SizedBox(width: 4),
-                                Text("$estimatedTime Dk", style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: Color(0xFF3B82F6))),
-                              ],
+                            child: Text(
+                              completedCount > 0 ? "$completedCount+ Başarılı Yardım" : "Doğrulanmış Usta",
+                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Color(0xFF00FFA3)),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                            decoration: BoxDecoration(
+                              color: _trustBlue.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: _trustBlue.withOpacity(0.4)),
+                            ),
+                            child: Text(
+                              "$estimatedTime Dk • %98 Zamanında",
+                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Color(0xFF60A5FA)),
                             ),
                           ),
                         ],
                       ),
+
+                      const SizedBox(height: 10),
+
+                      if (rawBadges.isNotEmpty)
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: rawBadges.map<Widget>((bData) {
+                            final String title = bData['title'] ?? '';
+                            final String iconName = bData['icon'] ?? '';
+                            final Color badgeColor = _parseBadgeColor(bData['color']);
+
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: badgeColor.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: badgeColor.withOpacity(0.3), width: 1.0),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(_getBadgeIcon(iconName), color: badgeColor, size: 13),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    title,
+                                    style: TextStyle(color: badgeColor, fontSize: 10.5, fontWeight: FontWeight.w800),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        )
+                      else
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: const [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.shield_rounded, color: Color(0xFF059669), size: 13),
+                                SizedBox(width: 3),
+                                Text("İşçilik Garantili", style: TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.receipt_long_rounded, color: Color(0xFFF59E0B), size: 13),
+                                SizedBox(width: 3),
+                                Text("Kayıtlı Sanayi Esnafı", style: TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ],
+                        ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 8),
+
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -1378,15 +1543,16 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                         margin: const EdgeInsets.only(bottom: 6),
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF59E0B).withOpacity(0.15),
+                          color: const Color(0xFFF59E0B).withOpacity(0.18),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.5)),
+                          border: Border.all(color: const Color(0xFFF59E0B)),
                         ),
                         child: const Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(Icons.auto_awesome_rounded, color: Color(0xFFF59E0B), size: 12),
                             SizedBox(width: 4),
-                            Text("EN İYİ", style: TextStyle(color: Color(0xFFF59E0B), fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                            Text("EN İYİ", style: TextStyle(color: Color(0xFFF59E0B), fontSize: 10, fontWeight: FontWeight.w900)),
                           ],
                         ),
                       )
@@ -1395,92 +1561,101 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                         margin: const EdgeInsets.only(bottom: 6),
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF3B82F6).withOpacity(0.15),
+                          color: const Color(0xFF3B82F6).withOpacity(0.18),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFF3B82F6).withOpacity(0.5)),
+                          border: Border.all(color: const Color(0xFF3B82F6)),
                         ),
                         child: const Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(Icons.savings_rounded, color: Color(0xFF3B82F6), size: 12),
                             SizedBox(width: 4),
-                            Text("EN UCUZ", style: TextStyle(color: Color(0xFF3B82F6), fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                            Text("EN UCUZ", style: TextStyle(color: Color(0xFF3B82F6), fontSize: 10, fontWeight: FontWeight.w900)),
                           ],
                         ),
                       ),
                     const Text("Teklif", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white54)),
                     const SizedBox(height: 2),
                     FittedBox(
-                      fit: BoxFit.scaleDown, 
+                      fit: BoxFit.scaleDown,
                       child: Text(
-                        displayPrice, 
+                        displayPrice,
                         style: TextStyle(
-                          fontSize: priceVal > 0 ? ((isBestMatch || isCheapest) ? 24 : 22) : 16, 
-                          fontWeight: FontWeight.w900, 
-                          color: isBestMatch ? const Color(0xFFF59E0B) : (isCheapest ? const Color(0xFF3B82F6) : Colors.white), 
-                          letterSpacing: -1.0,
-                        )
+                          fontSize: priceVal > 0 ? (isBestMatch ? 24 : 22) : 16,
+                          fontWeight: FontWeight.w900,
+                          color: isBestMatch ? const Color(0xFFF59E0B) : Colors.white,
+                          letterSpacing: -0.5,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ],
             ),
+
             if (note.isNotEmpty) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
               Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.02), 
-                  borderRadius: BorderRadius.circular(16), 
-                  border: Border.all(color: Colors.white.withOpacity(0.05))
+                  color: Colors.white.withOpacity(0.02),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.white.withOpacity(0.04)),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.format_quote_rounded, size: 20, color: _primaryColor.withOpacity(0.7)),
-                    const SizedBox(width: 12),
-                    Expanded(child: Text(note, style: const TextStyle(color: Colors.white70, fontSize: 13, fontStyle: FontStyle.italic, height: 1.5, fontWeight: FontWeight.w400), maxLines: 2, overflow: TextOverflow.ellipsis)),
+                    const Icon(Icons.format_quote_rounded, size: 18, color: Color(0xFF00FFA3)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        note,
+                        style: const TextStyle(color: Colors.white70, fontSize: 12, fontStyle: FontStyle.italic),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ],
                 ),
               ),
             ],
+
             const SizedBox(height: 16),
+
             if (isWaitingProvider)
               Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF59E0B).withOpacity(0.1), 
-                  borderRadius: BorderRadius.circular(16), 
-                  border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.3), width: 1)
+                  color: const Color(0xFFF59E0B).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.3)),
                 ),
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.hourglass_top_rounded, color: Color(0xFFF59E0B), size: 22),
-                    SizedBox(width: 10),
-                    Expanded(child: Text("Ustanın yanıtı bekleniyor...", style: TextStyle(color: Color(0xFFF59E0B), fontWeight: FontWeight.w800, fontSize: 14), overflow: TextOverflow.ellipsis)),
+                    Icon(Icons.hourglass_top_rounded, color: Color(0xFFF59E0B), size: 20),
+                    SizedBox(width: 8),
+                    Text("Ustanın yanıtı bekleniyor...", style: TextStyle(color: Color(0xFFF59E0B), fontWeight: FontWeight.w800, fontSize: 13)),
                   ],
                 ),
               )
             else
-              Row( 
+              Row(
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      icon: Icon(canNegotiate ? Icons.handshake_rounded : Icons.person_search_rounded, size: 18),
-                      onPressed: canNegotiate 
-                          ? () => _showCounterBidDialog(bidId, displayPrice) 
+                      icon: Icon(canNegotiate ? Icons.handshake_rounded : Icons.person_search_rounded, size: 16),
+                      onPressed: canNegotiate
+                          ? () => _showCounterBidDialog(bidId, displayPrice)
                           : () {
                               HapticFeedback.selectionClick();
                               Navigator.push(context, MaterialPageRoute(builder: (_) => ProviderProfileScreen(providerId: providerId)));
                             },
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
-                        side: BorderSide(color: canNegotiate ? _primaryColor : Colors.white24, width: 1.5),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: BorderSide(color: canNegotiate ? const Color(0xFF00FFA3) : Colors.white24, width: 1.5),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        foregroundColor: canNegotiate ? _primaryColor : Colors.white70,
+                        foregroundColor: canNegotiate ? const Color(0xFF00FFA3) : Colors.white70,
                       ),
                       label: FittedBox(child: Text(canNegotiate ? "Pazarlık" : "Profili İncele", style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13))),
                     ),
@@ -1492,15 +1667,15 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                         icon: isProcessing ? const SizedBox.shrink() : const Icon(Icons.verified_rounded, color: Colors.black, size: 18),
                         onPressed: isProcessing ? null : () => _acceptBid(bidId, providerId, bid['amount'].toString()),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _primaryColor,
+                          backgroundColor: const Color(0xFF00FFA3),
                           foregroundColor: Colors.black,
                           elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
                         label: isProcessing
                             ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2.5))
-                            : const FittedBox(child: Text("Kabul Et", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 13))),
+                            : const FittedBox(child: Text("Kabul Et", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 14))),
                       ),
                     ),
                   ],

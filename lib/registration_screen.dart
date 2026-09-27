@@ -39,6 +39,68 @@ class SmartIbanFormatter extends TextInputFormatter {
   }
 }
 
+// Türk Plaka Formatlayıcı (42 TAG 403)
+class TurkishPlateFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    String text = newValue.text
+        .toUpperCase()
+        .replaceAll('İ', 'I')
+        .replaceAll(RegExp(r'[^A-Z0-9]'), '');
+        
+    if (text.isEmpty) return newValue.copyWith(text: '');
+
+    final StringBuffer sb = StringBuffer();
+    int i = 0;
+
+    // 1. İl Kodu (İlk 2 hane rakam - Örn: 42)
+    while (i < text.length && i < 2) {
+      if (RegExp(r'[0-9]').hasMatch(text[i])) {
+        sb.write(text[i]);
+        i++;
+      } else {
+        break;
+      }
+    }
+
+    // 2. Harf Grubu (1 - 3 harf - Örn: TAG)
+    if (i < text.length) {
+      if (sb.length == 2) sb.write(' ');
+      int letterCount = 0;
+      while (i < text.length && letterCount < 3) {
+        if (RegExp(r'[A-Z]').hasMatch(text[i])) {
+          sb.write(text[i]);
+          i++;
+          letterCount++;
+        } else {
+          break;
+        }
+      }
+    }
+
+    // 3. Rakam Grubu (2 - 4 hane rakam - Örn: 403)
+    if (i < text.length) {
+      sb.write(' ');
+      int digitCount = 0;
+      while (i < text.length && digitCount < 4) {
+        if (RegExp(r'[0-9]').hasMatch(text[i])) {
+          sb.write(text[i]);
+          i++;
+          digitCount++;
+        } else {
+          i++;
+        }
+      }
+    }
+
+    final formatted = sb.toString();
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
 // Akıllı Telefon Formatlayıcı
 class SmartPhoneFormatter extends TextInputFormatter {
   @override
@@ -84,11 +146,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _ibanController = TextEditingController();
+  final TextEditingController _plateController = TextEditingController();
   
   final FocusNode _nameFocus = FocusNode();
   final FocusNode _phoneFocus = FocusNode();
   final FocusNode _passwordFocus = FocusNode();
   final FocusNode _ibanFocus = FocusNode();
+  final FocusNode _plateFocus = FocusNode();
   
   String _selectedService = 'mechanic';
   String? _selectedCity;
@@ -138,10 +202,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     _phoneController.dispose();
     _passwordController.dispose();
     _ibanController.dispose();
+    _plateController.dispose();
     _nameFocus.dispose();
     _phoneFocus.dispose();
     _passwordFocus.dispose();
     _ibanFocus.dispose();
+    _plateFocus.dispose();
     super.dispose();
   }
 
@@ -459,6 +525,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         return;
       }
 
+      String cleanPlate = _plateController.text.trim().toUpperCase();
+      if (cleanPlate.isEmpty || cleanPlate.length < 5) {
+        HapticFeedback.vibrate();
+        _showCustomSnackBar('Lütfen geçerli bir araç/çekici plakası giriniz (Örn: 42 TAG 403).', isError: true);
+        return;
+      }
+
       if (_selectedService == 'wash') {
         if (_driverLicense == null || _vehiclePhoto == null || _equipmentPhoto == null) {
           HapticFeedback.vibrate();
@@ -485,6 +558,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         request.fields['user_type'] = widget.userType;
         request.fields['service_category'] = _selectedService;
         request.fields['iban'] = _ibanController.text.replaceAll(' ', '').toUpperCase();
+        request.fields['tow_plate'] = _plateController.text.trim().toUpperCase();
         request.fields['city'] = _selectedCity!;
         request.fields['oauth_provider'] = _currentOauthProvider ?? '';
         request.fields['oauth_id'] = _currentOauthId ?? '';
@@ -826,17 +900,31 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   if (isSelected)
                     ClipRRect(
                       borderRadius: BorderRadius.circular(10),
-                      child: Image.file(
-                        File(file.path),
-                        width: 44,
-                        height: 44,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          width: 44, height: 44,
-                          color: neonGreen.withValues(alpha: 0.2),
-                          child: const Icon(Icons.image, color: neonGreen, size: 20),
-                        ),
-                      ),
+                      child: kIsWeb
+                          ? Image.network(
+                              file.path,
+                              width: 44,
+                              height: 44,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 44,
+                                height: 44,
+                                color: neonGreen.withValues(alpha: 0.2),
+                                child: const Icon(Icons.image, color: neonGreen, size: 20),
+                              ),
+                            )
+                          : Image.file(
+                              File(file.path),
+                              width: 44,
+                              height: 44,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 44,
+                                height: 44,
+                                color: neonGreen.withValues(alpha: 0.2),
+                                child: const Icon(Icons.image, color: neonGreen, size: 20),
+                              ),
+                            ),
                     )
                   else
                     Container(
@@ -1115,7 +1203,23 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     
                         if (!isCustomer) ...[
                           const SizedBox(height: 24),
-                          _buildSectionHeader("Banka & Uzmanlık (Zorunlu)", Icons.account_balance_wallet_rounded),
+                          _buildSectionHeader("Hizmet Aracı & Banka (Zorunlu)", Icons.directions_car_filled_rounded),
+                          _buildGlassTextField(
+                            controller: _plateController,
+                            focusNode: _plateFocus,
+                            label: "Hizmet / Çekici Araç Plakası (Örn: 42 TAG 403)",
+                            icon: Icons.pin_rounded,
+                            isPasswordField: false,
+                            type: TextInputType.text,
+                            textInputAction: TextInputAction.next,
+                            capitalization: TextCapitalization.characters,
+                            inputFormatters: [
+                              TurkishPlateFormatter(),
+                              LengthLimitingTextInputFormatter(11),
+                            ],
+                            onEditingComplete: () => FocusScope.of(context).requestFocus(_ibanFocus),
+                          ),
+                          const SizedBox(height: 14),
                           _buildGlassTextField(
                             controller: _ibanController, 
                             focusNode: _ibanFocus,

@@ -1296,6 +1296,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                 "lat": position.latitude.toString(),
                 "lng": position.longitude.toString(),
                 "heading": position.heading.toString(), 
+                "save_db": "1",
               }).timeout(_apiTimeout).catchError((_) => http.Response('', 500)).whenComplete(() {
                 if (mounted) _isUpdatingLocation = false;
               });

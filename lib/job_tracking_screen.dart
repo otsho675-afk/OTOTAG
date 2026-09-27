@@ -878,6 +878,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
               "lat": position.latitude.toString(),
               "lng": position.longitude.toString(),
               "heading": position.heading.toString(),
+              "save_db": "1",
             }
           ).catchError((_) => http.Response('', 500)); 
         }
@@ -1228,6 +1229,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
           providerId = int.tryParse(data['provider_id']?.toString() ?? "0");
           customerId = int.tryParse(data['customer_id']?.toString() ?? "0");
+          
+          if (widget.userType == 'customer' && providerId != null && providerId != 0) {
+            try { pusher.subscribe(channelName: "user_location_$providerId"); } catch(e){}
+          }
           
           if (isRated != (data['is_rated'] == true)) {
             isRated = data['is_rated'] == true;

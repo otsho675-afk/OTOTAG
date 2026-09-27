@@ -2968,68 +2968,133 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                 ),
                 const SizedBox(height: 12),
 
-                // MÜŞTERİ GÖRÜNÜMÜ: İlk hali gösterilmez, sadece ustanın bitirdiği son hali gösterilir
+                // MÜŞTERİ GÖRÜNÜMÜ: Öncesi ve Sonrası yan yana gösterilir
                 if (widget.userType == 'customer') ...[
                   if (afterPhotoUrl != null && afterPhotoUrl!.isNotEmpty) ...[
-                    GestureDetector(
-                      onTap: () => _showImageZoomDialog(afterPhotoUrl!, "Tamamlanan İş Fotoğrafı"),
-                      child: Container(
-                        height: 130,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: isEvidenceConfirmed ? neonGreen.withOpacity(0.5) : Colors.white24),
-                          image: DecorationImage(
-                            image: NetworkImage(afterPhotoUrl!.startsWith("http") ? afterPhotoUrl! : "https://eliteagency.sbs/$afterPhotoUrl"),
-                            fit: BoxFit.cover,
+                    Row(
+                      children: [
+                        if (beforePhotoUrl != null && beforePhotoUrl!.isNotEmpty)
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => _showImageZoomDialog(beforePhotoUrl!, "İş Öncesi Fotoğrafı"),
+                              child: Container(
+                                height: 130,
+                                margin: const EdgeInsets.only(right: 8),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: Colors.white24),
+                                  image: DecorationImage(
+                                    image: NetworkImage(beforePhotoUrl!.startsWith("http") ? beforePhotoUrl! : "https://eliteagency.sbs/$beforePhotoUrl"),
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                                child: Align(
+                                  alignment: Alignment.topLeft,
+                                  child: Container(
+                                    margin: const EdgeInsets.all(6),
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.7),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Text("ÖNCESİ", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => _showImageZoomDialog(afterPhotoUrl!, "Tamamlanan İş Fotoğrafı"),
+                            child: Container(
+                              height: 130,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: isEvidenceConfirmed ? neonGreen.withOpacity(0.5) : Colors.white24),
+                                image: DecorationImage(
+                                  image: NetworkImage(afterPhotoUrl!.startsWith("http") ? afterPhotoUrl! : "https://eliteagency.sbs/$afterPhotoUrl"),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              child: Align(
+                                alignment: Alignment.topLeft,
+                                child: Container(
+                                  margin: const EdgeInsets.all(6),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: neonGreen.withOpacity(0.9),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Text("SONRASI", style: TextStyle(color: pureBlack, fontSize: 10, fontWeight: FontWeight.bold)),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-                        child: Align(
-                          alignment: Alignment.bottomRight,
-                          child: Container(
-                            margin: const EdgeInsets.all(8),
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.7),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.fullscreen_rounded, color: Colors.white, size: 14),
-                                SizedBox(width: 4),
-                                Text("Büyütmek İçin Dokun", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     if (!isEvidenceConfirmed) ...[
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          color: neonGreen,
-                          boxShadow: [
-                            BoxShadow(color: neonGreen.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 3)),
-                          ],
-                        ),
-                        child: ElevatedButton.icon(
-                          onPressed: isProcessing ? null : _confirmEvidence,
-                          icon: isProcessing 
-                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 2))
-                              : const Icon(Icons.check_circle_rounded, color: pureBlack, size: 20),
-                          label: const Text(
-                            "Yapılan İşi Doğruluyorum", 
-                            style: TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.3),
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 1,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                color: Colors.transparent,
+                                border: Border.all(color: Colors.purpleAccent, width: 1.5),
+                              ),
+                              child: ElevatedButton.icon(
+                                onPressed: _showComplaintDialog,
+                                icon: const Icon(Icons.support_agent_rounded, color: Colors.purpleAccent, size: 18),
+                                label: const FittedBox(
+                                  child: Text(
+                                    "Şikayet", 
+                                    style: TextStyle(color: Colors.purpleAccent, fontWeight: FontWeight.w900, fontSize: 13),
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  shadowColor: Colors.transparent,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                ),
+                              ),
+                            ),
                           ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            flex: 1,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                color: neonGreen,
+                                boxShadow: [
+                                  BoxShadow(color: neonGreen.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 3)),
+                                ],
+                              ),
+                              child: ElevatedButton.icon(
+                                onPressed: isProcessing ? null : _confirmEvidence,
+                                icon: isProcessing 
+                                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 2))
+                                    : const Icon(Icons.check_circle_rounded, color: pureBlack, size: 18),
+                                label: const FittedBox(
+                                  child: Text(
+                                    "İşi Onayla", 
+                                    style: TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.3),
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  shadowColor: Colors.transparent,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ] else ...[
                       Container(

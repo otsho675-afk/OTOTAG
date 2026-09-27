@@ -745,6 +745,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   }
 
   Future<void> _initWebSocket() async {
+    if (kIsWeb) return; // Web ortamında Pusher çökmesini ve Null Check hatasını engeller
     try {
       await pusher.init(
         apiKey: "7197ebfa7d2e68b962dd",

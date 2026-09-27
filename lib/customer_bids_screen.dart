@@ -109,7 +109,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     
     _fallbackTimer?.cancel();
     _fallbackTimer = Timer.periodic(const Duration(seconds: 8), (_) {
-      if (mounted && bids.isEmpty) {
+      if (mounted) {
         _fetchBids();
       }
     });

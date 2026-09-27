@@ -1,5 +1,5 @@
 // chat_screen.dart
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; import 'core/constants/app_constants.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -32,7 +32,7 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
-  final String baseUrl = "https://eliteagency.sbs/api.php";
+  final String baseUrl = AppConstants.baseUrl;
   final TextEditingController _msgController = TextEditingController();
   
   // Mesajları ters sırada tutacağız (reverse: true için)

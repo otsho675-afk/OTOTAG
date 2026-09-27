@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'core/constants/app_constants.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
@@ -51,6 +52,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   List<dynamic> allPurchases = [];
   Map<String, dynamic> purchaseStats = {};
 
+  Map<String, dynamic> telemetrySummary = {};
+  List<dynamic> topClickedButtons = [];
+  List<dynamic> longestUserWaits = [];
+  List<dynamic> userDrops = [];
+  List<dynamic> topAppErrors = [];
+  List<dynamic> recentStream = [];
+  bool isTelemetryLoading = false;
+  String telemetryFilterRole = "all"; 
+  String telemetrySearchQuery = "";
+
   bool isJobSelectionMode = false;
   Set<int> selectedJobs = {};
   Set<int> hiddenJobs = {}; 
@@ -67,7 +78,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final ValueNotifier<int> currentAdIndex = ValueNotifier<int>(0);
   Timer? _adScrollTimer;
 
-  final String baseUrl = "https://eliteagency.sbs/api.php";
+  final String baseUrl = AppConstants.baseUrl;
   final String baseMediaUrl = "https://eliteagency.sbs/";
 
   @override
@@ -76,7 +87,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _fetchAllData();
   }
 
-  // Hata durumunda yükleniyor durumunun takılı kalması engellendi[cite: 1]
   Future<void> _fetchAllData() async {
     if (!mounted) return;
     setState(() => isLoading = true);
@@ -88,6 +98,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         _fetchAds(),
         _fetchPartListings(),
         _fetchPurchases(),
+        _fetchTelemetryStats(),
       ]);
     } catch (e) {
       debugPrint("Veri yükleme hatası: $e");
@@ -95,6 +106,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (mounted) {
         setState(() => isLoading = false);
       }
+    }
+  }
+
+  Future<void> _fetchTelemetryStats() async {
+    try {
+      final response = await http.get(Uri.parse("$baseUrl?action=admin_get_telemetry_stats"));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data is Map && data['status'] == 'success' && mounted) {
+          setState(() {
+            telemetrySummary = (data['summary'] is Map) ? Map<String, dynamic>.from(data['summary']) : {};
+            topClickedButtons = (data['top_buttons'] is List) ? List.from(data['top_buttons']) : [];
+            longestUserWaits = (data['longest_waits'] is List) ? List.from(data['longest_waits']) : [];
+            userDrops = (data['user_drops'] is List) ? List.from(data['user_drops']) : [];
+            topAppErrors = (data['top_errors'] is List) ? List.from(data['top_errors']) : [];
+            recentStream = (data['recent_stream'] is List) ? List.from(data['recent_stream']) : [];
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Telemetri verisi çekilirken hata: $e");
     }
   }
 
@@ -106,7 +138,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         if (data is Map && data['status'] == 'success' && mounted) {
           setState(() {
             allPurchases = (data['purchases'] is List) ? List.from(data['purchases']) : [];
-            purchaseStats = (data['stats'] is Map) ? data['stats'] : {};
+            purchaseStats = (data['stats'] is Map) ? Map<String, dynamic>.from(data['stats']) : {};
           });
         }
       }
@@ -122,7 +154,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         final data = json.decode(res.body);
         if (data['status'] == 'success' && mounted) {
           setState(() {
-            allPartListings = data['market'] ?? [];
+            allPartListings = (data['market'] is List) ? List.from(data['market']) : [];
           });
         }
       }
@@ -140,8 +172,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           if (nextPage >= allAds.length + 1) nextPage = 0;
           _adPageController.animateToPage(
             nextPage,
-            duration: const Duration(milliseconds: 800),
-            curve: Curves.fastOutSlowIn,
+            duration: const Duration(milliseconds: 700),
+            curve: Curves.easeInOutCubic,
           );
         }
       });
@@ -178,9 +210,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       return Container(
         width: width,
         height: height,
-        color: Colors.black12,
+        color: Colors.blueGrey.withOpacity(0.08),
         alignment: Alignment.center,
-        child: Icon(fallbackIcon, size: 36, color: Colors.orange),
+        child: Icon(fallbackIcon, size: 28, color: Colors.orange.shade400),
       );
     }
     return Image.network(
@@ -195,15 +227,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return Container(
           width: width,
           height: height,
+          color: Colors.blueGrey.withOpacity(0.05),
           alignment: Alignment.center,
           child: SizedBox(
-            width: 24,
-            height: 24,
+            width: 22,
+            height: 22,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              value: (expected != null && expected > 0)
-                  ? loaded / expected
-                  : null,
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.blueAccent),
+              value: (expected != null && expected > 0) ? loaded / expected : null,
             ),
           ),
         );
@@ -212,9 +244,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return Container(
           width: width,
           height: height,
-          color: Colors.black12,
+          color: Colors.blueGrey.withOpacity(0.08),
           alignment: Alignment.center,
-          child: Icon(fallbackIcon, size: 36, color: Colors.orange),
+          child: Icon(fallbackIcon, size: 28, color: Colors.orange.shade400),
         );
       },
     );
@@ -337,8 +369,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       }
     });
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text("Seçilen öğeler panonuzdan gizlendi. Taraflar görmeye devam edecek."),
+      content: Text("Seçilen öğeler panonuzdan gizlendi."),
       backgroundColor: Colors.blueAccent,
+      behavior: SnackBarBehavior.floating,
     ));
   }
 
@@ -349,17 +382,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     bool confirm = await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("Kalıcı Toplu Silme", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-        content: SingleChildScrollView(
-          child: Text("${targetSet.length} öğeyi veritabanından KALICI olarak silmek istiyor musunuz? Bu işlem geri alınamaz ve kullanıcılar da göremez.")
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.red),
+            SizedBox(width: 8),
+            Text("Kalıcı Toplu Silme", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 18)),
+          ],
         ),
+        content: Text("${targetSet.length} öğeyi veritabanından KALICI olarak silmek istiyor musunuz? Bu işlem geri alınamaz."),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("İptal")),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text("Evet, Kalıcı Sil", style: TextStyle(color: Colors.white)),
+            child: const Text("Evet, Kalıcı Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           )
         ],
       )
@@ -390,7 +430,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     });
 
     await _fetchAllData();
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Seçilen öğeler kalıcı olarak silindi."), backgroundColor: Colors.redAccent));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text("Seçilen öğeler kalıcı olarak silindi."), 
+        backgroundColor: Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
   }
 
   Future<void> _updateTicketStatus(int ticketId, String status) async {
@@ -403,11 +449,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (response.statusCode == 200) {
         await _fetchTickets();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Şikayet durumu güncellendi."), backgroundColor: Colors.green));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("Şikayet durumu güncellendi."), 
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ));
         }
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Hata oluştu."), backgroundColor: Colors.red));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Hata oluştu."), 
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
     }
   }
 
@@ -425,16 +481,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       final data = json.decode(response.body);
       if (data is Map && data['status'] == 'success') {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Bildirim başarıyla gönderildi!"), backgroundColor: Colors.green));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("Bildirim başarıyla gönderildi!"), 
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ));
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Bildirim gönderilemedi."), backgroundColor: Colors.red));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("Bildirim gönderilemedi."), 
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ));
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Bağlantı hatası oluştu."), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Bağlantı hatası oluştu."), 
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ));
       }
     }
   }
@@ -455,9 +523,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
               title: Row(
                 children: [
-                  const Icon(Icons.notifications_active, color: Colors.orange),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(userId == null ? "Toplu Bildirim Gönder" : "${userName ?? 'Kullanıcı'}'e Bildirim", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18))),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: Colors.orange.withOpacity(0.15), shape: BoxShape.circle),
+                    child: const Icon(Icons.notifications_active_rounded, color: Colors.orange, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      userId == null ? "Toplu Bildirim Gönder" : "${userName ?? 'Kullanıcı'}'e Bildirim", 
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
               content: SingleChildScrollView(
@@ -471,8 +549,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         decoration: InputDecoration(
                           labelText: "Hedef Kitle",
                           filled: true,
-                          fillColor: isDark ? Colors.black12 : Colors.grey.shade100,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                          fillColor: isDark ? Colors.black12 : const Color(0xFFF8FAFC),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.withOpacity(0.2))),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.withOpacity(0.2))),
                         ),
                         items: const [
                           DropdownMenuItem(value: 'all', child: Text("Tüm Kullanıcılar")),
@@ -480,31 +559,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           DropdownMenuItem(value: 'provider', child: Text("Sadece Ustalar")),
                         ],
                         onChanged: (val) {
-                          if (val != null) {
-                            setStateDialog(() => selectedTarget = val);
-                          }
+                          if (val != null) setStateDialog(() => selectedTarget = val);
                         },
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
                     ],
                     TextField(
                       controller: titleController,
                       decoration: InputDecoration(
                         labelText: "Bildirim Başlığı",
                         filled: true,
-                        fillColor: isDark ? Colors.black12 : Colors.grey.shade100,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                        fillColor: isDark ? Colors.black12 : const Color(0xFFF8FAFC),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.withOpacity(0.2))),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.withOpacity(0.2))),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     TextField(
                       controller: messageController,
                       maxLines: 4,
                       decoration: InputDecoration(
                         labelText: "Mesajınız",
                         filled: true,
-                        fillColor: isDark ? Colors.black12 : Colors.grey.shade100,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                        fillColor: isDark ? Colors.black12 : const Color(0xFFF8FAFC),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.withOpacity(0.2))),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.withOpacity(0.2))),
                       ),
                     ),
                   ],
@@ -515,8 +594,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
                   ),
                   onPressed: () {
                     if (titleController.text.isNotEmpty && messageController.text.isNotEmpty) {
@@ -560,28 +639,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             title: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text("$providerName Profili", style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                Text("$providerName Profili", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18), textAlign: TextAlign.center),
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.star, color: Colors.orange, size: 20),
+                    const Icon(Icons.star_rounded, color: Colors.orange, size: 22),
                     const SizedBox(width: 4),
-                    Text("${stats['average'] ?? '0.0'} / 5.0", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text("${stats['average'] ?? '0.0'} / 5.0", style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
                     const SizedBox(width: 8),
-                    Flexible(child: Text("(${stats['total'] ?? 0} Yorum)", style: const TextStyle(color: Colors.grey, fontSize: 14), overflow: TextOverflow.ellipsis)),
+                    Flexible(child: Text("(${stats['total'] ?? 0} Yorum)", style: const TextStyle(color: Colors.grey, fontSize: 13), overflow: TextOverflow.ellipsis)),
                   ],
                 ),
               ],
             ),
             content: SizedBox(
               width: double.maxFinite,
-              height: MediaQuery.of(context).size.height * 0.4,
+              height: MediaQuery.of(context).size.height * 0.45,
               child: reviews.isEmpty 
-                ? const Center(child: Text("Henüz yorum yapılmamış."))
+                ? const Center(child: Text("Henüz yorum yapılmamış.", style: TextStyle(color: Colors.grey)))
                 : ListView.separated(
                     itemCount: reviews.length,
-                    separatorBuilder: (context, index) => const Divider(),
+                    separatorBuilder: (context, index) => const Divider(height: 12),
                     itemBuilder: (context, index) {
                       final review = reviews[index];
                       return Material(
@@ -589,15 +668,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         child: ListTile(
                           contentPadding: EdgeInsets.zero,
                           leading: CircleAvatar(
-                            backgroundColor: Colors.blue.withOpacity(0.1),
-                            child: Text((review['rating'] ?? '5').toString(), style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+                            backgroundColor: Colors.orange.withOpacity(0.15),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text((review['rating'] ?? '5').toString(), style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.w900, fontSize: 13)),
+                                const Icon(Icons.star, size: 10, color: Colors.orange)
+                              ],
+                            ),
                           ),
-                          title: Text(review['customer_name']?.toString() ?? 'Müşteri', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          title: Text(review['customer_name']?.toString() ?? 'Müşteri', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const SizedBox(height: 4),
-                              Text(review['comment']?.toString().isNotEmpty == true ? review['comment'].toString() : 'Yorum bırakılmadı.', style: const TextStyle(fontStyle: FontStyle.italic)),
+                              Text(review['comment']?.toString().isNotEmpty == true ? review['comment'].toString() : 'Yorum bırakılmadı.', style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 12)),
                               const SizedBox(height: 4),
                               Text(_formatDate(review['created_at']?.toString()), style: const TextStyle(color: Colors.grey, fontSize: 10)),
                             ],
@@ -629,7 +714,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text("Admin Şifresini Değiştir", style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text("Admin Şifresini Değiştir", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         content: SingleChildScrollView(
           child: TextField(
             controller: passwordController,
@@ -646,7 +731,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("İptal")),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
             child: const Text("Güncelle", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
@@ -662,7 +747,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         );
         final data = json.decode(response.body);
         if (data is Map && data['status'] == 'success' && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Şifre başarıyla güncellendi."), backgroundColor: Colors.green));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("Şifre başarıyla güncellendi."), 
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ));
         }
       } catch (e) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Şifre güncellenemedi."), backgroundColor: Colors.red));
@@ -671,15 +760,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Future<void> _backupDatabase() async {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Yedekleme başlatıldı, lütfen bekleyin...")));
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Yedekleme başlatıldı, lütfen bekleyin..."), behavior: SnackBarBehavior.floating));
     try {
       final response = await http.get(Uri.parse("$baseUrl?action=admin_backup_db"));
       final data = json.decode(response.body);
       if (data is Map && data['status'] == 'success' && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Veritabanı yedeği başarıyla alındı!"), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Veritabanı yedeği başarıyla alındı!"), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Yedekleme hatası."), backgroundColor: Colors.red));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Yedekleme hatası."), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating));
     }
   }
 
@@ -692,7 +781,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           children: [
             Icon(Icons.cleaning_services_rounded, color: Colors.green),
             SizedBox(width: 8),
-            Expanded(child: Text("Derin Sistem Temizliği", style: TextStyle(fontWeight: FontWeight.bold))),
+            Expanded(child: Text("Derin Sistem Temizliği", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18))),
           ],
         ),
         content: const Column(
@@ -714,7 +803,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             child: const Text("İptal", style: TextStyle(color: Colors.grey))
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text("Temizliği Başlat", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           )
@@ -724,7 +813,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     if (!confirm) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Derin optimizasyon başlatıldı, lütfen bekleyin...")));
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Derin optimizasyon başlatıldı, lütfen bekleyin..."), behavior: SnackBarBehavior.floating));
     
     try {
       final response = await http.post(Uri.parse("$baseUrl?action=admin_optimize_system"));
@@ -739,22 +828,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.green, size: 64),
+                const Icon(Icons.check_circle_rounded, color: Colors.green, size: 60),
                 const SizedBox(height: 16),
-                const Text("Optimizasyon Tamamlandı!", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
+                const Text("Optimizasyon Tamamlandı!", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 10),
                 Text(
                   data['message']?.toString() ?? "Sistem başarıyla optimize edildi!", 
                   textAlign: TextAlign.center, 
-                  style: const TextStyle(fontSize: 15, height: 1.5)
+                  style: const TextStyle(fontSize: 14, height: 1.4)
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
                     onPressed: () => Navigator.pop(ctx),
-                    child: const Text("Harika!", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                    child: const Text("Harika!", style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
                   ),
                 )
               ],
@@ -788,7 +877,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       }
     } catch (e) {
       if (mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("İşlem sırasında bir hata oluştu.")));
+         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("İşlem sırasında bir hata oluştu."), behavior: SnackBarBehavior.floating));
       }
     }
   }
@@ -798,54 +887,51 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E293B) : Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (context) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20),
+            padding: const EdgeInsets.symmetric(vertical: 16),
             child: SingleChildScrollView(
-              child: Material(
-                color: Colors.transparent,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Center(child: Container(width: 50, height: 5, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10)))),
-                    const SizedBox(height: 16),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Text("$userName İçin Ceza İşlemi", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-                    ),
-                    const SizedBox(height: 16),
-                    if (isProvider)
-                      ListTile(
-                        leading: const Icon(Icons.timer_off_rounded, color: Colors.orange),
-                        title: const Text("15 Gün Askıya Al", style: TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: const Text("Düşük performans nedeniyle 15 gün iş alımını durdurur"),
-                        onTap: () {
-                          Navigator.pop(context);
-                          _applyPunishment(userId, userName, 'suspend_provider', "15 gün askıya alınacak");
-                        },
-                      ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Center(child: Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10)))),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text("$userName İçin Ceza İşlemi", style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                  ),
+                  const SizedBox(height: 12),
+                  if (isProvider)
                     ListTile(
-                      leading: const Icon(Icons.block_rounded, color: Colors.redAccent),
-                      title: const Text("Kalıcı Hesap Engeli (Ban)", style: TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: const Text("Kullanıcının hesaba girişini tamamen kapatır"),
+                      leading: const Icon(Icons.timer_off_rounded, color: Colors.orange),
+                      title: const Text("15 Gün Askıya Al", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      subtitle: const Text("Düşük performans nedeniyle 15 gün iş alımını durdurur", style: TextStyle(fontSize: 12)),
                       onTap: () {
                         Navigator.pop(context);
-                        _applyPunishment(userId, userName, 'ban_user', "kalıcı olarak engellenecek");
+                        _applyPunishment(userId, userName, 'suspend_provider', "15 gün askıya alınacak");
                       },
                     ),
-                    ListTile(
-                      leading: const Icon(Icons.phonelink_erase_rounded, color: Colors.red),
-                      title: const Text("IP Ban (Cihaz/Ağ Engeli)", style: TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: const Text("Bu cihazdan/ağdan gelen tüm bağlantıları keser"),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _applyPunishment(userId, userName, 'ban_ip', "IP adresi kalıcı olarak engellenecek");
-                      },
-                    ),
-                  ],
-                ),
+                  ListTile(
+                    leading: const Icon(Icons.block_rounded, color: Colors.redAccent),
+                    title: const Text("Kalıcı Hesap Engeli (Ban)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    subtitle: const Text("Kullanıcının hesaba girişini tamamen kapatır", style: TextStyle(fontSize: 12)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _applyPunishment(userId, userName, 'ban_user', "kalıcı olarak engellenecek");
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.phonelink_erase_rounded, color: Colors.red),
+                    title: const Text("IP Ban (Cihaz/Ağ Engeli)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    subtitle: const Text("Bu cihazdan/ağdan gelen tüm bağlantıları keser", style: TextStyle(fontSize: 12)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _applyPunishment(userId, userName, 'ban_ip', "IP adresi kalıcı olarak engellenecek");
+                    },
+                  ),
+                ],
               ),
             ),
           ),
@@ -858,23 +944,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     bool confirm = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Row(
           children: [
             Icon(Icons.warning_amber_rounded, color: Colors.red),
             SizedBox(width: 8),
-            Expanded(child: Text("İşlemi Onayla", style: TextStyle(color: Colors.red))),
+            Expanded(child: Text("İşlemi Onayla", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 17))),
           ],
         ),
         content: SingleChildScrollView(
-          child: Text("$userName adlı kullanıcının hesabı $warningText. Emin misiniz?")
+          child: Text("$userName adlı kullanıcının hesabı $warningText. Emin misiniz?"),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("İptal", style: TextStyle(color: Colors.grey))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
             onPressed: () => Navigator.pop(context, true), 
-            child: const Text("Onayla", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+            child: const Text("Onayla", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       )
@@ -918,23 +1004,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     bool confirm = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Row(
           children: [
             Icon(Icons.warning_amber_rounded, color: Colors.red),
             SizedBox(width: 8),
-            Expanded(child: Text("Kullanıcıyı Sil", style: TextStyle(color: Colors.red))),
+            Expanded(child: Text("Kullanıcıyı Sil", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 17))),
           ],
         ),
         content: SingleChildScrollView(
-          child: Text("$userName adlı kullanıcıyı ve ona ait tüm kayıtları kalıcı olarak silmek istediğinize emin misiniz?")
+          child: Text("$userName adlı kullanıcıyı ve ona ait tüm kayıtları kalıcı olarak silmek istediğinize emin misiniz?"),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("İptal", style: TextStyle(color: Colors.grey))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
             onPressed: () => Navigator.pop(context, true), 
-            child: const Text("Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+            child: const Text("Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       )
@@ -965,23 +1051,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     bool confirm = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Row(
           children: [
             Icon(Icons.delete_forever_rounded, color: Colors.red),
             SizedBox(width: 8),
-            Expanded(child: Text("İşlemi Sil", style: TextStyle(color: Colors.red))),
+            Expanded(child: Text("İşlemi Sil", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 17))),
           ],
         ),
         content: SingleChildScrollView(
-          child: Text("#$jobId numaralı işlemi ve ona bağlı tüm teklif/değerlendirme geçmişini kalıcı olarak silmek istediğinize emin misiniz?")
+          child: Text("#$jobId numaralı işlemi kalıcı olarak silmek istediğinize emin misiniz?"),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("İptal", style: TextStyle(color: Colors.grey))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
             onPressed: () => Navigator.pop(context, true), 
-            child: const Text("Kalıcı Olarak Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+            child: const Text("Kalıcı Olarak Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       )
@@ -1012,23 +1098,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     bool confirm = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Row(
           children: [
             Icon(Icons.delete_forever_rounded, color: Colors.red),
             SizedBox(width: 8),
-            Expanded(child: Text("İlanı Yayından Kaldır", style: TextStyle(color: Colors.red))),
+            Expanded(child: Text("İlanı Yayından Kaldır", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 17))),
           ],
         ),
         content: const SingleChildScrollView(
-          child: Text("Bu yedek parça ilanını tamamen silmek istediğinize emin misiniz?")
+          child: Text("Bu yedek parça ilanını tamamen silmek istediğinize emin misiniz?"),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("İptal", style: TextStyle(color: Colors.grey))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
             onPressed: () => Navigator.pop(context, true), 
-            child: const Text("Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+            child: const Text("Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       )
@@ -1047,13 +1133,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       });
       final data = json.decode(res.body);
       if (data['status'] == 'success') {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("İlan başarıyla kaldırıldı."), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("İlan başarıyla kaldırıldı."), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
         await _fetchAllData();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['message'] ?? "İşlem başarısız."), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['message'] ?? "İşlem başarısız."), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating));
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Bağlantı hatası."), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Bağlantı hatası."), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating));
     } finally {
       setState(() => isLoading = false);
     }
@@ -1070,25 +1156,100 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  void _showDocumentPreviewDialog(String title, String? path) {
+    if (path == null || path.trim().isEmpty) return;
+    final cleanUrl = _resolveImageUrl(path);
+    final isPdf = path.toLowerCase().endsWith('.pdf');
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (isPdf)
+                Container(
+                  height: 160,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(color: Colors.red.withOpacity(0.08), borderRadius: BorderRadius.circular(16)),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.picture_as_pdf_rounded, color: Colors.red, size: 44),
+                      const SizedBox(height: 8),
+                      const Text("PDF Dokümanı", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      const SizedBox(height: 10),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.open_in_new, size: 16),
+                        label: const Text("Tarayıcıda İncele"),
+                        style: ElevatedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                        onPressed: () => _launchURL(path),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 340),
+                    child: _buildSafeNetworkImage(cleanUrl, fit: BoxFit.contain),
+                  ),
+                ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.open_in_browser, size: 18),
+                  label: const Text("Tam Boyutta Aç"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueAccent, 
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () => _launchURL(path),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showUserDocumentsDialog(Map<String, dynamic> user) {
     final isWash = user['service_category'] == 'wash';
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text("${user['name'] ?? 'Kullanıcı'} Belgeleri", style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text("${user['name'] ?? 'Kullanıcı'} Belgeleri", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("İncelemek istediğiniz belgeye dokunun.", style: TextStyle(fontSize: 13, color: Colors.grey)),
+              const Text("İncelemek istediğiniz belgeye dokunun.", style: TextStyle(fontSize: 12, color: Colors.grey)),
               const SizedBox(height: 16),
               if (isWash) ...[
                 _buildDocButton("Ehliyet", user['driver_license']?.toString(), true),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 _buildDocButton("Araç Fotoğrafı", user['vehicle_photo']?.toString(), true),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 _buildDocButton("Ekipman Fotoğrafı", user['equipment_photo']?.toString(), true),
               ] else ...[
                 _buildDocButton("Vergi Levhası", user['tax_plate']?.toString(), true),
@@ -1099,7 +1260,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context), 
-            child: const Text("Kapat", style: TextStyle(fontWeight: FontWeight.bold))
+            child: const Text("Kapat", style: TextStyle(fontWeight: FontWeight.bold)),
           )
         ],
       )
@@ -1121,17 +1282,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         child: SafeArea(
           child: Container(
             constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1E293B) : Colors.white,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 30, offset: const Offset(0, -5))]
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 25, offset: const Offset(0, -5))]
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Center(child: Container(width: 50, height: 5, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10)))),
-                const SizedBox(height: 24),
+                Center(child: Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10)))),
+                const SizedBox(height: 20),
                 Expanded(
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
@@ -1139,15 +1300,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         CircleAvatar(
-                          radius: 45,
-                          backgroundColor: isBanned ? Colors.red.withOpacity(0.1) : Colors.blue.withOpacity(0.1),
-                          child: Icon(isBanned ? Icons.block : (isCustomer ? Icons.person : Icons.engineering), size: 45, color: isBanned ? Colors.red : Colors.blue),
+                          radius: 40,
+                          backgroundColor: isBanned ? Colors.red.withOpacity(0.12) : Colors.blue.withOpacity(0.12),
+                          child: Icon(isBanned ? Icons.block : (isCustomer ? Icons.person : Icons.engineering), size: 40, color: isBanned ? Colors.red : Colors.blue),
                         ),
-                        const SizedBox(height: 16),
-                        Text(user['name']?.toString() ?? 'Bilinmeyen Kullanıcı', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: isBanned ? Colors.red : (isDark ? Colors.white : Colors.black87), decoration: isBanned ? TextDecoration.lineThrough : null)),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 14),
+                        Text(user['name']?.toString() ?? 'Bilinmeyen Kullanıcı', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: isBanned ? Colors.red : (isDark ? Colors.white : Colors.black87), decoration: isBanned ? TextDecoration.lineThrough : null)),
+                        const SizedBox(height: 6),
                         Wrap(
                           spacing: 8,
+                          alignment: WrapAlignment.center,
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -1162,46 +1324,46 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               ),
                           ],
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 20),
                         Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(color: isDark ? Colors.white10 : Colors.grey.shade50, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.grey.withOpacity(0.2))),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(color: isDark ? Colors.white10 : const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.grey.withOpacity(0.15))),
                           child: Column(
                             children: [
                               _detailRow("Telefon", user['phone']?.toString() ?? '-', isDark),
-                              const Divider(),
+                              const Divider(height: 1),
                               _detailRow("Şehir", user['city']?.toString() ?? 'Belirtilmedi', isDark),
-                              const Divider(),
+                              const Divider(height: 1),
                               _detailRow("Kayıt Tarihi", _formatDate(user['created_at']?.toString()), isDark),
                               if (!isCustomer) ...[
-                                const Divider(),
+                                const Divider(height: 1),
                                 _detailRow("IBAN", user['iban']?.toString().isNotEmpty == true ? user['iban'] : 'Eklenmedi', isDark),
                               ]
                             ],
                           ),
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 22),
                         Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
+                          spacing: 10,
+                          runSpacing: 10,
                           alignment: WrapAlignment.center,
                           children: [
                             ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.green, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                              icon: const Icon(Icons.call, color: Colors.white, size: 20),
+                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981), padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                              icon: const Icon(Icons.call, color: Colors.white, size: 18),
                               label: const Text("Ara", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                               onPressed: () => _launchURL("tel:${user['phone']}"),
                             ),
                             if (!isCustomer)
                               ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                                icon: const Icon(Icons.folder_shared, color: Colors.white, size: 20),
+                                style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                                icon: const Icon(Icons.folder_shared, color: Colors.white, size: 18),
                                 label: const Text("Belgeler", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                                onPressed: () => _showUserDocumentsDialog(user),
+                                onPressed: () => _showUserDocumentsDialog(Map<String, dynamic>.from(user)),
                               ),
                             ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                              icon: const Icon(Icons.gavel_rounded, color: Colors.white, size: 20),
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                              icon: const Icon(Icons.gavel_rounded, color: Colors.white, size: 18),
                               label: const Text("Ceza", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                               onPressed: () {
                                 Navigator.pop(context);
@@ -1209,8 +1371,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               },
                             ),
                             ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.red, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                              icon: const Icon(Icons.delete_forever, color: Colors.white, size: 20),
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                              icon: const Icon(Icons.delete_forever, color: Colors.white, size: 18),
                               label: const Text("Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                               onPressed: () {
                                 Navigator.pop(context);
@@ -1252,22 +1414,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF1E293B) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 30, offset: const Offset(0, -5))]
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 25, offset: const Offset(0, -5))]
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Center(child: Container(width: 50, height: 5, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10)))),
-              const SizedBox(height: 20),
+              Center(child: Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10)))),
+              const SizedBox(height: 16),
               
               if (photos.isNotEmpty)
                 SizedBox(
-                  height: 180,
+                  height: 160,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     physics: const BouncingScrollPhysics(),
@@ -1275,7 +1437,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     itemBuilder: (ctx, i) {
                       String imgUrl = baseUrl.replaceAll('api.php', '') + photos[i];
                       return Container(
-                        width: 180,
+                        width: 160,
                         margin: const EdgeInsets.only(right: 12),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
@@ -1287,7 +1449,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     },
                   ),
                 ),
-              if (photos.isNotEmpty) const SizedBox(height: 20),
+              if (photos.isNotEmpty) const SizedBox(height: 16),
               
               Expanded(
                 child: SingleChildScrollView(
@@ -1299,43 +1461,43 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(color: typeColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                            child: Text(typeText, style: TextStyle(color: typeColor, fontWeight: FontWeight.bold, fontSize: 12)),
+                            decoration: BoxDecoration(color: typeColor.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
+                            child: Text(typeText, style: TextStyle(color: typeColor, fontWeight: FontWeight.bold, fontSize: 11)),
                           ),
                           const SizedBox(width: 8),
-                          Text(item['city'] ?? 'Şehir Yok', style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                          Text(item['city'] ?? 'Şehir Yok', style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 13)),
                           const Spacer(),
-                          Text("#$listingId", style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                          Text("#$listingId", style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 13)),
                         ],
                       ),
                       const SizedBox(height: 12),
-                      Text(cleanPartName, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: isDark ? Colors.white : Colors.black87)),
+                      Text(cleanPartName, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: isDark ? Colors.white : Colors.black87)),
                       const SizedBox(height: 4),
-                      Text("Araç: ${item['car_model']}", style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.grey.shade600)),
+                      Text("Araç: ${item['car_model']}", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey.shade600)),
                       
                       if (isForSale && item['price'] != null) ...[
-                        const SizedBox(height: 12),
-                        Text("${item['price']} ₺", style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF10B981))),
+                        const SizedBox(height: 10),
+                        Text("${item['price']} ₺", style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF10B981))),
                       ],
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(color: isDark ? Colors.white10 : Colors.grey.shade100, borderRadius: BorderRadius.circular(16)),
-                        child: Text(item['description']?.toString() ?? 'Açıklama girilmemiş.', style: TextStyle(fontSize: 14, color: isDark ? Colors.white70 : Colors.black87, height: 1.5)),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(color: isDark ? Colors.white10 : const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.withOpacity(0.15))),
+                        child: Text(item['description']?.toString() ?? 'Açıklama girilmemiş.', style: TextStyle(fontSize: 13, color: isDark ? Colors.white70 : Colors.black87, height: 1.4)),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
                       
-                      const Text("İlan Sahibi", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      const SizedBox(height: 8),
+                      const Text("İlan Sahibi", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      const SizedBox(height: 6),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: CircleAvatar(backgroundColor: Colors.blue.withOpacity(0.1), child: const Icon(Icons.person, color: Colors.blue)),
-                        title: Text(item['customer_name']?.toString() ?? 'Bilinmiyor', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text(item['customer_phone']?.toString() ?? 'Numara Yok'),
+                        title: Text(item['customer_name']?.toString() ?? 'Bilinmiyor', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        subtitle: Text(item['customer_phone']?.toString() ?? 'Numara Yok', style: const TextStyle(fontSize: 12)),
                         trailing: IconButton(
-                          icon: const Icon(Icons.call, color: Colors.green),
+                          icon: const Icon(Icons.call, color: Color(0xFF10B981)),
                           onPressed: () => _launchURL("tel:${item['customer_phone']}"),
                         ),
                       )
@@ -1343,15 +1505,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
+                  backgroundColor: Colors.redAccent,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))
                 ),
-                icon: const Icon(Icons.delete_forever, color: Colors.white),
-                label: const Text("İlanı Sil / Yayından Kaldır", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                icon: const Icon(Icons.delete_forever, color: Colors.white, size: 20),
+                label: const Text("İlanı Sil / Yayından Kaldır", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
                 onPressed: () {
                   Navigator.pop(context);
                   _deletePartListing(item);
@@ -1381,7 +1543,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 children: [
                   Icon(Icons.assignment_rounded, color: Colors.blue.shade600),
                   const SizedBox(width: 8),
-                  const Expanded(child: Text("İşlem Detayları", style: TextStyle(fontWeight: FontWeight.w900), overflow: TextOverflow.ellipsis)),
+                  const Expanded(child: Text("İşlem Detayları", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17), overflow: TextOverflow.ellipsis)),
                 ],
               ),
             ),
@@ -1395,7 +1557,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   final Uri url = Uri.parse("https://www.google.com/maps/search/?api=1&query=$lat,$lng");
                   if (await canLaunchUrl(url)) await launchUrl(url, mode: LaunchMode.externalApplication);
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Bu işlem için konum bilgisi mevcut değil.")));
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Bu işlem için konum bilgisi mevcut değil."), behavior: SnackBarBehavior.floating));
                 }
               },
             ),
@@ -1406,17 +1568,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _detailRow("İşlem ID", "#$jobId", isDark),
-              const Divider(),
+              const Divider(height: 1),
               _detailRow("Hizmet Türü", _translateServiceType(job['service_type']?.toString()), isDark),
-              const Divider(),
+              const Divider(height: 1),
               _detailRow("Müşteri", job['customer_name']?.toString() ?? 'Bilinmeyen', isDark),
-              const Divider(),
+              const Divider(height: 1),
               _detailRow("Usta", job['provider_name']?.toString() ?? 'Atanmadı', isDark),
-              const Divider(),
+              const Divider(height: 1),
               _detailRow("Durum", _translateStatus(job['status']?.toString()), isDark, statusColor: _getStatusColor(job['status']?.toString())),
-              const Divider(),
+              const Divider(height: 1),
               _detailRow("Tutar", "${job['agreed_price'] ?? '0.00'} ₺", isDark, isHighlight: true),
-              const Divider(),
+              const Divider(height: 1),
               _detailRow("Tarih", _formatDate(job['created_at']?.toString()), isDark),
             ],
           ),
@@ -1428,13 +1590,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               Navigator.pop(context);
               _deleteJob(jobId);
             }, 
-            icon: const Icon(Icons.delete, color: Colors.red),
+            icon: const Icon(Icons.delete, color: Colors.red, size: 18),
             label: const Text("Sil", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue.shade600,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             ),
             onPressed: () => Navigator.pop(context), 
             child: const Text("Tamam", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
@@ -1457,7 +1620,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           children: [
             Icon(Icons.confirmation_number_rounded, color: Colors.purple.shade600),
             const SizedBox(width: 8),
-            const Expanded(child: Text("Şikayet Detayı", style: TextStyle(fontWeight: FontWeight.w900), overflow: TextOverflow.ellipsis)),
+            const Expanded(child: Text("Şikayet Detayı", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17), overflow: TextOverflow.ellipsis)),
           ],
         ),
         content: SingleChildScrollView(
@@ -1466,25 +1629,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _detailRow("Şikayet ID", "#$ticketId", isDark),
-              const Divider(),
+              const Divider(height: 1),
               _detailRow("İşlem ID", "#${ticket['job_id'] ?? 'Bilinmiyor'}", isDark),
-              const Divider(),
+              const Divider(height: 1),
               _detailRow("Müşteri", ticket['customer_name']?.toString() ?? 'Bilinmiyor', isDark),
-              const Divider(),
+              const Divider(height: 1),
               _detailRow("Usta", ticket['provider_name']?.toString() ?? 'Bilinmiyor', isDark),
-              const Divider(),
+              const Divider(height: 1),
               _detailRow("Tarih", _formatDate(ticket['created_at']?.toString()), isDark),
-              const Divider(),
-              Text("Konu: ${ticket['subject'] ?? '-'}", style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
-              const SizedBox(height: 8),
+              const Divider(height: 1),
+              const SizedBox(height: 6),
+              Text("Konu: ${ticket['subject'] ?? '-'}", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isDark ? Colors.white : Colors.black87)),
+              const SizedBox(height: 6),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white12 : Colors.grey.shade100,
+                  color: isDark ? Colors.white12 : const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.withOpacity(0.15))
                 ),
-                child: Text(ticket['message']?.toString() ?? 'Mesaj yok.', style: TextStyle(color: isDark ? Colors.white70 : Colors.black87)),
+                child: Text(ticket['message']?.toString() ?? 'Mesaj yok.', style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontSize: 13, height: 1.4)),
               )
             ],
           ),
@@ -1503,7 +1668,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.purple.shade600,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             ),
             onPressed: () => Navigator.pop(context), 
             child: const Text("Tamam", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
@@ -1522,30 +1688,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           duration: const Duration(seconds: 1),
           backgroundColor: Colors.blueGrey,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ));
       },
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(10),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 12.0),
+        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 10.0),
         decoration: BoxDecoration(
           color: isHighlight ? (statusColor ?? Colors.green).withOpacity(0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Expanded(flex: 2, child: Row(
               children: [
-                Icon(Icons.copy_all_rounded, size: 14, color: isDark ? Colors.grey.shade600 : Colors.grey.shade400),
+                Icon(Icons.copy_all_rounded, size: 14, color: isDark ? Colors.grey.shade500 : Colors.grey.shade400),
                 const SizedBox(width: 6),
-                Expanded(child: Text(title, style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade600, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+                Expanded(child: Text(title, style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade600, fontWeight: FontWeight.w600, fontSize: 13), overflow: TextOverflow.ellipsis)),
               ],
             )),
             Expanded(flex: 3, child: Text(value, textAlign: TextAlign.right, style: TextStyle(
               fontWeight: isHighlight ? FontWeight.w900 : FontWeight.bold, 
-              color: statusColor ?? (isHighlight ? Colors.green : (isDark ? Colors.white : Colors.black87)),
-              fontSize: isHighlight ? 18 : 14
+              color: statusColor ?? (isHighlight ? const Color(0xFF10B981) : (isDark ? Colors.white : Colors.black87)),
+              fontSize: isHighlight ? 16 : 13
             ))),
           ],
         ),
@@ -1595,10 +1761,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Color _getStatusColor(String? status) {
     switch (status) {
-      case 'completed': return Colors.green;
+      case 'completed': return const Color(0xFF10B981);
       case 'cancelled': 
-      case 'banned': return Colors.red;
-      case 'searching': return Colors.blue;
+      case 'banned': return Colors.redAccent;
+      case 'searching': return Colors.blueAccent;
       case 'matched':
       case 'in_progress':
       case 'customer_paid': return Colors.orange;
@@ -1627,25 +1793,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             final int subscriptionCount = int.tryParse(purchaseStats['subscriptions_count']?.toString() ?? '0') ?? 0;
 
             return Container(
-              height: MediaQuery.of(context).size.height * 0.90, 
+              height: MediaQuery.of(context).size.height * 0.88, 
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
               ),
               child: Column(
                 children: [
                   const SizedBox(height: 12),
-                  Container(width: 40, height: 5, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10))),
+                  Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10))),
                   const SizedBox(height: 16),
                   
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 20),
                     child: Align(
                       alignment: Alignment.centerLeft,
-                      child: Text("Satın Alım & Premium Takibi", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      child: Text("Satın Alım & Premium Takibi", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
 
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1661,7 +1827,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     child: Align(
                       alignment: Alignment.centerLeft,
-                      child: Text("Son İşlemler", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey)),
+                      child: Text("Son İşlemler", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
                     ),
                   ),
 
@@ -1669,34 +1835,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     child: allPurchases.isEmpty
                       ? _buildEmptyState("Henüz satın alım bulunmuyor.", Icons.money_off_rounded)
                       : ListView.separated(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                           itemCount: allPurchases.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          separatorBuilder: (_, __) => const SizedBox(height: 10),
                           itemBuilder: (context, index) {
                             final purchase = allPurchases[index];
                             final bool isPremium = purchase['purchase_type'] == 'premium';
                             final bool isApple = purchase['platform'] == 'apple';
                             
                             return Material(
-                              color: isDark ? Colors.white10 : Colors.grey.shade50,
+                              color: isDark ? Colors.white10 : const Color(0xFFF8FAFC),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
-                                side: BorderSide(color: (isPremium ? Colors.orange : Colors.blue).withOpacity(0.3)),
+                                side: BorderSide(color: (isPremium ? Colors.orange : Colors.blue).withOpacity(0.25)),
                               ),
                               child: ListTile(
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                                 leading: CircleAvatar(
-                                  backgroundColor: isPremium ? Colors.orange.withOpacity(0.2) : Colors.blue.withOpacity(0.2),
-                                  child: Icon(isPremium ? Icons.star_rounded : Icons.autorenew_rounded, color: isPremium ? Colors.orange : Colors.blue),
+                                  backgroundColor: isPremium ? Colors.orange.withOpacity(0.15) : Colors.blue.withOpacity(0.15),
+                                  child: Icon(isPremium ? Icons.star_rounded : Icons.autorenew_rounded, color: isPremium ? Colors.orange : Colors.blue, size: 20),
                                 ),
-                                title: Text(purchase['user_name']?.toString() ?? 'Bilinmeyen Kullanıcı', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                title: Text(purchase['user_name']?.toString() ?? 'Bilinmeyen Kullanıcı', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                                 subtitle: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const SizedBox(height: 4),
-                                    Text(purchase['user_phone']?.toString() ?? ''),
-                                    const SizedBox(height: 4),
-                                    Text("Tarih: ${_formatDate(purchase['created_at']?.toString())}", style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                    const SizedBox(height: 2),
+                                    Text(purchase['user_phone']?.toString() ?? '', style: const TextStyle(fontSize: 12)),
+                                    const SizedBox(height: 2),
+                                    Text("Tarih: ${_formatDate(purchase['created_at']?.toString())}", style: const TextStyle(fontSize: 10, color: Colors.grey)),
                                   ],
                                 ),
                                 trailing: Column(
@@ -1704,11 +1870,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(color: (isApple ? Colors.black87 : Colors.green).withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                                      child: Text(isApple ? "Apple" : "Google", style: TextStyle(color: isApple ? (isDark ? Colors.white : Colors.black87) : Colors.green, fontWeight: FontWeight.bold, fontSize: 10)),
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(color: (isApple ? Colors.black87 : Colors.green).withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                                      child: Text(isApple ? "Apple" : "Google", style: TextStyle(color: isApple ? (isDark ? Colors.white : Colors.black87) : Colors.green, fontWeight: FontWeight.bold, fontSize: 9)),
                                     ),
-                                    const SizedBox(height: 6),
+                                    const SizedBox(height: 4),
                                     Text(isPremium ? "PREMİUM" : "ABONELİK", style: TextStyle(color: isPremium ? Colors.orange : Colors.blue, fontWeight: FontWeight.w900, fontSize: 10)),
                                   ],
                                 ),
@@ -1725,7 +1891,562 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       }
     );
   }
-void _showFeedbacksModal(BuildContext context, bool isDark) async {
+
+  void _showTelemetryModal(BuildContext context, bool isDark) {
+    _fetchTelemetryStats();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+            final q = telemetrySearchQuery.toLowerCase();
+
+            bool matchesFilter(dynamic item) {
+              final name = (item['event_name'] ?? '').toString().toLowerCase();
+              final screen = (item['screen_name'] ?? '').toString().toLowerCase();
+              final meta = (item['metadata'] ?? '').toString().toLowerCase();
+
+              if (q.isNotEmpty && !name.contains(q) && !screen.contains(q) && !meta.contains(q)) {
+                return false;
+              }
+
+              if (telemetryFilterRole == 'customer') {
+                return name.contains('musteri') || name.contains('hizmet_tiklandi') || screen.contains('customer');
+              } else if (telemetryFilterRole == 'provider') {
+                return name.contains('usta') || screen.contains('provider');
+              }
+              return true;
+            }
+
+            final filteredButtons = topClickedButtons.where(matchesFilter).toList();
+            final filteredWaits = longestUserWaits.where(matchesFilter).toList();
+            final filteredDrops = userDrops.where(matchesFilter).toList();
+            final filteredErrors = topAppErrors.where(matchesFilter).toList();
+
+            int maxClicks = 1;
+            for (var b in filteredButtons) {
+              int c = int.tryParse(b['click_count']?.toString() ?? '0') ?? 0;
+              if (c > maxClicks) maxClicks = c;
+            }
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.90,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 12),
+                  Container(
+                    width: 44,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.tealAccent.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.analytics_rounded, color: Colors.teal, size: 18),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              "Kullanıcı Davranış & Kalite Kokpiti",
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.refresh_rounded, color: Colors.blueAccent),
+                          tooltip: "Verileri Canlı Güncelle",
+                          onPressed: () async {
+                            await _fetchTelemetryStats();
+                            setModalState(() {});
+                          },
+                        )
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+
+                  // ARAMA ÇUBUĞU
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+                    child: Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                      ),
+                      child: TextField(
+                        onChanged: (val) => setModalState(() => telemetrySearchQuery = val),
+                        style: TextStyle(fontSize: 13, color: isDark ? Colors.white : Colors.black),
+                        decoration: const InputDecoration(
+                          hintText: "Aksiyon, ekran, terkedilme veya hata ara...",
+                          hintStyle: TextStyle(fontSize: 12, color: Colors.grey),
+                          prefixIcon: Icon(Icons.search_rounded, size: 18, color: Colors.grey),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(vertical: 10),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // ROL FİLTRE ÇİPLERİ
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    child: Row(
+                      children: [
+                        ChoiceChip(
+                          label: const Text("Tümü", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          selected: telemetryFilterRole == "all",
+                          onSelected: (_) => setModalState(() => telemetryFilterRole = "all"),
+                        ),
+                        const SizedBox(width: 8),
+                        ChoiceChip(
+                          avatar: const Icon(Icons.person_rounded, size: 14, color: Colors.blueAccent),
+                          label: const Text("Müşteri", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          selected: telemetryFilterRole == "customer",
+                          onSelected: (_) => setModalState(() => telemetryFilterRole = "customer"),
+                        ),
+                        const SizedBox(width: 8),
+                        ChoiceChip(
+                          avatar: const Icon(Icons.engineering_rounded, size: 14, color: Colors.orangeAccent),
+                          label: const Text("Usta", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          selected: telemetryFilterRole == "provider",
+                          onSelected: (_) => setModalState(() => telemetryFilterRole = "provider"),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.blue.withOpacity(0.3))),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Icon(Icons.touch_app_rounded, color: Colors.blue, size: 18),
+                                      const SizedBox(height: 4),
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text("${telemetrySummary['total_clicks'] ?? 0}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.blue)),
+                                      ),
+                                      const Text("Tıklamalar", style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold), maxLines: 1),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.orange.withOpacity(0.3))),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Icon(Icons.timer_rounded, color: Colors.orange, size: 18),
+                                      const SizedBox(height: 4),
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text("${telemetrySummary['overall_avg_wait_sec'] ?? 0} sn", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.orange)),
+                                      ),
+                                      const Text("Ort. Bekleme", style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold), maxLines: 1),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.amber.withOpacity(0.5))),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Icon(Icons.directions_run_rounded, color: Colors.amber, size: 18),
+                                      const SizedBox(height: 4),
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text("${telemetrySummary['total_drops'] ?? 0}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.amber)),
+                                      ),
+                                      const Text("Vazgeçmeler", style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold), maxLines: 1),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.red.withOpacity(0.4))),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Icon(Icons.bug_report_rounded, color: Colors.red, size: 18),
+                                      const SizedBox(height: 4),
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text("${telemetrySummary['total_errors'] ?? 0}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.red)),
+                                      ),
+                                      const Text("Çökme / Bug", style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold), maxLines: 1),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+
+                          const Text("🔥 En Çok Tıklanan Butonlar & Aksiyonlar", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
+                          const SizedBox(height: 8),
+                          filteredButtons.isEmpty
+                              ? Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(12)),
+                                  child: const Text("Kayıt bulunamadı.", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                )
+                              : ListView.separated(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: filteredButtons.length,
+                                  separatorBuilder: (_, __) => const SizedBox(height: 6),
+                                  itemBuilder: (context, idx) {
+                                    final item = filteredButtons[idx];
+                                    final int clicks = int.tryParse(item['click_count']?.toString() ?? '0') ?? 0;
+                                    final double ratio = (clicks / maxClicks).clamp(0.05, 1.0);
+                                    final bool isProviderAction = (item['event_name'] ?? '').toString().contains('usta');
+
+                                    return Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: cardBg,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: Colors.grey.withOpacity(0.12)),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              CircleAvatar(
+                                                radius: 10,
+                                                backgroundColor: (isProviderAction ? Colors.orange : Colors.blue).withOpacity(0.15),
+                                                child: Text("${idx + 1}", style: TextStyle(color: isProviderAction ? Colors.orange : Colors.blue, fontSize: 10, fontWeight: FontWeight.bold)),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(item['event_name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12), overflow: TextOverflow.ellipsis),
+                                                    Text("Ekran: ${item['screen_name']} • ${isProviderAction ? 'Usta' : 'Müşteri'}", style: const TextStyle(color: Colors.grey, fontSize: 10), overflow: TextOverflow.ellipsis),
+                                                  ],
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                                decoration: BoxDecoration(color: (isProviderAction ? Colors.orange : Colors.blue).withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                                                child: Text("$clicks tık", style: TextStyle(color: isProviderAction ? Colors.orange : Colors.blue, fontWeight: FontWeight.w900, fontSize: 10)),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 6),
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.circular(4),
+                                            child: LinearProgressIndicator(
+                                              value: ratio,
+                                              minHeight: 4,
+                                              backgroundColor: Colors.grey.withOpacity(0.1),
+                                              valueColor: AlwaysStoppedAnimation<Color>(isProviderAction ? Colors.orangeAccent : Colors.blueAccent),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                          const SizedBox(height: 20),
+
+                          const Text("⏳ En Çok Beklenen Aşamalar (Darboğazlar)", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.orange)),
+                          const SizedBox(height: 8),
+                          filteredWaits.isEmpty
+                              ? Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(12)),
+                                  child: const Text("Kayıtlı bekleme süresi bulunamadı.", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                )
+                              : ListView.separated(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: filteredWaits.length,
+                                  separatorBuilder: (_, __) => const SizedBox(height: 6),
+                                  itemBuilder: (context, idx) {
+                                    final item = filteredWaits[idx];
+                                    final double avgSec = double.tryParse(item['avg_duration_sec']?.toString() ?? '0') ?? 0.0;
+                                    final int samples = int.tryParse(item['total_samples']?.toString() ?? '0') ?? 0;
+
+                                    Color riskColor = avgSec > 60 ? Colors.redAccent : (avgSec > 25 ? Colors.orange : Colors.green);
+                                    String riskLabel = avgSec > 60 ? "Aşırı Yavaş" : (avgSec > 25 ? "Orta Bekleme" : "Hızlı Süreç");
+
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                      decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: riskColor.withOpacity(0.3))),
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.timer_outlined, color: riskColor, size: 20),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(item['event_name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12), overflow: TextOverflow.ellipsis),
+                                                Text("${item['screen_name']} • $samples ölçüm", style: const TextStyle(color: Colors.grey, fontSize: 10), overflow: TextOverflow.ellipsis),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.end,
+                                            children: [
+                                              Text("Ort. $avgSec sn", style: TextStyle(color: riskColor, fontWeight: FontWeight.w900, fontSize: 12)),
+                                              Text(riskLabel, style: TextStyle(color: riskColor, fontSize: 9, fontWeight: FontWeight.bold)),
+                                            ],
+                                          )
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                          const SizedBox(height: 20),
+
+                          const Text("🚪 Kullanıcı Nerede Vazgeçti? (İptal & Terk Analizi)", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.amber)),
+                          const SizedBox(height: 4),
+                          const Text("Kullanıcıların süreci tamamlamadan çıktığı aşamalar", style: TextStyle(fontSize: 11, color: Colors.grey)),
+                          const SizedBox(height: 8),
+                          filteredDrops.isEmpty
+                              ? Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(12)),
+                                  child: const Text("Terk edilen işlem bulunmuyor.", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                )
+                              : ListView.separated(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: filteredDrops.length,
+                                  separatorBuilder: (_, __) => const SizedBox(height: 6),
+                                  itemBuilder: (context, idx) {
+                                    final item = filteredDrops[idx];
+                                    final int count = int.tryParse(item['drop_count']?.toString() ?? '0') ?? 0;
+                                    final double avgWait = double.tryParse(item['avg_wait_before_drop']?.toString() ?? '0') ?? 0.0;
+
+                                    return Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber.withOpacity(0.06),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: Colors.amber.withOpacity(0.35)),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  item['event_name'] ?? 'Vazgeçildi',
+                                                  style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.w900, fontSize: 12),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                                decoration: BoxDecoration(color: Colors.amber.withOpacity(0.2), borderRadius: BorderRadius.circular(6)),
+                                                child: Text("$count Kez", style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.w900, fontSize: 10)),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text("Ekran: ${item['screen_name']} • Pes etmeden önceki bekleme: $avgWait sn", style: const TextStyle(color: Colors.grey, fontSize: 10), overflow: TextOverflow.ellipsis),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                          const SizedBox(height: 20),
+
+                          const Text("💥 Gerçek Yazılımsal Hatalar & Çökmeler (Bug/Crash)", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.redAccent)),
+                          const SizedBox(height: 8),
+                          filteredErrors.isEmpty
+                              ? Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(12)),
+                                  child: const Text("Tebrikler! Sistemde kayıtlı hiçbir yazılımsal çökme veya bug yok.", style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
+                                )
+                              : ListView.separated(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: filteredErrors.length,
+                                  separatorBuilder: (_, __) => const SizedBox(height: 6),
+                                  itemBuilder: (context, idx) {
+                                    final item = filteredErrors[idx];
+                                    final count = int.tryParse(item['error_count']?.toString() ?? '0') ?? 0;
+
+                                    return Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red.withOpacity(0.06),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: Colors.red.withOpacity(0.35)),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  item['event_name'] ?? 'Sistem Hatası',
+                                                  style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w900, fontSize: 12),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                                decoration: BoxDecoration(color: Colors.red.withOpacity(0.2), borderRadius: BorderRadius.circular(6)),
+                                                child: Text("$count Kez", style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w900, fontSize: 10)),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text("Ekran: ${item['screen_name']} • Son: ${item['last_seen']}", style: const TextStyle(color: Colors.grey, fontSize: 10), overflow: TextOverflow.ellipsis),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                          const SizedBox(height: 20),
+
+                          const Text("⚡ Canlı Son Hareketler Akışı (Canlı İzleme)", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
+                          const SizedBox(height: 8),
+                          recentStream.isEmpty
+                              ? const SizedBox.shrink()
+                              : ListView.separated(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: recentStream.length,
+                                  separatorBuilder: (_, __) => const SizedBox(height: 6),
+                                  itemBuilder: (context, idx) {
+                                    final log = recentStream[idx];
+                                    final type = log['event_type'] ?? '';
+                                    Color dotColor = Colors.blue;
+                                    IconData dotIcon = Icons.touch_app_rounded;
+
+                                    if (type == 'user_drop') {
+                                      dotColor = Colors.amber;
+                                      dotIcon = Icons.logout_rounded;
+                                    } else if (type == 'app_error') {
+                                      dotColor = Colors.red;
+                                      dotIcon = Icons.bug_report_rounded;
+                                    } else if (type == 'wait_time') {
+                                      dotColor = Colors.orange;
+                                      dotIcon = Icons.timer_rounded;
+                                    }
+
+                                    final int durationSec = int.tryParse(log['duration_seconds']?.toString() ?? '0') ?? 0;
+
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                      decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(10)),
+                                      child: Row(
+                                        children: [
+                                          Icon(dotIcon, size: 16, color: dotColor),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  "${log['user_type'] == 'provider' ? 'Usta' : 'Müşteri'} • ${log['event_name']}",
+                                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                                  overflow: TextOverflow.ellipsis,
+                                                  maxLines: 1,
+                                                ),
+                                                Text(
+                                                  "${log['screen_name']} • ${log['created_at']}",
+                                                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                                                  overflow: TextOverflow.ellipsis,
+                                                  maxLines: 1,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          if (durationSec > 0)
+                                            Text(
+                                              "$durationSec sn",
+                                              style: TextStyle(color: dotColor, fontWeight: FontWeight.bold, fontSize: 11),
+                                            ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showFeedbacksModal(BuildContext context, bool isDark) async {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -1738,7 +2459,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success') {
-          feedbacks = data['feedbacks'] ?? [];
+          feedbacks = (data['feedbacks'] is List) ? List.from(data['feedbacks']) : [];
         }
       }
     } catch (_) {}
@@ -1754,50 +2475,50 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
           height: MediaQuery.of(context).size.height * 0.85,
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF1E293B) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           ),
           child: Column(
             children: [
               const SizedBox(height: 12),
-              Container(width: 40, height: 5, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10))),
+              Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10))),
               const SizedBox(height: 16),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: Text("Kullanıcı Geri Bildirimleri", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  child: Text("Kullanıcı Geri Bildirimleri", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
               Expanded(
                 child: feedbacks.isEmpty
                   ? _buildEmptyState("Henüz geri bildirim bulunmuyor.", Icons.feedback_outlined)
                   : ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                       itemCount: feedbacks.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
                       itemBuilder: (context, index) {
                         final fb = feedbacks[index];
                         return Material(
-                          color: isDark ? Colors.white10 : Colors.grey.shade50,
+                          color: isDark ? Colors.white10 : const Color(0xFFF8FAFC),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
-                            side: BorderSide(color: Colors.amber.withOpacity(0.3)),
+                            side: BorderSide(color: Colors.amber.withOpacity(0.25)),
                           ),
                           child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                             leading: CircleAvatar(
-                              backgroundColor: Colors.amber.withOpacity(0.2),
-                              child: const Icon(Icons.person, color: Colors.orange),
+                              backgroundColor: Colors.amber.withOpacity(0.15),
+                              child: const Icon(Icons.person, color: Colors.orange, size: 20),
                             ),
-                            title: Text(fb['user_name']?.toString() ?? 'Bilinmeyen Kullanıcı', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            title: Text(fb['user_name']?.toString() ?? 'Bilinmeyen Kullanıcı', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const SizedBox(height: 8),
-                                Text(fb['message']?.toString() ?? '', style: TextStyle(color: isDark ? Colors.white70 : Colors.black87)),
-                                const SizedBox(height: 8),
-                                Text("Tarih: ${_formatDate(fb['created_at']?.toString())}", style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                const SizedBox(height: 6),
+                                Text(fb['message']?.toString() ?? '', style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontSize: 13)),
+                                const SizedBox(height: 6),
+                                Text("Tarih: ${_formatDate(fb['created_at']?.toString())}", style: const TextStyle(fontSize: 10, color: Colors.grey)),
                               ],
                             ),
                           ),
@@ -1811,6 +2532,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
       }
     );
   }
+
   void _showAdManagementModal(BuildContext context, bool isDark) {
     showModalBottomSheet(
       context: context,
@@ -1823,68 +2545,73 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
               height: MediaQuery.of(context).size.height * 0.85,
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
               ),
               child: Column(
                 children: [
                   const SizedBox(height: 12),
-                  Container(width: 40, height: 5, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10))),
+                  Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10))),
                   const SizedBox(height: 16),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text("Reklam Yönetimi", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                        const Text("Reklam Yönetimi", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
                         ElevatedButton.icon(
                           onPressed: () => _showAddAdModal(context, isDark, () => setModalState(() {})),
-                          icon: const Icon(Icons.add, size: 18),
-                          label: const Text("Yeni Ekle"),
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text("Yeni Ekle", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blueAccent, 
+                            foregroundColor: Colors.white, 
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8)
+                          ),
                         )
                       ],
                     ),
                   ),
-                  const Divider(height: 32),
+                  const Divider(height: 24),
                   Expanded(
                     child: allAds.isEmpty
                       ? const Center(child: Text("Sistemde aktif reklam bulunmuyor.", style: TextStyle(color: Colors.grey)))
                       : ListView.separated(
                           padding: const EdgeInsets.all(16),
                           itemCount: allAds.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          separatorBuilder: (_, __) => const SizedBox(height: 10),
                           itemBuilder: (context, index) {
                             final ad = allAds[index];
                             
                             return Material(
-                              color: isDark ? Colors.white10 : Colors.grey.shade50,
+                              color: isDark ? Colors.white10 : const Color(0xFFF8FAFC),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
-                                side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                                side: BorderSide(color: Colors.grey.withOpacity(0.18)),
                               ),
                               clipBehavior: Clip.antiAlias,
                               child: ListTile(
                                 leading: Container(
-                                  width: 50,
-                                  height: 50,
+                                  width: 48,
+                                  height: 48,
                                   decoration: BoxDecoration(
-                                    color: Colors.blueAccent.withOpacity(0.2),
+                                    color: Colors.blueAccent.withOpacity(0.15),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   clipBehavior: Clip.antiAlias,
-                                  child: _buildSafeNetworkImage(ad['image_url'], width: 50, height: 50),
+                                  child: _buildSafeNetworkImage(ad['image_url'], width: 48, height: 48),
                                 ),
-                                title: Text(ad['title'] ?? 'İsimsiz', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                subtitle: Text("Öncelik: ${ad['priority'] ?? 'Belirsiz'}\n${ad['description'] ?? ''}", maxLines: 2, overflow: TextOverflow.ellipsis),
+                                title: Text(ad['title'] ?? 'İsimsiz', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                subtitle: Text("Öncelik: ${ad['priority'] ?? 'Belirsiz'}\n${ad['description'] ?? ''}", maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
-                                      icon: const Icon(Icons.edit, color: Colors.blue),
+                                      icon: const Icon(Icons.edit, color: Colors.blueAccent, size: 20),
                                       onPressed: () => _showEditAdModal(context, isDark, ad, () => setModalState(() {})),
                                     ),
                                     IconButton(
-                                      icon: const Icon(Icons.delete, color: Colors.red),
+                                      icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
                                       onPressed: () => _deleteAd(ad['id'], () => setModalState(() {})),
                                     ),
                                   ],
@@ -1916,19 +2643,19 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
       context: context,
       isScrollControlled: true,
       backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
             return Padding(
-              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 24, right: 24, top: 24),
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 20, right: 20, top: 20),
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text("Yeni Reklam Ekle", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 20),
+                    const Text("Yeni Reklam Ekle", style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
                     
                     GestureDetector(
                       onTap: () async {
@@ -1942,11 +2669,11 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                         }
                       },
                       child: Container(
-                        height: 150,
+                        height: 140,
                         decoration: BoxDecoration(
-                          color: isDark ? Colors.black12 : Colors.grey.shade100,
+                          color: isDark ? Colors.black12 : const Color(0xFFF8FAFC),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.blueAccent.withOpacity(0.5)),
+                          border: Border.all(color: Colors.blueAccent.withOpacity(0.4)),
                         ),
                         child: selectedImageBytes != null
                             ? ClipRRect(
@@ -1956,32 +2683,32 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                             : Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.add_photo_alternate_rounded, size: 40, color: Colors.blueAccent.withOpacity(0.7)),
-                                  const SizedBox(height: 8),
-                                  const Text("Resim Seçmek İçin Dokunun", style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)),
+                                  Icon(Icons.add_photo_alternate_rounded, size: 36, color: Colors.blueAccent.withOpacity(0.7)),
+                                  const SizedBox(height: 6),
+                                  const Text("Resim Seçmek İçin Dokunun", style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: 13)),
                                 ],
                               ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
 
                     TextField(
                       controller: titleCtrl,
                       decoration: InputDecoration(labelText: "Reklam Başlığı", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     TextField(
                       controller: descCtrl,
                       decoration: InputDecoration(labelText: "Kısa Açıklama", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
                       maxLines: 2,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     TextField(
                       controller: priorityCtrl,
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(labelText: "Öncelik (1 en yüksek, örn: 1,2,3)", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: isSavingAd ? null : () async {
                         if (titleCtrl.text.trim().isEmpty) {
@@ -2021,12 +2748,12 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                           setSheetState(() => isSavingAd = false);
                         }
                       },
-                      style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), backgroundColor: Colors.blueAccent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                      style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), backgroundColor: Colors.blueAccent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
                       child: isSavingAd 
-                        ? const Center(child: CircularProgressIndicator(color: Colors.white))
-                        : const Text("Reklamı Kaydet", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        ? const Center(child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Text("Reklamı Kaydet", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
@@ -2051,19 +2778,19 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
       context: context,
       isScrollControlled: true,
       backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
             return Padding(
-              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 24, right: 24, top: 24),
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 20, right: 20, top: 20),
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text("Reklamı Düzenle", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 20),
+                    const Text("Reklamı Düzenle", style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
                     
                     GestureDetector(
                       onTap: () async {
@@ -2077,11 +2804,11 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                         }
                       },
                       child: Container(
-                        height: 150,
+                        height: 140,
                         decoration: BoxDecoration(
-                          color: isDark ? Colors.black12 : Colors.grey.shade100,
+                          color: isDark ? Colors.black12 : const Color(0xFFF8FAFC),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.blueAccent.withOpacity(0.5)),
+                          border: Border.all(color: Colors.blueAccent.withOpacity(0.4)),
                         ),
                         child: selectedImageBytes != null
                             ? ClipRRect(
@@ -2105,9 +2832,9 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                                           child: Column(
                                             mainAxisAlignment: MainAxisAlignment.center,
                                             children: [
-                                              Icon(Icons.edit, color: Colors.white, size: 32),
+                                              Icon(Icons.edit, color: Colors.white, size: 28),
                                               SizedBox(height: 4),
-                                              Text("Resmi Değiştir", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                              Text("Resmi Değiştir", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                                             ],
                                           ),
                                         ),
@@ -2117,32 +2844,32 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                                 : Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(Icons.add_photo_alternate_rounded, size: 40, color: Colors.blueAccent.withOpacity(0.7)),
-                                      const SizedBox(height: 8),
-                                      const Text("Resim Seçmek İçin Dokunun", style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)),
+                                      Icon(Icons.add_photo_alternate_rounded, size: 36, color: Colors.blueAccent.withOpacity(0.7)),
+                                      const SizedBox(height: 6),
+                                      const Text("Resim Seçmek İçin Dokunun", style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: 13)),
                                     ],
                                   )),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
 
                     TextField(
                       controller: titleCtrl,
                       decoration: InputDecoration(labelText: "Reklam Başlığı", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     TextField(
                       controller: descCtrl,
                       decoration: InputDecoration(labelText: "Kısa Açıklama", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
                       maxLines: 2,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     TextField(
                       controller: priorityCtrl,
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(labelText: "Öncelik", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: isSavingAd ? null : () async {
                         if (titleCtrl.text.trim().isEmpty) {
@@ -2184,12 +2911,12 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                           setSheetState(() => isSavingAd = false);
                         }
                       },
-                      style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), backgroundColor: Colors.blueAccent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                      style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), backgroundColor: Colors.blueAccent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
                       child: isSavingAd 
-                        ? const Center(child: CircularProgressIndicator(color: Colors.white))
-                        : const Text("Değişiklikleri Kaydet", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        ? const Center(child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Text("Değişiklikleri Kaydet", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
@@ -2240,15 +2967,15 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: Container(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF1E293B) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-            border: Border.all(color: Colors.orange.withOpacity(0.3), width: 1.5),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border.all(color: Colors.orange.withOpacity(0.3), width: 1.2),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 40, offset: const Offset(0, -10))
+              BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 30, offset: const Offset(0, -8))
             ]
           ),
           child: SafeArea(
@@ -2258,44 +2985,44 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
               children: [
                 Center(
                   child: Container(
-                    width: 40,
-                    height: 5,
+                    width: 44,
+                    height: 4,
                     decoration: BoxDecoration(
                       color: isDark ? Colors.white24 : Colors.black26,
                       borderRadius: BorderRadius.circular(10)
                     )
                   )
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(18),
                   child: Container(
-                    height: 180,
+                    height: 160,
                     color: isDark ? Colors.black12 : Colors.grey.shade200,
-                    child: _buildSafeNetworkImage(ad['image_url'], height: 180, width: double.infinity),
+                    child: _buildSafeNetworkImage(ad['image_url'], height: 160, width: double.infinity),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
                 Text(
                   ad['title'] ?? 'Kampanya', 
                   textAlign: TextAlign.center, 
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: isDark ? Colors.white : Colors.black87)
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: isDark ? Colors.white : Colors.black87)
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 Text(
                   ad['description'] ?? 'Detaylı bilgi için iletişim kurun.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: isDark ? Colors.white70 : Colors.black54, height: 1.5)
+                  style: TextStyle(fontSize: 13, color: isDark ? Colors.white70 : Colors.black54, height: 1.4)
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: () => Navigator.pop(context),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
-                  child: const Text("Fırsatı Değerlendir", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                  child: const Text("Fırsatı Değerlendir", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
                 )
               ],
             ),
@@ -2311,7 +3038,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
     return Column(
       children: [
         SizedBox(
-          height: 140,
+          height: 130,
           child: PageView.builder(
             controller: _adPageController,
             physics: const BouncingScrollPhysics(),
@@ -2333,7 +3060,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
           ),
         ),
         if (totalItems > 1) ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           ValueListenableBuilder<int>(
             valueListenable: currentAdIndex,
             builder: (context, selectedIdx, child) {
@@ -2343,9 +3070,9 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                   totalItems,
                   (index) => AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    width: selectedIdx == index ? 24 : 8,
-                    height: 6,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: selectedIdx == index ? 20 : 6,
+                    height: 5,
                     decoration: BoxDecoration(
                       color: selectedIdx == index ? Colors.blueAccent : Colors.grey.withOpacity(0.3),
                       borderRadius: BorderRadius.circular(4),
@@ -2362,33 +3089,33 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
 
   Widget _buildHeaderCard(Color cardColor, bool isDark) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF121212) : cardColor,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.blueAccent.withOpacity(0.2), width: 1.5),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 8))],
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.blueAccent.withOpacity(0.2), width: 1.2),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 15, offset: const Offset(0, 5))],
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               gradient: const LinearGradient(colors: [Colors.blueAccent, Colors.lightBlue], begin: Alignment.topLeft, end: Alignment.bottomRight),
               shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: Colors.blueAccent.withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 5))]
+              boxShadow: [BoxShadow(color: Colors.blueAccent.withOpacity(0.35), blurRadius: 10, offset: const Offset(0, 4))]
             ),
-            child: const Icon(Icons.bolt_rounded, color: Colors.white, size: 32),
+            child: const Icon(Icons.bolt_rounded, color: Colors.white, size: 28),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text("Oto Yardım Yanınızda", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: isDark ? Colors.white : Colors.black87, letterSpacing: -0.5)),
-                const SizedBox(height: 6),
-                Text("Müşteriler bu alanı varsayılan olarak bu şekilde görür.", style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : Colors.black54, height: 1.4, fontWeight: FontWeight.w600)),
+                Text("Oto Yardım Yanınızda", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: isDark ? Colors.white : Colors.black87, letterSpacing: -0.3)),
+                const SizedBox(height: 4),
+                Text("Müşteriler bu alanı varsayılan olarak bu şekilde görür.", style: TextStyle(fontSize: 11, color: isDark ? Colors.white70 : Colors.black54, height: 1.3, fontWeight: FontWeight.w600)),
               ],
             ),
           )
@@ -2404,12 +3131,12 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
     return GestureDetector(
       onTap: () => _showAdDetailsModal(context, ad),
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF121212) : cardColor,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.orange.withOpacity(0.4), width: 1.5),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 8))],
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.orange.withOpacity(0.35), width: 1.2),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 15, offset: const Offset(0, 5))],
         ),
         clipBehavior: Clip.antiAlias,
         child: Stack(
@@ -2424,15 +3151,15 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(colors: [Colors.orange, Colors.deepOrange], begin: Alignment.topLeft, end: Alignment.bottomRight),
                     shape: BoxShape.circle,
-                    boxShadow: [BoxShadow(color: Colors.orange.withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 5))]
+                    boxShadow: [BoxShadow(color: Colors.orange.withOpacity(0.35), blurRadius: 10, offset: const Offset(0, 4))]
                   ),
-                  child: const Icon(Icons.campaign_rounded, color: Colors.white, size: 32),
+                  child: const Icon(Icons.campaign_rounded, color: Colors.white, size: 28),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2441,20 +3168,20 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                             decoration: BoxDecoration(color: Colors.orange, borderRadius: BorderRadius.circular(4)),
-                            child: const Text("SPONSORLU", style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                            child: const Text("SPONSORLU", style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 6),
-                      Text(ad['title'] ?? 'Kampanya', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: hasImage || isDark ? Colors.white : Colors.black87, letterSpacing: -0.5), maxLines: 1, overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 4),
-                      Text(ad['description'] ?? 'Detaylı bilgi için dokunun', style: TextStyle(fontSize: 12, color: hasImage || isDark ? Colors.white70 : Colors.black54, height: 1.4, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      Text(ad['title'] ?? 'Kampanya', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: hasImage || isDark ? Colors.white : Colors.black87, letterSpacing: -0.3), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 2),
+                      Text(ad['description'] ?? 'Detaylı bilgi için dokunun', style: TextStyle(fontSize: 11, color: hasImage || isDark ? Colors.white70 : Colors.black54, height: 1.3, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
                     ],
                   ),
                 ),
-                Icon(Icons.arrow_forward_ios_rounded, color: hasImage || isDark ? Colors.white54 : Colors.black26, size: 16),
+                Icon(Icons.arrow_forward_ios_rounded, color: hasImage || isDark ? Colors.white54 : Colors.black26, size: 14),
               ],
             ),
           ],
@@ -2472,7 +3199,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        title: const Text("Yönetim Paneli", style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+        title: const Text("Yönetim Paneli", style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: -0.5, fontSize: 18)),
         backgroundColor: cardColor,
         elevation: 0,
         centerTitle: true,
@@ -2501,19 +3228,19 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
       ),
       extendBody: true,
       bottomNavigationBar: Container(
-        margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+        margin: const EdgeInsets.only(left: 14, right: 14, bottom: 14),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(32),
+          borderRadius: BorderRadius.circular(28),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 30, offset: const Offset(0, 10))
+            BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 20, offset: const Offset(0, 6))
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(32),
+          borderRadius: BorderRadius.circular(28),
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
             child: NavigationBar(
-              height: 65,
+              height: 60,
               selectedIndex: _selectedIndex,
               onDestinationSelected: (index) {
                 setState(() {
@@ -2534,10 +3261,10 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                   _partSearchCtrl.clear();
                 });
               },
-              backgroundColor: cardColor.withOpacity(isDark ? 0.6 : 0.85),
-              indicatorColor: Colors.blueAccent.withOpacity(0.2),
+              backgroundColor: cardColor.withOpacity(isDark ? 0.75 : 0.90),
+              indicatorColor: Colors.blueAccent.withOpacity(0.18),
               labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
-              animationDuration: const Duration(milliseconds: 400),
+              animationDuration: const Duration(milliseconds: 350),
               destinations: [
                 const NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard_rounded, color: Colors.blueAccent), label: "Genel"),
                 NavigationDestination(
@@ -2574,44 +3301,44 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Padding(
-          padding: EdgeInsets.symmetric(vertical: 16),
-          child: Text("Düşük Performanslı Ustalar (< 3.5)", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.red)),
+          padding: EdgeInsets.symmetric(vertical: 14),
+          child: Text("Düşük Performanslı Ustalar (< 3.5)", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.red)),
         ),
         ListView.separated(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: lowPerformingProviders.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          separatorBuilder: (_, __) => const SizedBox(height: 10),
           itemBuilder: (context, index) {
             final provider = lowPerformingProviders[index];
             final int pId = int.tryParse(provider['id']?.toString() ?? '0') ?? 0;
             
             return Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: Colors.red.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.red.withOpacity(0.3))
+                border: Border.all(color: Colors.red.withOpacity(0.25))
               ),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: Colors.red.withOpacity(0.15), shape: BoxShape.circle),
-                    child: const Icon(Icons.star_half_rounded, color: Colors.red),
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(color: Colors.red.withOpacity(0.12), shape: BoxShape.circle),
+                    child: const Icon(Icons.star_half_rounded, color: Colors.red, size: 20),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(provider['name']?.toString() ?? 'Usta', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), overflow: TextOverflow.ellipsis),
-                        const SizedBox(height: 4),
+                        Text(provider['name']?.toString() ?? 'Usta', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), overflow: TextOverflow.ellipsis),
+                        const SizedBox(height: 2),
                         Wrap(
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            Text("Puan: ${provider['rating'] ?? 0} ", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
-                            Text("(${provider['reviews_count'] ?? 0} Yorum)", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                            Text("Puan: ${provider['rating'] ?? 0} ", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 12)),
+                            Text("(${provider['reviews_count'] ?? 0} Yorum)", style: const TextStyle(color: Colors.grey, fontSize: 11)),
                           ],
                         )
                       ],
@@ -2619,11 +3346,11 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                   ),
                   ElevatedButton.icon(
                     onPressed: () => _applyPunishment(pId, provider['name']?.toString() ?? 'Usta', 'suspend_provider', "15 gün askıya alınacak"),
-                    icon: const Icon(Icons.gavel_rounded, color: Colors.white, size: 16),
-                    label: const Text("Askıya Al", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                    icon: const Icon(Icons.gavel_rounded, color: Colors.white, size: 14),
+                    label: const Text("Askıya Al", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
                     ),
                   )
@@ -2632,67 +3359,71 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
             );
           },
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
       ],
     );
   }
 
   Widget _buildOverviewTab(Color cardColor, bool isDark) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final crossAxisCount = screenWidth >= 1200 ? 4 : (screenWidth >= 800 ? 3 : (screenWidth >= 600 ? 2 : 2));
-    final childRatio = screenWidth >= 600 ? 1.5 : 1.1;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = constraints.maxWidth;
+        final crossAxisCount = screenWidth >= 1200 ? 4 : (screenWidth >= 800 ? 3 : (screenWidth >= 600 ? 2 : 2));
+        final childRatio = screenWidth >= 600 ? 1.5 : 1.15;
 
-    return SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildTopSection(cardColor, isDark),
-          const SizedBox(height: 24),
-          const Text("Sistem Özeti", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 16),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: crossAxisCount,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            childAspectRatio: childRatio,
+        return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildGradientCard("Ciro", "${totalRevenue.toStringAsFixed(2)} ₺", Icons.account_balance_wallet_rounded, const [Color(0xFF11998e), Color(0xFF38ef7d)]),
-              _buildGradientCard("Toplam İşlem", totalJobs.toString(), Icons.handshake_rounded, const [Color(0xFF2193b0), Color(0xFF6dd5ed)], onTap: () => setState(() => _selectedIndex = 3)),
-              _buildGradientCard("Müşteriler", totalCustomers.toString(), Icons.person_rounded, const [Color(0xFFf12711), Color(0xFFf5af19)], onTap: () => setState(() { _selectedIndex = 2; userFilter = 'customer'; })),
-              _buildGradientCard("Kayıtlı Ustalar", totalProviders.toString(), Icons.engineering_rounded, const [Color(0xFF8E2DE2), Color(0xFF4A00E0)], onTap: () => setState(() { _selectedIndex = 2; userFilter = 'provider'; })),
+              _buildTopSection(cardColor, isDark),
+              const SizedBox(height: 20),
+              const Text("Sistem Özeti", style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 12),
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: crossAxisCount,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: childRatio,
+                children: [
+                  _buildGradientCard("Ciro", "${totalRevenue.toStringAsFixed(2)} ₺", Icons.account_balance_wallet_rounded, const [Color(0xFF11998e), Color(0xFF38ef7d)]),
+                  _buildGradientCard("Toplam İşlem", totalJobs.toString(), Icons.handshake_rounded, const [Color(0xFF2193b0), Color(0xFF6dd5ed)], onTap: () => setState(() => _selectedIndex = 3)),
+                  _buildGradientCard("Müşteriler", totalCustomers.toString(), Icons.person_rounded, const [Color(0xFFf12711), Color(0xFFf5af19)], onTap: () => setState(() { _selectedIndex = 2; userFilter = 'customer'; })),
+                  _buildGradientCard("Kayıtlı Ustalar", totalProviders.toString(), Icons.engineering_rounded, const [Color(0xFF8E2DE2), Color(0xFF4A00E0)], onTap: () => setState(() { _selectedIndex = 2; userFilter = 'provider'; })),
+                ],
+              ),
+              _buildLowPerformanceAlerts(cardColor), 
+              const SizedBox(height: 20),
+              const Text("Hızlı İşlemler", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildQuickActionButton(
+                      icon: Icons.refresh_rounded, 
+                      title: "Yenile", 
+                      color: Colors.blueAccent, 
+                      onTap: _fetchAllData
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _buildQuickActionButton(
+                      icon: Icons.notifications_active_rounded, 
+                      title: "Bildirim", 
+                      color: Colors.orange, 
+                      onTap: () => _showNotificationDialog()
+                    ),
+                  ),
+                ],
+              )
             ],
           ),
-          _buildLowPerformanceAlerts(cardColor), 
-          const SizedBox(height: 24),
-          const Text("Hızlı İşlemler", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildQuickActionButton(
-                  icon: Icons.refresh_rounded, 
-                  title: "Yenile", 
-                  color: Colors.blue, 
-                  onTap: _fetchAllData
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildQuickActionButton(
-                  icon: Icons.notifications_active_rounded, 
-                  title: "Bildirim", 
-                  color: Colors.orange, 
-                  onTap: () => _showNotificationDialog()
-                ),
-              ),
-            ],
-          )
-        ],
-      ),
+        );
+      }
     );
   }
 
@@ -2701,16 +3432,16 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withOpacity(0.08),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.3))
+          border: Border.all(color: color.withOpacity(0.25))
         ),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 8),
+            Icon(icon, color: color, size: 28),
+            const SizedBox(height: 6),
             Text(title, textAlign: TextAlign.center, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
           ],
         ),
@@ -2727,7 +3458,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
       itemCount: pendingProviders.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 16),
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final provider = pendingProviders[index];
         final isWash = provider['service_category'] == 'wash';
@@ -2738,8 +3469,8 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
           decoration: BoxDecoration(
             color: cardColor, 
             borderRadius: BorderRadius.circular(20), 
-            border: Border.all(color: Colors.orange.shade300, width: 1.5),
-            boxShadow: [BoxShadow(color: Colors.orange.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 5))]
+            border: Border.all(color: Colors.orange.shade300, width: 1.2),
+            boxShadow: [BoxShadow(color: Colors.orange.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))]
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2752,25 +3483,25 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("${provider['name'] ?? 'İsimsiz'}", style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18), overflow: TextOverflow.ellipsis),
+                        Text("${provider['name'] ?? 'İsimsiz'}", style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16), overflow: TextOverflow.ellipsis),
                         const SizedBox(height: 4),
-                        Text(provider['phone']?.toString() ?? '', style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.w600)),
+                        Text(provider['phone']?.toString() ?? '', style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.w600, fontSize: 13)),
                       ],
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(10)),
-                    child: Text(_translateServiceType(provider['service_category']?.toString()), style: TextStyle(color: Colors.orange.shade800, fontWeight: FontWeight.bold, fontSize: 12)),
+                    child: Text(_translateServiceType(provider['service_category']?.toString()), style: TextStyle(color: Colors.orange.shade800, fontWeight: FontWeight.bold, fontSize: 11)),
                   ),
                 ],
               ),
               const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Divider(),
+                padding: EdgeInsets.symmetric(vertical: 10),
+                child: Divider(height: 1),
               ),
-              const Text("İbraz Edilen Belgeler", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-              const SizedBox(height: 12),
+              const Text("İbraz Edilen Belgeler", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const SizedBox(height: 10),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -2784,15 +3515,15 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                   ]
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
-                      icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+                      icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green, 
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        backgroundColor: const Color(0xFF10B981), 
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
                       ),
                       onPressed: () => _handleProviderAction(providerId, 'approve_provider'),
@@ -2802,12 +3533,12 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                   const SizedBox(width: 8),
                   Expanded(
                     child: ElevatedButton.icon(
-                      icon: const Icon(Icons.cancel_outlined, size: 20),
+                      icon: const Icon(Icons.cancel_outlined, size: 18),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red.shade50, 
                         foregroundColor: Colors.red,
                         elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
                       ),
                       onPressed: () => _handleProviderAction(providerId, 'reject_provider'),
@@ -2824,7 +3555,6 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
   }
 
   Widget _buildUsersTab(Color cardColor, bool isDark) {
-    // Arama performansı optimize edildi
     final String searchLower = userSearchQuery.toLowerCase();
     List filteredUsers = allUsers.where((user) {
       if (user is! Map) return false;
@@ -2856,28 +3586,25 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           child: Row(
             children: [
               Expanded(
                 child: TextField(
                   controller: _userSearchCtrl,
                   onChanged: (value) => setState(() => userSearchQuery = value),
-                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 13),
                   decoration: InputDecoration(
                     hintText: "İsim veya Telefon Ara...",
-                    hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
-                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                    hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
+                    prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
                     suffixIcon: userSearchQuery.isNotEmpty 
-                        ? IconButton(icon: const Icon(Icons.clear, color: Colors.grey), onPressed: () => setState(() { _userSearchCtrl.clear(); userSearchQuery = ""; }))
+                        ? IconButton(icon: const Icon(Icons.clear, color: Colors.grey, size: 18), onPressed: () => setState(() { _userSearchCtrl.clear(); userSearchQuery = ""; }))
                         : null,
                     filled: true,
                     fillColor: cardColor,
                     contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
-                    ),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                   ),
                 ),
               ),
@@ -2885,7 +3612,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
               Container(
                 decoration: BoxDecoration(color: isUserSelectionMode ? Colors.blue.withOpacity(0.2) : cardColor, borderRadius: BorderRadius.circular(16)),
                 child: IconButton(
-                  icon: Icon(isUserSelectionMode ? Icons.close_rounded : Icons.checklist_rounded, color: Colors.blue),
+                  icon: Icon(isUserSelectionMode ? Icons.close_rounded : Icons.checklist_rounded, color: Colors.blueAccent),
                   onPressed: () {
                     setState(() {
                       isUserSelectionMode = !isUserSelectionMode;
@@ -2902,14 +3629,14 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
           duration: const Duration(milliseconds: 300),
           child: isUserSelectionMode && selectedUsers.isNotEmpty
             ? Container(
-                margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.blue.withOpacity(0.3))),
+                margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.blue.withOpacity(0.3))),
                 child: Wrap(
                   alignment: WrapAlignment.spaceBetween,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Text("${selectedUsers.length} Seçildi", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+                    Text("${selectedUsers.length} Seçildi", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent, fontSize: 13)),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -2923,16 +3650,16 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                               }
                             });
                           },
-                          child: Text(selectedUsers.length == filteredUsers.length ? "Seçimi Kaldır" : "Tümünü Seç", style: const TextStyle(fontSize: 13, color: Colors.blue)),
+                          child: Text(selectedUsers.length == filteredUsers.length ? "Seçimi Kaldır" : "Tümünü Seç", style: const TextStyle(fontSize: 12, color: Colors.blueAccent)),
                         ),
                         TextButton(
                           onPressed: () => _hideSelectedItems('users'),
-                          child: const Text("Gizle", style: TextStyle(fontSize: 13)),
+                          child: const Text("Gizle", style: TextStyle(fontSize: 12)),
                         ),
                         ElevatedButton(
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white, elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 12)),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white, elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6)),
                           onPressed: () => _bulkDeleteItems('users'),
-                          child: const Text("Sil", style: TextStyle(fontSize: 13)),
+                          child: const Text("Sil", style: TextStyle(fontSize: 12)),
                         )
                       ],
                     )
@@ -2944,7 +3671,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
 
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
             children: [
               _buildFilterChip("Tümü", "all", userFilter, (val) => setState(() => userFilter = val)),
@@ -2966,10 +3693,10 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
             ? _buildEmptyState("Arama kriterlerine uygun kullanıcı bulunamadı.", Icons.search_off_rounded)
             : ListView.separated(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 100),
                 cacheExtent: 2000,
                 itemCount: filteredUsers.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
                   final user = filteredUsers[index];
                   final isCustomer = user['user_type'] == 'customer';
@@ -3002,23 +3729,23 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                     child: Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))]
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 3))]
                       ),
                       child: Material(
                         color: isSelected ? Colors.blue.withOpacity(0.1) : (isBanned ? Colors.red.withOpacity(0.05) : cardColor),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(color: isSelected ? Colors.blue : Colors.transparent, width: 1.5),
+                          side: BorderSide(color: isSelected ? Colors.blueAccent : Colors.transparent, width: 1.5),
                         ),
                         clipBehavior: Clip.antiAlias,
                         child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           leading: isUserSelectionMode 
-                            ? Icon(isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, color: isSelected ? Colors.blue : Colors.grey)
+                            ? Icon(isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, color: isSelected ? Colors.blueAccent : Colors.grey)
                             : CircleAvatar(
-                                radius: 22,
-                                backgroundColor: isBanned ? Colors.red.withOpacity(0.15) : (isCustomer ? Colors.blue.withOpacity(0.15) : Colors.purple.withOpacity(0.15)),
-                                child: Icon(isBanned ? Icons.block : (isCustomer ? Icons.person : Icons.engineering), color: isBanned ? Colors.red : (isCustomer ? Colors.blue : Colors.purple), size: 20),
+                                radius: 20,
+                                backgroundColor: isBanned ? Colors.red.withOpacity(0.12) : (isCustomer ? Colors.blue.withOpacity(0.12) : Colors.purple.withOpacity(0.12)),
+                                child: Icon(isBanned ? Icons.block : (isCustomer ? Icons.person : Icons.engineering), color: isBanned ? Colors.red : (isCustomer ? Colors.blue : Colors.purple), size: 18),
                               ),
                           title: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -3026,7 +3753,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                               Expanded(
                                 child: Text(
                                   user['name']?.toString() ?? 'Bilinmeyen', 
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, decoration: isBanned ? TextDecoration.lineThrough : null),
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, decoration: isBanned ? TextDecoration.lineThrough : null),
                                   overflow: TextOverflow.ellipsis,
                                 )
                               ),
@@ -3036,9 +3763,9 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const SizedBox(height: 4),
-                              Text(user['phone']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 3),
+                              Text(user['phone']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12)),
+                              const SizedBox(height: 3),
                               Wrap(
                                 spacing: 6,
                                 runSpacing: 4,
@@ -3049,28 +3776,28 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                                   ),
                                   if (isCustomer && isPremium)
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                                       decoration: BoxDecoration(color: Colors.amber.shade100, borderRadius: BorderRadius.circular(4)),
                                       child: const Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Icon(Icons.workspace_premium, color: Colors.orange, size: 10),
+                                          Icon(Icons.workspace_premium, color: Colors.orange, size: 9),
                                           SizedBox(width: 2),
-                                          Text("PREMIUM", style: TextStyle(color: Colors.orange, fontSize: 9, fontWeight: FontWeight.bold)),
+                                          Text("PREMIUM", style: TextStyle(color: Colors.orange, fontSize: 8, fontWeight: FontWeight.bold)),
                                         ],
                                       ),
                                     ),
                                   if (isBanned)
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                                       decoration: BoxDecoration(color: Colors.red.shade100, borderRadius: BorderRadius.circular(4)),
-                                      child: const Text("ENGELLİ", style: TextStyle(color: Colors.red, fontSize: 9, fontWeight: FontWeight.bold)),
+                                      child: const Text("ENGELLİ", style: TextStyle(color: Colors.red, fontSize: 8, fontWeight: FontWeight.bold)),
                                     )
                                   else if (isUnderProbation)
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                                       decoration: BoxDecoration(color: Colors.amber.shade100, borderRadius: BorderRadius.circular(4)),
-                                      child: const Text("YENİ", style: TextStyle(color: Colors.orange, fontSize: 9, fontWeight: FontWeight.bold)),
+                                      child: const Text("YENİ", style: TextStyle(color: Colors.orange, fontSize: 8, fontWeight: FontWeight.bold)),
                                     )
                                 ],
                               ),
@@ -3080,7 +3807,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.notifications_active, color: Colors.orange, size: 20),
+                                icon: const Icon(Icons.notifications_active, color: Colors.orange, size: 18),
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
                                 tooltip: "Bildirim Gönder",
@@ -3089,7 +3816,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                               const SizedBox(width: 8),
                               if (!isCustomer)
                                 IconButton(
-                                  icon: const Icon(Icons.folder_shared, color: Colors.blueGrey, size: 20),
+                                  icon: const Icon(Icons.folder_shared, color: Colors.blueGrey, size: 18),
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(),
                                   tooltip: "Belgeler",
@@ -3097,7 +3824,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                                 ),
                               PopupMenuButton<String>(
                                 padding: EdgeInsets.zero,
-                                icon: const Icon(Icons.more_vert_rounded, color: Colors.grey, size: 22),
+                                icon: const Icon(Icons.more_vert_rounded, color: Colors.grey, size: 20),
                                 onSelected: (value) {
                                   if (value == 'delete') {
                                     _deleteUser(userId, user['name']?.toString() ?? 'Kullanıcı');
@@ -3113,9 +3840,9 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                                       value: 'reviews',
                                       child: Row(
                                         children: [
-                                          Icon(Icons.star_rate_rounded, color: Colors.amber, size: 20),
+                                          Icon(Icons.star_rate_rounded, color: Colors.amber, size: 18),
                                           SizedBox(width: 8),
-                                          Text("Profili/Yorumları Gör", style: TextStyle(fontSize: 14)),
+                                          Text("Profili/Yorumları Gör", style: TextStyle(fontSize: 13)),
                                         ],
                                       ),
                                     ),
@@ -3125,7 +3852,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                                       children: [
                                         Icon(Icons.gavel_rounded, color: Colors.orange, size: 14),
                                         SizedBox(width: 8),
-                                        Text("Ceza / Ban", style: TextStyle(fontSize: 14)),
+                                        Text("Ceza / Ban", style: TextStyle(fontSize: 13)),
                                       ],
                                     ),
                                   ),
@@ -3133,9 +3860,9 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                                     value: 'delete',
                                     child: Row(
                                       children: [
-                                        Icon(Icons.delete_forever_rounded, color: Colors.red, size: 20),
+                                        Icon(Icons.delete_forever_rounded, color: Colors.red, size: 18),
                                         SizedBox(width: 8),
-                                        Text("Sil", style: TextStyle(fontSize: 14)),
+                                        Text("Sil", style: TextStyle(fontSize: 13)),
                                       ],
                                     ),
                                   ),
@@ -3166,7 +3893,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
               indicatorWeight: 3,
               labelColor: Colors.blueAccent,
               unselectedLabelColor: Colors.grey,
-              labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               tabs: const [
                 Tab(text: "Servis Talepleri"),
                 Tab(text: "Parça İlanları"),
@@ -3198,15 +3925,15 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           child: TextField(
             controller: _partSearchCtrl,
             onChanged: (val) => setState(() => partSearchQuery = val),
-            style: TextStyle(color: isDark ? Colors.white : Colors.black),
+            style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 13),
             decoration: InputDecoration(
               hintText: "Parça adı, araç modeli veya ilan no...",
-              hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
-              prefixIcon: const Icon(Icons.search, color: Colors.grey),
+              hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
+              prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
               filled: true,
               fillColor: cardColor,
               contentPadding: const EdgeInsets.symmetric(vertical: 0),
@@ -3219,9 +3946,9 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
               ? _buildEmptyState("Arama kriterine uygun ilan bulunamadı.", Icons.inventory_2_rounded)
               : ListView.separated(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
                   itemCount: filteredParts.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
                     final item = filteredParts[index];
                     final int listingId = int.tryParse(item['id']?.toString() ?? '0') ?? 0;
@@ -3233,29 +3960,29 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                     return GestureDetector(
                       onTap: () => _showPartListingDetailsModal(Map<String, dynamic>.from(item), cardColor, isDark),
                       child: Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           color: cardColor,
                           borderRadius: BorderRadius.circular(16),
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))]
+                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 3))]
                         ),
                         child: Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(color: typeColor.withOpacity(0.15), shape: BoxShape.circle),
-                              child: Icon(isForSale ? Icons.sell : Icons.search_rounded, color: typeColor),
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(color: typeColor.withOpacity(0.12), shape: BoxShape.circle),
+                              child: Icon(isForSale ? Icons.sell : Icons.search_rounded, color: typeColor, size: 20),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(cleanPartName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                  const SizedBox(height: 4),
+                                  Text(cleanPartName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  const SizedBox(height: 3),
                                   Text("Araç: ${item['car_model']}", style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                                  const SizedBox(height: 4),
-                                  Text("Şehir: ${item['city'] ?? '-'}", style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                                  const SizedBox(height: 3),
+                                  Text("Şehir: ${item['city'] ?? '-'}", style: TextStyle(color: Colors.grey.shade600, fontSize: 11)),
                                 ],
                               ),
                             ),
@@ -3263,8 +3990,8 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 if (isForSale && item['price'] != null)
-                                  Text("${item['price']} ₺", style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF10B981))),
-                                const SizedBox(height: 4),
+                                  Text("${item['price']} ₺", style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Color(0xFF10B981))),
+                                const SizedBox(height: 3),
                                 Text("ID: #$listingId", style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold)),
                               ],
                             ),
@@ -3308,28 +4035,25 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           child: Row(
             children: [
               Expanded(
                 child: TextField(
                   controller: _jobSearchCtrl,
                   onChanged: (value) => setState(() => jobSearchQuery = value),
-                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 13),
                   decoration: InputDecoration(
                     hintText: "İşlem Ara...",
-                    hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
-                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                    hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
+                    prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
                     suffixIcon: jobSearchQuery.isNotEmpty 
-                        ? IconButton(icon: const Icon(Icons.clear, color: Colors.grey), onPressed: () => setState(() { _jobSearchCtrl.clear(); jobSearchQuery = ""; }))
+                        ? IconButton(icon: const Icon(Icons.clear, color: Colors.grey, size: 18), onPressed: () => setState(() { _jobSearchCtrl.clear(); jobSearchQuery = ""; }))
                         : null,
                     filled: true,
                     fillColor: cardColor,
                     contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
-                    ),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                   ),
                 ),
               ),
@@ -3337,7 +4061,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
               Container(
                 decoration: BoxDecoration(color: isJobSelectionMode ? Colors.blue.withOpacity(0.2) : cardColor, borderRadius: BorderRadius.circular(16)),
                 child: IconButton(
-                  icon: Icon(isJobSelectionMode ? Icons.close_rounded : Icons.checklist_rounded, color: Colors.blue),
+                  icon: Icon(isJobSelectionMode ? Icons.close_rounded : Icons.checklist_rounded, color: Colors.blueAccent),
                   onPressed: () {
                     setState(() {
                       isJobSelectionMode = !isJobSelectionMode;
@@ -3354,14 +4078,14 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
           duration: const Duration(milliseconds: 300),
           child: isJobSelectionMode && selectedJobs.isNotEmpty
             ? Container(
-                margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.blue.withOpacity(0.3))),
+                margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.blue.withOpacity(0.3))),
                 child: Wrap(
                   alignment: WrapAlignment.spaceBetween,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Text("${selectedJobs.length} Seçildi", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+                    Text("${selectedJobs.length} Seçildi", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent, fontSize: 13)),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -3375,16 +4099,16 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                               }
                             });
                           },
-                          child: Text(selectedJobs.length == filteredJobs.length ? "Seçimi Kaldır" : "Tümünü Seç", style: const TextStyle(fontSize: 13, color: Colors.blue)),
+                          child: Text(selectedJobs.length == filteredJobs.length ? "Seçimi Kaldır" : "Tümünü Seç", style: const TextStyle(fontSize: 12, color: Colors.blueAccent)),
                         ),
                         TextButton(
                           onPressed: () => _hideSelectedItems('jobs'),
-                          child: const Text("Gizle", style: TextStyle(fontSize: 13)),
+                          child: const Text("Gizle", style: TextStyle(fontSize: 12)),
                         ),
                         ElevatedButton(
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white, elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 12)),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white, elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6)),
                           onPressed: () => _bulkDeleteItems('jobs'),
-                          child: const Text("Sil", style: TextStyle(fontSize: 13)),
+                          child: const Text("Sil", style: TextStyle(fontSize: 12)),
                         )
                       ],
                     )
@@ -3396,7 +4120,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
 
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
             children: [
               _buildFilterChip("Tümü", "all", historyFilter, (val) => setState(() => historyFilter = val)),
@@ -3414,10 +4138,10 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
             ? _buildEmptyState("Arama kriterine uygun işlem bulunamadı.", Icons.history_rounded)
             : ListView.separated(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 100),
                 cacheExtent: 2000,
                 itemCount: filteredJobs.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
                   final job = filteredJobs[index];
                   final status = job['status']?.toString() ?? 'unknown';
@@ -3450,38 +4174,38 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                       decoration: BoxDecoration(
                         color: isSelected ? Colors.blue.withOpacity(0.1) : cardColor,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: isSelected ? Colors.blue : Colors.transparent, width: 1.5),
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))]
+                        border: Border.all(color: isSelected ? Colors.blueAccent : Colors.transparent, width: 1.5),
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 3))]
                       ),
                       child: Row(
                         children: [
                           if (isJobSelectionMode) ...[
-                            Icon(isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, color: isSelected ? Colors.blue : Colors.grey),
+                            Icon(isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, color: isSelected ? Colors.blueAccent : Colors.grey),
                             const SizedBox(width: 8),
                           ],
                           Container(
-                            padding: const EdgeInsets.all(10),
+                            padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.15),
+                              color: statusColor.withOpacity(0.12),
                               shape: BoxShape.circle
                             ),
-                            child: Icon(statusIcon, color: statusColor, size: 24),
+                            child: Icon(statusIcon, color: statusColor, size: 20),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text("${job['customer_name'] ?? 'Bilinmeyen'} ➔ ${job['provider_name'] ?? 'Bekleniyor'}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), overflow: TextOverflow.ellipsis),
-                                const SizedBox(height: 6),
+                                Text("${job['customer_name'] ?? 'Bilinmeyen'} ➔ ${job['provider_name'] ?? 'Bekleniyor'}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), overflow: TextOverflow.ellipsis),
+                                const SizedBox(height: 4),
                                 Wrap(
                                   spacing: 6,
                                   runSpacing: 4,
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                                       decoration: BoxDecoration(color: Colors.blueGrey.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-                                      child: Text(_translateServiceType(job['service_type']?.toString()), style: const TextStyle(color: Colors.blueGrey, fontSize: 10, fontWeight: FontWeight.bold)),
+                                      child: Text(_translateServiceType(job['service_type']?.toString()), style: const TextStyle(color: Colors.blueGrey, fontSize: 9, fontWeight: FontWeight.bold)),
                                     ),
                                     Text(_translateStatus(status), style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold)),
                                   ],
@@ -3492,9 +4216,9 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              Text("${job['agreed_price'] ?? 0} ₺", style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Colors.blue)),
-                              const SizedBox(height: 4),
-                              Text("ID: #$jobId", style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold)),
+                              Text("${job['agreed_price'] ?? 0} ₺", style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Colors.blueAccent)),
+                              const SizedBox(height: 3),
+                              Text("ID: #$jobId", style: const TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.bold)),
                               const SizedBox(height: 2),
                               Text(jobDate, style: const TextStyle(color: Colors.grey, fontSize: 9)),
                             ],
@@ -3502,7 +4226,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                           if (!isJobSelectionMode) ...[
                             const SizedBox(width: 4),
                             IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 18),
                               onPressed: () => _deleteJob(jobId),
                               constraints: const BoxConstraints(),
                               padding: EdgeInsets.zero,
@@ -3540,28 +4264,25 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           child: Row(
             children: [
               Expanded(
                 child: TextField(
                   controller: _ticketSearchCtrl,
                   onChanged: (value) => setState(() => ticketSearchQuery = value),
-                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 13),
                   decoration: InputDecoration(
                     hintText: "Müşteri veya Konu...",
-                    hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
-                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                    hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
+                    prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
                     suffixIcon: ticketSearchQuery.isNotEmpty 
-                        ? IconButton(icon: const Icon(Icons.clear, color: Colors.grey), onPressed: () => setState(() { _ticketSearchCtrl.clear(); ticketSearchQuery = ""; }))
+                        ? IconButton(icon: const Icon(Icons.clear, color: Colors.grey, size: 18), onPressed: () => setState(() { _ticketSearchCtrl.clear(); ticketSearchQuery = ""; }))
                         : null,
                     filled: true,
                     fillColor: cardColor,
                     contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
-                    ),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                   ),
                 ),
               ),
@@ -3569,7 +4290,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
               Container(
                 decoration: BoxDecoration(color: isTicketSelectionMode ? Colors.blue.withOpacity(0.2) : cardColor, borderRadius: BorderRadius.circular(16)),
                 child: IconButton(
-                  icon: Icon(isTicketSelectionMode ? Icons.close_rounded : Icons.checklist_rounded, color: Colors.blue),
+                  icon: Icon(isTicketSelectionMode ? Icons.close_rounded : Icons.checklist_rounded, color: Colors.blueAccent),
                   onPressed: () {
                     setState(() {
                       isTicketSelectionMode = !isTicketSelectionMode;
@@ -3586,14 +4307,14 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
           duration: const Duration(milliseconds: 300),
           child: isTicketSelectionMode && selectedTickets.isNotEmpty
             ? Container(
-                margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.blue.withOpacity(0.3))),
+                margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.blue.withOpacity(0.3))),
                 child: Wrap(
                   alignment: WrapAlignment.spaceBetween,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Text("${selectedTickets.length} Seçildi", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+                    Text("${selectedTickets.length} Seçildi", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent, fontSize: 13)),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -3607,16 +4328,16 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                               }
                             });
                           },
-                          child: Text(selectedTickets.length == filteredTickets.length ? "Seçimi Kaldır" : "Tümünü Seç", style: const TextStyle(fontSize: 13, color: Colors.blue)),
+                          child: Text(selectedTickets.length == filteredTickets.length ? "Seçimi Kaldır" : "Tümünü Seç", style: const TextStyle(fontSize: 12, color: Colors.blueAccent)),
                         ),
                         TextButton(
                           onPressed: () => _hideSelectedItems('tickets'),
-                          child: const Text("Gizle", style: TextStyle(fontSize: 13)),
+                          child: const Text("Gizle", style: TextStyle(fontSize: 12)),
                         ),
                         ElevatedButton(
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white, elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 12)),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white, elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6)),
                           onPressed: () => _bulkDeleteItems('tickets'),
-                          child: const Text("Sil", style: TextStyle(fontSize: 13)),
+                          child: const Text("Sil", style: TextStyle(fontSize: 12)),
                         )
                       ],
                     )
@@ -3628,7 +4349,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
 
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
             children: [
               _buildFilterChip("Tümü", "all", ticketFilter, (val) => setState(() => ticketFilter = val)),
@@ -3644,10 +4365,10 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
             ? _buildEmptyState("Arama kriterine uygun şikayet bulunamadı.", Icons.support_agent_rounded)
             : ListView.separated(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 100),
                 cacheExtent: 2000,
                 itemCount: filteredTickets.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
                   final ticket = filteredTickets[index];
                   final status = ticket['status']?.toString() ?? 'open';
@@ -3680,30 +4401,30 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                       decoration: BoxDecoration(
                         color: isSelected ? Colors.blue.withOpacity(0.1) : cardColor,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: isSelected ? Colors.blue : statusColor.withOpacity(0.3), width: 1.5),
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))]
+                        border: Border.all(color: isSelected ? Colors.blueAccent : statusColor.withOpacity(0.25), width: 1.2),
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 3))]
                       ),
                       child: Row(
                         children: [
                           if (isTicketSelectionMode) ...[
-                            Icon(isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, color: isSelected ? Colors.blue : Colors.grey),
+                            Icon(isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, color: isSelected ? Colors.blueAccent : Colors.grey),
                             const SizedBox(width: 8),
                           ],
                           Container(
-                            padding: const EdgeInsets.all(10),
+                            padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.15),
+                              color: statusColor.withOpacity(0.12),
                               shape: BoxShape.circle
                             ),
-                            child: Icon(statusIcon, color: statusColor, size: 24),
+                            child: Icon(statusIcon, color: statusColor, size: 20),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text("#$ticketId - ${ticket['subject'] ?? 'Konu Yok'}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                const SizedBox(height: 4),
+                                Text("#$ticketId - ${ticket['subject'] ?? 'Konu Yok'}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                const SizedBox(height: 3),
                                 Text("Eden: ${ticket['customer_name'] ?? 'Bilinmiyor'}", style: TextStyle(color: Colors.grey.shade600, fontSize: 11), overflow: TextOverflow.ellipsis),
                                 Text("Edilen: ${ticket['provider_name'] ?? 'Bilinmiyor'}", style: TextStyle(color: Colors.grey.shade600, fontSize: 11), overflow: TextOverflow.ellipsis),
                               ],
@@ -3713,14 +4434,14 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                                child: Text(status == 'open' ? "Açık" : "Kapalı", style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 11)),
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                                child: Text(status == 'open' ? "Açık" : "Kapalı", style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 10)),
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 6),
                               Text(ticketDate, style: const TextStyle(color: Colors.grey, fontSize: 9)),
                               if (!isTicketSelectionMode && status == 'open') ...[
-                                const SizedBox(height: 8),
+                                const SizedBox(height: 6),
                                 InkWell(
                                   onTap: () {
                                     if (ticket['customer_phone'] != null) {
@@ -3728,9 +4449,9 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
                                     }
                                   },
                                   child: Container(
-                                    padding: const EdgeInsets.all(6),
-                                    decoration: BoxDecoration(color: Colors.green.withOpacity(0.15), shape: BoxShape.circle),
-                                    child: const Icon(Icons.call, color: Colors.green, size: 16),
+                                    padding: const EdgeInsets.all(5),
+                                    decoration: BoxDecoration(color: const Color(0xFF10B981).withOpacity(0.15), shape: BoxShape.circle),
+                                    child: const Icon(Icons.call, color: Color(0xFF10B981), size: 14),
                                   ),
                                 )
                               ]
@@ -3749,100 +4470,108 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
 
   Widget _buildSettingsTab(Color cardColor, bool isDark) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
       physics: const AlwaysScrollableScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Sistem Bilgileri", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 16),
+          const Text("Sistem Bilgileri", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 12),
           Material(
             color: cardColor,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(20),
             clipBehavior: Clip.antiAlias,
             child: const Padding(
-              padding: EdgeInsets.all(16),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Column(
                 children: [
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.api_rounded, color: Colors.blue),
-                    title: Text("API Durumu", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                    trailing: Text("Aktif", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                    leading: Icon(Icons.api_rounded, color: Colors.blueAccent),
+                    title: Text("API Durumu", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    trailing: Text("Aktif", style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
                   ),
-                  Divider(),
+                  Divider(height: 1),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(Icons.storage_rounded, color: Colors.blueGrey),
-                    title: Text("Veritabanı", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                    trailing: Text("Bağlı", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                    title: Text("Veritabanı", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    trailing: Text("Bağlı", style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
                   ),
-                  Divider(),
+                  Divider(height: 1),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(Icons.update_rounded, color: Colors.orange),
-                    title: Text("Sistem Sürümü", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    title: Text("Sistem Sürümü", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                     trailing: Text("v1.2.0", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 32),
-          const Text("Yönetim İşlemleri", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
+          const Text("Yönetim İşlemleri", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 12),
           Material(
             color: cardColor,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(20),
             clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
                 ListTile(
                   onTap: () => _showAdManagementModal(context, isDark),
                   leading: const Icon(Icons.campaign_rounded, color: Colors.purple),
-                  title: const Text("Reklam (Banner) Yönetimi", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                  title: const Text("Reklam (Banner) Yönetimi", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
                 ),
                 const Divider(height: 1),
                 ListTile(
                   onTap: () => _showPurchasesModal(context, isDark),
                   leading: const Icon(Icons.workspace_premium_rounded, color: Colors.orange),
-                  title: const Text("Premium ve Satın Alım Takibi", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                  title: const Text("Premium ve Satın Alım Takibi", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
                 ),
                 const Divider(height: 1),
                 ListTile(
                   onTap: () => _showFeedbacksModal(context, isDark),
                   leading: const Icon(Icons.feedback_rounded, color: Colors.amber),
-                  title: const Text("Kullanıcı Geri Bildirimleri", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                  title: const Text("Kullanıcı Geri Bildirimleri", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  onTap: () => _showTelemetryModal(context, isDark),
+                  leading: const Icon(Icons.analytics_rounded, color: Colors.teal),
+                  title: const Text("Kullanıcı Davranış & Darboğaz Analizi", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  subtitle: const Text("En çok basılan butonlar, bekleme süreleri ve sorunlar", style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
                 ),
                 const Divider(height: 1),
                 ListTile(
                   onTap: _changeAdminPassword,
                   leading: const Icon(Icons.lock_reset_rounded),
-                  title: const Text("Admin Şifresi Değiştir", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                  title: const Text("Admin Şifresi Değiştir", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
                 ),
                 const Divider(height: 1),
                 ListTile(
                   onTap: _backupDatabase,
                   leading: const Icon(Icons.backup_rounded),
-                  title: const Text("Veritabanı Yedeği Al", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                  title: const Text("Veritabanı Yedeği Al", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
                 ),
                 const Divider(height: 1),
                 ListTile(
                   onTap: _optimizeSystem,
                   leading: const Icon(Icons.cleaning_services_rounded, color: Colors.green),
-                  title: const Text("Sistemi ve Dosyaları Optimize Et", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                  title: const Text("Sistemi ve Dosyaları Optimize Et", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
                 ),
                 const Divider(height: 1),
                 ListTile(
                   onTap: _logout,
-                  leading: const Icon(Icons.logout_rounded, color: Colors.red),
-                  title: const Text("Güvenli Çıkış Yap", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 15)),
+                  leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+                  title: const Text("Güvenli Çıkış Yap", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 14)),
                 ),
               ],
             ),
@@ -3855,11 +4584,11 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
   Widget _buildFilterChip(String label, String value, String currentValue, Function(String) onSelected) {
     final isSelected = value == currentValue;
     return ChoiceChip(
-      label: Text(label, style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.white : Colors.grey.shade600, fontSize: 13)),
+      label: Text(label, style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.white : Colors.grey.shade600, fontSize: 12)),
       selected: isSelected,
       selectedColor: Colors.blue.shade600,
-      backgroundColor: Colors.grey.withOpacity(0.1),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: Colors.transparent)),
+      backgroundColor: Colors.grey.withOpacity(0.08),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Colors.transparent)),
       onSelected: (bool selected) {
         if (selected) onSelected(value);
       },
@@ -3876,9 +4605,9 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 60, color: Colors.grey.shade300),
-            const SizedBox(height: 16),
-            Text(message, style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 15), textAlign: TextAlign.center),
+            Icon(icon, size: 50, color: Colors.grey.shade300),
+            const SizedBox(height: 14),
+            Text(message, style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 14), textAlign: TextAlign.center),
           ],
         ),
       ),
@@ -3891,7 +4620,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
     Widget buttonContent = Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: hasDoc ? Colors.blue.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+        color: hasDoc ? Colors.blue.withOpacity(0.08) : Colors.grey.withOpacity(0.08),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: hasDoc ? Colors.blue.shade300 : Colors.grey.shade300)
       ),
@@ -3915,7 +4644,7 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
 
     return InkWell(
       borderRadius: BorderRadius.circular(12),
-      onTap: hasDoc ? () => _launchURL(path) : null,
+      onTap: hasDoc ? () => _showDocumentPreviewDialog(title, path) : null,
       child: buttonContent,
     );
   }
@@ -3925,14 +4654,14 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(20),
           gradient: LinearGradient(colors: gradientColors, begin: Alignment.topLeft, end: Alignment.bottomRight),
-          border: Border.all(color: Colors.white.withOpacity(0.2), width: 1.5),
+          border: Border.all(color: Colors.white.withOpacity(0.2), width: 1.2),
           boxShadow: [
-            BoxShadow(color: gradientColors.last.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8)),
-            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 5, offset: const Offset(0, 2))
+            BoxShadow(color: gradientColors.last.withOpacity(0.25), blurRadius: 12, offset: const Offset(0, 6)),
+            BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 4, offset: const Offset(0, 2))
           ],
         ),
         child: Column(
@@ -3943,16 +4672,16 @@ void _showFeedbacksModal(BuildContext context, bool isDark) async {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(icon, color: Colors.white.withOpacity(0.9), size: 28),
-                Icon(Icons.auto_graph_rounded, color: Colors.white.withOpacity(0.3), size: 20),
+                Icon(icon, color: Colors.white.withOpacity(0.95), size: 24),
+                Icon(Icons.auto_graph_rounded, color: Colors.white.withOpacity(0.35), size: 18),
               ],
             ),
-            const SizedBox(height: 12),
-            Text(title, style: const TextStyle(fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
+            Text(title, style: const TextStyle(fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 2),
             FittedBox(
               fit: BoxFit.scaleDown,
-              child: Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white)),
+              child: Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white)),
             ),
           ],
         ),

@@ -1,5 +1,5 @@
 // Dosya: job_tracking_screen.dart
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; import 'core/constants/app_constants.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
@@ -145,7 +145,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       OneSignal.Notifications.requestPermission(true);
     }
     
-    googleApiKey = const String.fromEnvironment('MAPS_API_KEY', defaultValue: 'AIzaSyA_NvuYHjKyG7O0ZDYJLvxfgClvdHlMlJU');
+    googleApiKey = const String.fromEnvironment('MAPS_API_KEY', defaultValue: AppConstants.googleMapsKey);
     
     _initTts();
 
@@ -615,10 +615,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   Future<void> _initWebSocket() async {
     try {
       await pusher.init(
-        apiKey: "7197ebfa7d2e68b962dd", 
+        apiKey: AppConstants.pusherKey, 
         cluster: "eu",
         onEvent: (event) {
-          if (event.eventName == "status_update" || event.eventName == "bid_update") {
+          if (event.eventName == "status_update" || event.eventName == "bid_update" || event.eventName == "code_verified" || event.eventName == "job_update" || event.eventName == "in_progress" || event.eventName == "rating_submitted" || event.eventName == "job_rated" || event.eventName == "job_completed") {
             if (mounted) _fetchJobStatus();
           } else if (event.eventName == "new_message") {
             if (mounted) _checkUnreadMessages();
@@ -675,8 +675,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     _checkUnreadMessages();
     
     _statusPollingTimer?.cancel();
-    _statusPollingTimer = Timer.periodic(const Duration(seconds: 8), (_) {
-      if (mounted && jobStatus == 'searching') {
+    // Müşteri değerlendirme yaptığında her iki tarafın da ekranı kapatabilmesi için kontrol sürdürülür
+    _statusPollingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (mounted && jobStatus != 'cancelled' && !(jobStatus == 'completed' && isRated)) {
         _fetchJobStatus();
       }
     });
@@ -897,7 +898,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       _rerouteTimer?.cancel();
     } else if (state == AppLifecycleState.resumed) {
       pusher.connect();
-      if (jobStatus == 'searching') _startTimer();
+      if (jobStatus != 'completed' && jobStatus != 'cancelled') _startTimer();
       _startReroutingEngine();
     }
   }
@@ -1039,6 +1040,26 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     }
   }
 
+  void _sendTelemetry({required String eventType, required String eventName, int duration = 0, Map<String, dynamic>? meta}) {
+    Future.microtask(() async {
+      try {
+        await _httpClient.post(
+          Uri.parse("$_baseUrl?action=log_telemetry"),
+          headers: {"Content-Type": "application/x-www-form-urlencoded"},
+          body: {
+            "user_id": (widget.userId ?? (widget.userType == 'provider' ? providerId : customerId) ?? 0).toString(),
+            "user_type": widget.userType,
+            "event_type": eventType,
+            "event_name": eventName,
+            "screen_name": "JobTrackingScreen",
+            "duration_seconds": duration.toString(),
+            "metadata": meta != null ? json.encode(meta) : "",
+          },
+        );
+      } catch (_) {}
+    });
+  }
+
   void _showTopSnackBar(String message, {bool isError = false, bool isNewAlert = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).clearSnackBars();
@@ -1098,16 +1119,21 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       if (!mounted) return;
 
       if (response.statusCode == 200 && data['status'] != 'error') {
-        // PERFORMANS: Gereksiz jsonEncode yükü kaldırıldı, anlık hafif hash üretimi yapıldı
-        final String currentDataHash = "${data['status']}_${data['agreed_price']}_${data['provider_live_lat']}_${data['provider_live_lng']}_${data['provider_heading']}_${data['is_rated']}";
-        bool isSearching = (data['status']?.toString().trim().toLowerCase() ?? 'matched') == 'searching';
-        if (_lastStatusHash == currentDataHash && !isSearching) {
+        // Hem job_status hem status parametrelerini doğrula ('success' cevabını filtrele)
+        String rawStatus = (data['job_status'] != null && data['job_status'].toString().isNotEmpty && data['job_status'].toString().toLowerCase() != 'success')
+            ? data['job_status'].toString()
+            : (data['status']?.toString() ?? 'matched');
+        if (rawStatus.toLowerCase() == 'success' && data['job_status'] != null) {
+          rawStatus = data['job_status'].toString();
+        }
+        String newJobStatus = rawStatus.trim().toLowerCase();
+
+        final String currentDataHash = "${newJobStatus}_${data['agreed_price']}_${data['provider_live_lat']}_${data['provider_live_lng']}_${data['provider_heading']}_${data['is_rated']}";
+        if (_lastStatusHash == currentDataHash && newJobStatus != 'searching' && newJobStatus != 'matched' && newJobStatus != 'completed') {
           if (mounted) setState(() => _isFetchingStatus = false);
           return;
         }
         _lastStatusHash = currentDataHash;
-
-        String newJobStatus = data['status']?.toString().trim().toLowerCase() ?? 'matched';
 
         if (newJobStatus == 'cancelled') {
             
@@ -1234,8 +1260,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
             try { pusher.subscribe(channelName: "user_location_$providerId"); } catch(e){}
           }
           
-          if (isRated != (data['is_rated'] == true)) {
-            isRated = data['is_rated'] == true;
+          bool apiIsRated = data['is_rated'] == true || data['is_rated'] == 1 || data['is_rated'] == '1' || data['is_rated'] == 'true';
+          if (isRated != apiIsRated) {
+            isRated = apiIsRated;
           }
 
           if (widget.userType == 'customer') {
@@ -1280,13 +1307,50 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
             } catch(e){ debugPrint(e.toString()); }
           }
 
-          if (jobStatus == 'completed' && widget.userType == 'customer' && !isRated && !_isRatingModalOpen) {
-              
-             _positionStream?.cancel(); 
-             _showRatingDialog();
-          } else if (jobStatus == 'completed') {
-              
-             _positionStream?.cancel(); 
+          if (jobStatus == 'completed') {
+            _positionStream?.cancel();
+            
+            if (widget.userType == 'provider') {
+               if (!_isNavigating) {
+                 if (isRated) {
+                    _isNavigating = true;
+                    _statusPollingTimer?.cancel();
+                    _showTopSnackBar("Müşteri değerlendirme yaptı, işlem başarıyla tamamlandı!");
+                    Future.delayed(const Duration(milliseconds: 600), () {
+                      if (mounted) {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (context) => ProviderMapScreen(providerId: widget.userId ?? providerId ?? 0, initialOnline: true)),
+                          (route) => false,
+                        );
+                      }
+                    });
+                 } else {
+                    // Ustanın müşteri değerlendirmesini sonsuza kadar beklemesini önlemek için 5 sn sonra otomatik çıkış
+                    Future.delayed(const Duration(seconds: 5), () {
+                      if (mounted && !_isNavigating) {
+                        _isNavigating = true;
+                        _statusPollingTimer?.cancel();
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (context) => ProviderMapScreen(providerId: widget.userId ?? providerId ?? 0, initialOnline: true)),
+                          (route) => false,
+                        );
+                      }
+                    });
+                 }
+               }
+            } else {
+              // Müşteri Tarafı Otomatik Çıkış Kaldırıldı
+              if (isRated) {
+                if (_isRatingModalOpen) {
+                  Navigator.of(context, rootNavigator: true).pop();
+                  _isRatingModalOpen = false;
+                }
+              } else if (!_isRatingModalOpen) {
+                _showRatingDialog();
+              }
+            }
           }
         });
         
@@ -1543,9 +1607,19 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       
       if (mounted) {
         if (response.statusCode == 200 && data['status'] == 'success') {
+          _sendTelemetry(
+            eventType: 'button_click',
+            eventName: 'kod_dogrulandi_is_basladi',
+            meta: {'job_id': widget.jobId},
+          );
           _showTopSnackBar("Eşleşme başarılı, iş başladı!");
           _fetchJobStatus();
         } else {
+          _sendTelemetry(
+            eventType: 'app_error',
+            eventName: 'hatali_kod_girildi',
+            meta: {'job_id': widget.jobId, 'entered_code': _codeController.text.trim()},
+          );
           _showTopSnackBar(data['message'] ?? "Hatalı kod.", isError: true);
         }
       }
@@ -1557,6 +1631,11 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   }
 
   Future<void> _customerPaid() async {
+    _sendTelemetry(
+      eventType: 'button_click',
+      eventName: 'musteri_odemeyi_gonderdim_bastı',
+      meta: {'job_id': widget.jobId, 'price': agreedPrice},
+    );
     setState(() => isProcessing = true);
     try {
       final response = await _httpClient.post(
@@ -1613,12 +1692,15 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         }
       ).timeout(_apiTimeout);
       if (mounted && (response.statusCode == 201 || response.statusCode == 200)) {
-         Navigator.pop(context); 
+         if (_isRatingModalOpen) {
+           Navigator.pop(context); 
+           _isRatingModalOpen = false;
+         }
          _showTopSnackBar("Değerlendirme için teşekkürler!");
          setState(() {
            isRated = true;
-           _isRatingModalOpen = false;
          });
+         // Otomatik yönlendirme kaldırıldı, butonla dönülecek
       }
     } catch (e) {
       if (mounted) _showTopSnackBar("Bağlantı hatası.", isError: true);
@@ -1885,12 +1967,13 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                       TextButton(
                          onPressed: () {
                            FocusScope.of(context).unfocus();
-                           Navigator.pop(context);
-                           _isRatingModalOpen = false;
-                           if (!_isNavigating) {
-                             _isNavigating = true;
-                             Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => CustomerDashboardScreen(customerId: widget.userId ?? customerId ?? 0)));
+                           if (_isRatingModalOpen) {
+                             Navigator.pop(context);
+                             _isRatingModalOpen = false;
                            }
+                           setState(() {
+                             isRated = true; // Atlandığı için bir daha sormaması adına true yapıyoruz
+                           });
                          },
                          child: const Text("Atla", style: TextStyle(color: textGray, fontWeight: FontWeight.w800, fontSize: 14))
                       )
@@ -2815,6 +2898,32 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                     );
                   }
                 ),
+              ] else ...[
+                // Müşteri Değerlendirmeyi Yaptıktan Veya Atladıktan Sonra Çıkacak Buton
+                const SizedBox(height: 28),
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    color: neonGreen,
+                  ),
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.check_circle_rounded, color: pureBlack, size: 24),
+                    label: const Text("Ana Ekrana Dön", style: TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
+                    onPressed: () {
+                      if (!_isNavigating) {
+                        _isNavigating = true;
+                        _positionStream?.cancel();
+                        _statusPollingTimer?.cancel();
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (context) => CustomerDashboardScreen(customerId: widget.userId ?? customerId ?? 0)),
+                          (route) => false,
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 20), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
+                  ),
+                ),
               ],
               const SizedBox(height: 20),
               OutlinedButton.icon(
@@ -2825,6 +2934,32 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                   padding: const EdgeInsets.symmetric(vertical: 18),
                   side: const BorderSide(color: Colors.purpleAccent, width: 1.5),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))
+                ),
+              ),
+            ] else ...[
+              // USTA İÇİN ANA EKRANA DÖN BUTONU
+              const SizedBox(height: 28),
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  color: neonGreen,
+                ),
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.check_circle_rounded, color: pureBlack, size: 24),
+                  label: const Text("Ana Ekrana Dön", style: TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
+                  onPressed: () {
+                    if (!_isNavigating) {
+                      _isNavigating = true;
+                      _positionStream?.cancel();
+                      _statusPollingTimer?.cancel();
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (context) => ProviderMapScreen(providerId: widget.userId ?? providerId ?? 0, initialOnline: true)),
+                        (route) => false,
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 20), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
                 ),
               ),
             ]

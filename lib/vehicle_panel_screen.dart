@@ -1,5 +1,5 @@
 // vehicle_panel_screen.dart
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; import 'core/constants/app_constants.dart';
 import 'package:flutter/cupertino.dart'; 
 import 'package:flutter/services.dart'; 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -29,7 +29,7 @@ class VehiclePanelScreen extends StatefulWidget {
 
 class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProviderStateMixin {
   final http.Client _httpClient = http.Client();
-  final String baseUrl = "https://eliteagency.sbs/api.php";
+  final String baseUrl = AppConstants.baseUrl;
   final Duration _apiTimeout = const Duration(seconds: 15);
   
   List<dynamic> records = [];

@@ -1,6 +1,6 @@
 // Dosya: customer_map_screen.dart
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; import 'core/constants/app_constants.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart' hide Path;
@@ -82,7 +82,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
   late final AnimationController _panelSlideController;
   AnimationController? _mapMoveController; 
   
-  final String baseUrl = "https://eliteagency.sbs/api.php";
+  final String baseUrl = AppConstants.baseUrl;
   final http.Client _httpClient = http.Client(); // Port tükenmesini (Socket Exhaustion) engelleyen bağlantı havuzu
   late final String googleApiKey;
   bool _isMapReady = false;
@@ -102,7 +102,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
   @override
   void initState() {
     super.initState();
-    googleApiKey = const String.fromEnvironment('MAPS_API_KEY', defaultValue: 'AIzaSyA_NvuYHjKyG7O0ZDYJLvxfgClvdHlMlJU');
+    googleApiKey = const String.fromEnvironment('MAPS_API_KEY', defaultValue: AppConstants.googleMapsKey);
     WidgetsBinding.instance.addObserver(this); 
     selectedService = widget.initialService;
     _generateSmartSuggestion();
@@ -843,6 +843,26 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     }
   }
 
+  void _sendTelemetry({required String eventType, required String eventName, int duration = 0, Map<String, dynamic>? meta}) {
+    Future.microtask(() async {
+      try {
+        await _httpClient.post(
+          Uri.parse("$baseUrl?action=log_telemetry"),
+          headers: {"Content-Type": "application/x-www-form-urlencoded"},
+          body: {
+            "user_id": widget.customerId.toString(),
+            "user_type": "customer",
+            "event_type": eventType,
+            "event_name": eventName,
+            "screen_name": "CustomerMapScreen",
+            "duration_seconds": duration.toString(),
+            "metadata": meta != null ? json.encode(meta) : "",
+          },
+        );
+      } catch (_) {}
+    });
+  }
+
   void _showTopSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).clearSnackBars();
@@ -961,6 +981,11 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     } catch (e) {
       if (mounted) {
         isCreatingJobNotifier.value = false;
+        _sendTelemetry(
+          eventType: 'app_error',
+          eventName: 'talep_olusturma_sunucu_veya_ag_hatasi',
+          meta: {'error': e.toString(), 'service': selectedService},
+        );
         _showTopSnackBar("Sunucuyla iletişim kurulamadı, lütfen internet bağlantınızı kontrol edin.", isError: true);
       }
     }
@@ -1310,7 +1335,14 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                     ),
                                     child: IconButton(
                                       icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 22),
-                                      onPressed: () => Navigator.pop(context),
+                                      onPressed: () {
+                                        _sendTelemetry(
+                                          eventType: 'user_drop',
+                                          eventName: 'haritada_talep_acmadan_geri_cikti',
+                                          meta: {'service': selectedService, 'address': _currentAddress},
+                                        );
+                                        Navigator.pop(context);
+                                      },
                                       constraints: const BoxConstraints(),
                                       padding: const EdgeInsets.all(8),
                                     ),

@@ -1,5 +1,5 @@
 // Dosya: profile_screen.dart
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; import 'core/constants/app_constants.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -52,7 +52,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   final TextEditingController _ibanController = TextEditingController();
   String selectedService = 'mechanic';
 
-  final String baseUrl = "https://eliteagency.sbs/api.php";
+  final String baseUrl = AppConstants.baseUrl;
   
   late AnimationController _pulseController;
   late AnimationController _listAnimController;

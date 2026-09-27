@@ -1,5 +1,5 @@
 // spare_parts_market.dart
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; import 'core/constants/app_constants.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
@@ -26,7 +26,7 @@ class SparePartsMarketScreen extends StatefulWidget {
 }
 
 class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with TickerProviderStateMixin {
-  final String baseUrl = "https://eliteagency.sbs/api.php"; 
+  final String baseUrl = AppConstants.baseUrl;
   final Duration _apiTimeout = const Duration(seconds: 15);
   final Duration _uploadTimeout = const Duration(seconds: 30);
   

@@ -1,5 +1,5 @@
 // customer_dashboard_screen.dart
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; import 'core/constants/app_constants.dart';
 import 'package:flutter/cupertino.dart'; 
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -122,7 +122,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   bool _isNotifModalOpen = false;
   bool _isVehicleModalOpen = false;
 
-  final String baseUrl = "https://eliteagency.sbs/api.php";
+  final String baseUrl = AppConstants.baseUrl;
   final String baseMediaUrl = "https://eliteagency.sbs/";
   final Duration apiTimeout = const Duration(seconds: 15);
   final http.Client _httpClient = http.Client(); // Port tükenmesini önleyen bağlantı havuzu
@@ -470,15 +470,15 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     _adPageController.dispose();
     selectedVehicleIndex.dispose();
     currentAdIndex.dispose();
-    _httpClient.close(); // Bellek sızıntısını ve açık soketleri temizler
     super.dispose();
   }
 
   Future<void> _fetchAds() async {
+    if (!mounted) return;
     try {
       final res = await _httpClient.get(
         Uri.parse("$baseUrl?action=get_ads"),
-        headers: {"Connection": "close", "Cache-Control": "no-cache"}
+        headers: {"Cache-Control": "no-cache"}
       ).timeout(apiTimeout);
       if (res.statusCode == 200) {
         final data = json.decode(res.body);
@@ -497,10 +497,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   }
 
   Future<void> _fetchProfile() async {
+    if (!mounted) return;
     try {
       final res = await _httpClient.get(
         Uri.parse("$baseUrl?action=get_profile&user_id=${widget.customerId}"),
-        headers: {"Connection": "close", "Cache-Control": "no-cache"}
+        headers: {"Cache-Control": "no-cache"}
       ).timeout(apiTimeout);
       if (res.statusCode == 200) {
         final data = json.decode(res.body);
@@ -518,10 +519,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   }
 
   Future<void> _checkActiveJob() async {
+    if (!mounted) return;
     try {
       final res = await _httpClient.get(
         Uri.parse("$baseUrl?action=check_active_job&user_id=${widget.customerId}&user_type=customer"),
-        headers: {"Connection": "close", "Cache-Control": "no-cache"}
+        headers: {"Cache-Control": "no-cache"}
       ).timeout(apiTimeout);
       final data = json.decode(res.body);
       if (data['status'] == 'success' && data['has_active'] == true && mounted) {
@@ -630,10 +632,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   }
 
   Future<void> _fetchNotifications() async {
+    if (!mounted) return;
     try {
       final response = await _httpClient.get(
         Uri.parse("$baseUrl?action=get_notifications&user_id=${widget.customerId}"),
-        headers: {"Connection": "close", "Cache-Control": "no-cache"}
+        headers: {"Cache-Control": "no-cache"}
       ).timeout(apiTimeout);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -945,6 +948,26 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     });
   }
 
+  void _sendTelemetry({required String eventType, required String eventName, int duration = 0, Map<String, dynamic>? meta}) {
+    Future.microtask(() async {
+      try {
+        await http.post(
+          Uri.parse("$baseUrl?action=log_telemetry"),
+          headers: {"Content-Type": "application/x-www-form-urlencoded"},
+          body: {
+            "user_id": widget.customerId.toString(),
+            "user_type": "customer",
+            "event_type": eventType,
+            "event_name": eventName,
+            "screen_name": "CustomerDashboardScreen",
+            "duration_seconds": duration.toString(),
+            "metadata": meta != null ? json.encode(meta) : "",
+          },
+        );
+      } catch (_) {}
+    });
+  }
+
   void _showTopSnackBar(String message, {bool isError = false}) {
     if (mounted) {
       ScaffoldMessenger.of(context).clearSnackBars();
@@ -1077,11 +1100,14 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   Future<void> _fetchVehicles({int retries = 2, bool showSnackOnError = false}) async {
     for (int attempt = 0; attempt <= retries; attempt++) {
+      if (!mounted) return;
       try {
         final response = await _httpClient.get(
           Uri.parse("$baseUrl?action=get_vehicles&customer_id=${widget.customerId}"),
-          headers: {"Connection": "close", "Cache-Control": "no-cache"}
+          headers: {"Cache-Control": "no-cache"}
         ).timeout(apiTimeout);
+
+        if (!mounted) return;
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
@@ -1202,14 +1228,15 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
           }
         }
       } catch (e) {
+        if (!mounted) return;
         debugPrint("fetchVehicles deneme $attempt hatası: $e");
         if (attempt < retries) {
           await Future.delayed(const Duration(milliseconds: 750));
+          if (!mounted) return;
           continue;
         }
       }
     }
-    // Tüm denemeler bittiğinde kullanıcıya sadece açıkça talep edilmişse veya manuel yenilemede hata gösterilir
     if (mounted && showSnackOnError) {
       _showTopSnackBar("Araçlar yüklenemedi.", isError: true);
     }
@@ -2651,7 +2678,17 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
           service: service,
           index: index,
           onTap: () {
+            _sendTelemetry(
+              eventType: 'button_click',
+              eventName: 'hizmet_tiklandi_${service['id']}',
+              meta: {'service_name': service['name'], 'city': userCity},
+            );
             if (activeJobId != null) {
+              _sendTelemetry(
+                eventType: 'user_drop',
+                eventName: 'aktif_is_varken_yeni_hizmet_denemesi',
+                meta: {'active_job_id': activeJobId, 'tried_service': service['id']},
+              );
               _showTopSnackBar("Devam eden bir işleminiz var. Lütfen önce onu tamamlayın.", isError: true);
             } else {
               Navigator.push(

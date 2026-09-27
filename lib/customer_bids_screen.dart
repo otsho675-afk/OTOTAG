@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; import 'core/constants/app_constants.dart';
 import 'package:flutter/services.dart'; 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -42,7 +42,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
   final http.Client _httpClient = http.Client();
   PusherChannelsFlutter pusher = PusherChannelsFlutter.getInstance();
   
-  final String baseUrl = "https://eliteagency.sbs/api.php";
+  final String baseUrl = AppConstants.baseUrl;
 
   late final AnimationController _radarController;
   late final AnimationController _rippleController;
@@ -55,6 +55,27 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
 
   Timer? _statusTextTimer;
   int _statusMessageIndex = 0;
+  DateTime? _waitStartTime;
+
+  void _sendTelemetry({required String eventType, required String eventName, int duration = 0, Map<String, dynamic>? meta}) {
+    Future.microtask(() async {
+      try {
+        await _httpClient.post(
+          Uri.parse("$baseUrl?action=log_telemetry"),
+          headers: {"Content-Type": "application/x-www-form-urlencoded"},
+          body: {
+            "user_id": widget.customerId.toString(),
+            "user_type": "customer",
+            "event_type": eventType,
+            "event_name": eventName,
+            "screen_name": "CustomerBidsScreen",
+            "duration_seconds": duration.toString(),
+            "metadata": meta != null ? json.encode(meta) : "",
+          },
+        );
+      } catch (_) {}
+    });
+  }
   final List<String> _radarStatusMessages = [
     "📡 Bölgesel GPS radarı aktif edildi...",
     "🛰️ Çevredeki uzman ustalara çağrı sinyali iletiliyor...",
@@ -95,6 +116,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
       }
     });
 
+    _waitStartTime = DateTime.now();
     _fetchBids();
     _startTimers();
   }
@@ -176,7 +198,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
   Future<void> _initWebSocket() async {
     try {
       await pusher.init(
-        apiKey: "7197ebfa7d2e68b962dd", 
+        apiKey: AppConstants.pusherKey, 
         cluster: "eu",
         onEvent: (event) {
           if (event.eventName == "bid_update" || event.eventName == "status_update") {
@@ -366,6 +388,16 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
             if (isLengthChanged && newBidsList.length > bids.length) {
               HapticFeedback.heavyImpact();
               _listAnimController.forward(from: 0.0);
+              if (_waitStartTime != null) {
+                int waitSec = DateTime.now().difference(_waitStartTime!).inSeconds;
+                _sendTelemetry(
+                  eventType: 'wait_time',
+                  eventName: 'ilk_teklif_bekleme_suresi',
+                  duration: waitSec,
+                  meta: {'job_id': widget.jobId, 'total_bids': newBidsList.length},
+                );
+                _waitStartTime = null;
+              }
             }
             setState(() => bids = newBidsList);
           }
@@ -373,6 +405,11 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
       }
     } catch (e) {
       debugPrint("Fetch bids error: $e");
+      _sendTelemetry(
+        eventType: 'app_error',
+        eventName: 'teklif_sorgulama_ag_veya_sunucu_hatasi',
+        meta: {'error': e.toString(), 'job_id': widget.jobId},
+      );
     } finally {
       if (mounted) _isFetching = false;
     }
@@ -721,6 +758,18 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
       if (!mounted) return; 
       final data = json.decode(response.body);
       if (data['status'] == 'success' && mounted) {
+        int waitSec = _waitStartTime != null ? DateTime.now().difference(_waitStartTime!).inSeconds : 0;
+        _sendTelemetry(
+          eventType: 'user_drop',
+          eventName: 'musteri_usta_ararken_iptal_etti',
+          duration: waitSec,
+          meta: {
+            'job_id': widget.jobId,
+            'radius_km': currentRadius,
+            'bids_received': bids.length,
+            'reason': bids.isEmpty ? 'Hic teklif gelmedi' : 'Teklifleri begenmedi'
+          },
+        );
         _isNavigating = true; 
         _cleanupTimers();
         HapticFeedback.mediumImpact();

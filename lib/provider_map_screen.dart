@@ -1,6 +1,6 @@
 // Dosya: provider_map_screen.dart
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; import 'core/constants/app_constants.dart';
 import 'package:flutter/services.dart'; 
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
@@ -108,7 +108,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   String suspensionEndDate = "";
   String profileImageUrl = "https://images.unsplash.com/photo-1613214149922-f1809c99b414?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80";
 
-  final String baseUrl = "https://eliteagency.sbs/api.php";
+  final String baseUrl = AppConstants.baseUrl;
   late final String googleApiKey;
 
   InAppPurchase? _inAppPurchase;
@@ -136,7 +136,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   void initState() {
     super.initState();
     isOnline = widget.initialOnline;
-    googleApiKey = const String.fromEnvironment('MAPS_API_KEY', defaultValue: 'AIzaSyA_NvuYHjKyG7O0ZDYJLvxfgClvdHlMlJU');
+    googleApiKey = const String.fromEnvironment('MAPS_API_KEY', defaultValue: AppConstants.googleMapsKey);
 
     _initCompassStream();
 
@@ -637,6 +637,16 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                         
                                         if (mounted) {
                                           if (data['status'] == 'success') {
+                                            _sendTelemetry(
+                                              eventType: 'button_click',
+                                              eventName: 'usta_teklif_gonderdi',
+                                              meta: {
+                                                'job_id': jobId,
+                                                'amount': priceController.text.trim(),
+                                                'estimated_time': timeController.text.trim(),
+                                                'service_type': serviceType
+                                              },
+                                            );
                                             _showTopSnackBar("Teklifiniz başarıyla müşteriye iletildi.");
                                             
                                             try {
@@ -748,7 +758,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     if (kIsWeb) return; // Web ortamında Pusher çökmesini ve Null Check hatasını engeller
     try {
       await pusher.init(
-        apiKey: "7197ebfa7d2e68b962dd",
+        apiKey: AppConstants.pusherKey,
         cluster: "eu",
         onEvent: (event) {
           if (event.eventName == "new_job_created") {
@@ -1323,6 +1333,26 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     }
   }
 
+  void _sendTelemetry({required String eventType, required String eventName, int duration = 0, Map<String, dynamic>? meta}) {
+    Future.microtask(() async {
+      try {
+        await _httpClient.post(
+          Uri.parse("$baseUrl?action=log_telemetry"),
+          headers: {"Content-Type": "application/x-www-form-urlencoded"},
+          body: {
+            "user_id": widget.providerId.toString(),
+            "user_type": "provider",
+            "event_type": eventType,
+            "event_name": eventName,
+            "screen_name": "ProviderMapScreen",
+            "duration_seconds": duration.toString(),
+            "metadata": meta != null ? json.encode(meta) : "",
+          },
+        );
+      } catch (_) {}
+    });
+  }
+
   void _showTopSnackBar(String message, {bool isError = false, bool isNewJob = false}) {
     if (mounted) {
       ScaffoldMessenger.of(context).clearSnackBars();
@@ -1486,6 +1516,11 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         final bool canWork = data['can_work'] ?? false;
         if (canWork) {
           HapticFeedback.mediumImpact();
+          _sendTelemetry(
+            eventType: 'button_click',
+            eventName: 'usta_cevrimici_oldu_radar_acildi',
+            meta: {'radius': _searchRadius.toInt()},
+          );
           setState(() {
             isOnline = true;
             isCheckingSubscription = false;

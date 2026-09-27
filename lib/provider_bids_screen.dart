@@ -1,5 +1,5 @@
 // provider_bids_screen.dart
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; import 'core/constants/app_constants.dart';
 import 'package:flutter/services.dart'; 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -27,7 +27,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
   
   bool isLoading = true;
   bool _isFetching = false;
-  final String baseUrl = "https://eliteagency.sbs/api.php";
+  final String baseUrl = AppConstants.baseUrl;
   late AnimationController _fadeController;
 
   double totalEarnings = 0.0;

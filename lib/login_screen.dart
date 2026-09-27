@@ -1,5 +1,5 @@
 // Dosya: login_screen.dart
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; import 'core/constants/app_constants.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -68,7 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
   
   bool isLoggingIn = false;
   bool _obscurePassword = true; 
-  final String baseUrl = "https://eliteagency.sbs/api.php";
+  final String baseUrl = AppConstants.baseUrl;
   final Duration apiTimeout = const Duration(seconds: 20);
 
   static const String _iosGoogleClientId = '73273804842-u0lcirptug9aotm2m6gn27g92hftt5ud.apps.googleusercontent.com';

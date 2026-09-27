@@ -1,6 +1,7 @@
 // Dosya: customer_map_screen.dart
 
-import 'package:flutter/material.dart'; import 'core/constants/app_constants.dart';
+import 'package:flutter/material.dart'; 
+import 'core/constants/app_constants.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart' hide Path;
@@ -92,9 +93,6 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
   static const Color pureBlack = Color(0xFF0F172A); 
   static const Color panelBlack = Color(0xFF1E293B); 
   static const Color textGray = Colors.white60; 
-
-  bool _hasFaultPhoto = false;
-  bool _hasEngineAudio = false; 
 
   static const List<Map<String, dynamic>> services = [
     {'id': 'mechanic', 'name': 'Tamirci', 'icon': Icons.build_rounded},
@@ -1630,66 +1628,6 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                                                     ),
                                                   ),
                                                   const SizedBox(height: 20),
-                                                  
-                                                  // Arıza Görseli ve Ses Kaydı Seçenekleri (Ustanın Güvenle Kabulü İçin)
-                                                  Row(
-                                                    children: [
-                                                      Expanded(
-                                                        child: InkWell(
-                                                          onTap: () {
-                                                            HapticFeedback.selectionClick();
-                                                            setState(() => _hasFaultPhoto = !_hasFaultPhoto);
-                                                            _showTopSnackBar(_hasFaultPhoto ? "Arıza göstergesi/parça fotoğrafı eklendi ✓" : "Fotoğraf kaldırıldı.");
-                                                          },
-                                                          borderRadius: BorderRadius.circular(16),
-                                                          child: Container(
-                                                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                                                            decoration: BoxDecoration(
-                                                              color: _hasFaultPhoto ? neonGreen.withOpacity(0.2) : pureBlack,
-                                                              borderRadius: BorderRadius.circular(16),
-                                                              border: Border.all(color: _hasFaultPhoto ? neonGreen : Colors.white12),
-                                                            ),
-                                                            child: Row(
-                                                              mainAxisAlignment: MainAxisAlignment.center,
-                                                              children: [
-                                                                Icon(Icons.add_a_photo_rounded, color: _hasFaultPhoto ? neonGreen : Colors.white70, size: 16),
-                                                                const SizedBox(width: 6),
-                                                                Text(_hasFaultPhoto ? "Fotoğraf Eklendi" : "Arıza Lambası Çek", style: TextStyle(color: _hasFaultPhoto ? neonGreen : Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
-                                                              ],
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      const SizedBox(width: 8),
-                                                      Expanded(
-                                                        child: InkWell(
-                                                          onTap: () {
-                                                            HapticFeedback.selectionClick();
-                                                            setState(() => _hasEngineAudio = !_hasEngineAudio);
-                                                            _showTopSnackBar(_hasEngineAudio ? "Motor sesi kaydı (5 sn) eklendi ✓" : "Ses kaydı kaldırıldı.");
-                                                          },
-                                                          borderRadius: BorderRadius.circular(16),
-                                                          child: Container(
-                                                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                                                            decoration: BoxDecoration(
-                                                              color: _hasEngineAudio ? neonGreen.withOpacity(0.2) : pureBlack,
-                                                              borderRadius: BorderRadius.circular(16),
-                                                              border: Border.all(color: _hasEngineAudio ? neonGreen : Colors.white12),
-                                                            ),
-                                                            child: Row(
-                                                              mainAxisAlignment: MainAxisAlignment.center,
-                                                              children: [
-                                                                Icon(Icons.mic_rounded, color: _hasEngineAudio ? neonGreen : Colors.white70, size: 16),
-                                                                const SizedBox(width: 6),
-                                                                Text(_hasEngineAudio ? "Motor Sesi Eklendi" : "Motor Sesi Kaydet", style: TextStyle(color: _hasEngineAudio ? neonGreen : Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
-                                                              ],
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  const SizedBox(height: 12),
 
                                                   Container(
                                                     decoration: BoxDecoration(

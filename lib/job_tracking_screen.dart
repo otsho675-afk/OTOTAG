@@ -267,8 +267,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     if (!_isMapReady || !mounted || !destLocation.latitude.isFinite || !destLocation.longitude.isFinite || !destZoom.isFinite) return;
     if (destLocation.latitude < -90 || destLocation.latitude > 90 || destLocation.longitude < -180 || destLocation.longitude > 180) return;
 
+    // ANINDA EŞLEŞME: Gecikmeyi sıfırlamak için animateCamera yerine doğrudan moveCamera kullanıldı.
     if (defaultTargetPlatform == TargetPlatform.iOS && _appleMapController != null) {
-      _appleMapController!.animateCamera(
+      _appleMapController!.moveCamera(
         amaps.CameraUpdate.newCameraPosition(
           amaps.CameraPosition(
             target: amaps.LatLng(destLocation.latitude, destLocation.longitude),
@@ -277,7 +278,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         ),
       );
     } else if (_googleMapController != null) {
-      _googleMapController!.animateCamera(
+      _googleMapController!.moveCamera(
         gmaps.CameraUpdate.newCameraPosition(
           gmaps.CameraPosition(
             target: gmaps.LatLng(destLocation.latitude, destLocation.longitude),
@@ -1030,8 +1031,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       west -= 0.0015;
     }
 
+    // ANINDA EŞLEŞME: Kamera anında müşteriye ve ustaya ortalanır (moveCamera)
     if (defaultTargetPlatform == TargetPlatform.iOS && _appleMapController != null) {
-      _appleMapController!.animateCamera(
+      _appleMapController!.moveCamera(
         amaps.CameraUpdate.newLatLngBounds(
           amaps.LatLngBounds(
             southwest: amaps.LatLng(south, west),
@@ -1041,7 +1043,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         ),
       );
     } else if (_googleMapController != null) {
-      _googleMapController!.animateCamera(
+      _googleMapController!.moveCamera(
         gmaps.CameraUpdate.newLatLngBounds(
           gmaps.LatLngBounds(
             southwest: gmaps.LatLng(south, west),
@@ -3621,6 +3623,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           TextField(
             controller: _codeController,
             keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly], // KLAVYE HATASI (HARF/BOŞLUK) ENGELLENDİ
             textInputAction: TextInputAction.done,
             maxLength: 4,
             style: TextStyle(fontSize: 40, letterSpacing: 28, fontWeight: FontWeight.w900, color: primaryColor),
@@ -3634,6 +3637,14 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
               focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide(color: primaryColor, width: 2.0)),
               contentPadding: const EdgeInsets.symmetric(vertical: 24)
             ),
+            onChanged: (value) {
+              if (value.length == 4) {
+                FocusScope.of(context).unfocus(); // Klavyeyi kapatarak UI çakışmasını engeller
+                if (!isProcessing) {
+                  _verifyCode(); // Butona basmadan OTP gibi anında doğrular
+                }
+              }
+            },
             onSubmitted: (_) => FocusScope.of(context).unfocus(),
           ),
           const SizedBox(height: 28),

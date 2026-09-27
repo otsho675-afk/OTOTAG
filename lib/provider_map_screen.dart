@@ -439,7 +439,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
               insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  // Ekran boyutuna göre dinamik genişlik ayarlaması
                   double dialogWidth = constraints.maxWidth > 500 ? 450 : constraints.maxWidth;
                   return ClipRRect(
                     borderRadius: BorderRadius.circular(32),
@@ -448,13 +447,13 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                       child: Container(
                         width: dialogWidth,
                         padding: EdgeInsets.only(
-                          bottom: MediaQuery.of(context).viewInsets.bottom > 0 ? 20 : 28, 
+                          bottom: MediaQuery.of(context).viewInsets.bottom + 20, // KLAVYE ÇAKIŞMASI KESİN OLARAK ÇÖZÜLDÜ
                           left: 24, 
                           right: 24, 
                           top: 28
                         ),
                         constraints: BoxConstraints(
-                          maxHeight: MediaQuery.of(context).size.height * 0.88
+                          maxHeight: MediaQuery.of(context).size.height * 0.95 // RESPONSIVE TAŞMA ALANI GENİŞLETİLDİ
                         ),
                         decoration: BoxDecoration(
                           color: panelBlack.withOpacity(0.95),
@@ -496,7 +495,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                               ),
                               const SizedBox(height: 24),
                               
-                              // Hızlı Fiyat Çipleri Alanı
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
@@ -539,6 +537,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                               TextField(
                                 controller: priceController,
                                 keyboardType: TextInputType.number,
+                                inputFormatters: [FilteringTextInputFormatter.digitsOnly], // KLAVYE HATASI (HARF/BOŞLUK) ENGELLENDİ
                                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
                                 decoration: InputDecoration(
                                   labelText: "Fiyat Teklifiniz (₺)",
@@ -560,7 +559,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                               
                               const SizedBox(height: 24),
                               
-                              // Hızlı Süre Çipleri Alanı
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
@@ -603,6 +601,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                               TextField(
                                 controller: timeController,
                                 keyboardType: TextInputType.number,
+                                inputFormatters: [FilteringTextInputFormatter.digitsOnly], // KLAVYE HATASI (HARF/BOŞLUK) ENGELLENDİ
                                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
                                 decoration: InputDecoration(
                                   labelText: "Tahmini Varış Süresi (Dk)",
@@ -801,8 +800,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         onEvent: (event) {
           if (event.eventName == "new_job_created") {
             if (isOnline && !isSuspended && currentPosition != null) {
-              // Gecikme 1.5 saniyeden 300ms'ye indirildi. Usta ekranına (Apple/Android) ANINDA düşer.
-              Future.delayed(const Duration(milliseconds: 300), () {
+              // ANINDA EŞLEŞME: Bekleme süresi tamamen kaldırıldı, sistem doğrudan tetiklenir.
+              Future.microtask(() {
                 if (mounted) _fetchNearbyJobs(isAuto: true, radius: _searchRadius.toInt());
               });
             }
@@ -872,8 +871,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       targetLat -= (0.004 * (15.0 / destZoom));
     }
 
+    // ANINDA EŞLEŞME: animateCamera yerine moveCamera kullanılarak iOS ve Android'de gecikmesiz nokta atışı yapıldı.
     if (defaultTargetPlatform == TargetPlatform.iOS && _appleMapController != null) {
-      _appleMapController!.animateCamera(
+      _appleMapController!.moveCamera(
         amaps.CameraUpdate.newCameraPosition(
           amaps.CameraPosition(
             target: amaps.LatLng(targetLat, destLocation.longitude),
@@ -882,7 +882,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         ),
       );
     } else if (_googleMapController != null) {
-      _googleMapController!.animateCamera(
+      _googleMapController!.moveCamera(
         gmaps.CameraUpdate.newCameraPosition(
           gmaps.CameraPosition(
             target: gmaps.LatLng(targetLat, destLocation.longitude),

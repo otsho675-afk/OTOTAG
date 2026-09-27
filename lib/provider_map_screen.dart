@@ -770,8 +770,11 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     }
   }
 
+  bool _isPusherInitialized = false;
+
   Future<void> _initWebSocket() async {
-    if (kIsWeb) return; // Web ortamında Pusher çökmesini ve Null Check hatasını engeller
+    if (kIsWeb || _isPusherInitialized) return; // Çoklu başlatmayı (listener kopmalarını) engeller
+    _isPusherInitialized = true;
     try {
       await pusher.init(
         apiKey: AppConstants.pusherKey,
@@ -1427,7 +1430,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
   Future<void> _fetchNearbyJobs({bool isAuto = false, int radius = 10}) async {
     if (currentPosition == null || !isOnline || isSuspended) return;
-    if (_isFetchingJobs) return;
+    // Çakışmayı önle: Socket tetiklemeleri (isAuto = true) bekleme kilidine takılmadan anında çalışsın
+    if (_isFetchingJobs && !isAuto) return; 
     _isFetchingJobs = true;
     
     if (!isAuto && mounted) setState(() { isRefreshing = true; });
@@ -1457,7 +1461,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             final newJobId = newJobs.first;
             final newJobData = fetchedJobs.firstWhere((j) => (int.tryParse(j['id']?.toString() ?? '0') ?? 0) == newJobId);
             
-            if (isAuto && knownJobIds.isNotEmpty) {
+            if (isAuto) {
               _playAlertSound();
               // SnackBar'ı kaldırdık çünkü artık doğrudan Modal açılacak
               _showLocalNotification("📍 Yakınınızda yeni bir iş var!", "${_getServiceName(newJobData['service_type']?.toString() ?? '')} için bölgenizde yeni bir iş talebi var!");
@@ -1547,6 +1551,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             isCheckingSubscription = false;
           });
           _positionStream?.resume();
+          _startJobRefreshTimer(); // Arka planda uykuya dalmış polling motorunu tekrar tetikler
           _fetchNearbyJobs(radius: _searchRadius.toInt());
         } else {
           setState(() => isCheckingSubscription = false);

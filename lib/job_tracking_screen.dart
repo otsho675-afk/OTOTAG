@@ -858,14 +858,14 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         _processNewPosition(position);
 
         // 350K Yük Koruması: DB isteklerini hafifletiyoruz. (Anlık canlılık Pusher üzerinden zaten kesintisiz akar)
-        bool timeElapsed = lastApiPostTime == null || DateTime.now().difference(lastApiPostTime!).inSeconds >= 20;
+        bool timeElapsed = lastApiPostTime == null || DateTime.now().difference(lastApiPostTime!).inSeconds >= 10;
         bool distanceMoved = _lastSentPosition == null || 
             Geolocator.distanceBetween(
               _lastSentPosition!.latitude, _lastSentPosition!.longitude, 
               position.latitude, position.longitude
-            ) > 50; 
+            ) > 10; 
 
-        bool shouldUpdateApi = timeElapsed && distanceMoved;
+        bool shouldUpdateApi = timeElapsed || distanceMoved;
 
         if (widget.userId != null && shouldUpdateApi) {
           _lastSentPosition = position;

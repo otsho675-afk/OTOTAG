@@ -1138,9 +1138,11 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                       onCameraMoveStarted: () {
                         FocusManager.instance.primaryFocus?.unfocus(); 
                         _isMapMovingNotifier.value = true;
+                        _isUserPanning = true;
                       },
                       onCameraMove: (amaps.CameraPosition position) {
                         _currentZoom = position.zoom;
+                        _pinLocationNotifier.value = LatLng(position.target.latitude, position.target.longitude);
                       },
                       onCameraIdle: () {
                         _isMapMovingNotifier.value = false;
@@ -1175,9 +1177,11 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                       onCameraMoveStarted: () {
                         FocusManager.instance.primaryFocus?.unfocus(); 
                         _isMapMovingNotifier.value = true;
+                        _isUserPanning = true;
                       },
                       onCameraMove: (gmaps.CameraPosition position) {
                         _currentZoom = position.zoom;
+                        _pinLocationNotifier.value = LatLng(position.target.latitude, position.target.longitude);
                       },
                       onCameraIdle: () {
                         _isMapMovingNotifier.value = false;

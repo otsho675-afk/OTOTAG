@@ -437,304 +437,323 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             child: Dialog(
               backgroundColor: Colors.transparent,
               insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return ClipRRect(
-                  borderRadius: BorderRadius.circular(32),
-                  child: BackdropFilter(
-                    filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                    child: Container(
-                      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 28, left: 28, right: 28, top: 28),
-                    constraints: BoxConstraints(
-                      maxWidth: 420,
-                      maxHeight: MediaQuery.of(context).size.height * 0.85
-                    ),
-                    decoration: BoxDecoration(
-                      color: panelBlack.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(32),
-                      border: Border.all(color: neonGreen.withOpacity(0.4), width: 1.5),
-                      boxShadow: [BoxShadow(color: pureBlack.withOpacity(0.9), blurRadius: 40, offset: const Offset(0, 15))]
-                    ),
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // Ekran boyutuna göre dinamik genişlik ayarlaması
+                  double dialogWidth = constraints.maxWidth > 500 ? 450 : constraints.maxWidth;
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(32),
+                    child: BackdropFilter(
+                      filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                      child: Container(
+                        width: dialogWidth,
+                        padding: EdgeInsets.only(
+                          bottom: MediaQuery.of(context).viewInsets.bottom > 0 ? 20 : 28, 
+                          left: 24, 
+                          right: 24, 
+                          top: 28
+                        ),
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.of(context).size.height * 0.88
+                        ),
+                        decoration: BoxDecoration(
+                          color: panelBlack.withOpacity(0.95),
+                          borderRadius: BorderRadius.circular(32),
+                          border: Border.all(color: neonGreen.withOpacity(0.4), width: 1.5),
+                          boxShadow: [BoxShadow(color: pureBlack.withOpacity(0.9), blurRadius: 40, offset: const Offset(0, 15))]
+                        ),
+                        child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(14),
+                                    decoration: BoxDecoration(color: neonGreen.withOpacity(0.15), borderRadius: BorderRadius.circular(16)),
+                                    child: Icon(_getServiceIcon(serviceType), color: neonGreen, size: 28),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text("$serviceName Talebi", style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: -0.3)),
+                                        const SizedBox(height: 4),
+                                        Text("$distance KM Uzaklıkta", style: const TextStyle(color: textGray, fontSize: 13, fontWeight: FontWeight.bold)),
+                                      ],
+                                    ),
+                                  )
+                                ],
+                              ),
+                              const SizedBox(height: 20),
                               Container(
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(color: neonGreen.withOpacity(0.15), borderRadius: BorderRadius.circular(16)),
-                                child: Icon(_getServiceIcon(serviceType), color: neonGreen, size: 30),
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(color: pureBlack, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white.withOpacity(0.05))),
+                                child: Text(probDesc.isNotEmpty ? probDesc : "Müşteri bir açıklama belirtmedi.", style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13, height: 1.4)),
                               ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text("$serviceName Talebi", style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
-                                    const SizedBox(height: 4),
-                                    Text("$distance KM Uzaklıkta", style: const TextStyle(color: textGray, fontSize: 13, fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              )
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-                          Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(color: pureBlack, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white.withOpacity(0.05))),
-                            child: Text(probDesc.isNotEmpty ? probDesc : "Müşteri bir açıklama belirtmedi.", style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14, height: 1.5)),
-                          ),
-                          const SizedBox(height: 20),
-                          // Hızlı Fiyat Çipleri
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text("Fiyat Teklifi", style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold)),
-                              Text(
-                                _lastBidPrice.isNotEmpty ? "Son: $_lastBidPrice ₺" : "Hızlı Seçim",
-                                style: const TextStyle(color: textGray, fontSize: 11, fontWeight: FontWeight.w600),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            physics: const BouncingScrollPhysics(),
-                            child: Row(
-                              children: [500, 750, 1000, 1500, 2000, 3000].map((quickVal) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: InkWell(
-                                    onTap: () {
-                                      HapticFeedback.selectionClick();
-                                      setDialogState(() => priceController.text = quickVal.toString());
-                                    },
-                                    borderRadius: BorderRadius.circular(14),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: pureBlack,
-                                        borderRadius: BorderRadius.circular(14),
-                                        border: Border.all(color: neonGreen.withOpacity(0.4)),
-                                      ),
-                                      child: Text("$quickVal ₺", style: const TextStyle(color: neonGreen, fontWeight: FontWeight.w800, fontSize: 12)),
-                                    ),
+                              const SizedBox(height: 24),
+                              
+                              // Hızlı Fiyat Çipleri Alanı
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text("Fiyat Teklifi", style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold)),
+                                  Text(
+                                    _lastBidPrice.isNotEmpty ? "Son: $_lastBidPrice ₺" : "Hızlı Seçim",
+                                    style: const TextStyle(color: textGray, fontSize: 11, fontWeight: FontWeight.w600),
                                   ),
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          TextField(
-                            controller: priceController,
-                            keyboardType: TextInputType.number,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-                            decoration: InputDecoration(
-                              labelText: "Fiyat Teklifiniz (₺)",
-                              labelStyle: const TextStyle(color: textGray, fontWeight: FontWeight.w600),
-                              prefixIcon: const Icon(Icons.payments_rounded, color: neonGreen),
-                              suffixIcon: priceController.text.isNotEmpty
-                                  ? IconButton(
-                                      icon: const Icon(Icons.clear_rounded, color: Colors.white38, size: 20),
-                                      onPressed: () => setDialogState(() => priceController.clear()),
-                                    )
-                                  : null,
-                              filled: true,
-                              fillColor: pureBlack,
-                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: Colors.white.withOpacity(0.1))),
-                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: neonGreen, width: 2.5)),
-                            ),
-                          ),
-                          const SizedBox(height: 18),
-                          // Hızlı Süre Çipleri
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text("Tahmini Varış Süresi", style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold)),
-                              Text(
-                                _lastBidTime.isNotEmpty ? "Son: $_lastBidTime Dk" : "Hızlı Seçim",
-                                style: const TextStyle(color: textGray, fontSize: 11, fontWeight: FontWeight.w600),
+                                ],
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            physics: const BouncingScrollPhysics(),
-                            child: Row(
-                              children: [10, 15, 20, 30, 45, 60].map((min) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: InkWell(
-                                    onTap: () {
-                                      HapticFeedback.selectionClick();
-                                      setDialogState(() => timeController.text = min.toString());
-                                    },
-                                    borderRadius: BorderRadius.circular(14),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: pureBlack,
+                              const SizedBox(height: 10),
+                              SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                physics: const BouncingScrollPhysics(),
+                                child: Row(
+                                  children: [500, 750, 1000, 1500, 2000, 3000].map((quickVal) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(right: 8),
+                                      child: InkWell(
+                                        onTap: () {
+                                          HapticFeedback.selectionClick();
+                                          setDialogState(() => priceController.text = quickVal.toString());
+                                        },
                                         borderRadius: BorderRadius.circular(14),
-                                        border: Border.all(color: const Color(0xFF00E5FF).withOpacity(0.4)),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                          decoration: BoxDecoration(
+                                            color: pureBlack,
+                                            borderRadius: BorderRadius.circular(14),
+                                            border: Border.all(color: neonGreen.withOpacity(0.4)),
+                                          ),
+                                          child: Text("$quickVal ₺", style: const TextStyle(color: neonGreen, fontWeight: FontWeight.w800, fontSize: 13)),
+                                        ),
                                       ),
-                                      child: Text("$min Dk", style: const TextStyle(color: Color(0xFF00E5FF), fontWeight: FontWeight.w800, fontSize: 12)),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          TextField(
-                            controller: timeController,
-                            keyboardType: TextInputType.number,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-                            decoration: InputDecoration(
-                              labelText: "Tahmini Varış Süresi (Dk)",
-                              labelStyle: const TextStyle(color: textGray, fontWeight: FontWeight.w600),
-                              prefixIcon: const Icon(Icons.timer_rounded, color: neonGreen),
-                              suffixIcon: timeController.text.isNotEmpty
-                                  ? IconButton(
-                                      icon: const Icon(Icons.clear_rounded, color: Colors.white38, size: 20),
-                                      onPressed: () => setDialogState(() => timeController.clear()),
-                                    )
-                                  : null,
-                              filled: true,
-                              fillColor: pureBlack,
-                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: Colors.white.withOpacity(0.1))),
-                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: neonGreen, width: 2.5)),
-                            ),
-                          ),
-                          const SizedBox(height: 36),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextButton(
-                                  onPressed: isSubmitting ? null : () => Navigator.pop(context),
-                                  style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 18)),
-                                  child: const Text("İptal Et", style: TextStyle(color: textGray, fontSize: 16, fontWeight: FontWeight.bold)),
+                                    );
+                                  }).toList(),
                                 ),
                               ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                flex: 2,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(20),
-                                    color: neonGreen,
-                                    boxShadow: [BoxShadow(color: neonGreen.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 5))]
+                              const SizedBox(height: 12),
+                              TextField(
+                                controller: priceController,
+                                keyboardType: TextInputType.number,
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                                decoration: InputDecoration(
+                                  labelText: "Fiyat Teklifiniz (₺)",
+                                  labelStyle: const TextStyle(color: textGray, fontWeight: FontWeight.w600),
+                                  prefixIcon: const Icon(Icons.payments_rounded, color: neonGreen),
+                                  suffixIcon: priceController.text.isNotEmpty
+                                      ? IconButton(
+                                          icon: const Icon(Icons.clear_rounded, color: Colors.white38, size: 20),
+                                          onPressed: () => setDialogState(() => priceController.clear()),
+                                        )
+                                      : null,
+                                  filled: true,
+                                  fillColor: pureBlack,
+                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: Colors.white.withOpacity(0.1))),
+                                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: neonGreen, width: 2.0)),
+                                  contentPadding: const EdgeInsets.symmetric(vertical: 18),
+                                ),
+                              ),
+                              
+                              const SizedBox(height: 24),
+                              
+                              // Hızlı Süre Çipleri Alanı
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text("Tahmini Varış Süresi", style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold)),
+                                  Text(
+                                    _lastBidTime.isNotEmpty ? "Son: $_lastBidTime Dk" : "Hızlı Seçim",
+                                    style: const TextStyle(color: textGray, fontSize: 11, fontWeight: FontWeight.w600),
                                   ),
-                                  child: ElevatedButton(
-                                    onPressed: isSubmitting ? null : () async {
-                                      if(priceController.text.isEmpty || timeController.text.isEmpty) {
-                                        _showTopSnackBar("Lütfen fiyat ve süre bilgilerini eksiksiz girin.", isError: true);
-                                        return;
-                                      }
-                                      
-                                      setDialogState(() => isSubmitting = true);
-                                      
-                                      try {
-                                        final response = await _httpClient.post(
-                                          Uri.parse("$baseUrl?action=place_bid"),
-                                          headers: {"Content-Type": "application/x-www-form-urlencoded"},
-                                          body: {
-                                            "job_id": jobId.toString(),
-                                            "provider_id": widget.providerId.toString(),
-                                            "amount": priceController.text.trim(),
-                                            "estimated_time": timeController.text.trim(), 
-                                          },
-                                        ).timeout(_apiTimeout);
-
-                                        final data = json.decode(response.body);
-                                        
-                                        if (mounted) {
-                                          if (data['status'] == 'success') {
-                                            _sendTelemetry(
-                                              eventType: 'button_click',
-                                              eventName: 'usta_teklif_gonderdi',
-                                              meta: {
-                                                'job_id': jobId,
-                                                'amount': priceController.text.trim(),
-                                                'estimated_time': timeController.text.trim(),
-                                                'service_type': serviceType
-                                              },
-                                            );
-                                            _showTopSnackBar("Teklifiniz başarıyla müşteriye iletildi.");
-                                            
-                                            try {
-                                              FirebaseAnalytics.instance.logEvent(
-                                                name: 'provider_bid_placed',
-                                                parameters: {'amount': priceController.text.trim()},
-                                              );
-                                            } catch(e) {}
-                                            
-                                            _lastBidPrice = priceController.text.trim();
-                                            _lastBidTime = timeController.text.trim();
-                                            
-                                            Navigator.of(context).pop(); 
-                                            
-                                            Future.microtask(() {
-                                              if (!mounted) return;
-                                              setState(() {
-                                                jobList.removeWhere((j) => int.parse(j['id'].toString()) == jobId);
-                                                knownJobIds.remove(jobId);
-                                                _showJobCard = false;
-                                                _isModalOpen = false;
-                                              });
-
-                                              Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) => JobTrackingScreen(
-                                                  jobId: jobId,
-                                                  userType: 'provider',
-                                                  userId: widget.providerId,
-                                                ),
-                                              ),
-                                            ).then((_) {
-                                              if (mounted) {
-                                                  _fetchNearbyJobs(radius: _searchRadius.toInt());
-                                                  _checkActiveJob();
-                                                }
-                                              });
-                                            });
-                                          } else {
-                                            setDialogState(() => isSubmitting = false);
-                                            _showTopSnackBar(data['message'] ?? "Teklif gönderilemedi.", isError: true);
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                physics: const BouncingScrollPhysics(),
+                                child: Row(
+                                  children: [10, 15, 20, 30, 45, 60].map((min) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(right: 8),
+                                      child: InkWell(
+                                        onTap: () {
+                                          HapticFeedback.selectionClick();
+                                          setDialogState(() => timeController.text = min.toString());
+                                        },
+                                        borderRadius: BorderRadius.circular(14),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                          decoration: BoxDecoration(
+                                            color: pureBlack,
+                                            borderRadius: BorderRadius.circular(14),
+                                            border: Border.all(color: const Color(0xFF00E5FF).withOpacity(0.4)),
+                                          ),
+                                          child: Text("$min Dk", style: const TextStyle(color: Color(0xFF00E5FF), fontWeight: FontWeight.w800, fontSize: 13)),
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              TextField(
+                                controller: timeController,
+                                keyboardType: TextInputType.number,
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                                decoration: InputDecoration(
+                                  labelText: "Tahmini Varış Süresi (Dk)",
+                                  labelStyle: const TextStyle(color: textGray, fontWeight: FontWeight.w600),
+                                  prefixIcon: const Icon(Icons.timer_rounded, color: neonGreen),
+                                  suffixIcon: timeController.text.isNotEmpty
+                                      ? IconButton(
+                                          icon: const Icon(Icons.clear_rounded, color: Colors.white38, size: 20),
+                                          onPressed: () => setDialogState(() => timeController.clear()),
+                                        )
+                                      : null,
+                                  filled: true,
+                                  fillColor: pureBlack,
+                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: Colors.white.withOpacity(0.1))),
+                                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: neonGreen, width: 2.0)),
+                                  contentPadding: const EdgeInsets.symmetric(vertical: 18),
+                                ),
+                              ),
+                              
+                              const SizedBox(height: 32),
+                              
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      onPressed: isSubmitting ? null : () => Navigator.pop(context),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                        side: BorderSide(color: Colors.white.withOpacity(0.1), width: 1.5)
+                                      ),
+                                      child: const FittedBox(child: Text("İptal Et", style: TextStyle(color: textGray, fontSize: 15, fontWeight: FontWeight.bold))),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(20),
+                                        color: neonGreen,
+                                        boxShadow: [BoxShadow(color: neonGreen.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 5))]
+                                      ),
+                                      child: ElevatedButton(
+                                        onPressed: isSubmitting ? null : () async {
+                                          if(priceController.text.isEmpty || timeController.text.isEmpty) {
+                                            _showTopSnackBar("Lütfen fiyat ve süre bilgilerini eksiksiz girin.", isError: true);
+                                            return;
                                           }
-                                        }
-                                      } catch (e) {
-                                        setDialogState(() => isSubmitting = false);
-                                        if (mounted) _showTopSnackBar("Bağlantı hatası oluştu.", isError: true);
-                                      }
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.transparent,
-                                      shadowColor: Colors.transparent,
-                                      padding: const EdgeInsets.symmetric(vertical: 18),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))
+                                          
+                                          setDialogState(() => isSubmitting = true);
+                                          
+                                          try {
+                                            final response = await _httpClient.post(
+                                              Uri.parse("$baseUrl?action=place_bid"),
+                                              headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                                              body: {
+                                                "job_id": jobId.toString(),
+                                                "provider_id": widget.providerId.toString(),
+                                                "amount": priceController.text.trim(),
+                                                "estimated_time": timeController.text.trim(), 
+                                              },
+                                            ).timeout(_apiTimeout);
+
+                                            final data = json.decode(response.body);
+                                            
+                                            if (mounted) {
+                                              if (data['status'] == 'success') {
+                                                _sendTelemetry(
+                                                  eventType: 'button_click',
+                                                  eventName: 'usta_teklif_gonderdi',
+                                                  meta: {
+                                                    'job_id': jobId,
+                                                    'amount': priceController.text.trim(),
+                                                    'estimated_time': timeController.text.trim(),
+                                                    'service_type': serviceType
+                                                  },
+                                                );
+                                                _showTopSnackBar("Teklifiniz başarıyla müşteriye iletildi.");
+                                                
+                                                try {
+                                                  FirebaseAnalytics.instance.logEvent(
+                                                    name: 'provider_bid_placed',
+                                                    parameters: {'amount': priceController.text.trim()},
+                                                  );
+                                                } catch(e) {}
+                                                
+                                                _lastBidPrice = priceController.text.trim();
+                                                _lastBidTime = timeController.text.trim();
+                                                
+                                                Navigator.of(context).pop(); 
+                                                
+                                                Future.microtask(() {
+                                                  if (!mounted) return;
+                                                  setState(() {
+                                                    jobList.removeWhere((j) => int.parse(j['id'].toString()) == jobId);
+                                                    knownJobIds.remove(jobId);
+                                                    _showJobCard = false;
+                                                    _isModalOpen = false;
+                                                  });
+
+                                                  Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (_) => JobTrackingScreen(
+                                                      jobId: jobId,
+                                                      userType: 'provider',
+                                                      userId: widget.providerId,
+                                                    ),
+                                                  ),
+                                                ).then((_) {
+                                                  if (mounted) {
+                                                      _fetchNearbyJobs(radius: _searchRadius.toInt());
+                                                      _checkActiveJob();
+                                                    }
+                                                  });
+                                                });
+                                              } else {
+                                                setDialogState(() => isSubmitting = false);
+                                                _showTopSnackBar(data['message'] ?? "Teklif gönderilemedi.", isError: true);
+                                              }
+                                            }
+                                          } catch (e) {
+                                            setDialogState(() => isSubmitting = false);
+                                            if (mounted) _showTopSnackBar("Bağlantı hatası oluştu.", isError: true);
+                                          }
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.transparent,
+                                          shadowColor: Colors.transparent,
+                                          padding: const EdgeInsets.symmetric(vertical: 16),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))
+                                        ),
+                                        child: isSubmitting 
+                                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 3.0))
+                                            : const FittedBox(child: Text("Teklif Gönder", style: TextStyle(color: pureBlack, fontSize: 16, fontWeight: FontWeight.w900))),
+                                      ),
                                     ),
-                                    child: isSubmitting 
-                                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 3.0))
-                                        : const Text("Teklif Gönder", style: TextStyle(color: pureBlack, fontSize: 16, fontWeight: FontWeight.w900)),
-                                  ),
-                                ),
+                                  )
+                                ],
                               )
                             ],
-                          )
-                        ],
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                )); 
-              }
+                  ); 
+                }
+              ),
             ),
-          ),
-        );
+          );
         }
       )
     ).then((_) {
@@ -782,8 +801,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         onEvent: (event) {
           if (event.eventName == "new_job_created") {
             if (isOnline && !isSuspended && currentPosition != null) {
-              // Veritabanı tam kaydetsin diye 1.5 saniye mühlet veriyoruz
-              Future.delayed(const Duration(milliseconds: 1500), () {
+              // Gecikme 1.5 saniyeden 300ms'ye indirildi. Usta ekranına (Apple/Android) ANINDA düşer.
+              Future.delayed(const Duration(milliseconds: 300), () {
                 if (mounted) _fetchNearbyJobs(isAuto: true, radius: _searchRadius.toInt());
               });
             }
@@ -796,7 +815,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       debugPrint("Pusher error: $e");
       // Kopmalara karşı akıllı retry
       Future.delayed(const Duration(seconds: 3), () {
-        if (mounted && isOnline) _initWebSocket();
+        if (mounted && isOnline) {
+          _isPusherInitialized = false;
+          _initWebSocket();
+        }
       });
     }
   }
@@ -1170,42 +1192,11 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     currentPosition = position;
     LatLng newPos = LatLng(position.latitude, position.longitude);
 
-    if (_targetProviderPos == null || _animatedProviderPos.value == null) {
-      _animatedProviderPos.value = newPos;
-      _targetProviderPos = newPos;
-      _oldProviderPos = newPos;
-      _animatedHeading.value = position.heading;
-      _oldHeading = position.heading;
-      _targetHeading = position.heading;
-    } else if (_targetProviderPos != newPos) {
-      double distDrift = Geolocator.distanceBetween(
-        _targetProviderPos!.latitude, _targetProviderPos!.longitude,
-        newPos.latitude, newPos.longitude
-      );
-      
-      if (distDrift > 2.0) {
-        _oldProviderPos = _animatedProviderPos.value ?? newPos;
-        _targetProviderPos = newPos;
-        _oldHeading = _animatedHeading.value;
-        
-        if (_oldProviderPos != null && _targetProviderPos != null && distDrift > 5.0) {
-          double lat1 = _oldProviderPos!.latitude * math.pi / 180.0;
-          double lng1 = _oldProviderPos!.longitude * math.pi / 180.0;
-          double lat2 = _targetProviderPos!.latitude * math.pi / 180.0;
-          double lng2 = _targetProviderPos!.longitude * math.pi / 180.0;
-          double dLng = lng2 - lng1;
-          double y = math.sin(dLng) * math.cos(lat2);
-          double x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dLng);
-          _targetHeading = (math.atan2(y, x) * 180.0 / math.pi + 360.0) % 360.0;
-        } else {
-           _targetHeading = position.speed < 1.5 ? _animatedHeading.value : position.heading;
-        }
-        _slideController.forward(from: 0.0);
-      }
-    } else {
-      _animatedProviderPos.value = newPos;
-      _animatedHeading.value = position.heading;
-    }
+    // Apple Maps'te (iOS) haritaya işlerin düşmemesi ve marker kaybolma sorunu çözüldü.
+    // 60FPS _slideController animasyonu yerine, marker pozisyonu doğrudan GPS ile (2 sn'de bir) güncellenerek 
+    // AppleMap SDK'sının render kuyruğunun kilitlenmesi engellendi.
+    _animatedProviderPos.value = newPos;
+    _animatedHeading.value = position.speed < 1.5 ? _animatedHeading.value : position.heading;
 
     if (isFirst || isLoading) {
       isLoading = false;

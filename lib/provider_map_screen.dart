@@ -261,6 +261,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (context) => BackdropFilter(
         filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
@@ -270,41 +271,47 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             border: Border.all(color: alertRed.withOpacity(0.3), width: 1.5)
           ),
           padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 24, top: 32, left: 24, right: 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: alertRed.withOpacity(0.15), shape: BoxShape.circle),
-                child: const Icon(Icons.gavel_rounded, color: alertRed, size: 48),
-              ),
-              const SizedBox(height: 24),
-              const Text("Hesabınız Askıya Alındı", style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
-              const SizedBox(height: 12),
-              Text(
-                "Hesabınız kural ihlali veya düşük puan nedeniyle $suspensionEndDate tarihine kadar askıya alınmıştır. Bu süre zarfında iş alamazsınız.", 
-                textAlign: TextAlign.center, 
-                style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 15, height: 1.5)
-              ),
-              const SizedBox(height: 32),
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [BoxShadow(color: pureBlack, blurRadius: 15, offset: const Offset(0, 5))]
-                ),
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: pureBlack,
-                    side: BorderSide(color: Colors.white.withOpacity(0.1)),
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    minimumSize: const Size(double.infinity, 50)
+          child: SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(color: alertRed.withOpacity(0.15), shape: BoxShape.circle),
+                    child: const Icon(Icons.gavel_rounded, color: alertRed, size: 48),
                   ),
-                  child: const Text("Anladım", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)),
-                ),
-              )
-            ],
+                  const SizedBox(height: 24),
+                  const Text("Hesabınız Askıya Alındı", style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5), textAlign: TextAlign.center),
+                  const SizedBox(height: 12),
+                  Text(
+                    "Hesabınız kural ihlali veya düşük puan nedeniyle $suspensionEndDate tarihine kadar askıya alınmıştır. Bu süre zarfında iş alamazsınız.", 
+                    textAlign: TextAlign.center, 
+                    style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14, height: 1.5)
+                  ),
+                  const SizedBox(height: 32),
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [BoxShadow(color: pureBlack, blurRadius: 15, offset: const Offset(0, 5))]
+                    ),
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: pureBlack,
+                        side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        minimumSize: const Size(double.infinity, 50)
+                      ),
+                      child: const Text("Anladım", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)),
+                    ),
+                  )
+                ],
+              ),
+            ),
           ),
         ),
       )
@@ -319,6 +326,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (context) => BackdropFilter(
         filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
@@ -328,76 +336,82 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             border: Border.all(color: neonGreen.withOpacity(0.3), width: 1.5)
           ),
           padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 24, top: 32, left: 24, right: 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: neonGreen.withOpacity(0.15), shape: BoxShape.circle),
-                child: const Icon(Icons.workspace_premium_rounded, color: neonGreen, size: 48),
-              ),
-              const SizedBox(height: 24),
-              const Text("Abonelik Yenileme Gerekli", style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
-              const SizedBox(height: 12),
-              Text(
-                "Çevrimiçi olup müşterilerden yeni iş talepleri alabilmek için aktif bir sağlayıcı aboneliğinizin olması gerekmektedir.", 
-                textAlign: TextAlign.center, 
-                style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 15, height: 1.5)
-              ),
-              const SizedBox(height: 32),
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  color: neonGreen,
-                  boxShadow: [BoxShadow(color: neonGreen.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 5))]
-                ),
-                child: ElevatedButton(
-                  onPressed: isCheckingSubscription ? null : () async {
-                     Navigator.pop(context);
-                     await _startSubscriptionPurchase();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent, 
-                    shadowColor: Colors.transparent,
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    minimumSize: const Size(double.infinity, 50)
-                  ),
-                  child: isCheckingSubscription
-                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 3))
-                      : Text("Aboneliği Başlat ($_subscriptionPriceDisplay)", style: const TextStyle(color: pureBlack, fontSize: 16, fontWeight: FontWeight.w900)),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                alignment: WrapAlignment.center,
-                crossAxisAlignment: WrapCrossAlignment.center,
+          child: SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _restorePurchases();
-                    },
-                    child: const Text("Satın Alımları Geri Yükle", style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                  Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(color: neonGreen.withOpacity(0.15), shape: BoxShape.circle),
+                    child: const Icon(Icons.workspace_premium_rounded, color: neonGreen, size: 48),
                   ),
-                  const Text(" • ", style: TextStyle(color: Colors.white38)),
-                  TextButton(
-                    onPressed: () => launchUrl(Uri.parse("https://eliteagency.sbs/terms.html")),
-                    child: const Text("Kullanım Koşulları", style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 24),
+                  const Text("Abonelik Yenileme Gerekli", style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5), textAlign: TextAlign.center),
+                  const SizedBox(height: 12),
+                  Text(
+                    "Çevrimiçi olup müşterilerden yeni iş talepleri alabilmek için aktif bir sağlayıcı aboneliğinizin olması gerekmektedir.", 
+                    textAlign: TextAlign.center, 
+                    style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14, height: 1.5)
                   ),
-                  const Text(" • ", style: TextStyle(color: Colors.white38)),
-                  TextButton(
-                    onPressed: () => launchUrl(Uri.parse("https://eliteagency.sbs/privacy.html")),
-                    child: const Text("Gizlilik Politikası", style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 32),
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      color: neonGreen,
+                      boxShadow: [BoxShadow(color: neonGreen.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 5))]
+                    ),
+                    child: ElevatedButton(
+                      onPressed: isCheckingSubscription ? null : () async {
+                         Navigator.pop(context);
+                         await _startSubscriptionPurchase();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent, 
+                        shadowColor: Colors.transparent,
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        minimumSize: const Size(double.infinity, 50)
+                      ),
+                      child: isCheckingSubscription
+                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 3))
+                          : Text("Aboneliği Başlat ($_subscriptionPriceDisplay)", style: const TextStyle(color: pureBlack, fontSize: 16, fontWeight: FontWeight.w900)),
+                    ),
                   ),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _restorePurchases();
+                        },
+                        child: const Text("Satın Alımları Geri Yükle", style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                      ),
+                      const Text(" • ", style: TextStyle(color: Colors.white38)),
+                      TextButton(
+                        onPressed: () => launchUrl(Uri.parse("https://eliteagency.sbs/terms.html")),
+                        child: const Text("Kullanım Koşulları", style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                      ),
+                      const Text(" • ", style: TextStyle(color: Colors.white38)),
+                      TextButton(
+                        onPressed: () => launchUrl(Uri.parse("https://eliteagency.sbs/privacy.html")),
+                        child: const Text("Gizlilik Politikası", style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                    child: const Text("Daha Sonra Belki", style: TextStyle(color: Colors.white54, fontWeight: FontWeight.w800, fontSize: 14)),
+                  )
                 ],
               ),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
-                child: const Text("Daha Sonra Belki", style: TextStyle(color: Colors.white54, fontWeight: FontWeight.w800, fontSize: 14)),
-              )
-            ],
+            ),
           ),
         ),
       )
@@ -1445,31 +1459,34 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             
             if (isAuto && knownJobIds.isNotEmpty) {
               _playAlertSound();
-              _showTopSnackBar("YENİ İŞ TALEBİ! Haritada yanan işe tıkla.", isNewJob: true);
+              // SnackBar'ı kaldırdık çünkü artık doğrudan Modal açılacak
               _showLocalNotification("📍 Yakınınızda yeni bir iş var!", "${_getServiceName(newJobData['service_type']?.toString() ?? '')} için bölgenizde yeni bir iş talebi var!");
             }
             
             setState(() {
-              if (!_isModalOpen) {
-                _showJobCard = true; 
-                _currentJobIndex = fetchedJobs.indexWhere((j) => (int.tryParse(j['id']?.toString() ?? '0') ?? 0) == newJobId);
-                if (_currentJobIndex == -1) _currentJobIndex = 0;
-              }
+              _showJobCard = true; 
+              _currentJobIndex = fetchedJobs.indexWhere((j) => (int.tryParse(j['id']?.toString() ?? '0') ?? 0) == newJobId);
+              if (_currentJobIndex == -1) _currentJobIndex = 0;
               _flitchingJobId = newJobId;
             });
 
-            if (!_isModalOpen) {
-              _animatedMapMove(
-                LatLng(_parseDouble(newJobData['latitude']), _parseDouble(newJobData['longitude'])),
-                16.0,
-                avoidBottomSheet: true 
-              );
-              Future.delayed(const Duration(milliseconds: 300), () {
-                if (_pageController.hasClients && mounted) {
-                  _pageController.animateToPage(_currentJobIndex, duration: const Duration(milliseconds: 800), curve: Curves.fastOutSlowIn);
-                }
-              });
-            }
+            // Haritayı hemen müşterinin konumuna kaydır
+            _animatedMapMove(
+              LatLng(_parseDouble(newJobData['latitude']), _parseDouble(newJobData['longitude'])),
+              16.0,
+              avoidBottomSheet: true 
+            );
+
+            // Gecikmeli olarak teklif formunu (Modal'ı) otomatik aç
+            Future.delayed(const Duration(milliseconds: 800), () {
+              if (mounted && !_isModalOpen) {
+                 final String serviceType = newJobData['service_type']?.toString() ?? 'mechanic';
+                 final String serviceName = _getServiceName(serviceType);
+                 final String distance = newJobData['distance'] != null ? _parseDouble(newJobData['distance']).toStringAsFixed(1) : "0.0";
+                 final String probDesc = newJobData['problem_description']?.toString() ?? '';
+                 _showBidDialog(newJobId, serviceName, probDesc, distance, serviceType);
+              }
+            });
           }
 
           bool listChanged = jobList.length != fetchedJobs.length ||

@@ -24,6 +24,11 @@
     <string>$(FLUTTER_BUILD_NUMBER)</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
+    
+    <!-- iOS 18/26+ ve iPad Açılış Çökmesini (Scene Lifecycle Trap) Önleyen Kritik Ayar -->
+    <key>UIRequiresFullScreen</key>
+    <true/>
+    
     <key>UILaunchStoryboardName</key>
     <string>LaunchScreen</string>
     <key>UIMainStoryboardFile</key>

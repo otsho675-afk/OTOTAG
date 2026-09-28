@@ -106,18 +106,29 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   gmaps.BitmapDescriptor? _providerCarIconGmaps;
   amaps.BitmapDescriptor? _providerCarIconAmaps;
 
+  Future<Uint8List?> _getBytesFromAsset(String path, int width) async {
+    try {
+      final ByteData data = await rootBundle.load(path);
+      final ui.Codec codec = await ui.instantiateImageCodec(
+        data.buffer.asUint8List(),
+        targetWidth: width,
+      );
+      final ui.FrameInfo fi = await codec.getNextFrame();
+      final ByteData? byteData = await fi.image.toByteData(format: ui.ImageByteFormat.png);
+      return byteData?.buffer.asUint8List();
+    } catch (e) {
+      debugPrint("Araba simgesi boyutlandırma hatası: $e");
+      return null;
+    }
+  }
+
   Future<void> _loadCarIcon() async {
     try {
-      _providerCarIconGmaps = await gmaps.BitmapDescriptor.fromAssetImage(
-        const ImageConfiguration(size: Size(128, 128)),
-        'assets/images/car_top_view.png',
-      );
-    } catch (_) {}
-    try {
-      _providerCarIconAmaps = await amaps.BitmapDescriptor.fromAssetImage(
-        const ImageConfiguration(size: Size(128, 128)),
-        'assets/images/car_top_view.png',
-      );
+      final Uint8List? carBytes = await _getBytesFromAsset('assets/images/car_top_view.png', 45);
+      if (carBytes != null) {
+        _providerCarIconGmaps = gmaps.BitmapDescriptor.fromBytes(carBytes);
+        _providerCarIconAmaps = amaps.BitmapDescriptor.fromBytes(carBytes);
+      }
     } catch (_) {}
     if (mounted) setState(() {});
   }
@@ -2335,6 +2346,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
               _animatedProviderPos.value?.latitude ?? providerLat,
               _animatedProviderPos.value?.longitude ?? providerLng,
             ),
+            anchor: const Offset(0.5, 0.5),
             icon: _providerCarIconAmaps ?? amaps.BitmapDescriptor.defaultAnnotationWithHue(amaps.BitmapDescriptor.hueGreen),
           ),
         );

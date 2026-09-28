@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
 import 'package:flutter/services.dart'; 
 import 'package:flutter/foundation.dart';
-import 'package:latlong2/latlong.dart';
+import 'dart:typed_data';
+import 'package:latlong2/latlong.dart' hide Path;
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 import 'package:apple_maps_flutter/apple_maps_flutter.dart' as amaps;
 import 'package:geolocator/geolocator.dart';
@@ -124,6 +125,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   static const Color textGray = Colors.white54;
   static const Color alertRed = Color(0xFFFF3366);
 
+  gmaps.BitmapDescriptor? _customerMarkerIconGmaps;
+  amaps.BitmapDescriptor? _customerMarkerIconAmaps;
+
   double _parseDouble(dynamic value) {
     if (value == null) return 0.0;
     if (value is double) return value.isFinite ? value : 0.0;
@@ -139,6 +143,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     googleApiKey = const String.fromEnvironment('MAPS_API_KEY', defaultValue: AppConstants.googleMapsKey);
 
     _initCompassStream();
+    _loadCustomerMarkerIcon();
 
     WidgetsBinding.instance.addObserver(this); 
     _checkActiveJob();
@@ -179,6 +184,125 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     _initLocationStream(); 
     _fetchEarningsAndPerformance();
     _startJobRefreshTimer();
+  }
+
+  Future<Uint8List> _createCustomCustomerMarkerBytes({int width = 140, int height = 160}) async {
+    final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
+    final Canvas canvas = Canvas(pictureRecorder);
+    final double centerX = width / 2;
+    final double centerY = 56.0;
+    final double circleRadius = 46.0;
+
+    // Alt Zemin Gölgesi
+    final Path shadowPath = Path();
+    shadowPath.addOval(Rect.fromCenter(
+      center: Offset(centerX, height - 10),
+      width: 34,
+      height: 12,
+    ));
+    final Paint shadowPaint = Paint()
+      ..color = Colors.black.withOpacity(0.45)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+    canvas.drawPath(shadowPath, shadowPaint);
+
+    // Gövde Pin Şekli (Daire + Sivri Uç)
+    final Path pinPath = Path();
+    pinPath.addOval(Rect.fromCircle(
+      center: Offset(centerX, centerY),
+      radius: circleRadius,
+    ));
+    pinPath.moveTo(centerX - 18, centerY + 30);
+    pinPath.lineTo(centerX, height - 12);
+    pinPath.lineTo(centerX + 18, centerY + 30);
+    pinPath.close();
+
+    // Dış Neon Işıma
+    final Paint pinGlowPaint = Paint()
+      ..color = neonGreen.withOpacity(0.6)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6.0
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+    canvas.drawPath(pinPath, pinGlowPaint);
+
+    // Dış Neon Çerçeve Dolgusu
+    final Paint pinFillPaint = Paint()
+      ..color = neonGreen
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(pinPath, pinFillPaint);
+
+    // İç Koyu Panel
+    final Paint innerDarkPaint = Paint()
+      ..color = panelBlack
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(centerX, centerY), circleRadius - 4.5, innerDarkPaint);
+
+    // İç Dekoratif İnce Halka
+    final Paint innerRingPaint = Paint()
+      ..color = neonGreen.withOpacity(0.25)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+    canvas.drawCircle(Offset(centerX, centerY), circleRadius - 8, innerRingPaint);
+
+    // Müşteri Avatar Logosu (Baş + Gövde Silüeti)
+    canvas.save();
+    final Path clipPath = Path()
+      ..addOval(Rect.fromCircle(
+        center: Offset(centerX, centerY),
+        radius: circleRadius - 8,
+      ));
+    canvas.clipPath(clipPath);
+
+    final Paint silhouettePaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+
+    // Kafa
+    canvas.drawCircle(Offset(centerX, centerY - 8), 13.0, silhouettePaint);
+
+    // Omuz / Gövde
+    final Path torsoPath = Path();
+    torsoPath.addOval(Rect.fromCenter(
+      center: Offset(centerX, centerY + 24),
+      width: 44,
+      height: 34,
+    ));
+    canvas.drawPath(torsoPath, silhouettePaint);
+
+    canvas.restore();
+
+    // Aktif Çağrı Bildirim Noktası (Sağ Üst Rozet)
+    final Paint alertGlow = Paint()
+      ..color = alertRed.withOpacity(0.8)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+    canvas.drawCircle(Offset(centerX + 30, centerY - 28), 7.5, alertGlow);
+
+    final Paint alertDot = Paint()
+      ..color = alertRed
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(centerX + 30, centerY - 28), 6.5, alertDot);
+
+    final Paint alertCenter = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(centerX + 30, centerY - 28), 2.5, alertCenter);
+
+    final ui.Image image = await pictureRecorder.endRecording().toImage(width, height);
+    final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    return byteData!.buffer.asUint8List();
+  }
+
+  Future<void> _loadCustomerMarkerIcon() async {
+    try {
+      final Uint8List markerBytes = await _createCustomCustomerMarkerBytes();
+      if (mounted) {
+        setState(() {
+          _customerMarkerIconGmaps = gmaps.BitmapDescriptor.fromBytes(markerBytes);
+          _customerMarkerIconAmaps = amaps.BitmapDescriptor.fromBytes(markerBytes);
+        });
+      }
+    } catch (e) {
+      debugPrint("Özel müşteri ikonu oluşturma hatası: $e");
+    }
   }
 
   void _zoomIn() {
@@ -787,7 +911,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
               });
             }
           } 
-          // Müşteri teklifi kabul ettiğinde ustayı anında iş takibi ekranına yönlendir
           else if (event.eventName == "job_matched" || event.eventName == "status_update") {
             if (mounted && !_isNavigating) {
               HapticFeedback.heavyImpact();
@@ -797,7 +920,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         },
       );
       await pusher.subscribe(channelName: "global_jobs");
-      // Ustanın şahsi kanalına abone olunarak anlık eşleşme tetiklenir
       await pusher.subscribe(channelName: "user_${widget.providerId}");
       await pusher.connect();
     } catch (e) {
@@ -814,7 +936,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   void _startJobRefreshTimer() {
     _initWebSocket();
     _jobPollingTimer?.cancel();
-    // Socket gecikmesi veya arka plandan dönüşte eşleşmeyi 6 saniyede bir doğrular
     _jobPollingTimer = Timer.periodic(const Duration(seconds: 6), (_) {
       if (mounted && isOnline && !isSuspended) {
         _checkActiveJob();
@@ -934,7 +1055,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   }
 
   void _initInAppPurchase() {
-    if (_inAppPurchase == null || kIsWeb) return;
+    if (_inAppPurchase == null || kIsWeb) return; 
     
     final Stream<List<PurchaseDetails>> purchaseUpdated = _inAppPurchase!.purchaseStream;
     _purchaseSubscription = purchaseUpdated.listen((purchaseDetailsList) {
@@ -1014,9 +1135,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   }
 
   Future<void> _loadSubscriptionPrice() async {
-    if (kIsWeb || _inAppPurchase == null) return;
+    if (kIsWeb || _inAppPurchase == null) return; 
     final bool available = await _inAppPurchase!.isAvailable();
-    if (!available) return;
+    if (!available) return; 
     final ProductDetailsResponse response = await _inAppPurchase!.queryProductDetails({_subscriptionProductId});
     if (response.productDetails.isNotEmpty && mounted) {
       setState(() {
@@ -1058,7 +1179,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   }
 
   Future<void> _restorePurchases() async {
-    if (kIsWeb || _inAppPurchase == null) return;
+    if (kIsWeb || _inAppPurchase == null) return; 
     try {
       setState(() => isCheckingSubscription = true);
       await _inAppPurchase!.restorePurchases();
@@ -1279,7 +1400,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
       _positionStream?.cancel();
       _positionStream = Geolocator.getPositionStream(locationSettings: locationSettings).listen((Position position) {
-        if (!mounted) return;
+        if (!mounted) return; 
         _updatePositionInternal(position, isFirst: currentPosition == null);
 
         if (isOnline && !isSuspended) {
@@ -1402,7 +1523,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   }
 
   Future<void> _fetchNearbyJobs({bool isAuto = false, int radius = 10}) async {
-    if (currentPosition == null || !isOnline || isSuspended) return;
+    if (currentPosition == null || !isOnline || isSuspended) return; 
     if (_isFetchingJobs && !isAuto) return; 
     _isFetchingJobs = true;
     
@@ -1450,8 +1571,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
               16.0,
               avoidBottomSheet: true 
             );
-
-            // Otomatik teklif modalı açılışı iptal edildi. Usta haritadan kendi seçecek.
           }
 
           bool listChanged = jobList.length != fetchedJobs.length ||
@@ -1549,8 +1668,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       _positionStream?.pause();
     }
   }
-
-  
 
   Widget _buildAvatar() {
     return GestureDetector(
@@ -2539,8 +2656,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         return Scaffold(
           backgroundColor: bgColor,
           extendBodyBehindAppBar: true,
-          extendBody: true, // Haritanın Navbar'ın altına yayılması için eklendi
-          resizeToAvoidBottomInset: false, // KLAVYE/ANİMASYON ÇAKIŞMASI ÇÖZÜMÜ
+          extendBody: true,
+          resizeToAvoidBottomInset: false,
           bottomNavigationBar: Container(
             decoration: BoxDecoration(
               color: panelBlack,
@@ -2600,6 +2717,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                         _parseDouble(jobList[i]['latitude']),
                                         _parseDouble(jobList[i]['longitude']),
                                       ),
+                                      icon: _customerMarkerIconAmaps ?? amaps.BitmapDescriptor.defaultAnnotation,
                                       onTap: () {
                                         HapticFeedback.selectionClick();
                                         final job = jobList[i];
@@ -2663,6 +2781,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                         _parseDouble(jobList[i]['latitude']),
                                         _parseDouble(jobList[i]['longitude']),
                                       ),
+                                      icon: _customerMarkerIconGmaps ?? gmaps.BitmapDescriptor.defaultMarkerWithHue(gmaps.BitmapDescriptor.hueAzure),
+                                      anchor: const Offset(0.5, 0.92),
+                                      zIndex: 20,
                                       onTap: () {
                                         HapticFeedback.selectionClick();
                                         final job = jobList[i];

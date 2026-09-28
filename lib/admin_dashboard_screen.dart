@@ -1322,6 +1322,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
                                 child: const Text("Premium Üye", style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12)),
                               ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(color: Colors.amber.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.star_rounded, color: Colors.orange, size: 14),
+                                  const SizedBox(width: 4),
+                                  Text("${user['rating'] ?? '5.0'} (${user['reviews_count'] ?? '0'})", style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12)),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 20),

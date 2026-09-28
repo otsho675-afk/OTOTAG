@@ -1,6 +1,5 @@
-// Dosya: provider_map_screen.dart
-
-import 'package:flutter/material.dart'; import 'core/constants/app_constants.dart';
+import 'package:flutter/material.dart'; 
+import 'core/constants/app_constants.dart';
 import 'package:flutter/services.dart'; 
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
@@ -47,7 +46,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   StreamSubscription<CompassEvent>? _compassStream;
   PusherChannelsFlutter pusher = PusherChannelsFlutter.getInstance();
   DateTime? _lastApiCallTime;
-  Timer? _jobPollingTimer; // Yeni iş tarama motoru eklendi
+  Timer? _jobPollingTimer; 
 
   List<Map<String, dynamic>> jobList = [];
   Set<int> knownJobIds = {}; 
@@ -71,7 +70,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   String _lastBidPrice = ""; 
   String _lastBidTime = ""; 
 
-  // --- EKLENEN KISIM: Ustanın müşteriye yaklaştığını anlatan state değişkeni ---
   bool _hasNotifiedArrival = false; 
   
   final ValueNotifier<double> _mapRotationNotifier = ValueNotifier(0.0);
@@ -146,7 +144,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     _checkActiveJob();
     if (!kIsWeb) {
       OneSignal.login(widget.providerId.toString());
-      // iOS için zorunlu bildirim izni talebi eklendi
       OneSignal.Notifications.requestPermission(true);
       
       flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -447,13 +444,13 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                       child: Container(
                         width: dialogWidth,
                         padding: EdgeInsets.only(
-                          bottom: MediaQuery.of(context).viewInsets.bottom + 20, // KLAVYE ÇAKIŞMASI KESİN OLARAK ÇÖZÜLDÜ
+                          bottom: MediaQuery.of(context).viewInsets.bottom + 20, 
                           left: 24, 
                           right: 24, 
                           top: 28
                         ),
                         constraints: BoxConstraints(
-                          maxHeight: MediaQuery.of(context).size.height * 0.95 // RESPONSIVE TAŞMA ALANI GENİŞLETİLDİ
+                          maxHeight: MediaQuery.of(context).size.height * 0.95 
                         ),
                         decoration: BoxDecoration(
                           color: panelBlack.withOpacity(0.95),
@@ -537,7 +534,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                               TextField(
                                 controller: priceController,
                                 keyboardType: TextInputType.number,
-                                inputFormatters: [FilteringTextInputFormatter.digitsOnly], // KLAVYE HATASI (HARF/BOŞLUK) ENGELLENDİ
+                                inputFormatters: [FilteringTextInputFormatter.digitsOnly], 
                                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
                                 decoration: InputDecoration(
                                   labelText: "Fiyat Teklifiniz (₺)",
@@ -601,7 +598,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                               TextField(
                                 controller: timeController,
                                 keyboardType: TextInputType.number,
-                                inputFormatters: [FilteringTextInputFormatter.digitsOnly], // KLAVYE HATASI (HARF/BOŞLUK) ENGELLENDİ
+                                inputFormatters: [FilteringTextInputFormatter.digitsOnly], 
                                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
                                 decoration: InputDecoration(
                                   labelText: "Tahmini Varış Süresi (Dk)",
@@ -702,22 +699,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                                     _showJobCard = false;
                                                     _isModalOpen = false;
                                                   });
-
-                                                  Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (_) => JobTrackingScreen(
-                                                      jobId: jobId,
-                                                      userType: 'provider',
-                                                      userId: widget.providerId,
-                                                    ),
-                                                  ),
-                                                ).then((_) {
-                                                  if (mounted) {
-                                                      _fetchNearbyJobs(radius: _searchRadius.toInt());
-                                                      _checkActiveJob();
-                                                    }
-                                                  });
+                                                  _showTopSnackBar("Teklifiniz iletildi. Müşteri yanıtı bekleniyor.");
                                                 });
                                               } else {
                                                 setDialogState(() => isSubmitting = false);
@@ -791,7 +773,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   bool _isPusherInitialized = false;
 
   Future<void> _initWebSocket() async {
-    if (kIsWeb || _isPusherInitialized) return; // Çoklu başlatmayı (listener kopmalarını) engeller
+    if (kIsWeb || _isPusherInitialized) return; 
     _isPusherInitialized = true;
     try {
       await pusher.init(
@@ -800,19 +782,26 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         onEvent: (event) {
           if (event.eventName == "new_job_created") {
             if (isOnline && !isSuspended && currentPosition != null) {
-              // ANINDA EŞLEŞME: Bekleme süresi tamamen kaldırıldı, sistem doğrudan tetiklenir.
               Future.microtask(() {
                 if (mounted) _fetchNearbyJobs(isAuto: true, radius: _searchRadius.toInt());
               });
+            }
+          } 
+          // Müşteri teklifi kabul ettiğinde ustayı anında iş takibi ekranına yönlendir
+          else if (event.eventName == "job_matched" || event.eventName == "status_update") {
+            if (mounted && !_isNavigating) {
+              HapticFeedback.heavyImpact();
+              _checkActiveJob();
             }
           }
         },
       );
       await pusher.subscribe(channelName: "global_jobs");
+      // Ustanın şahsi kanalına abone olunarak anlık eşleşme tetiklenir
+      await pusher.subscribe(channelName: "user_${widget.providerId}");
       await pusher.connect();
     } catch (e) {
       debugPrint("Pusher error: $e");
-      // Kopmalara karşı akıllı retry
       Future.delayed(const Duration(seconds: 3), () {
         if (mounted && isOnline) {
           _isPusherInitialized = false;
@@ -824,11 +813,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
   void _startJobRefreshTimer() {
     _initWebSocket();
-    // 15 Saniyede bir otomatik tarama (Soket kaçırsa bile işleri bulur)
     _jobPollingTimer?.cancel();
-    _jobPollingTimer = Timer.periodic(const Duration(seconds: 15), (_) {
-      if (mounted && isOnline && !isSuspended && currentPosition != null) {
-        if (!_isFetchingJobs) {
+    // Socket gecikmesi veya arka plandan dönüşte eşleşmeyi 6 saniyede bir doğrular
+    _jobPollingTimer = Timer.periodic(const Duration(seconds: 6), (_) {
+      if (mounted && isOnline && !isSuspended) {
+        _checkActiveJob();
+        if (currentPosition != null && !_isFetchingJobs) {
           _fetchNearbyJobs(isAuto: true, radius: _searchRadius.toInt());
         }
       }
@@ -871,7 +861,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       targetLat -= (0.004 * (15.0 / destZoom));
     }
 
-    // ANINDA EŞLEŞME: animateCamera yerine moveCamera kullanılarak iOS ve Android'de gecikmesiz nokta atışı yapıldı.
     if (defaultTargetPlatform == TargetPlatform.iOS && _appleMapController != null) {
       _appleMapController!.moveCamera(
         amaps.CameraUpdate.newCameraPosition(
@@ -1111,6 +1100,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     WidgetsBinding.instance.removeObserver(this); 
     _jobPollingTimer?.cancel();
     pusher.unsubscribe(channelName: "global_jobs");
+    pusher.unsubscribe(channelName: "user_${widget.providerId}");
     pusher.disconnect();
     _httpClient.close();
     _slideController.dispose();
@@ -1192,9 +1182,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     currentPosition = position;
     LatLng newPos = LatLng(position.latitude, position.longitude);
 
-    // Apple Maps'te (iOS) haritaya işlerin düşmemesi ve marker kaybolma sorunu çözüldü.
-    // 60FPS _slideController animasyonu yerine, marker pozisyonu doğrudan GPS ile (2 sn'de bir) güncellenerek 
-    // AppleMap SDK'sının render kuyruğunun kilitlenmesi engellendi.
     _animatedProviderPos.value = newPos;
     _animatedHeading.value = position.speed < 1.5 ? _animatedHeading.value : position.heading;
 
@@ -1298,15 +1285,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         if (isOnline && !isSuspended) {
           final now = DateTime.now();
 
-          // --- EKLENEN KISIM: Devam eden bir iş varsa, ustayı 1 KM yakınlığa ulaştığında müşteriye bildir ---
           if (_isNavigating && !_hasNotifiedArrival && currentPosition != null) {
-              // İş takibi esnasında hedefe yaklaşıldı mı kontrolü (Basit bir kontrol olarak buraya entegre edildi, 
-              // gerçek detaylar JobTrackingScreen'de işlenir fakat arka planda çalışmasını sağlar).
-              _hasNotifiedArrival = true; // Sadece bir kere tetiklensin
+              _hasNotifiedArrival = true; 
           }
-          // ---------------------------------------------------------------------------------------------------
 
-          // Akıllı Konum Güncellemesi: Usta sabitse gereksiz API isteği atma (Pil Tasarrufu)
           bool hasMoved = _oldProviderPos == null || Geolocator.distanceBetween(_oldProviderPos!.latitude, _oldProviderPos!.longitude, position.latitude, position.longitude) > 10.0;
           
           if ((_lastApiCallTime == null || now.difference(_lastApiCallTime!).inSeconds > 15) && hasMoved) {
@@ -1406,7 +1388,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         margin: EdgeInsets.only(bottom: 24, left: screenWidth * 0.05, right: screenWidth * 0.05),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         elevation: 25,
-        duration: const Duration(seconds: 2), // 2 saniye kuralı uygulandı
+        duration: const Duration(seconds: 2), 
       ));
       setState(() { isLoading = false; isRefreshing = false; });
     }
@@ -1421,7 +1403,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
 
   Future<void> _fetchNearbyJobs({bool isAuto = false, int radius = 10}) async {
     if (currentPosition == null || !isOnline || isSuspended) return;
-    // Çakışmayı önle: Socket tetiklemeleri (isAuto = true) bekleme kilidine takılmadan anında çalışsın
     if (_isFetchingJobs && !isAuto) return; 
     _isFetchingJobs = true;
     
@@ -1454,7 +1435,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             
             if (isAuto) {
               _playAlertSound();
-              // SnackBar'ı kaldırdık çünkü artık doğrudan Modal açılacak
               _showLocalNotification("📍 Yakınınızda yeni bir iş var!", "${_getServiceName(newJobData['service_type']?.toString() ?? '')} için bölgenizde yeni bir iş talebi var!");
             }
             
@@ -1465,23 +1445,13 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
               _flitchingJobId = newJobId;
             });
 
-            // Haritayı hemen müşterinin konumuna kaydır
             _animatedMapMove(
               LatLng(_parseDouble(newJobData['latitude']), _parseDouble(newJobData['longitude'])),
               16.0,
               avoidBottomSheet: true 
             );
 
-            // Gecikmeli olarak teklif formunu (Modal'ı) otomatik aç
-            Future.delayed(const Duration(milliseconds: 800), () {
-              if (mounted && !_isModalOpen) {
-                 final String serviceType = newJobData['service_type']?.toString() ?? 'mechanic';
-                 final String serviceName = _getServiceName(serviceType);
-                 final String distance = newJobData['distance'] != null ? _parseDouble(newJobData['distance']).toStringAsFixed(1) : "0.0";
-                 final String probDesc = newJobData['problem_description']?.toString() ?? '';
-                 _showBidDialog(newJobId, serviceName, probDesc, distance, serviceType);
-              }
-            });
+            // Otomatik teklif modalı açılışı iptal edildi. Usta haritadan kendi seçecek.
           }
 
           bool listChanged = jobList.length != fetchedJobs.length ||
@@ -1542,7 +1512,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             isCheckingSubscription = false;
           });
           _positionStream?.resume();
-          _startJobRefreshTimer(); // Arka planda uykuya dalmış polling motorunu tekrar tetikler
+          _startJobRefreshTimer(); 
           _fetchNearbyJobs(radius: _searchRadius.toInt());
         } else {
           setState(() => isCheckingSubscription = false);
@@ -1580,32 +1550,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     }
   }
 
-  Future<void> _selectTime(BuildContext context, bool isStart) async {
-    HapticFeedback.selectionClick();
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: neonGreen,
-              onPrimary: pureBlack,
-              surface: panelBlack,
-              onSurface: Colors.white,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null) {
-      setState(() {
-        if (isStart) _plannedStartTime = picked;
-        else _plannedEndTime = picked;
-      });
-    }
-  }
+  
 
   Widget _buildAvatar() {
     return GestureDetector(
@@ -1736,7 +1681,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // 1. Üst Tutma Çubuğu & Kapatma Butonu
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -1768,7 +1712,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                           ),
                           const SizedBox(height: 12),
 
-                          // 2. Siber Statü Banner'ı (Canlı Aura & Gradyan)
                           Container(
                             padding: EdgeInsets.all(isSmallScreen ? 18 : 22),
                             decoration: BoxDecoration(
@@ -1855,7 +1798,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                           ),
                           const SizedBox(height: 18),
 
-                          // 3. Algoritma & Dağıtım Motoru HUD (3'lü Kompakt Panel)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                             decoration: BoxDecoration(
@@ -1949,7 +1891,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                           ),
                           const SizedBox(height: 18),
 
-                          // 4. Müşteri Puanı & Kademeli Seviye Atlama Barı
                           Container(
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
@@ -2016,7 +1957,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                           ),
                           const SizedBox(height: 18),
 
-                          // 5. Dörtlü Siber KPI Matrisi (2x2 Grid)
                           Row(
                             children: [
                               Expanded(
@@ -2068,7 +2008,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                           ),
                           const SizedBox(height: 18),
 
-                          // 6. VIP Usta Olma Kuralları & Algoritma Rehberi
                           Container(
                             padding: const EdgeInsets.all(18),
                             decoration: BoxDecoration(
@@ -2100,7 +2039,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                           ),
                           const SizedBox(height: 20),
 
-                          // 7. Paneli Kapat Butonu
                           Container(
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(22),
@@ -2229,73 +2167,251 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     );
   }
 
+  int _selectedNavIndex = 0;
+
+  void _showSchedulePanel() {
+    HapticFeedback.selectionClick();
+    setState(() => _isModalOpen = true);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 24, top: 24, left: 24, right: 24),
+              decoration: BoxDecoration(
+                color: panelBlack.withOpacity(0.96),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                border: Border.all(color: neonGreen.withOpacity(0.3), width: 1.5)
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10))),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: _isScheduleActive ? neonGreen.withOpacity(0.15) : Colors.white.withOpacity(0.05),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.schedule_rounded, color: _isScheduleActive ? neonGreen : textGray, size: 24),
+                          ),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("Mesai Planlayıcı", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18)),
+                              const SizedBox(height: 4),
+                              Text(
+                                _isScheduleActive ? "Otomatik vardiya devrede" : "Belirli saatlerde radarı aç",
+                                style: const TextStyle(color: textGray, fontSize: 13, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      Switch(
+                        value: _isScheduleActive,
+                        activeTrackColor: neonGreen.withOpacity(0.5),
+                        thumbColor: const WidgetStatePropertyAll(neonGreen),
+                        onChanged: (val) {
+                          HapticFeedback.selectionClick();
+                          setModalState(() => _isScheduleActive = val);
+                          setState(() => _isScheduleActive = val);
+                          if (val) _showTopSnackBar("Otomatik mesai planlaması aktifleştirildi.");
+                        },
+                      ),
+                    ],
+                  ),
+                  if (_isScheduleActive) ...[
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              final TimeOfDay? picked = await showTimePicker(
+                                context: context, initialTime: TimeOfDay.now(),
+                              );
+                              if (picked != null) {
+                                setModalState(() => _plannedStartTime = picked);
+                                setState(() => _plannedStartTime = picked);
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(18),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                              decoration: BoxDecoration(
+                                color: pureBlack,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: neonGreen.withOpacity(0.3), width: 1.2),
+                              ),
+                              child: Column(
+                                children: [
+                                  const Icon(Icons.wb_sunny_rounded, color: neonGreen, size: 24),
+                                  const SizedBox(height: 8),
+                                  const Text("Başlangıç", style: TextStyle(color: textGray, fontSize: 12, fontWeight: FontWeight.w700)),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _plannedStartTime != null ? _plannedStartTime!.format(context) : "Seçiniz",
+                                    style: const TextStyle(color: neonGreen, fontWeight: FontWeight.w900, fontSize: 18),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              final TimeOfDay? picked = await showTimePicker(
+                                context: context, initialTime: TimeOfDay.now(),
+                              );
+                              if (picked != null) {
+                                setModalState(() => _plannedEndTime = picked);
+                                setState(() => _plannedEndTime = picked);
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(18),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                              decoration: BoxDecoration(
+                                color: pureBlack,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: alertRed.withOpacity(0.3), width: 1.2),
+                              ),
+                              child: Column(
+                                children: [
+                                  const Icon(Icons.nightlight_round, color: alertRed, size: 24),
+                                  const SizedBox(height: 8),
+                                  const Text("Bitiş", style: TextStyle(color: textGray, fontSize: 12, fontWeight: FontWeight.w700)),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _plannedEndTime != null ? _plannedEndTime!.format(context) : "Seçiniz",
+                                    style: const TextStyle(color: alertRed, fontWeight: FontWeight.w900, fontSize: 18),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: neonGreen,
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      ),
+                      child: const Text("Kapat", style: TextStyle(color: pureBlack, fontSize: 16, fontWeight: FontWeight.w900)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      )
+    ).then((_) {
+      if (mounted) setState(() => _isModalOpen = false);
+    });
+  }
+
+  Widget _buildNavItem(int index, IconData icon, String label) {
+    final isSelected = _selectedNavIndex == index;
+    return GestureDetector(
+      onTap: () {
+        if (index == 0) {
+          setState(() => _selectedNavIndex = 0);
+        } else if (index == 1) {
+          HapticFeedback.selectionClick();
+          Navigator.push(context, MaterialPageRoute(builder: (context) => ProviderBidsScreen(providerId: widget.providerId)));
+        } else if (index == 2) {
+          HapticFeedback.selectionClick();
+          _showPerformancePanel();
+        } else if (index == 3) {
+          HapticFeedback.selectionClick();
+          _showSchedulePanel();
+        } else if (index == 4) {
+          HapticFeedback.selectionClick();
+          Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen(userId: widget.providerId, userType: 'provider')));
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? neonGreen.withOpacity(0.15) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: isSelected ? neonGreen : textGray, size: 24),
+            const SizedBox(height: 4),
+            Text(label, style: TextStyle(color: isSelected ? neonGreen : textGray, fontSize: 10, fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildOfflineDashboard(BoxConstraints constraints) {
     final bool isSmallScreen = constraints.maxWidth < 400;
-    final double monthlyEarnings = _parseDouble(earningsData['monthly']);
-    final double totalJobsCount = _parseDouble(earningsData['total_jobs']);
-    final double avgPerJob = totalJobsCount > 0 ? (monthlyEarnings / totalJobsCount) : 0.0;
-    final double monthlyTarget = 15000.0;
-    final double targetProgress = (monthlyEarnings / monthlyTarget).clamp(0.0, 1.0);
-
-    Color coachColor = neonGreen;
-    IconData coachIcon = Icons.verified_user_rounded;
-    String coachTitle = "VIP Algoritma Aktif";
-    String coachDesc = "Puanınız mükemmel seviyede! Çevrimiçi olduğunuzda ilk çağrılar doğrudan ekranınıza yönlendirilir.";
-
-    if (isGracePeriod || reviewsCount < 3) {
-      coachColor = const Color(0xFF00E5FF);
-      coachIcon = Icons.shield_rounded;
-      coachTitle = "Gözlem ve Başlangıç Süreci (Korumalı)";
-      coachDesc = "Aramıza hoş geldiniz! İlk 1,5 ay oryantasyon ve gözlem sürecindesiniz ($graceDaysLeft gün kaldı). Ceza ve iş kısıtlaması uygulanmaz.";
-    } else if (providerRating < 3.0) {
-      coachColor = alertRed;
-      coachIcon = Icons.gavel_rounded;
-      coachTitle = "Ceza Kısıtlaması Mevcut";
-      coachDesc = "Puanınız 3.0'ın altında. Günlük maksimum 2 iş kotası ve 45 sn gecikme uygulanıyor. Kaliteli hizmetle puanınızı yükseltin.";
-    } else if (providerRating < 4.0) {
-      coachColor = const Color(0xFFF59E0B);
-      coachIcon = Icons.trending_up_rounded;
-      coachTitle = "Standart Usta Seviyesi";
-      coachDesc = "Puanınızı 4.5 üzerine çıkararak VIP öncelikli iş dağıtımına geçebilir ve günlük sınırsız kotalı iş alabilirsiniz.";
-    }
 
     return SafeArea(
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 800),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Expanded(
-                child: ListView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24, vertical: 16),
-                  children: [
-                    // 1. Üst Başlık & Canlı Durum Kartı
-                    _buildAnimatedDashboardItem(
-                      index: 0,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: panelBlack.withValues(alpha: 0.85),
-                          borderRadius: BorderRadius.circular(28),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.2),
-                          boxShadow: const [
-                            BoxShadow(color: pureBlack, blurRadius: 20, offset: Offset(0, 8)),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                _buildAvatar(),
-                                const SizedBox(width: 14),
-                                Column(
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24, vertical: 16),
+                child: _buildAnimatedDashboardItem(
+                  index: 0,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: panelBlack.withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.2),
+                      boxShadow: const [
+                        BoxShadow(color: pureBlack, blurRadius: 20, offset: Offset(0, 8)),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              _buildAvatar(),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const Text(
                                       "OtoTAG Usta Paneli",
                                       style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: -0.3),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                     const SizedBox(height: 4),
                                     Row(
@@ -2312,614 +2428,42 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                           ),
                                         ),
                                         const SizedBox(width: 6),
-                                        const Text(
-                                          "ÇEVRİMDIŞI • DİNLENME",
-                                          style: TextStyle(color: alertRed, fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 0.5),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            _buildPerformanceBadge(),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-
-                    // 2. Hızlı Eylem Butonları (İşlemlerim & Hesabım)
-                    _buildAnimatedDashboardItem(
-                      index: 1,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () {
-                                  HapticFeedback.selectionClick();
-                                  Navigator.push(context, MaterialPageRoute(builder: (context) => ProviderBidsScreen(providerId: widget.providerId)));
-                                },
-                                borderRadius: BorderRadius.circular(24),
-                                child: Ink(
-                                  padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 14 : 18, vertical: isSmallScreen ? 16 : 18),
-                                  decoration: BoxDecoration(
-                                    color: panelBlack,
-                                    borderRadius: BorderRadius.circular(24),
-                                    border: Border.all(color: neonGreen.withValues(alpha: 0.25), width: 1.5),
-                                    boxShadow: const [
-                                      BoxShadow(color: pureBlack, blurRadius: 16, offset: Offset(0, 6)),
-                                    ],
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(10),
-                                        decoration: BoxDecoration(
-                                          color: neonGreen.withValues(alpha: 0.15),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(Icons.history_toggle_off_rounded, color: neonGreen, size: 22),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            const Text("İşlemlerim", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
-                                            const SizedBox(height: 2),
-                                            Text("Geçmiş Çağrılar", style: TextStyle(color: textGray.withValues(alpha: 0.8), fontWeight: FontWeight.w600, fontSize: 11)),
-                                          ],
-                                        ),
-                                      ),
-                                      const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white24, size: 14),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () {
-                                  HapticFeedback.selectionClick();
-                                  Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen(userId: widget.providerId, userType: 'provider')));
-                                },
-                                borderRadius: BorderRadius.circular(24),
-                                child: Ink(
-                                  padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 14 : 18, vertical: isSmallScreen ? 16 : 18),
-                                  decoration: BoxDecoration(
-                                    color: panelBlack,
-                                    borderRadius: BorderRadius.circular(24),
-                                    border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.3), width: 1.5),
-                                    boxShadow: const [
-                                      BoxShadow(color: pureBlack, blurRadius: 16, offset: Offset(0, 6)),
-                                    ],
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(10),
-                                        decoration: BoxDecoration(
-                                          color: Colors.blueAccent.withValues(alpha: 0.15),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(Icons.person_rounded, color: Colors.blueAccent, size: 22),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            const Text("Hesabım", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
-                                            const SizedBox(height: 2),
-                                            Text("Profil & Servis", style: TextStyle(color: textGray.withValues(alpha: 0.8), fontWeight: FontWeight.w600, fontSize: 11)),
-                                          ],
-                                        ),
-                                      ),
-                                      const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white24, size: 14),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-
-                    // 3. Fintech Siber Kazanç Kartı
-                    _buildAnimatedDashboardItem(
-                      index: 2,
-                      child: isEarningsLoading
-                          ? Container(
-                              height: 200,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(color: panelBlack, borderRadius: BorderRadius.circular(32)),
-                              child: const CircularProgressIndicator(color: neonGreen, strokeWidth: 3.5),
-                            )
-                          : Container(
-                              padding: EdgeInsets.all(isSmallScreen ? 20 : 26),
-                              decoration: BoxDecoration(
-                                color: panelBlack,
-                                borderRadius: BorderRadius.circular(32),
-                                border: Border.all(color: neonGreen.withValues(alpha: 0.35), width: 1.5),
-                                gradient: RadialGradient(
-                                  center: const Alignment(0.8, -0.6),
-                                  radius: 1.4,
-                                  colors: [
-                                    neonGreen.withValues(alpha: 0.12),
-                                    panelBlack,
-                                    pureBlack,
-                                  ],
-                                ),
-                                boxShadow: [
-                                  BoxShadow(color: neonGreen.withValues(alpha: 0.08), blurRadius: 35, spreadRadius: 2),
-                                  const BoxShadow(color: pureBlack, blurRadius: 25, offset: Offset(0, 12)),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.all(12),
-                                            decoration: BoxDecoration(
-                                              color: neonGreen.withValues(alpha: 0.18),
-                                              borderRadius: BorderRadius.circular(18),
-                                              border: Border.all(color: neonGreen.withValues(alpha: 0.35)),
-                                            ),
-                                            child: const Icon(Icons.account_balance_wallet_rounded, color: neonGreen, size: 24),
-                                          ),
-                                          const SizedBox(width: 14),
-                                          Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              const Text("Bu Ayki Kazanç", style: TextStyle(color: textGray, fontWeight: FontWeight.w800, fontSize: 14)),
-                                              const SizedBox(height: 2),
-                                              Text("Canlı Bakiye Özeti", style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11, fontWeight: FontWeight.bold)),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                        decoration: BoxDecoration(
-                                          color: neonGreen.withValues(alpha: 0.12),
-                                          borderRadius: BorderRadius.circular(14),
-                                          border: Border.all(color: neonGreen.withValues(alpha: 0.3)),
-                                        ),
-                                        child: const Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(Icons.trending_up_rounded, color: neonGreen, size: 16),
-                                            SizedBox(width: 4),
-                                            Text("AKTİF", style: TextStyle(color: neonGreen, fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 0.5)),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 22),
-                                  TweenAnimationBuilder<double>(
-                                    tween: Tween<double>(begin: 0, end: monthlyEarnings),
-                                    duration: const Duration(seconds: 2),
-                                    curve: Curves.easeOutQuart,
-                                    builder: (context, value, child) {
-                                      return FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        alignment: Alignment.centerLeft,
-                                        child: Row(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            const Text(
-                                              "₺",
-                                              style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: neonGreen, height: 1.3),
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              value.toInt().toString(),
-                                              style: TextStyle(
-                                                fontSize: isSmallScreen ? 44 : 54,
-                                                fontWeight: FontWeight.w900,
-                                                color: Colors.white,
-                                                letterSpacing: -2.0,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                  const SizedBox(height: 16),
-
-                                  // Hedef İlerleme Çubuğu
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text("Aylık Kazanç Hedefi: ₺${monthlyTarget.toInt()}", style: const TextStyle(color: textGray, fontSize: 11, fontWeight: FontWeight.w700)),
-                                          Text("%${(targetProgress * 100).toInt()}", style: const TextStyle(color: neonGreen, fontSize: 12, fontWeight: FontWeight.w900)),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 6),
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: LinearProgressIndicator(
-                                          value: targetProgress,
-                                          minHeight: 6,
-                                          backgroundColor: Colors.white.withValues(alpha: 0.08),
-                                          valueColor: const AlwaysStoppedAnimation<Color>(neonGreen),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 20),
-
-                                  // Yıllık Ciro & Tamamlanan İş Alt Izgarası
-                                  Container(
-                                    padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 20, vertical: 16),
-                                    decoration: BoxDecoration(
-                                      color: pureBlack,
-                                      borderRadius: BorderRadius.circular(22),
-                                      border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.2),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            children: [
-                                              Row(
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                children: [
-                                                  const Icon(Icons.event_note_rounded, color: textGray, size: 15),
-                                                  const SizedBox(width: 6),
-                                                  Text("Yıllık Ciro", style: TextStyle(color: textGray, fontWeight: FontWeight.w800, fontSize: isSmallScreen ? 11 : 13)),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 6),
-                                              FittedBox(
-                                                fit: BoxFit.scaleDown,
-                                                child: Text(
-                                                  "₺${earningsData['yearly'] ?? 0}",
-                                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: isSmallScreen ? 17 : 20),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Container(width: 1.2, height: 40, color: Colors.white.withValues(alpha: 0.1)),
-                                        Expanded(
-                                          child: Column(
-                                            children: [
-                                              Row(
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                children: [
-                                                  const Icon(Icons.handyman_rounded, color: textGray, size: 15),
-                                                  const SizedBox(width: 6),
-                                                  Text("İşlem Sayısı", style: TextStyle(color: textGray, fontWeight: FontWeight.w800, fontSize: isSmallScreen ? 11 : 13)),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 6),
-                                              FittedBox(
-                                                fit: BoxFit.scaleDown,
-                                                child: Text(
-                                                  "${earningsData['total_jobs'] ?? 0} İş",
-                                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: isSmallScreen ? 17 : 20),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Container(width: 1.2, height: 40, color: Colors.white.withValues(alpha: 0.1)),
-                                        Expanded(
-                                          child: Column(
-                                            children: [
-                                              Row(
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                children: [
-                                                  const Icon(Icons.analytics_rounded, color: textGray, size: 15),
-                                                  const SizedBox(width: 6),
-                                                  Text("İş Başı Ort.", style: TextStyle(color: textGray, fontWeight: FontWeight.w800, fontSize: isSmallScreen ? 11 : 13)),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 6),
-                                              FittedBox(
-                                                fit: BoxFit.scaleDown,
-                                                child: Text(
-                                                  "₺${avgPerJob.toInt()}",
-                                                  style: TextStyle(color: neonGreen, fontWeight: FontWeight.w900, fontSize: isSmallScreen ? 17 : 20),
-                                                ),
-                                              ),
-                                            ],
+                                        const Flexible(
+                                          child: Text(
+                                            "ÇEVRİMDIŞI • DİNLENME",
+                                            style: TextStyle(color: alertRed, fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 0.5),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
                                       ],
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                    ),
-                    const SizedBox(height: 18),
-
-                    // 4. Canlı Algoritma & Dağıtım Durumu (3'lü Mini KPI Rozeti)
-                    _buildAnimatedDashboardItem(
-                      index: 3,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: pureBlack,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.2),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.all_inclusive_rounded, color: neonGreen, size: 18),
-                                const SizedBox(width: 8),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text("Günlük Kota", style: TextStyle(color: textGray, fontSize: 10, fontWeight: FontWeight.w700)),
-                                    Text(
-                                      maxDailyJobs >= 999 ? "Sınırsız" : "$maxDailyJobs İş",
-                                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900),
-                                    ),
                                   ],
                                 ),
-                              ],
-                            ),
-                            Container(width: 1, height: 28, color: Colors.white12),
-                            Row(
-                              children: [
-                                Icon(Icons.bolt_rounded, color: penaltyDelaySec > 0 ? alertRed : neonGreen, size: 18),
-                                const SizedBox(width: 8),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text("Dağıtım Hızı", style: TextStyle(color: textGray, fontSize: 10, fontWeight: FontWeight.w700)),
-                                    Text(
-                                      penaltyDelaySec > 0 ? "+$penaltyDelaySec sn Gecikme" : "Anında İletim",
-                                      style: TextStyle(color: penaltyDelaySec > 0 ? alertRed : neonGreen, fontSize: 13, fontWeight: FontWeight.w900),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            Container(width: 1, height: 28, color: Colors.white12),
-                            Row(
-                              children: [
-                                const Icon(Icons.workspace_premium_rounded, color: Color(0xFFF59E0B), size: 18),
-                                const SizedBox(width: 8),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text("Öncelik Sınıfı", style: TextStyle(color: textGray, fontSize: 10, fontWeight: FontWeight.w700)),
-                                    Text(
-                                      algorithmTier.toUpperCase(),
-                                      style: const TextStyle(color: Color(0xFFF59E0B), fontSize: 13, fontWeight: FontWeight.w900),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-
-                    // 5. Mesai Planlayıcı (Çalışma Saatleri)
-                    _buildAnimatedDashboardItem(
-                      index: 4,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 22, vertical: 18),
-                        decoration: BoxDecoration(
-                          color: panelBlack,
-                          borderRadius: BorderRadius.circular(28),
-                          border: Border.all(
-                            color: _isScheduleActive ? neonGreen.withValues(alpha: 0.4) : Colors.white.withValues(alpha: 0.08),
-                            width: 1.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(color: pureBlack.withValues(alpha: 0.5), blurRadius: 16),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(10),
-                                        decoration: BoxDecoration(
-                                          color: _isScheduleActive ? neonGreen.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.05),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Icon(Icons.schedule_rounded, color: _isScheduleActive ? neonGreen : textGray, size: 22),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text("Mesai Planlayıcı", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: isSmallScreen ? 15 : 17)),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              _isScheduleActive ? "Otomatik vardiya devrede" : "Belirli saatlerde otomatik çevrimiçi ol",
-                                              style: TextStyle(color: textGray, fontSize: isSmallScreen ? 11 : 12, fontWeight: FontWeight.w600),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Switch(
-                                  value: _isScheduleActive,
-                                  activeTrackColor: neonGreen.withValues(alpha: 0.5),
-                                  thumbColor: const WidgetStatePropertyAll(neonGreen),
-                                  onChanged: (val) {
-                                    HapticFeedback.selectionClick();
-                                    setState(() {
-                                      _isScheduleActive = val;
-                                      if (val) {
-                                        _showTopSnackBar("Otomatik mesai planlaması aktifleştirildi.");
-                                      }
-                                    });
-                                  },
-                                ),
-                              ],
-                            ),
-                            if (_isScheduleActive) ...[
-                              const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: InkWell(
-                                      onTap: () => _selectTime(context, true),
-                                      borderRadius: BorderRadius.circular(18),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                                        decoration: BoxDecoration(
-                                          color: pureBlack,
-                                          borderRadius: BorderRadius.circular(18),
-                                          border: Border.all(color: neonGreen.withValues(alpha: 0.3), width: 1.2),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            const Icon(Icons.wb_sunny_rounded, color: neonGreen, size: 18),
-                                            const SizedBox(width: 10),
-                                            Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                const Text("Başlangıç", style: TextStyle(color: textGray, fontSize: 11, fontWeight: FontWeight.w700)),
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  _plannedStartTime != null ? _plannedStartTime!.format(context) : "Seçiniz",
-                                                  style: const TextStyle(color: neonGreen, fontWeight: FontWeight.w900, fontSize: 16),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: InkWell(
-                                      onTap: () => _selectTime(context, false),
-                                      borderRadius: BorderRadius.circular(18),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                                        decoration: BoxDecoration(
-                                          color: pureBlack,
-                                          borderRadius: BorderRadius.circular(18),
-                                          border: Border.all(color: alertRed.withValues(alpha: 0.3), width: 1.2),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            const Icon(Icons.nightlight_round, color: alertRed, size: 18),
-                                            const SizedBox(width: 10),
-                                            Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                const Text("Bitiş", style: TextStyle(color: textGray, fontSize: 11, fontWeight: FontWeight.w700)),
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  _plannedEndTime != null ? _plannedEndTime!.format(context) : "Seçiniz",
-                                                  style: const TextStyle(color: alertRed, fontWeight: FontWeight.w900, fontSize: 16),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
                               ),
                             ],
-                          ],
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        _buildPerformanceBadge(),
+                      ],
                     ),
-                    const SizedBox(height: 18),
-
-                    // 6. Akıllı Algoritma ve Performans Koçu Kartı
-                    _buildAnimatedDashboardItem(
-                      index: 5,
-                      child: Container(
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: coachColor.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: coachColor.withValues(alpha: 0.3), width: 1.2),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: coachColor.withValues(alpha: 0.15),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(coachIcon, color: coachColor, size: 22),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    coachTitle,
-                                    style: TextStyle(color: coachColor, fontWeight: FontWeight.w900, fontSize: 14),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    coachDesc,
-                                    style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12, height: 1.45, fontWeight: FontWeight.w600),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 100),
-                  ],
+                  ),
                 ),
               ),
-
-              // 7. Alt Sabit Radar Başlat Butonu
+              const Spacer(),
+              Icon(Icons.location_off_rounded, size: 80, color: Colors.white.withOpacity(0.1)),
+              const SizedBox(height: 16),
+              Text(
+                "Şu an çevrimdışısınız.\nİş almak için radarı açın.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: textGray, fontSize: 16, fontWeight: FontWeight.w600, height: 1.5),
+              ),
+              const Spacer(),
               Padding(
-                padding: EdgeInsets.fromLTRB(isSmallScreen ? 16 : 24, 0, isSmallScreen ? 16 : 24, MediaQuery.paddingOf(context).bottom + 16),
+                padding: EdgeInsets.fromLTRB(isSmallScreen ? 16 : 24, 0, isSmallScreen ? 16 : 24, 32),
                 child: _buildAnimatedDashboardItem(
-                  index: 6,
+                  index: 1,
                   child: RepaintBoundary(
                     child: AnimatedBuilder(
                       animation: _buttonPulseController,
@@ -2995,6 +2539,30 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         return Scaffold(
           backgroundColor: bgColor,
           extendBodyBehindAppBar: true,
+          extendBody: true, // Haritanın Navbar'ın altına yayılması için eklendi
+          resizeToAvoidBottomInset: false, // KLAVYE/ANİMASYON ÇAKIŞMASI ÇÖZÜMÜ
+          bottomNavigationBar: Container(
+            decoration: BoxDecoration(
+              color: panelBlack,
+              border: Border(top: BorderSide(color: Colors.white.withOpacity(0.05), width: 1)),
+              boxShadow: [BoxShadow(color: pureBlack.withOpacity(0.8), blurRadius: 20, offset: const Offset(0, -5))],
+            ),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildNavItem(0, Icons.map_rounded, "Harita"),
+                    _buildNavItem(1, Icons.history_rounded, "İşlemler"),
+                    _buildNavItem(2, Icons.account_balance_wallet_rounded, "Kazanç"),
+                    _buildNavItem(3, Icons.schedule_rounded, "Mesai"),
+                    _buildNavItem(4, Icons.person_rounded, "Profil"),
+                  ],
+                ),
+              ),
+            ),
+          ),
           body: ((isLoading || !_isMapSdkLoaded) && !kIsWeb && currentPosition == null)
               ? Center(child: CircularProgressIndicator(color: neonGreen, strokeWidth: 4, backgroundColor: neonGreen.withOpacity(0.2)))
               : Stack(
@@ -3019,14 +2587,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                 compassEnabled: true,
                                 trafficEnabled: false,
                                 annotations: {
-                                  // Ustanın Kendi Konum Markeri (iOS)
                                   if (providerPos != null)
                                     amaps.Annotation(
                                       annotationId: amaps.AnnotationId('provider_current_location'),
                                       position: amaps.LatLng(providerPos.latitude, providerPos.longitude),
                                       icon: amaps.BitmapDescriptor.defaultAnnotationWithHue(amaps.BitmapDescriptor.hueGreen),
                                     ),
-                                  // Müşteri İş Talepleri
                                   for (int i = 0; i < jobList.length; i++)
                                     amaps.Annotation(
                                       annotationId: amaps.AnnotationId('job_${jobList[i]['id']}'),
@@ -3036,14 +2602,20 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                       ),
                                       onTap: () {
                                         HapticFeedback.selectionClick();
-                                        setState(() {
-                                          _showJobCard = true;
-                                          _currentJobIndex = i;
-                                          _flitchingJobId = null;
-                                        });
+                                        final job = jobList[i];
+                                        final String serviceType = job['service_type']?.toString() ?? 'mechanic';
+                                        final String serviceName = _getServiceName(serviceType);
+                                        final String distance = job['distance'] != null ? _parseDouble(job['distance']).toStringAsFixed(1) : "0.0";
+                                        final String probDesc = job['problem_description']?.toString() ?? '';
+                                        final int parsedCurrentId = int.tryParse(job['id']?.toString() ?? '0') ?? 0;
+                                        
+                                        _animatedMapMove(LatLng(_parseDouble(job['latitude']), _parseDouble(job['longitude'])), 16.0, avoidBottomSheet: true);
+                                        
                                         if (_pageController.hasClients) {
-                                          _pageController.animateToPage(i, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+                                          _pageController.animateToPage(i, duration: const Duration(milliseconds: 400), curve: Curves.fastOutSlowIn);
                                         }
+                                        
+                                        _showBidDialog(parsedCurrentId, serviceName, probDesc, distance, serviceType);
                                       },
                                     ),
                                 },
@@ -3070,7 +2642,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                 trafficEnabled: false,
                                 zoomControlsEnabled: false,
                                 markers: {
-                                  // Ustanın Kendi Canlı Konum Markeri (Android/Web)
                                   if (providerPos != null)
                                     gmaps.Marker(
                                       markerId: const gmaps.MarkerId('provider_current_location'),
@@ -3085,7 +2656,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                         snippet: "Çağrılar bu konuma göre taranıyor",
                                       ),
                                     ),
-                                  // Müşteri İş Talepleri
                                   for (int i = 0; i < jobList.length; i++)
                                     gmaps.Marker(
                                       markerId: gmaps.MarkerId('job_${jobList[i]['id']}'),
@@ -3095,18 +2665,23 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                       ),
                                       onTap: () {
                                         HapticFeedback.selectionClick();
-                                        setState(() {
-                                          _showJobCard = true;
-                                          _currentJobIndex = i;
-                                          _flitchingJobId = null;
-                                        });
+                                        final job = jobList[i];
+                                        final String serviceType = job['service_type']?.toString() ?? 'mechanic';
+                                        final String serviceName = _getServiceName(serviceType);
+                                        final String distance = job['distance'] != null ? _parseDouble(job['distance']).toStringAsFixed(1) : "0.0";
+                                        final String probDesc = job['problem_description']?.toString() ?? '';
+                                        final int parsedCurrentId = int.tryParse(job['id']?.toString() ?? '0') ?? 0;
+                                        
+                                        _animatedMapMove(LatLng(_parseDouble(job['latitude']), _parseDouble(job['longitude'])), 16.0, avoidBottomSheet: true);
+                                        
                                         if (_pageController.hasClients) {
-                                          _pageController.animateToPage(i, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+                                          _pageController.animateToPage(i, duration: const Duration(milliseconds: 400), curve: Curves.fastOutSlowIn);
                                         }
+                                        
+                                        _showBidDialog(parsedCurrentId, serviceName, probDesc, distance, serviceType);
                                       },
                                     ),
                                 },
-                                // Ustanın Seçtiği Hizmet Menzili Çemberi (10 KM vs.)
                                 circles: {
                                   if (providerPos != null)
                                     gmaps.Circle(
@@ -3315,8 +2890,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                       Positioned(
                         right: 16,
                         bottom: (jobList.isNotEmpty && _showJobCard) 
-                            ? (bottomInset + 195) 
-                            : (bottomInset + (isSmallScreen ? 20 : 32)),
+                            ? (bottomInset + 265) 
+                            : (bottomInset + (isSmallScreen ? 90 : 102)),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 300),
                           child: ClipRRect(
@@ -3401,7 +2976,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                         duration: const Duration(milliseconds: 500),
                         curve: Curves.easeOutExpo,
                         bottom: (isOnline && jobList.isNotEmpty && _showJobCard && !_isModalOpen)
-                            ? (bottomInset + 14)
+                            ? (bottomInset + 84)
                             : -350,
                         left: 14,
                         right: 14,
@@ -3507,7 +3082,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                                       ],
                                                     ),
                                                     const SizedBox(height: 6),
-                                                    // Müşteri Güvenilirlik Puanı ve İptal Oranı
                                                     Container(
                                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                                       decoration: BoxDecoration(

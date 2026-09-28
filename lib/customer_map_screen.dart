@@ -1156,7 +1156,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                       myLocationButtonEnabled: false,
                       compassEnabled: true,
                       trafficEnabled: false,
-                      scrollGesturesEnabled: false, // Kaydırma engellendi
+                      scrollGesturesEnabled: true, // Kaydırma aktifleştirildi
                       annotations: _appleAnnotations,
                       onMapCreated: (amaps.AppleMapController controller) {
                         _appleMapController = controller;
@@ -1194,7 +1194,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                       compassEnabled: true,
                       trafficEnabled: false,
                       zoomControlsEnabled: false,
-                      scrollGesturesEnabled: false, // Kaydırma engellendi
+                      scrollGesturesEnabled: true, // Kaydırma aktifleştirildi
                       markers: _googleMarkersNotifier.value,
                       
                       onMapCreated: (gmaps.GoogleMapController controller) {

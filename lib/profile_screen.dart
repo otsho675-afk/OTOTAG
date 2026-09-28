@@ -1,5 +1,6 @@
-// Dosya: profile_screen.dart
-import 'package:flutter/material.dart'; import 'core/constants/app_constants.dart';
+// profile_screen.dart
+import 'package:flutter/material.dart'; 
+import 'core/constants/app_constants.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -10,8 +11,11 @@ import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:flutter/foundation.dart'; 
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
+import 'package:apple_maps_flutter/apple_maps_flutter.dart' as amaps;
+import 'package:intl/intl.dart';
 
-import 'provider_profile_screen.dart';
+
 import 'main.dart'; 
 
 class ProfileScreen extends StatefulWidget {
@@ -44,6 +48,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   Set<int> selectedJobs = {};
   bool isSelectionMode = false;
   
+  // Kategori Filtresi (Görseldeki TAG / Scooter / Kurye filtre barı gibi)
+  String _selectedCategoryFilter = 'all';
+
   int _historyPage = 1;
   final int _itemsPerPage = 10;
 
@@ -95,10 +102,23 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     super.dispose();
   }
   
-  int get _totalHistoryPages => (historyJobs.length / _itemsPerPage).ceil();
+  List<dynamic> _getFilteredHistory() {
+    if (widget.userType == 'provider') {
+      return historyJobs;
+    }
+    if (_selectedCategoryFilter == 'all') {
+      return historyJobs;
+    }
+    return historyJobs.where((job) {
+      return job['service_type']?.toString().toLowerCase() == _selectedCategoryFilter;
+    }).toList();
+  }
+
+  int get _totalHistoryPages => (_getFilteredHistory().length / _itemsPerPage).ceil();
 
   List<dynamic> _getPaginatedHistory() {
-    if (historyJobs.isEmpty) return [];
+    final filteredList = _getFilteredHistory();
+    if (filteredList.isEmpty) return [];
     
     if (_historyPage > _totalHistoryPages && _totalHistoryPages > 0) {
       _historyPage = _totalHistoryPages;
@@ -109,8 +129,8 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     int start = (_historyPage - 1) * _itemsPerPage;
     int end = start + _itemsPerPage;
     
-    if (start >= historyJobs.length) return [];
-    return historyJobs.sublist(start, end > historyJobs.length ? historyJobs.length : end);
+    if (start >= filteredList.length) return [];
+    return filteredList.sublist(start, end > filteredList.length ? filteredList.length : end);
   }
 
   void _showCustomSnackBar(String message, {bool isError = false, bool isNewAlert = false}) {
@@ -177,7 +197,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
         futures.add(_httpClient.get(Uri.parse("$baseUrl?action=get_earnings&provider_id=${widget.userId}")).timeout(_apiTimeout));
       }
 
-      // 350K Optimizasyonu: Eşzamanlı 3 istek sunucuyu DDoS'lar. İstekleri sırayla (Sequential) atarak sunucu soketlerini rahatlatıyoruz.
       final responses = <http.Response>[];
       for (var future in futures) {
         responses.add(await future);
@@ -507,9 +526,12 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                             child: const Icon(Icons.badge_rounded, color: _primaryColor, size: 24),
                           ),
                           const SizedBox(width: 12),
-                          const Text(
-                            "Profili Düzenle", 
-                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)
+                          const Expanded(
+                            child: Text(
+                              "Profili Düzenle", 
+                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
@@ -537,8 +559,10 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                           ]
                         ),
                         child: ElevatedButton(
-                          onPressed: isSaving ? null : () {
-                            _updateProfile(onSuccess: () => Navigator.pop(modalCtx));
+                          onPressed: isSaving ? null : () async {
+                            await _updateProfile(onSuccess: () {
+                              if (modalCtx.mounted) Navigator.pop(modalCtx);
+                            });
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
@@ -599,7 +623,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                             child: const Icon(Icons.lock_rounded, color: Colors.blueAccent, size: 24),
                           ),
                           const SizedBox(width: 12),
-                          const Text("Şifre Değiştir", textAlign: TextAlign.center, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white)),
+                          const Expanded(
+                            child: Text("Şifre Değiştir", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white), overflow: TextOverflow.ellipsis),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 24),
@@ -656,80 +682,90 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
+      isDismissible: true,
+      enableDrag: true,
       backgroundColor: Colors.transparent,
       builder: (modalCtx) => StatefulBuilder(
         builder: (context, setModalState) {
-          return SafeArea(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-              child: Container(
-                padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 24, left: 20, right: 20, top: 20),
-                decoration: BoxDecoration(
-                  color: _cardColor.withValues(alpha: 0.98),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                  border: Border.all(color: _warningColor.withValues(alpha: 0.3), width: 1.5),
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(color: _warningColor.withValues(alpha: 0.15), shape: BoxShape.circle),
-                            child: const Icon(Icons.favorite_rounded, color: _warningColor, size: 24),
-                          ),
-                          const SizedBox(width: 12),
-                          const Text("Geri Bildirim Gönder", textAlign: TextAlign.center, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white)),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        "Fikir ve önerileriniz bizim için çok değerlidir.",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: _subtitleColor, fontSize: 13),
-                      ),
-                      const SizedBox(height: 24),
-                      _buildGlassTextField(subjectCtrl, "Konu", Icons.subject_rounded, _warningColor, readOnly: true),
-                      const SizedBox(height: 14),
-                      _buildGlassTextField(messageCtrl, "Mesajınız / Öneriniz", Icons.mark_chat_unread_rounded, _warningColor, maxLines: 4, action: TextInputAction.done),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: isSending ? null : () async {
-                          if (messageCtrl.text.trim().isEmpty) {
-                            _showCustomSnackBar("Lütfen bir mesaj yazın.", isError: true);
-                            return;
-                          }
-                          setModalState(() => isSending = true);
-                          try {
-                            final response = await _httpClient.post(
-                              Uri.parse("$baseUrl?action=send_feedback"),
-                              headers: {"Content-Type": "application/x-www-form-urlencoded"},
-                              body: {"user_id": widget.userId.toString(), "message": messageCtrl.text}
-                            ).timeout(_apiTimeout);
-                            final data = json.decode(response.body);
-                            if (response.statusCode == 200 && data['status'] == 'success') {
-                              if (!modalCtx.mounted) return;
-                              Navigator.pop(modalCtx);
-                              _showCustomSnackBar("Geri bildiriminiz için çok teşekkürler!");
-                            } else {
-                              _showCustomSnackBar("Gönderilemedi.", isError: true);
+          return GestureDetector(
+            onTap: () => FocusScope.of(context).unfocus(),
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                child: Container(
+                  padding: const EdgeInsets.only(bottom: 24, left: 20, right: 20, top: 20),
+                  decoration: BoxDecoration(
+                    color: _cardColor.withValues(alpha: 0.98),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                    border: Border.all(color: _warningColor.withValues(alpha: 0.3), width: 1.5),
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(color: _warningColor.withValues(alpha: 0.15), shape: BoxShape.circle),
+                              child: const Icon(Icons.favorite_rounded, color: _warningColor, size: 24),
+                            ),
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Text("Geri Bildirim Gönder", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white), overflow: TextOverflow.ellipsis),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          "Fikir ve önerileriniz bizim için çok değerlidir.",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: _subtitleColor, fontSize: 13),
+                        ),
+                        const SizedBox(height: 24),
+                        _buildGlassTextField(subjectCtrl, "Konu", Icons.subject_rounded, _warningColor, readOnly: true),
+                        const SizedBox(height: 14),
+                        _buildGlassTextField(messageCtrl, "Mesajınız / Öneriniz", Icons.mark_chat_unread_rounded, _warningColor, maxLines: 4, action: TextInputAction.done),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: isSending ? null : () async {
+                            if (messageCtrl.text.trim().isEmpty) {
+                              _showCustomSnackBar("Lütfen bir mesaj yazın.", isError: true);
+                              return;
                             }
-                          } catch (_) {
-                            _showCustomSnackBar("Bağlantı hatası.", isError: true);
-                          } finally {
-                            if (mounted) setModalState(() => isSending = false);
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(backgroundColor: _warningColor, padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                        child: isSending ? const CircularProgressIndicator(color: Colors.white) : const Text("Gönder", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16)),
-                      ),
-                    ],
+                            setModalState(() => isSending = true);
+                            try {
+                              final response = await _httpClient.post(
+                                Uri.parse("$baseUrl?action=send_feedback"),
+                                headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                                body: {"user_id": widget.userId.toString(), "message": messageCtrl.text}
+                              ).timeout(_apiTimeout);
+                              final data = json.decode(response.body);
+                              if (response.statusCode == 200 && data['status'] == 'success') {
+                                if (!modalCtx.mounted) return;
+                                Navigator.pop(modalCtx);
+                                _showCustomSnackBar("Geri bildiriminiz için çok teşekkürler!");
+                              } else {
+                                _showCustomSnackBar("Gönderilemedi.", isError: true);
+                              }
+                            } catch (_) {
+                              _showCustomSnackBar("Bağlantı hatası.", isError: true);
+                            } finally {
+                              if (mounted) setModalState(() => isSending = false);
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(backgroundColor: _warningColor, padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                          child: isSending ? const CircularProgressIndicator(color: Colors.white) : const Text("Gönder", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16)),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -740,8 +776,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
   }
 
-  void _showComplaintDialog(int jobId, int? providerId) {
-    if (providerId == null) {
+  void _showComplaintDialog(dynamic jobId, dynamic providerId, dynamic customerId) {
+    final String pId = providerId?.toString() ?? '';
+    final String cId = customerId?.toString() ?? '';
+
+    if (pId.isEmpty && cId.isEmpty) {
       _showCustomSnackBar("Bu işlem için şikayet oluşturulamaz.", isError: true);
       return;
     }
@@ -753,130 +792,135 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
+      isDismissible: true,
+      enableDrag: true,
       backgroundColor: Colors.transparent,
       builder: (modalCtx) => StatefulBuilder(
         builder: (context, setModalState) {
-          return SafeArea(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-              child: Container(
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-                  left: 20, right: 20, top: 20
-                ),
-                decoration: BoxDecoration(
-                  color: _cardColor.withValues(alpha: 0.98),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                  border: Border.all(color: _dangerColor.withValues(alpha: 0.3), width: 1.5),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 40, offset: const Offset(0, -10))
-                  ],
-                ),
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 48, height: 6, 
-                          decoration: BoxDecoration(
-                            color: Colors.white24, 
-                            borderRadius: BorderRadius.circular(10)
-                          )
-                        )
-                      ),
-                      const SizedBox(height: 24),
-                      Center(
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: _dangerColor.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.support_agent_rounded, color: _dangerColor, size: 36),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        "Şikayet Oluştur", 
-                        textAlign: TextAlign.center, 
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: -0.5)
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        "İşlem #$jobId için yaşadığınız problemi yetkililere iletin.", 
-                        textAlign: TextAlign.center, 
-                        style: const TextStyle(fontSize: 15, color: _subtitleColor, fontWeight: FontWeight.w500)
-                      ),
-                      const SizedBox(height: 24),
-                      _buildGlassTextField(
-                        subjectController, "Konu Başlığı", Icons.subject_rounded, _dangerColor, 
-                        action: TextInputAction.next
-                      ),
-                      const SizedBox(height: 12),
-                      _buildGlassTextField(
-                        messageController, "Detaylı Açıklama", Icons.notes_rounded, _dangerColor, 
-                        maxLines: 4, action: TextInputAction.done, 
-                        onSubmitted: (_) => FocusScope.of(context).unfocus()
-                      ),
-                      const SizedBox(height: 24),
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(color: _dangerColor.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 5))
-                          ],
-                        ),
-                        child: ElevatedButton(
-                          onPressed: isSending ? null : () async {
-                            if (subjectController.text.trim().isEmpty || messageController.text.trim().isEmpty) {
-                              _showCustomSnackBar("Lütfen tüm alanları doldurun.", isError: true);
-                              return;
-                            }
-                            setModalState(() => isSending = true);
-                            try {
-                              final response = await _httpClient.post(
-                                Uri.parse("$baseUrl?action=create_ticket"),
-                                headers: {"Content-Type": "application/x-www-form-urlencoded"},
-                                body: {
-                                  "job_id": jobId.toString(),
-                                  "customer_id": widget.userId.toString(),
-                                  "provider_id": providerId.toString(),
-                                  "subject": subjectController.text.trim(),
-                                  "message": messageController.text.trim(),
-                                }
-                              ).timeout(_apiTimeout);
-                              
-                              if (mounted) {
-                                if (response.statusCode == 200) {
-                                  if (!modalCtx.mounted) return;
-                                  Navigator.pop(modalCtx);
-                                  _showCustomSnackBar("Şikayetiniz yönetime başarıyla iletildi.");
-                                } else {
-                                  _showCustomSnackBar("Şikayet gönderilemedi.", isError: true);
-                                }
-                              }
-                            } catch (e) {
-                              if (mounted) _showCustomSnackBar("Bağlantı hatası: İşlem başarısız.", isError: true);
-                            } finally {
-                              if (mounted) setModalState(() => isSending = false);
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _dangerColor,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            elevation: 0,
-                          ),
-                          child: isSending
-                              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                              : const Text("Şikayeti Gönder", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
-                        ),
-                      ),
+          return GestureDetector(
+            onTap: () => FocusScope.of(context).unfocus(),
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                child: Container(
+                  padding: const EdgeInsets.only(bottom: 24, left: 20, right: 20, top: 20),
+                  decoration: BoxDecoration(
+                    color: _cardColor.withValues(alpha: 0.98),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                    border: Border.all(color: _dangerColor.withValues(alpha: 0.3), width: 1.5),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 40, offset: const Offset(0, -10))
                     ],
+                  ),
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 48, height: 6, 
+                            decoration: BoxDecoration(
+                              color: Colors.white24, 
+                              borderRadius: BorderRadius.circular(10)
+                            )
+                          )
+                        ),
+                        const SizedBox(height: 24),
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: _dangerColor.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.support_agent_rounded, color: _dangerColor, size: 36),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          "Şikayet Oluştur", 
+                          textAlign: TextAlign.center, 
+                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: -0.5)
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          "İşlem #$jobId için yaşadığınız problemi yetkililere iletin.", 
+                          textAlign: TextAlign.center, 
+                          style: const TextStyle(fontSize: 15, color: _subtitleColor, fontWeight: FontWeight.w500)
+                        ),
+                        const SizedBox(height: 24),
+                        _buildGlassTextField(
+                          subjectController, "Konu Başlığı", Icons.subject_rounded, _dangerColor, 
+                          action: TextInputAction.next
+                        ),
+                        const SizedBox(height: 12),
+                        _buildGlassTextField(
+                          messageController, "Detaylı Açıklama", Icons.notes_rounded, _dangerColor, 
+                          maxLines: 4, action: TextInputAction.done, 
+                          onSubmitted: (_) => FocusScope.of(context).unfocus()
+                        ),
+                        const SizedBox(height: 24),
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(color: _dangerColor.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 5))
+                            ],
+                          ),
+                          child: ElevatedButton(
+                            onPressed: isSending ? null : () async {
+                              if (subjectController.text.trim().isEmpty || messageController.text.trim().isEmpty) {
+                                _showCustomSnackBar("Lütfen tüm alanları doldurun.", isError: true);
+                                return;
+                              }
+                              setModalState(() => isSending = true);
+                              try {
+                                final response = await _httpClient.post(
+                                  Uri.parse("$baseUrl?action=create_ticket"),
+                                  headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                                  body: {
+                                    "job_id": jobId.toString(),
+                                    "customer_id": cId.isNotEmpty ? cId : widget.userId.toString(),
+                                    "provider_id": pId.isNotEmpty ? pId : widget.userId.toString(),
+                                    "subject": (widget.userType == 'provider' ? "[USTA ŞİKAYETİ] " : "[MÜŞTERİ ŞİKAYETİ] ") + subjectController.text.trim(),
+                                    "message": messageController.text.trim(),
+                                  }
+                                ).timeout(_apiTimeout);
+                                
+                                if (mounted) {
+                                  if (response.statusCode == 200) {
+                                    if (!modalCtx.mounted) return;
+                                    Navigator.pop(modalCtx);
+                                    _showCustomSnackBar("Şikayetiniz yönetime başarıyla iletildi.");
+                                  } else {
+                                    _showCustomSnackBar("Şikayet gönderilemedi.", isError: true);
+                                  }
+                                }
+                              } catch (e) {
+                                if (mounted) _showCustomSnackBar("Bağlantı hatası: İşlem başarısız.", isError: true);
+                              } finally {
+                                if (mounted) setModalState(() => isSending = false);
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _dangerColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 18),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              elevation: 0,
+                            ),
+                            child: isSending
+                                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                                : const Text("Şikayeti Gönder", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -887,14 +931,107 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
   }
 
+  // Kategorilere göre özel ikon belirleme
+  IconData _getServiceIcon(String? type) {
+    switch (type?.toLowerCase()) {
+      case 'mechanic': return Icons.build_rounded;
+      case 'tow': return Icons.car_repair_rounded;
+      case 'tire': return Icons.tire_repair_rounded;
+      case 'wash': return Icons.local_car_wash_rounded;
+      default: return Icons.handyman_rounded;
+    }
+  }
+
   String _getServiceTypeName(String? type) {
     switch (type) {
-      case 'mechanic': return "Tamirci";
-      case 'tow': return "Çekici";
-      case 'tire': return "Lastikçi";
-      case 'wash': return "Oto Yıkama";
-      default: return "Hizmet";
+      case 'mechanic': return 'Oto Tamir';
+      case 'tow': return 'Çekici Hizmeti';
+      case 'tire': return 'Lastikçi';
+      case 'wash': return 'Oto Yıkama';
+      default: return 'Genel Hizmet';
     }
+  }
+
+  // Görseldeki formatla birebir uyumlu tarih formatlayıcı (Örn: 28 Eyl • 08:17)
+  String _formatDate(String? dateStr) {
+    if (dateStr == null) return "";
+    try {
+      DateTime dt = DateTime.parse(dateStr);
+      List<String> months = ["", "Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+      String month = months[dt.month];
+      String day = dt.day.toString();
+      String time = "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
+      return "$day $month • $time";
+    } catch (e) {
+      return dateStr;
+    }
+  }
+
+  // Sadece müşteriye açık olan hizmet tekrarlama aksiyonu
+  void _repeatService(Map<String, dynamic> job) {
+    HapticFeedback.lightImpact();
+    final serviceName = _getServiceTypeName(job['service_type']?.toString());
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: AlertDialog(
+          backgroundColor: _cardColor.withValues(alpha: 0.95),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: BorderSide(color: _primaryColor.withValues(alpha: 0.3), width: 1.5),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: _primaryColor.withValues(alpha: 0.15), shape: BoxShape.circle),
+                child: const Icon(Icons.replay_rounded, color: _primaryColor, size: 24),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text("Hizmeti Tekrarla", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20)),
+              ),
+            ],
+          ),
+          content: Text(
+            "$serviceName talebini bu rota için yeniden oluşturmak istiyor musunuz?",
+            style: const TextStyle(color: _subtitleColor, fontSize: 15, height: 1.4),
+          ),
+          actionsPadding: const EdgeInsets.all(20),
+          actions: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(dialogCtx),
+                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                    child: const Text("Vazgeç", style: TextStyle(color: Colors.white60, fontWeight: FontWeight.bold, fontSize: 15)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _primaryColor,
+                      foregroundColor: Colors.black,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(dialogCtx);
+                      _showCustomSnackBar("$serviceName talebiniz hazırlanıyor...");
+                    },
+                    child: const Text("Tekrarla", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+                  ),
+                ),
+              ],
+            )
+          ],
+        ),
+      ),
+    );
   }
 
   void _handleLogout() {
@@ -1181,7 +1318,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ÜST KULLANICI ÖZET KARTI (ÇIKIŞ YAP BUTONU İLE ENTEGRE DİZAYN)
+              // ÜST KULLANICI ÖZET KARTI
               Container(
                 padding: const EdgeInsets.all(22),
                 decoration: BoxDecoration(
@@ -1229,7 +1366,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                             ),
                             child: Center(
                               child: Icon(
-                                isProvider ? Icons.engineering_rounded : Icons.person_rounded, 
+                                isProvider ? _getServiceIcon(profile['service_category']?.toString()) : Icons.person_rounded, 
                                 size: 34, 
                                 color: Colors.black
                               ),
@@ -1288,7 +1425,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                               border: Border.all(color: _primaryColor.withValues(alpha: 0.3), width: 1),
                             ),
                             child: Text(
-                              isProvider ? "Usta / Hizmet Veren" : "Müşteri Hesabı",
+                              isProvider ? "Usta / ${_getServiceTypeName(profile['service_category']?.toString())}" : "Müşteri Hesabı",
                               style: const TextStyle(
                                 color: _primaryColor, 
                                 fontSize: 11, 
@@ -1301,7 +1438,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                       ),
                     ),
                     const SizedBox(width: 10),
-                    // KART İÇİ ÇIKIŞ YAP BUTONU (ÖZEL CAM VE NEON DİZAYN)
+                    // KART İÇİ ÇIKIŞ YAP BUTONU
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
@@ -1348,7 +1485,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
               const SizedBox(height: 28),
 
-              // HESAP BAĞLANTILARI (GOOGLE & APPLE) KARTI
+              // HESAP BAĞLANTILARI
               Row(
                 children: [
                   Container(
@@ -1382,7 +1519,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 ),
                 child: Column(
                   children: [
-                    // GOOGLE BAĞLANTI SATIRI
+                    // GOOGLE
                     Row(
                       children: [
                         Container(
@@ -1449,7 +1586,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
                     const Divider(height: 24, color: Colors.white10),
 
-                    // APPLE BAĞLANTI SATIRI
+                    // APPLE
                     Row(
                       children: [
                         Container(
@@ -1513,7 +1650,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
               const SizedBox(height: 32),
 
-              // BÖLÜM BAŞLIĞI: KULLANICI İŞLEMLERİ
               Row(
                 children: [
                   Container(
@@ -1539,7 +1675,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
               const SizedBox(height: 18),
 
-              // 2'Lİ GRID MENÜ
               GridView.count(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -1898,83 +2033,585 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildHistoryTab(bool isProvider, Color primaryColor, BoxConstraints constraints) {
-    if (historyJobs.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), shape: BoxShape.circle),
-              child: Icon(Icons.history_toggle_off_rounded, size: 80, color: Colors.white.withValues(alpha: 0.3)),
-            ),
-            const SizedBox(height: 24),
-            const Text("İşlem Geçmişi Boş", style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 12),
-            const Text("Tamamlanan veya iptal edilen\nişlemleriniz burada görünür.", textAlign: TextAlign.center, style: TextStyle(color: _subtitleColor, fontSize: 16, height: 1.5, fontWeight: FontWeight.w500))
-          ],
-        )
-      );
+  void _showJobDetailsAndRatingModal(Map<String, dynamic> job) {
+    final bool isProviderView = widget.userType == 'provider';
+    
+    final String? beforePhotoUrl = job['before_photo']?.toString();
+    final String? afterPhotoUrl = job['after_photo']?.toString();
+    final String personName = isProviderView ? (job['customer_name']?.toString() ?? 'Müşteri') : (job['provider_name']?.toString() ?? 'Usta');
+    final String agreedPrice = job['agreed_price']?.toString() ?? '0';
+    final double existingRating = double.tryParse(job['given_rating']?.toString() ?? '0') ?? 0;
+    
+    final double cLat = double.tryParse(job['latitude']?.toString() ?? '0') ?? 0.0;
+    final double cLng = double.tryParse(job['longitude']?.toString() ?? '0') ?? 0.0;
+    final double pLat = double.tryParse(job['p_start_lat']?.toString() ?? '0') ?? 0.0;
+    final double pLng = double.tryParse(job['p_start_lng']?.toString() ?? '0') ?? 0.0;
+    final String city = job['city']?.toString() ?? 'Konum';
+
+    DateTime? startTime;
+    DateTime? endTime;
+    String displayDate = "";
+    String startTimeStr = "--:--";
+    String endTimeStr = "--:--";
+
+    if (job['created_at'] != null) {
+      startTime = DateTime.tryParse(job['created_at'].toString());
+      if (startTime != null) {
+        endTime = startTime.add(const Duration(minutes: 15)); 
+        displayDate = DateFormat('EEE, d MMM yyyy', 'tr_TR').format(startTime);
+        startTimeStr = DateFormat('HH:mm').format(startTime);
+        endTimeStr = DateFormat('HH:mm').format(endTime);
+      }
     }
 
+    Set<gmaps.Marker> googleMarkers = {};
+    if (cLat != 0.0) googleMarkers.add(gmaps.Marker(markerId: const gmaps.MarkerId('customer'), position: gmaps.LatLng(cLat, cLng), icon: gmaps.BitmapDescriptor.defaultMarkerWithHue(gmaps.BitmapDescriptor.hueRed)));
+    if (pLat != 0.0) googleMarkers.add(gmaps.Marker(markerId: const gmaps.MarkerId('provider'), position: gmaps.LatLng(pLat, pLng), icon: gmaps.BitmapDescriptor.defaultMarkerWithHue(gmaps.BitmapDescriptor.hueGreen)));
+
+    Set<gmaps.Polyline> googlePolylines = {};
+    if (cLat != 0.0 && pLat != 0.0) {
+      googlePolylines.add(gmaps.Polyline(
+        polylineId: const gmaps.PolylineId('route'),
+        points: [gmaps.LatLng(pLat, pLng), gmaps.LatLng(cLat, cLng)],
+        color: const Color(0xFF00FFA3),
+        width: 4,
+        patterns: [gmaps.PatternItem.dash(15), gmaps.PatternItem.gap(10)]
+      ));
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalCtx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+          return SafeArea(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+              child: Container(
+                padding: EdgeInsets.only(bottom: bottomInset > 0 ? bottomInset + 20 : 24, left: 20, right: 20, top: 20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF111115).withValues(alpha: 0.98),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.5),
+                ),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
+                      const SizedBox(height: 20),
+                      
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text("OTOTAG", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1.0)),
+                                const SizedBox(height: 4),
+                                Text("$displayDate • $startTimeStr", style: const TextStyle(fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w500)),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Row(
+                            children: [
+                              const Icon(Icons.star_rounded, color: Colors.amber, size: 20),
+                              const SizedBox(width: 4),
+                              Text(existingRating > 0 ? existingRating.toStringAsFixed(1) : "5.0", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                              const SizedBox(width: 4),
+                              Text(personName.split(' ').first, style: const TextStyle(color: Colors.white, fontSize: 16), overflow: TextOverflow.ellipsis),
+                            ],
+                          )
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      if (beforePhotoUrl != null || afterPhotoUrl != null) ...[
+                        Row(
+                          children: [
+                            if (beforePhotoUrl != null && beforePhotoUrl.isNotEmpty)
+                              Expanded(
+                                child: Container(
+                                  height: 120,
+                                  margin: const EdgeInsets.only(right: 8),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: Colors.white24),
+                                    image: DecorationImage(
+                                      image: NetworkImage(beforePhotoUrl.startsWith("http") ? beforePhotoUrl : "https://eliteagency.sbs/$beforePhotoUrl"),
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                  child: Align(
+                                    alignment: Alignment.topLeft,
+                                    child: Container(
+                                      margin: const EdgeInsets.all(8),
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.7), borderRadius: BorderRadius.circular(8)),
+                                      child: const Text("ÖNCESİ", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            if (afterPhotoUrl != null && afterPhotoUrl.isNotEmpty)
+                              Expanded(
+                                child: Container(
+                                  height: 120,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: const Color(0xFF00FFA3).withValues(alpha: 0.5)),
+                                    image: DecorationImage(
+                                      image: NetworkImage(afterPhotoUrl.startsWith("http") ? afterPhotoUrl : "https://eliteagency.sbs/$afterPhotoUrl"),
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                  child: Align(
+                                    alignment: Alignment.topLeft,
+                                    child: Container(
+                                      margin: const EdgeInsets.all(8),
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(color: const Color(0xFF00FFA3).withValues(alpha: 0.9), borderRadius: BorderRadius.circular(8)),
+                                      child: const Text("SONRASI", style: TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.w900)),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+
+                      if (cLat != 0.0 && !kIsWeb)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: SizedBox(
+                            height: 180,
+                            width: double.infinity,
+                            child: defaultTargetPlatform == TargetPlatform.iOS
+                              ? amaps.AppleMap(
+                                  initialCameraPosition: amaps.CameraPosition(
+                                    target: amaps.LatLng(cLat, cLng),
+                                    zoom: 12.0,
+                                  ),
+                                  scrollGesturesEnabled: false,
+                                  zoomGesturesEnabled: false,
+                                  annotations: {
+                                    amaps.Annotation(annotationId: amaps.AnnotationId('end'), position: amaps.LatLng(cLat, cLng)),
+                                    if (pLat != 0.0) amaps.Annotation(annotationId: amaps.AnnotationId('start'), position: amaps.LatLng(pLat, pLng)),
+                                  },
+                                )
+                              : gmaps.GoogleMap(
+                                  initialCameraPosition: gmaps.CameraPosition(
+                                    target: gmaps.LatLng(cLat, cLng),
+                                    zoom: 12.0,
+                                  ),
+                                  scrollGesturesEnabled: false,
+                                  zoomGesturesEnabled: false,
+                                  markers: googleMarkers,
+                                  polylines: googlePolylines,
+                                ),
+                          ),
+                        ),
+                      
+                      const SizedBox(height: 24),
+
+                      const Text("Rota Bilgilerim", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 16),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Column(
+                            children: [
+                              const Icon(Icons.trip_origin, color: Color(0xFF00FFA3), size: 16),
+                              Container(height: 24, width: 2, color: Colors.white38),
+                              const Icon(Icons.radio_button_checked_rounded, color: Colors.white, size: 16),
+                            ],
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Expanded(child: Text("Usta Başlangıç", style: TextStyle(color: Colors.white, fontSize: 15))),
+                                    Text(startTimeStr, style: const TextStyle(color: Colors.white54, fontSize: 14)),
+                                  ],
+                                ),
+                                const SizedBox(height: 20),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(child: Text(city, style: const TextStyle(color: Colors.white, fontSize: 15), overflow: TextOverflow.ellipsis)),
+                                    Text(endTimeStr, style: const TextStyle(color: Colors.white54, fontSize: 14)),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Divider(color: Colors.white10, thickness: 1.5),
+                      ),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text("Değerlendirme", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                          Row(
+                            children: List.generate(5, (index) => GestureDetector(
+                              onTap: () {
+                                if (existingRating == 0) {
+                                  Navigator.pop(modalCtx);
+                                  _showRatingDialog(job);
+                                }
+                              },
+                              child: Icon(
+                                index < existingRating ? Icons.star_rounded : Icons.star_border_rounded, 
+                                color: Colors.amber, 
+                                size: 24
+                              ),
+                            )),
+                          )
+                        ],
+                      ),
+                      
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Divider(color: Colors.white10, thickness: 1.5),
+                      ),
+
+                      const Text("Ödeme Bilgileri", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(color: Colors.green, borderRadius: BorderRadius.circular(4)),
+                            child: const Icon(Icons.payments_rounded, color: Colors.white, size: 14),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(child: Text("Nakit / Banka Havalesi", style: TextStyle(color: Colors.white, fontSize: 15), overflow: TextOverflow.ellipsis)),
+                          const SizedBox(width: 8),
+                          Text("$agreedPrice ₺", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 32),
+                      
+                      InkWell(
+                        onTap: () {
+                          Navigator.pop(modalCtx);
+                          final cId = job['customer_id']?.toString() ?? (widget.userType == 'customer' ? widget.userId.toString() : null);
+                          final pId = job['provider_id']?.toString() ?? (widget.userType == 'provider' ? widget.userId.toString() : null);
+                          _showComplaintDialog(job['job_id'] ?? job['id'], pId, cId);
+                        },
+                        child: Row(
+                          children: const [
+                            Icon(Icons.help_outline_rounded, color: Colors.white54, size: 20),
+                            SizedBox(width: 8),
+                            Expanded(child: Text("Sorun mu var? Destek al", style: TextStyle(color: Colors.white54, fontSize: 14))),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+      ),
+    );
+  }
+
+  void _showRatingDialog(Map<String, dynamic> job) {
+    int selectedRating = 5;
+    final TextEditingController commentController = TextEditingController();
+    bool isSubmitting = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      isDismissible: true,
+      enableDrag: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalCtx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return GestureDetector(
+            onTap: () => FocusScope.of(context).unfocus(),
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                child: Container(
+                  padding: const EdgeInsets.only(bottom: 24, left: 20, right: 20, top: 20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF111115).withValues(alpha: 0.98),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.5),
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
+                        const SizedBox(height: 24),
+                        const Text("Hizmeti Değerlendirin", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white)),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(5, (index) => IconButton(
+                            icon: Icon(index < selectedRating ? Icons.star_rounded : Icons.star_border_rounded, color: Colors.amber, size: 40),
+                            onPressed: () => setModalState(() => selectedRating = index + 1),
+                          )),
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: commentController,
+                          maxLines: 3,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText: "Deneyiminizi paylaşın (İsteğe bağlı)",
+                            hintStyle: const TextStyle(color: Colors.white54),
+                            filled: true,
+                            fillColor: Colors.white.withValues(alpha: 0.05),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: isSubmitting ? null : () async {
+                              setModalState(() => isSubmitting = true);
+                              try {
+                                final response = await _httpClient.post(
+                                  Uri.parse("$baseUrl?action=add_rating"),
+                                  headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                                  body: {
+                                    "job_id": job['job_id']?.toString() ?? job['id']?.toString() ?? '',
+                                    "provider_id": job['provider_id']?.toString() ?? (widget.userType == 'provider' ? widget.userId.toString() : ''),
+                                    "customer_id": job['customer_id']?.toString() ?? (widget.userType == 'customer' ? widget.userId.toString() : ''),
+                                    "rating": selectedRating.toString(),
+                                    "comment": commentController.text.trim(),
+                                    "rater_type": widget.userType,
+                                  }
+                                ).timeout(_apiTimeout);
+
+                                if (response.statusCode == 201 || response.statusCode == 200) {
+                                  if (!modalCtx.mounted) return;
+                                  Navigator.pop(modalCtx);
+                                  _showCustomSnackBar("Değerlendirmeniz başarıyla kaydedildi!");
+                                  
+                                  setState(() {
+                                    job['given_rating'] = selectedRating.toString();
+                                    job['is_rated'] = 1;
+                                    
+                                    int jId = int.tryParse(job['job_id']?.toString() ?? job['id']?.toString() ?? '0') ?? 0;
+                                    int index = historyJobs.indexWhere((element) {
+                                      int eId = int.tryParse(element['job_id']?.toString() ?? element['id']?.toString() ?? '0') ?? 0;
+                                      return eId == jId;
+                                    });
+                                    if (index != -1) {
+                                      historyJobs[index]['given_rating'] = selectedRating.toString();
+                                      historyJobs[index]['is_rated'] = 1;
+                                    }
+                                  });
+                                  _showJobDetailsAndRatingModal(job);
+                                } else {
+                                  _showCustomSnackBar("Değerlendirme kaydedilemedi.", isError: true);
+                                }
+                              } catch (e) {
+                                _showCustomSnackBar("Bağlantı hatası.", isError: true);
+                              } finally {
+                                if (mounted) setModalState(() => isSubmitting = false);
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF00FFA3),
+                              foregroundColor: Colors.black,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            ),
+                            child: isSubmitting
+                                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
+                                : const Text("Gönder", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+      ),
+    );
+  }
+
+  // GÖRSELDEKİ GİBİ GEÇMİŞ LİSTESİ VE KATEGORİ HAPLARI
+  Widget _buildHistoryTab(bool isProvider, Color primaryColor, BoxConstraints constraints) {
     final paginatedJobs = _getPaginatedHistory();
-    double horizontalPadding = constraints.maxWidth > 800 ? constraints.maxWidth * 0.15 : 20.0;
+    double horizontalPadding = constraints.maxWidth > 800 ? constraints.maxWidth * 0.15 : 16.0;
+
+    // Görseldeki filtre barı kategorileri
+    final categories = [
+      {'id': 'all', 'title': 'Tümü'},
+      {'id': 'mechanic', 'title': 'Oto Tamir'},
+      {'id': 'tire', 'title': 'Lastikçi'},
+      {'id': 'tow', 'title': 'Çekici'},
+      {'id': 'wash', 'title': 'Oto Yıkama'},
+    ];
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: EdgeInsets.fromLTRB(horizontalPadding, 20, horizontalPadding, 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text("Son İşlemler", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
-              TextButton.icon(
-                onPressed: () {
-                  setState(() {
-                    isSelectionMode = !isSelectionMode;
-                    selectedJobs.clear();
-                  });
-                },
-                icon: Icon(isSelectionMode ? Icons.close_rounded : Icons.checklist_rtl_rounded, color: primaryColor, size: 20),
-                label: Text(isSelectionMode ? "Vazgeç" : "Seç & Sil", style: TextStyle(color: primaryColor, fontWeight: FontWeight.w900, fontSize: 15)),
-                style: TextButton.styleFrom(backgroundColor: primaryColor.withValues(alpha: 0.15), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-              )
-            ],
+        // 1. ÜST KATEGORİ HAPLARI (Yolculuklar ekranındaki TAG / Scooter / Kurye gibi)
+        if (!isProvider)
+          Container(
+            height: 44,
+            margin: const EdgeInsets.only(top: 14, bottom: 8),
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+              itemCount: categories.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, idx) {
+                final cat = categories[idx];
+                final isSelected = _selectedCategoryFilter == cat['id'];
+                return InkWell(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() {
+                      _selectedCategoryFilter = cat['id']!;
+                      _historyPage = 1;
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(24),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected ? Colors.white : const Color(0xFF26262B),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      cat['title']!,
+                      style: TextStyle(
+                        color: isSelected ? Colors.black : Colors.white70,
+                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                        fontSize: 14,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          )
+        else
+          // USTA İÇİN BAŞLIK (Sadece yaptığı işe odaklı)
+          Padding(
+            padding: EdgeInsets.fromLTRB(horizontalPadding, 16, horizontalPadding, 8),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: _primaryColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    _getServiceIcon(profile['service_category']?.toString()),
+                    color: _primaryColor,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  "Tamamlanan ${_getServiceTypeName(profile['service_category']?.toString())} İşleri",
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        
+
+        // SEÇ & SİL BARI
+        if (historyJobs.isNotEmpty)
+          Padding(
+            padding: EdgeInsets.fromLTRB(horizontalPadding, 4, horizontalPadding, 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "${_getFilteredHistory().length} İşlem",
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white38),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      isSelectionMode = !isSelectionMode;
+                      selectedJobs.clear();
+                    });
+                  },
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    isSelectionMode ? "Vazgeç" : "Seç & Sil",
+                    style: TextStyle(color: isSelectionMode ? _dangerColor : _primaryColor, fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                )
+              ],
+            ),
+          ),
+
+        // ÇOKLU SİLME ONAY BARI
         AnimatedSize(
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeOutBack,
+          duration: const Duration(milliseconds: 300),
           child: isSelectionMode && selectedJobs.isNotEmpty
             ? Container(
-                margin: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 16),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                margin: EdgeInsets.fromLTRB(horizontalPadding, 8, horizontalPadding, 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
                   color: _dangerColor.withValues(alpha: 0.15), 
-                  borderRadius: BorderRadius.circular(20), 
-                  border: Border.all(color: _dangerColor.withValues(alpha: 0.4), width: 1.5)
+                  borderRadius: BorderRadius.circular(16), 
+                  border: Border.all(color: _dangerColor.withValues(alpha: 0.4), width: 1)
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: _dangerColor, borderRadius: BorderRadius.circular(10)),
-                      child: Text("${selectedJobs.length}", style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 16)),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text("Öğe Seçildi", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _dangerColor)),
+                    Text("${selectedJobs.length} seçildi", style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 14)),
                     const Spacer(),
                     ElevatedButton.icon(
-                      icon: const Icon(Icons.delete_forever_rounded, color: Colors.white, size: 20),
-                      label: const Text("Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15)),
+                      icon: const Icon(Icons.delete_forever_rounded, color: Colors.white, size: 16),
+                      label: const Text("Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _dangerColor, 
-                        elevation: 10,
-                        shadowColor: _dangerColor.withValues(alpha: 0.4),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), 
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8), 
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
                       ),
                       onPressed: _deleteSelectedJobs,
                     )
@@ -1983,148 +2620,187 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               )
             : const SizedBox.shrink(),
         ),
+
+        // 2. GÖRSELDEKİ LİSTE GÖRÜNÜMÜ
         Expanded(
-          child: ListView.separated(
-            padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 24),
-            physics: const BouncingScrollPhysics(),
-            itemCount: paginatedJobs.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 16),
-            itemBuilder: (context, index) {
-              final job = paginatedJobs[index];
-              final jobId = int.tryParse(job['job_id']?.toString() ?? '-1') ?? -1;
-              final bool isCompleted = job['status'] == 'completed';
-              final bool isSelected = selectedJobs.contains(jobId);
-              
-              if (jobId == -1) return const SizedBox.shrink();
-              
-              return SlideTransition(
-                // 350K Optimizasyonu: Flutter UI çökmesini (Interval out of bounds) önledik.
-                position: Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
-                  CurvedAnimation(parent: _listAnimController, curve: Interval((index * 0.1).clamp(0.0, 0.9), 1.0, curve: Curves.easeOutQuart))
-                ),
-                child: GestureDetector(
-                  onLongPress: () {
-                    setState(() {
-                      isSelectionMode = true;
-                      selectedJobs.add(jobId);
-                    });
-                  },
-                  onTap: () {
-                    if (isSelectionMode) {
-                      _toggleSelection(jobId);
-                    } else {
-                      if (isProvider) {
-                        _showCustomSnackBar("Müşteri: ${job['customer_name'] ?? 'Bilinmiyor'}\nTutar: ${job['agreed_price'] ?? '0'} ₺", isNewAlert: true);
-                      }
-                    }
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: isSelected ? primaryColor.withValues(alpha: 0.15) : _cardColor.withValues(alpha: 0.6),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: isSelected 
-                          ? primaryColor 
-                          : (isCompleted ? primaryColor.withValues(alpha: 0.15) : _dangerColor.withValues(alpha: 0.15)), 
-                        width: isSelected ? 2.0 : 1.5
+          child: paginatedJobs.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.history_rounded, size: 64, color: Colors.white.withValues(alpha: 0.2)),
+                      const SizedBox(height: 12),
+                      const Text(
+                        "Kayıt Bulunamadı", 
+                        style: TextStyle(color: Colors.white70, fontSize: 17, fontWeight: FontWeight.bold)
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: isSelected ? primaryColor.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.3), 
-                          blurRadius: isSelected ? 20 : 15, 
-                          offset: const Offset(0, 8)
-                        )
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        if (isSelectionMode) ...[
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 200),
-                            child: Icon(isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, color: isSelected ? primaryColor : Colors.white30, size: 28, key: ValueKey(isSelected)),
-                          ),
-                          const SizedBox(width: 16),
-                        ],
-                        Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: isCompleted ? primaryColor.withValues(alpha: 0.15) : _dangerColor.withValues(alpha: 0.15), 
-                            borderRadius: BorderRadius.circular(18),
-                            boxShadow: [BoxShadow(color: isCompleted ? primaryColor.withValues(alpha: 0.4) : _dangerColor.withValues(alpha: 0.4), blurRadius: 15, offset: const Offset(0, 6))]
-                          ),
-                          child: Icon(isCompleted ? Icons.verified_rounded : Icons.cancel_rounded, color: isCompleted ? primaryColor : _dangerColor, size: 28),
-                        ),
-                        const SizedBox(width: 20),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                isProvider 
-                                  ? "${job['customer_name'] ?? 'Müşteri'}" 
-                                  : (job['provider_name'] != null && job['provider_name'].toString().trim().isNotEmpty 
-                                      ? "${job['provider_name']}" 
-                                      : "Usta Atanmadı"), 
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.3),
-                                maxLines: 1, overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.08),
-                                  borderRadius: BorderRadius.circular(12)
-                                ),
-                                child: Text(
-                                  "${_getServiceTypeName(job['service_type']?.toString()).toUpperCase()} • ${job['agreed_price'] ?? '0'} ₺", 
-                                  style: const TextStyle(fontSize: 13, color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: 0.5),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (!isSelectionMode && !isProvider && job['provider_id'] != null)
-                          Container(
-                            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), shape: BoxShape.circle),
-                            child: PopupMenuButton<String>(
-                              icon: Icon(Icons.more_vert_rounded, color: Colors.white.withValues(alpha: 0.9), size: 24),
-                              color: _cardColor,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
-                              onSelected: (val) {
-                                final pId = int.tryParse(job['provider_id']?.toString() ?? '-1') ?? -1;
-                                if (val == 'profile' && pId != -1) {
-                                  Navigator.push(context, PageRouteBuilder(
-                                    pageBuilder: (context, anim1, anim2) => ProviderProfileScreen(providerId: pId),
-                                    transitionsBuilder: (context, anim1, anim2, child) => FadeTransition(opacity: anim1, child: child)
-                                  ));
-                                } else if (val == 'complain' && pId != -1) {
-                                  _showComplaintDialog(jobId, pId);
-                                }
-                              },
-                              itemBuilder: (context) => [
-                                const PopupMenuItem(
-                                  value: 'profile', 
-                                  child: Row(children: [Icon(Icons.person_rounded, color: Colors.white, size: 20), SizedBox(width: 12), Text("Profili Gör", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15))])
-                                ),
-                                PopupMenuItem(
-                                  value: 'complain', 
-                                  child: Row(children: [Icon(Icons.report_problem_rounded, color: _dangerColor, size: 20), const SizedBox(width: 12), Text("Şikayet Et", style: TextStyle(color: _dangerColor, fontWeight: FontWeight.bold, fontSize: 15))])
-                                ),
-                              ],
-                            ),
-                          )
-                      ],
-                    ),
+                    ],
                   ),
+                )
+              : ListView.separated(
+                  padding: EdgeInsets.fromLTRB(horizontalPadding, 8, horizontalPadding, 24),
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: paginatedJobs.length,
+                  separatorBuilder: (_, __) => Divider(
+                    color: Colors.white.withValues(alpha: 0.08), 
+                    height: 1, 
+                    thickness: 0.8,
+                    indent: 64, // İkonun sağından başlayan çizgi
+                  ),
+                  itemBuilder: (context, index) {
+                    final job = paginatedJobs[index];
+                    final jobId = int.tryParse(job['job_id']?.toString() ?? '-1') ?? -1;
+                    final bool isSelected = selectedJobs.contains(jobId);
+
+                    // Konum veya başlık bilgisi (Görseldeki "Gülenbey Sokak" / "Konya Şehir Hastanesi" gibi)
+                    final String locationTitle = (job['city']?.toString().isNotEmpty == true)
+                        ? job['city'].toString()
+                        : (isProvider ? (job['customer_name']?.toString() ?? 'Müşteri Talebi') : (job['provider_name']?.toString() ?? _getServiceTypeName(job['service_type']?.toString())));
+
+                    // İkon belirleme:
+                    // Ustada: Sadece yaptığı işin logosu (profile['service_category'] veya job['service_type'])
+                    // Müşteride: Yapılan servisin kategori ikonu (mechanic/tire/tow/wash)
+                    final IconData serviceIcon = _getServiceIcon(
+                      isProvider 
+                        ? (profile['service_category']?.toString() ?? job['service_type']?.toString())
+                        : job['service_type']?.toString()
+                    );
+
+                    return InkWell(
+                      onLongPress: () {
+                        setState(() {
+                          isSelectionMode = true;
+                          selectedJobs.add(jobId);
+                        });
+                      },
+                      onTap: () {
+                        if (isSelectionMode) {
+                          _toggleSelection(jobId);
+                        } else {
+                          _showJobDetailsAndRatingModal(job);
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // Çoklu seçim kutusu
+                            if (isSelectionMode) ...[
+                              Icon(
+                                isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                                color: isSelected ? _primaryColor : Colors.white30,
+                                size: 24,
+                              ),
+                              const SizedBox(width: 12),
+                            ],
+
+                            // SOL: KATEGORİ İKONU (Görseldeki araba görseli yerine)
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF18181E),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  serviceIcon, 
+                                  color: Colors.white, 
+                                  size: 24
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(width: 16),
+
+                            // ORTA: LOKASYON / ADRES VE TARİH (Görseldeki tipografi)
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    locationTitle,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16,
+                                      letterSpacing: -0.2,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    _formatDate(job['created_at']?.toString()),
+                                    style: const TextStyle(
+                                      color: Colors.white54,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(width: 12),
+
+                            // SAĞ: TEKRARLA BUTONU (SADECE MÜŞTERİDE OLUR)
+                            if (!isProvider)
+                              InkWell(
+                                onTap: () => _repeatService(job),
+                                borderRadius: BorderRadius.circular(20),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF222227),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: const [
+                                      Icon(Icons.replay_rounded, color: Colors.white, size: 16),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        "Tekrarla",
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            else
+                              // Ustada tekrarla olmaz; tutar ve detay ok ikonu gösterilir
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    "${job['agreed_price'] ?? '0'} ₺",
+                                    style: const TextStyle(
+                                      color: _primaryColor,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.chevron_right_rounded, color: Colors.white30, size: 20),
+                                ],
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
         ),
+
+        // Sayfalama kontrolleri
         _buildPaginationControls(primaryColor),
       ],
     );
@@ -2147,7 +2823,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 children: [
                   Container(width: 6, height: 28, decoration: BoxDecoration(color: primaryColor, borderRadius: BorderRadius.circular(12))),
                   const SizedBox(width: 12),
-                  const Text("Kazanç & İstatistik", style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
+                  const Expanded(child: Text("Kazanç & İstatistik", style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5), overflow: TextOverflow.ellipsis)),
                 ],
               ),
               const SizedBox(height: 32),
@@ -2232,7 +2908,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title, style: TextStyle(fontSize: isMain ? 16 : 14, color: _subtitleColor, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                      Text(title, style: TextStyle(fontSize: isMain ? 16 : 14, color: _subtitleColor, fontWeight: FontWeight.w700, letterSpacing: 0.5), overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 6),
                       Text(value, style: TextStyle(fontSize: isMain ? 36 : 28, color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: -1.0), overflow: TextOverflow.ellipsis),
                     ],

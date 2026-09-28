@@ -1012,6 +1012,24 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       OneSignal.logout();
     }
 
+    // Müşteri çıkış yaptığında devam eden arama ve talebi tamamen iptal et
+    if (activeJobId != null) {
+      try {
+        await _httpClient.post(
+          Uri.parse("$baseUrl?action=cancel_job"),
+          headers: {"Content-Type": "application/x-www-form-urlencoded"},
+          body: {
+            "job_id": activeJobId.toString(),
+            "customer_id": widget.customerId.toString(),
+          },
+        ).timeout(const Duration(seconds: 4));
+      } catch (e) {
+        debugPrint("Çıkış sırasında iş iptal hatası: $e");
+      }
+      activeJobId = null;
+      activeJobStatus = null;
+    }
+
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear(); 

@@ -1,5 +1,6 @@
 // Dosya: job_tracking_screen.dart
-import 'package:flutter/material.dart'; import 'core/constants/app_constants.dart';
+import 'package:flutter/material.dart'; 
+import 'core/constants/app_constants.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
@@ -78,7 +79,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   bool _isCheckingMessages = false; 
   bool _isFetchingRoute = false; 
   bool _isNavigating = false; 
-  bool _isRatingModalOpen = false; // Çifte modal açılmasını engelleyen kilit
+  bool _isRatingModalOpen = false;
   Map<String, dynamic>? activeBid;
 
   bool _isPanelExpanded = true;
@@ -102,9 +103,28 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   final ValueNotifier<double> _mapRotation = ValueNotifier<double>(0.0);
   int _selectedRating = 5;
 
+  gmaps.BitmapDescriptor? _providerCarIconGmaps;
+  amaps.BitmapDescriptor? _providerCarIconAmaps;
+
+  Future<void> _loadCarIcon() async {
+    try {
+      _providerCarIconGmaps = await gmaps.BitmapDescriptor.fromAssetImage(
+        const ImageConfiguration(size: Size(128, 128)),
+        'assets/images/car_top_view.png',
+      );
+    } catch (_) {}
+    try {
+      _providerCarIconAmaps = await amaps.BitmapDescriptor.fromAssetImage(
+        const ImageConfiguration(size: Size(128, 128)),
+        'assets/images/car_top_view.png',
+      );
+    } catch (_) {}
+    if (mounted) setState(() {});
+  }
+
   Timer? _resumeTrackingTimer;
   StreamSubscription<Position>? _positionStream; 
-  final String _baseUrl = "https://eliteagency.sbs/api.php";
+  final String _baseUrl = AppConstants.baseUrl;
   final Duration _apiTimeout = const Duration(seconds: 12);
   PusherChannelsFlutter pusher = PusherChannelsFlutter.getInstance();
   int unreadMessageCount = 0;
@@ -114,7 +134,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   late AnimationController _glowController;
   late AnimationController _warningPulseController;
 
-  // Kurumsal Güven Paleti (Slate & Sertifikalı Zümrüt)
   static const Color neonGreen = Color(0xFF059669); 
   static const Color darkGreen = Color(0xFF064E3B);
   static const Color pureBlack = Color(0xFF0F172A); 
@@ -166,7 +185,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
             mainAxisSize: MainAxisSize.min,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: dynamicTitle(title),
                 children: [
                   Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
                   IconButton(
@@ -198,6 +217,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       ),
     );
   }
+
+  MainAxisAlignment dynamicTitle(String title) => MainAxisAlignment.spaceBetween;
+
   List<LatLng> _routePoints = []; 
   String _etaString = "";
   DateTime? _lastRouteFetch;
@@ -218,7 +240,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     super.initState();
     WidgetsBinding.instance.addObserver(this); 
 
-    // Takip ekranı arka plana alındığında bildirimlerin düşmesi için OneSignal oturumunu garantile
     if (!kIsWeb && widget.userId != null) {
       OneSignal.login(widget.userId.toString());
       OneSignal.Notifications.requestPermission(true);
@@ -249,6 +270,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
     _loadMapSdkAndInit();
     _startReroutingEngine();
+    _loadCarIcon();
   }
 
   void _zoomIn() {
@@ -267,9 +289,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     if (!_isMapReady || !mounted || !destLocation.latitude.isFinite || !destLocation.longitude.isFinite || !destZoom.isFinite) return;
     if (destLocation.latitude < -90 || destLocation.latitude > 90 || destLocation.longitude < -180 || destLocation.longitude > 180) return;
 
-    // ANINDA EŞLEŞME: Gecikmeyi sıfırlamak için animateCamera yerine doğrudan moveCamera kullanıldı.
     if (defaultTargetPlatform == TargetPlatform.iOS && _appleMapController != null) {
-      _appleMapController!.moveCamera(
+      _appleMapController!.animateCamera(
         amaps.CameraUpdate.newCameraPosition(
           amaps.CameraPosition(
             target: amaps.LatLng(destLocation.latitude, destLocation.longitude),
@@ -421,14 +442,13 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     if (_routePoints.isEmpty) return -1;
     double minDist = double.infinity;
     int closestIndex = -1;
+    final int scanLimit = _routePoints.length;
     
-    // PERFORMANS: Tüm diziyi değil, sadece önündeki ilk 60 noktayı tarar. (CPU Darboğazı çözüldü)
-    int limit = math.min(_routePoints.length, 60);
-    
-    for (int i = 0; i < limit; i++) {
+    for (int i = 0; i < scanLimit; i++) {
       double dist = Geolocator.distanceBetween(
-          currentPos.latitude, currentPos.longitude,
-          _routePoints[i].latitude, _routePoints[i].longitude);
+        currentPos.latitude, currentPos.longitude,
+        _routePoints[i].latitude, _routePoints[i].longitude
+      );
       if (dist < minDist) {
         minDist = dist;
         closestIndex = i;
@@ -442,7 +462,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   void _updateRouteProgress(LatLng currentPos) {
     if (_routePoints.length <= 1) return;
     
-    // PERFORMANS: Araç 15 metreden az hareket ettiyse diziyi kesme işlemi yapıp UI'ı yorma
     if (_lastProcessedPosForRoute != null) {
       double moveDist = Geolocator.distanceBetween(
         _lastProcessedPosForRoute!.latitude, _lastProcessedPosForRoute!.longitude,
@@ -475,13 +494,12 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         }
       }
           
-      double deviationThreshold = (widget.userType == 'provider' && currentSpeed > 40) ? 80.0 : 40.0;
+      const double deviationThreshold = 120.0;
       
-      if ((distToClosest > deviationThreshold || isHeadingWrong) && !_isFetchingRoute && _routePoints.length > 2) { 
+      if (distToClosest > deviationThreshold && !_isFetchingRoute && _routePoints.length > 2) { 
           _showTopSnackBar(isHeadingWrong ? "Ters yön algılandı. Rota güncelleniyor..." : "Rota sapması algılandı.");
           _fetchRoute();          
-      } else if (closestIndex > 2) { 
-          // Sadece araç gerçekten 2-3 düğüm atladığında setState tetiklenir (Kasma/Donma Engellendi)
+      } else if (closestIndex > 0) { 
           final newRoute = List<LatLng>.from(_routePoints);
           newRoute.removeRange(0, closestIndex);
           
@@ -636,7 +654,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           actions: [
             Row(
               children: [
-                Expanded(child: TextButton(onPressed: () => Navigator.pop(ctx, false), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)), child: const Text("İptal", style: TextStyle(fontWeight: FontWeight.w900, color: textGray, fontSize: 14)))),
+                Expanded(child: TextButton(onPressed: () => Navigator.pop(ctx, false), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)), child: const Text("Vazgeç", style: TextStyle(fontWeight: FontWeight.w900, color: textGray, fontSize: 14)))),
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
@@ -703,33 +721,42 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           } else if (event.eventName == "new_message") {
             if (mounted) _checkUnreadMessages();
           } else if (event.eventName == "location_update" && widget.userType == 'customer') {
-            final data = json.decode(event.data);
-            if (data['lat'] != null && data['lng'] != null && mounted) {
-              setState(() {
-                providerLat = double.parse(data['lat'].toString());
-                providerLng = double.parse(data['lng'].toString());
-                double apiProvHeading = double.parse(data['heading'].toString());
-                
-                LatLng newPos = LatLng(providerLat, providerLng);
-                if (_animatedProviderPos.value == null) {
-                  _animatedProviderPos.value = newPos;
-                  _targetProviderPos = newPos;
-                  _animatedHeading.value = apiProvHeading;
-                  _targetHeading = apiProvHeading;
-                } else if (_targetProviderPos != newPos || _targetHeading != apiProvHeading) {
-                  double distDrift = Geolocator.distanceBetween(
-                    _targetProviderPos!.latitude, _targetProviderPos!.longitude,
-                    newPos.latitude, newPos.longitude
-                  );
-                  _oldProviderPos = _animatedProviderPos.value;
-                  _targetProviderPos = newPos;
-                  _oldHeading = _animatedHeading.value;
-                  _targetHeading = _oldProviderPos != null && distDrift > 5.0 ? _calculateBearing(_oldProviderPos!, _targetProviderPos!) : apiProvHeading;
+            try {
+              final data = json.decode(event.data);
+              if (data['lat'] != null && data['lng'] != null && mounted) {
+                setState(() {
+                  providerLat = double.tryParse(data['lat']?.toString() ?? '0.0') ?? providerLat;
+                  providerLng = double.tryParse(data['lng']?.toString() ?? '0.0') ?? providerLng;
+                  double apiProvHeading = double.tryParse(data['heading']?.toString() ?? '0.0') ?? 0.0;
                   
-                  if (!kIsWeb) _slideController.forward(from: 0.0);
-                }
-              });
-            }
+                  LatLng newPos = LatLng(providerLat, providerLng);
+                  if (_animatedProviderPos.value == null) {
+                    _animatedProviderPos.value = newPos;
+                    _targetProviderPos = newPos;
+                    _animatedHeading.value = apiProvHeading;
+                    _targetHeading = apiProvHeading;
+                  } else if (_targetProviderPos != newPos || _targetHeading != apiProvHeading) {
+                    double distDrift = Geolocator.distanceBetween(
+                      _targetProviderPos!.latitude, _targetProviderPos!.longitude,
+                      newPos.latitude, newPos.longitude
+                    );
+                    _oldProviderPos = _animatedProviderPos.value;
+                    _targetProviderPos = newPos;
+                    _oldHeading = _animatedHeading.value;
+                    _targetHeading = _oldProviderPos != null && distDrift > 5.0 ? _calculateBearing(_oldProviderPos!, _targetProviderPos!) : apiProvHeading;
+                    
+                    if (!kIsWeb) _slideController.forward(from: 0.0);
+                  }
+
+                  _updateRouteProgress(newPos);
+
+                  if (customerLat != 0.0) {
+                    distanceInKm = Geolocator.distanceBetween(customerLat, customerLng, providerLat, providerLng) / 1000;
+                    _checkSoftGeofences(distanceInKm);
+                  }
+                });
+              }
+            } catch (_) {}
           }
         },
       );
@@ -740,7 +767,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       await pusher.connect();
     } catch (e) {
       debugPrint("Pusher error: $e");
-      // Kopmalara karşı akıllı retry
       Future.delayed(const Duration(seconds: 3), () {
         if (mounted) _initWebSocket();
       });
@@ -755,7 +781,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     _checkUnreadMessages();
     
     _statusPollingTimer?.cancel();
-    // Müşteri değerlendirme yaptığında her iki tarafın da ekranı kapatabilmesi için kontrol sürdürülür
     _statusPollingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       if (mounted && jobStatus != 'cancelled' && !(jobStatus == 'completed' && isRated)) {
         _fetchJobStatus();
@@ -853,7 +878,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   }
 
   void _processNewPosition(Position position, {bool isInitial = false}) {
-    // GÜVENLİK DUVARI: İş takibi sırasında hileli konum (Mock Location) sinyallerini engeller
     if (position.isMocked) {
       _showTopSnackBar("Güvenlik Uyarısı: Sistem sahte GPS sinyali engelledi!", isError: true);
       return;
@@ -875,8 +899,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           _animatedProviderPos.value = LatLng(position.latitude, position.longitude);
           _animatedHeading.value = position.heading;
         } else if (widget.userType == 'customer') {
-          customerLat = position.latitude;
-          customerLng = position.longitude;
+          if (customerLat == 0.0 || customerLng == 0.0) {
+            customerLat = position.latitude;
+            customerLng = position.longitude;
+          }
         }
 
         if (customerLat != 0.0 && providerLat != 0.0) {
@@ -907,9 +933,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       if (defaultTargetPlatform == TargetPlatform.android) {
         locationSettings = AndroidSettings(
           accuracy: LocationAccuracy.bestForNavigation,
-          distanceFilter: 5, // 350K Optimizasyonu: Ufak titreşimleri (2m) dikkate alma, pili ve CPU'yu koru
+          distanceFilter: 5,
           forceLocationManager: true,
-          intervalDuration: const Duration(seconds: 4), // 2 saniyeden 4 saniyeye çıkarıldı, donmalar biter
+          intervalDuration: const Duration(seconds: 4),
           foregroundNotificationConfig: const ForegroundNotificationConfig(
             notificationText: "Oto TAG canlı takip aktif.",
             notificationTitle: "Görev Takip Ediliyor",
@@ -920,7 +946,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         locationSettings = AppleSettings(
           accuracy: LocationAccuracy.bestForNavigation,
           activityType: ActivityType.automotiveNavigation,
-          distanceFilter: 5, // 350K Optimizasyonu: Ufak titreşimleri filtrele
+          distanceFilter: 5,
           pauseLocationUpdatesAutomatically: false,
           showBackgroundLocationIndicator: true, 
         );
@@ -938,7 +964,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         if (!mounted) return; 
         _processNewPosition(position);
 
-        // 350K Yük Koruması: DB isteklerini hafifletiyoruz. (Anlık canlılık Pusher üzerinden zaten kesintisiz akar)
         bool timeElapsed = lastApiPostTime == null || DateTime.now().difference(lastApiPostTime!).inSeconds >= 10;
         bool distanceMoved = _lastSentPosition == null || 
             Geolocator.distanceBetween(
@@ -1021,7 +1046,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     double west = math.min(customerLng, providerLng);
     double east = math.max(customerLng, providerLng);
 
-    // CRASH FIX: Konumlar aynı/çok yakın olduğunda harita SDK çökmesini önleyen delta tamponu
     if ((north - south).abs() < 0.0015) {
       north += 0.0015;
       south -= 0.0015;
@@ -1031,9 +1055,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       west -= 0.0015;
     }
 
-    // ANINDA EŞLEŞME: Kamera anında müşteriye ve ustaya ortalanır (moveCamera)
     if (defaultTargetPlatform == TargetPlatform.iOS && _appleMapController != null) {
-      _appleMapController!.moveCamera(
+      _appleMapController!.animateCamera(
         amaps.CameraUpdate.newLatLngBounds(
           amaps.LatLngBounds(
             southwest: amaps.LatLng(south, west),
@@ -1098,7 +1121,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       final data = json.decode(response.body);
       if (data['status'] == 'success') {
         if (mounted) {
-          
           _positionStream?.cancel(); 
           if (_isNavigating) return;
           _isNavigating = true;
@@ -1170,7 +1192,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       margin: EdgeInsets.only(bottom: bottomMargin, left: 16, right: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 0,
-      duration: const Duration(seconds: 2), // 2 saniye kuralı
+      duration: const Duration(seconds: 2),
     ));
   }
 
@@ -1183,7 +1205,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       final response = await _httpClient.get(Uri.parse("$_baseUrl?action=get_job_status&job_id=${widget.jobId}&_t=$timestamp")).timeout(_apiTimeout);
       
       if (response.statusCode == 401) {
-        
         _positionStream?.cancel();
         _showTopSnackBar("Oturum süresi doldu veya yetkisiz erişim. Lütfen giriş yapın.", isError: true);
         return;
@@ -1200,7 +1221,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       if (!mounted) return;
 
       if (response.statusCode == 200 && data['status'] != 'error') {
-        // Hem job_status hem status parametrelerini doğrula ('success' cevabını filtrele)
         String rawStatus = (data['job_status'] != null && data['job_status'].toString().isNotEmpty && data['job_status'].toString().toLowerCase() != 'success')
             ? data['job_status'].toString()
             : (data['status']?.toString() ?? 'matched');
@@ -1217,7 +1237,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         _lastStatusHash = currentDataHash;
 
         if (newJobStatus == 'cancelled') {
-            
             _positionStream?.cancel(); 
             if (_isNavigating) return;
             _isNavigating = true;
@@ -1235,11 +1254,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           if (jobStatus != newJobStatus) {
             jobStatus = newJobStatus;
             _startTimer();
-          } else {
-            // Akıllı Backoff: Pil ve sunucu dostu logaritmik artış
-            if (jobStatus != 'searching') {
-              // WebSocket kullanıldığı için gereksiz HTTP polling backoff döngüsü kaldırıldı.
-            }
           }
 
           if (serviceType != (data['service_type']?.toString() ?? 'mechanic')) {
@@ -1273,10 +1287,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           afterPhotoUrl = data['after_photo']?.toString();
           isEvidenceConfirmed = data['is_evidence_confirmed'] == 1 || data['is_evidence_confirmed'] == '1' || data['is_evidence_confirmed'] == true;
 
-          double apiCustLat = _parseDouble(data['customer_live_lat']);
-          if (apiCustLat == 0.0) apiCustLat = _parseDouble(data['latitude']);
-          double apiCustLng = _parseDouble(data['customer_live_lng']);
-          if (apiCustLng == 0.0) apiCustLng = _parseDouble(data['longitude']);
+          double apiCustLat = _parseDouble(data['latitude']);
+          double apiCustLng = _parseDouble(data['longitude']);
 
           if (apiCustLat != 0.0 && apiCustLng != 0.0) {
             customerLat = apiCustLat;
@@ -1360,7 +1372,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
           if (jobStatus != 'searching' && jobStatus != 'cancelled' && widget.userType == 'provider') {
              if (providerId != 0 && providerId != widget.userId) {
-                  
                   _positionStream?.cancel(); 
                   if (!_isNavigating) {
                     _isNavigating = true;
@@ -1415,7 +1426,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                       }
                     });
                  } else {
-                    // Ustanın müşteri değerlendirmesini sonsuza kadar beklemesini önlemek için 5 sn sonra otomatik çıkış
                     Future.delayed(const Duration(seconds: 5), () {
                       if (mounted && !_isNavigating) {
                         _isNavigating = true;
@@ -1430,7 +1440,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                  }
                }
             } else {
-              // Müşteri Tarafı Otomatik Çıkış Kaldırıldı
               if (isRated) {
                 if (_isRatingModalOpen) {
                   Navigator.of(context, rootNavigator: true).pop();
@@ -1466,7 +1475,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                  final verifyData = json.decode(verifyRes.body);
                  if (verifyData['status']?.toString().toLowerCase() != 'searching') return;
                  
-                 
                  _positionStream?.cancel(); 
                  if (!_isNavigating) {
                     _isNavigating = true;
@@ -1496,7 +1504,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         body: {"bid_id": bidId},
       ).timeout(_apiTimeout);
       if (mounted) {
-        
         _positionStream?.cancel();
         if (_isNavigating) return;
         _isNavigating = true;
@@ -1694,7 +1701,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       maxWidth: 1200,
     );
 
-    if (photo == null) return; // Kullanıcı kamerayı kapattıysa işlemi iptal et
+    if (photo == null) return;
 
     setState(() => isProcessing = true);
     try {
@@ -1845,7 +1852,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
          setState(() {
            isRated = true;
          });
-         // Otomatik yönlendirme kaldırıldı, butonla dönülecek
       }
     } catch (e) {
       if (mounted) _showTopSnackBar("Bağlantı hatası.", isError: true);
@@ -2117,7 +2123,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                              _isRatingModalOpen = false;
                            }
                            setState(() {
-                             isRated = true; // Atlandığı için bir daha sormaması adına true yapıyoruz
+                             isRated = true; 
                            });
                          },
                          child: const Text("Atla", style: TextStyle(color: textGray, fontWeight: FontWeight.w800, fontSize: 14))
@@ -2271,22 +2277,37 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
     final bool isIOS = defaultTargetPlatform == TargetPlatform.iOS;
 
+    final List<LatLng> activePoints = [];
+    if (_routePoints.length >= 2) {
+      activePoints.addAll(_routePoints);
+      if (providerLat != 0.0 && providerLng != 0.0) {
+        activePoints[0] = LatLng(
+          _animatedProviderPos.value?.latitude ?? providerLat,
+          _animatedProviderPos.value?.longitude ?? providerLng,
+        );
+      }
+    } else if (providerLat != 0.0 && providerLng != 0.0 && customerLat != 0.0 && customerLng != 0.0) {
+      activePoints.add(LatLng(
+        _animatedProviderPos.value?.latitude ?? providerLat,
+        _animatedProviderPos.value?.longitude ?? providerLng,
+      ));
+      activePoints.add(LatLng(customerLat, customerLng));
+    }
+
     if (isIOS) {
       final Set<amaps.Polyline> applePolylines = {};
-      if (_routePoints.isNotEmpty) {
-        final amapsPoints = _routePoints.map((p) => amaps.LatLng(p.latitude, p.longitude)).toList();
+      if (activePoints.length >= 2) {
+        final amapsPoints = activePoints.map((p) => amaps.LatLng(p.latitude, p.longitude)).toList();
         
-        // Tasarım: Arka Plan Neon Parlama Efekti
         applePolylines.add(
           amaps.Polyline(
             polylineId: amaps.PolylineId('tracking_route_glow'),
             points: amapsPoints,
             color: _polylineColor.withValues(alpha: 0.25),
-            width: 14, // Yumuşak ve geniş gölge
+            width: 14,
           ),
         );
         
-        // Tasarım: Ana Keskin Çizgi
         applePolylines.add(
           amaps.Polyline(
             polylineId: amaps.PolylineId('tracking_route_main'),
@@ -2310,7 +2331,11 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         appleAnnotations.add(
           amaps.Annotation(
             annotationId: amaps.AnnotationId('provider_marker'),
-            position: amaps.LatLng(providerLat, providerLng),
+            position: amaps.LatLng(
+              _animatedProviderPos.value?.latitude ?? providerLat,
+              _animatedProviderPos.value?.longitude ?? providerLng,
+            ),
+            icon: _providerCarIconAmaps ?? amaps.BitmapDescriptor.defaultAnnotationWithHue(amaps.BitmapDescriptor.hueGreen),
           ),
         );
       }
@@ -2337,24 +2362,22 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       );
     } else {
       final Set<gmaps.Polyline> googlePolylines = {};
-      if (_routePoints.isNotEmpty) {
-        final gmapsPoints = _routePoints.map((p) => gmaps.LatLng(p.latitude, p.longitude)).toList();
+      if (activePoints.length >= 2) {
+        final gmapsPoints = activePoints.map((p) => gmaps.LatLng(p.latitude, p.longitude)).toList();
         
-        // Tasarım: Google Maps Neon Parlama (Aura) Efekti
         googlePolylines.add(
           gmaps.Polyline(
             polylineId: const gmaps.PolylineId('tracking_route_glow'),
             points: gmapsPoints,
             color: _polylineColor.withValues(alpha: 0.3),
             width: 12,
-            startCap: gmaps.Cap.roundCap, // Yumuşak başlangıç
-            endCap: gmaps.Cap.roundCap,   // Yumuşak bitiş
-            jointType: gmaps.JointType.round, // Dönüşlerde yumuşak kırılım
-            zIndex: 1, // Altta kalsın
+            startCap: gmaps.Cap.roundCap,
+            endCap: gmaps.Cap.roundCap,
+            jointType: gmaps.JointType.round,
+            zIndex: 1,
           ),
         );
         
-        // Tasarım: Üst Katman Net Yol Çizgisi
         googlePolylines.add(
           gmaps.Polyline(
             polylineId: const gmaps.PolylineId('tracking_route_main'),
@@ -2364,7 +2387,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
             startCap: gmaps.Cap.roundCap,
             endCap: gmaps.Cap.roundCap,
             jointType: gmaps.JointType.round,
-            zIndex: 2, // Üstte kalsın
+            zIndex: 2,
           ),
         );
       }
@@ -2373,7 +2396,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       if (customerLat != 0.0 && customerLng != 0.0) {
         googleMarkers.add(
           gmaps.Marker(
-            markerId: gmaps.MarkerId('customer_marker'),
+            markerId: const gmaps.MarkerId('customer_marker'),
             position: gmaps.LatLng(customerLat, customerLng),
           ),
         );
@@ -2381,9 +2404,15 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       if (providerLat != 0.0 && providerLng != 0.0) {
         googleMarkers.add(
           gmaps.Marker(
-            markerId: gmaps.MarkerId('provider_marker'),
-            position: gmaps.LatLng(providerLat, providerLng),
+            markerId: const gmaps.MarkerId('provider_marker'),
+            position: gmaps.LatLng(
+              _animatedProviderPos.value?.latitude ?? providerLat,
+              _animatedProviderPos.value?.longitude ?? providerLng,
+            ),
             rotation: _animatedHeading.value,
+            flat: true,
+            anchor: const Offset(0.5, 0.5),
+            icon: _providerCarIconGmaps ?? gmaps.BitmapDescriptor.defaultMarkerWithHue(gmaps.BitmapDescriptor.hueGreen),
           ),
         );
       }
@@ -2396,7 +2425,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           ),
           zoom: 14.5,
         ),
-       
         polylines: googlePolylines,
         markers: googleMarkers,
         myLocationEnabled: true,
@@ -2459,7 +2487,17 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           bool isDesktop = constraints.maxWidth > 800;
           return Stack(
             children: [
-              _buildFullScreenMap(),
+              ValueListenableBuilder<LatLng?>(
+                valueListenable: _animatedProviderPos,
+                builder: (context, animPos, _) {
+                  return ValueListenableBuilder<double>(
+                    valueListenable: _animatedHeading,
+                    builder: (context, animHeading, _) {
+                      return _buildFullScreenMap();
+                    },
+                  );
+                },
+              ),
               
               Positioned(
                 top: MediaQuery.paddingOf(context).top + 60, 
@@ -2825,7 +2863,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                   ],
                 ),
 
-                // Usta Kurumsal Güvence & Canlı Araç Plakası
                 if (widget.userType == 'customer') ...[
                   const Divider(height: 20, color: Colors.white10),
                   Wrap(
@@ -2834,7 +2871,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                     spacing: 8,
                     runSpacing: 6,
                     children: [
-                      // Ustanın Kayıtta Girdiği Gerçek Araç Plakası
                       if (towPlateNumber != null && towPlateNumber!.trim().isNotEmpty)
                         Row(
                           mainAxisSize: MainAxisSize.min,
@@ -2903,7 +2939,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                   ),
                 ],
 
-                // Aile Güvenliği Canlı Takip Paylaşım Butonu
                 if (widget.userType == 'customer') ...[
                   const SizedBox(height: 14),
                   ElevatedButton.icon(
@@ -2922,7 +2957,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
             ),
           ),
 
-          // Fotoğraflı Teşhis Kanıt Kartı
           Container(
             margin: const EdgeInsets.only(top: 12),
             padding: const EdgeInsets.all(16),
@@ -2970,7 +3004,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                 ),
                 const SizedBox(height: 12),
 
-                // MÜŞTERİ GÖRÜNÜMÜ: Öncesi ve Sonrası yan yana gösterilir
                 if (widget.userType == 'customer') ...[
                   if (afterPhotoUrl != null && afterPhotoUrl!.isNotEmpty) ...[
                     Row(
@@ -3140,7 +3173,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                   ],
                 ],
 
-                // USTA GÖRÜNÜMÜ: Usta fotoğraf yükler ve müşterinin doğrulayıp doğrulamadığını görür
                 if (widget.userType == 'provider') ...[
                   Row(
                     children: [
@@ -3444,7 +3476,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                   }
                 ),
               ] else ...[
-                // Müşteri Değerlendirmeyi Yaptıktan Veya Atladıktan Sonra Çıkacak Buton
                 const SizedBox(height: 28),
                 Container(
                   decoration: BoxDecoration(
@@ -3482,7 +3513,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                 ),
               ),
             ] else ...[
-              // USTA İÇİN ANA EKRANA DÖN BUTONU
               const SizedBox(height: 28),
               Container(
                 decoration: BoxDecoration(
@@ -3590,6 +3620,41 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   }
 
   Widget _buildProviderCodeInput(Color primaryColor, LinearGradient themeGradient, Color shadowColor, Color cardColor, Color subtitleColor) {
+    if (beforePhotoUrl == null || beforePhotoUrl!.isEmpty) {
+      return Container(
+        key: const ValueKey("provider_photo_first"),
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(36),
+          border: Border.all(color: Colors.amber.withOpacity(0.5), width: 1.5),
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(color: Colors.amber.withOpacity(0.1), shape: BoxShape.circle),
+              child: const Icon(Icons.add_a_photo_rounded, color: Colors.amber, size: 40),
+            ),
+            const SizedBox(height: 24),
+            const Text("Önce Fotoğraf Yükleyin", textAlign: TextAlign.center, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.amber)),
+            const SizedBox(height: 12),
+            Text("İşe başlamak ve müşteri onay kodunu girebilmek için önce arızalı aracın fotoğrafını çekmelisiniz.", textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: subtitleColor, height: 1.4)),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: isProcessing ? null : () => _takeEvidencePhoto('before'),
+                icon: isProcessing ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2)) : const Icon(Icons.camera_alt_rounded, color: Colors.black),
+                label: const Text("Kamerayı Aç", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16)),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       key: const ValueKey("provider_input"),
       padding: const EdgeInsets.all(32),
@@ -3623,7 +3688,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           TextField(
             controller: _codeController,
             keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly], // KLAVYE HATASI (HARF/BOŞLUK) ENGELLENDİ
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             textInputAction: TextInputAction.done,
             maxLength: 4,
             style: TextStyle(fontSize: 40, letterSpacing: 28, fontWeight: FontWeight.w900, color: primaryColor),
@@ -3639,9 +3704,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
             ),
             onChanged: (value) {
               if (value.length == 4) {
-                FocusScope.of(context).unfocus(); // Klavyeyi kapatarak UI çakışmasını engeller
+                FocusScope.of(context).unfocus();
                 if (!isProcessing) {
-                  _verifyCode(); // Butona basmadan OTP gibi anında doğrular
+                  _verifyCode();
                 }
               }
             },

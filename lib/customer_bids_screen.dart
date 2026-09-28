@@ -202,6 +202,26 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
         apiKey: AppConstants.pusherKey, 
         cluster: "eu",
         onEvent: (event) {
+          if (event.eventName == "status_update") {
+            try {
+              final data = json.decode(event.data);
+              if (data['job_status'] == 'matched' || data['status'] == 'matched') {
+                if (mounted && !_isNavigating) {
+                  _isNavigating = true;
+                  _cleanupTimers();
+                  HapticFeedback.mediumImpact();
+                  Navigator.pushReplacement(
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (_, __, ___) => JobTrackingScreen(jobId: widget.jobId, userType: 'customer', userId: widget.customerId),
+                      transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
+                    ),
+                  );
+                }
+                return;
+              }
+            } catch (_) {}
+          }
           if (event.eventName == "bid_update" || event.eventName == "status_update") {
             if (mounted) _fetchBids();
           }

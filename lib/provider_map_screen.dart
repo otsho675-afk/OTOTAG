@@ -71,6 +71,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   bool _isUpdatingLocation = false;
   
   String _lastBidPrice = ""; 
+  // Çoklu askıya alınan işlerin hafızası (JobId -> Bilgiler)
+  final Map<int, Map<String, dynamic>> _suspendedJobs = {};
+  bool _isCheckingSuspended = false;
 
   bool _hasNotifiedArrival = false; 
   
@@ -574,9 +577,15 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     if (_isModalOpen) return;
     setState(() => _isModalOpen = true);
 
+    // Askıya alınan işi çoklu listeye ekle
+    _suspendedJobs[jobId] = {
+      'serviceName': serviceName,
+      'probDesc': probDesc,
+      'distance': distance,
+      'serviceType': serviceType,
+    };
+
     final TextEditingController priceController = TextEditingController(text: _lastBidPrice);
-    
-    // Süre konuma göre otomatik hesaplanıyor (Her KM için 2.5 Dk + 5 Dk Hazırlık)
     int autoMinutes = ((double.tryParse(distance.replaceAll(',', '.')) ?? 0.0) * 2.5).ceil() + 5;
     final String autoTimeStr = autoMinutes.toString();
 
@@ -601,79 +610,80 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      enableDrag: false, // Kullanıcının paneli aşağı kaydırarak kapatmasını engeller
-      isDismissible: false, // Panelin dışındaki siyah alana tıklanarak kapatılmasını engeller
+      enableDrag: false,
+      isDismissible: false,
       barrierColor: pureBlack.withValues(alpha: 0.50), 
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder( 
         builder: (context, setDialogState) {
           
-          dialogPollingTimer ??= Timer.periodic(const Duration(seconds: 3), (_) async {
-              if (!mounted || !_isModalOpen) {
-                dialogPollingTimer?.cancel();
-                return;
-              }
-              try {
-                final String ts = DateTime.now().millisecondsSinceEpoch.toString();
-                final response = await _httpClient.get(
-                  Uri.parse("$baseUrl?action=get_bids&job_id=$jobId&provider_id=${widget.providerId}&user_type=provider&_t=$ts")
-                ).timeout(const Duration(seconds: 5));
+          Future<void> fetchBidsData() async {
+            if (!mounted || !_isModalOpen) return;
+            try {
+              final String ts = DateTime.now().millisecondsSinceEpoch.toString();
+              final response = await _httpClient.get(
+                Uri.parse("$baseUrl?action=get_bids&job_id=$jobId&provider_id=${widget.providerId}&user_type=provider&_t=$ts")
+              ).timeout(const Duration(seconds: 5));
+              
+              if (response.statusCode == 200 && mounted && _isModalOpen) {
+                final data = json.decode(response.body);
                 
-                if (response.statusCode == 200) {
-                  final data = json.decode(response.body);
-                  
-                  final String? jStatus = data['job_status']?.toString().toLowerCase();
-                  if (jStatus == 'matched' || jStatus == 'in_progress') {
-                    if (_isModalOpen) {
-                      Navigator.of(context, rootNavigator: true).pop();
-                      _isModalOpen = false;
-                    }
-                    _checkActiveJob();
-                    return;
+                final String? jStatus = data['job_status']?.toString().toLowerCase();
+                if (jStatus == 'matched' || jStatus == 'in_progress') {
+                  if (_isModalOpen) {
+                    Navigator.of(context, rootNavigator: true).pop();
+                    _isModalOpen = false;
                   }
+                  _suspendedJobs.remove(jobId);
+                  _checkActiveJob();
+                  return;
+                }
 
-                  if (data['status'] == 'success') {
-                    List bids = data['bids'] ?? [];
-                    if (bids.isNotEmpty) {
-                      var latestBid = bids.first; 
-                      bool isMine = (latestBid['last_bidder'] == 'provider');
-                      
-                      Map<String, dynamic> newBubble = {
-                        "bid_id": (latestBid['bid_id'] ?? latestBid['id'] ?? '').toString(),
-                        "price": latestBid['amount'].toString(),
-                        "time": latestBid['estimated_time']?.toString() ?? "30",
+                if (data['status'] == 'success') {
+                  List bids = data['bids'] ?? [];
+                  if (bids.isNotEmpty) {
+                    List<Map<String, dynamic>> parsedHistory = [];
+                    // Tüm pazarlık geçmişini eski -> yeni sırasıyla ekle
+                    for (var b in bids.reversed) {
+                      bool isMine = (b['last_bidder'] == 'provider');
+                      parsedHistory.add({
+                        "bid_id": (b['bid_id'] ?? b['id'] ?? '').toString(),
+                        "price": b['amount'].toString(),
+                        "time": b['estimated_time']?.toString() ?? "30",
                         "is_mine": isMine,
                         "status": isMine ? "Müşteri Onayı Bekleniyor..." : "Müşteri Karşı Teklif Verdi"
-                      };
-                      
-                      double lastPrice = double.tryParse(bidHistory.isNotEmpty ? bidHistory.last['price'].toString() : "0") ?? 0;
-                      double newPrice = double.tryParse(newBubble['price'].toString()) ?? 0;
+                      });
+                    }
 
-                      if (bidHistory.isEmpty || 
-                          lastPrice != newPrice || 
-                          bidHistory.last['is_mine'] != newBubble['is_mine']) {
-                        
-                        if (_isModalOpen) {
-                          setDialogState(() {
-                            bidHistory.add(newBubble);
-                          });
-                          scrollToBottom();
-                        }
-                        
-                        if (!isMine) {
-                           HapticFeedback.heavyImpact();
-                           _playAlertSound();
-                           LiveActivityService().updateOfferStatus(
-                             statusText: "Müşteriden Karşı Teklif Geldi!",
-                             updatedSubtitle: "${newBubble['price']} ₺",
-                           );
-                        }
-                      }
+                    bool hadCustomerOffer = bidHistory.any((item) => item['is_mine'] == false);
+                    bool hasCustomerOfferNow = parsedHistory.any((item) => item['is_mine'] == false);
+
+                    if (_isModalOpen) {
+                      setDialogState(() {
+                        bidHistory = parsedHistory;
+                      });
+                      scrollToBottom();
+                    }
+
+                    if (!hadCustomerOffer && hasCustomerOfferNow) {
+                      HapticFeedback.heavyImpact();
+                      _playAlertSound();
+                      LiveActivityService().updateOfferStatus(
+                        statusText: "Müşteriden Karşı Teklif Geldi!",
+                        updatedSubtitle: "${parsedHistory.last['price']} ₺",
+                      );
                     }
                   }
                 }
-              } catch (_) {}
-            });
+              }
+            } catch (_) {}
+          }
+
+          // Modal açıldığı milisaniyede 3 saniye beklemeden İLK SORGULAMAYI ÇALIŞTIR
+          if (dialogPollingTimer == null) {
+            fetchBidsData();
+            dialogPollingTimer = Timer.periodic(const Duration(seconds: 2), (_) => fetchBidsData());
+          }
 
           return PopScope(
             canPop: !isSubmitting,
@@ -778,9 +788,15 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                   child: IconButton(
                                     onPressed: isSubmitting ? null : () {
                                       HapticFeedback.selectionClick();
+                                      _suspendedJobs[jobId] = {
+                                        'serviceName': serviceName,
+                                        'probDesc': probDesc,
+                                        'distance': distance,
+                                        'serviceType': serviceType,
+                                      };
                                       if (context.mounted) {
                                         Navigator.pop(context);
-                                        _showTopSnackBar("İş askıya alındı. Arka planda takip ediliyor, hareket olduğunda bildirilecek.");
+                                        _showTopSnackBar("İş askıya alındı. Müşteri karşı teklif verdiğinde ekranınız otomatik açılacaktır.");
                                       }
                                     },
                                     tooltip: "Askıya Al (Aşağıya İndir)",
@@ -1280,13 +1296,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             if (mounted && !_isNavigating) {
               HapticFeedback.heavyImpact();
               _playAlertSound();
-              _showTopSnackBar("🔔 Askıdaki iş için müşteriden yeni bir teklif/yanıt geldi!", isNewJob: true);
-              if (!_isModalOpen) {
-                setState(() {
-                  _showJobCard = true;
-                  _isJobCardExpanded = true;
-                });
-              }
+              _showTopSnackBar("🔔 Müşteriden anlık karşı teklif geldi!", isNewJob: true);
+              _checkSuspendedJobBids();
               _fetchNearbyJobs(isAuto: true, radius: _searchRadius.toInt());
             }
           }
@@ -1309,9 +1320,11 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   void _startJobRefreshTimer() {
     _initWebSocket();
     _jobPollingTimer?.cancel();
-    _jobPollingTimer = Timer.periodic(const Duration(seconds: 6), (_) {
+    // 3 saniyede bir hem aktif işi hem de askıdaki işe gelen karşı teklifleri yoklar
+    _jobPollingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       if (mounted && isOnline && !isSuspended) {
         _checkActiveJob();
+        _checkSuspendedJobBids();
         if (currentPosition != null && !_isFetchingJobs) {
           _fetchNearbyJobs(isAuto: true, radius: _searchRadius.toInt());
         }
@@ -1373,6 +1386,57 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
           ),
         ),
       );
+    }
+  }
+
+  // Ustanın askıya aldığı tüm işleri tarayıp hangisinden karşı teklif gelirse ekranı ona açan metot
+  Future<void> _checkSuspendedJobBids() async {
+    if (_suspendedJobs.isEmpty || !mounted || _isNavigating || _isCheckingSuspended) return;
+    _isCheckingSuspended = true;
+
+    try {
+      final String ts = DateTime.now().millisecondsSinceEpoch.toString();
+      // Backend'deki hazır 'get_provider_active_bids' servisi ustanın tüm aktif tekliflerini tek seferde döner
+      final response = await _httpClient.get(
+        Uri.parse("$baseUrl?action=get_provider_active_bids&provider_id=${widget.providerId}&_t=$ts")
+      ).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200 && mounted) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'success') {
+          List activeBids = data['active_bids'] ?? [];
+
+          for (var b in activeBids) {
+            final int jId = int.tryParse(b['job_id']?.toString() ?? '0') ?? 0;
+            final bool isCustomerBid = (b['last_bidder'] != 'provider');
+
+            // Eğer bu iş askıdaysa ve müşteri karşı teklif verdiyse modalı hemen aç
+            if (isCustomerBid && _suspendedJobs.containsKey(jId) && !_isModalOpen) {
+              final String newAmount = b['amount']?.toString() ?? '';
+              _playAlertSound();
+              HapticFeedback.heavyImpact();
+              _showTopSnackBar("🔔 ${b['customer_name'] ?? 'Müşteri'} Karşı Teklif Verdi: $newAmount ₺!", isNewJob: true);
+
+              LiveActivityService().updateOfferStatus(
+                statusText: "Müşteriden Karşı Teklif: $newAmount ₺",
+                updatedSubtitle: "$newAmount ₺",
+              );
+
+              final meta = _suspendedJobs[jId]!;
+              _showBidDialog(
+                jId,
+                meta['serviceName'] ?? _getServiceName(b['service_type'] ?? 'mechanic'),
+                meta['probDesc'] ?? '',
+                meta['distance'] ?? '0.0',
+                b['service_type'] ?? 'mechanic',
+              );
+              break; // Tek seferde tek modal aç
+            }
+          }
+        }
+      }
+    } catch (_) {} finally {
+      if (mounted) _isCheckingSuspended = false;
     }
   }
 

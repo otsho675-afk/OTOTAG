@@ -144,7 +144,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   Timer? _resumeTrackingTimer;
   StreamSubscription<Position>? _positionStream; 
   final String _baseUrl = AppConstants.baseUrl;
-  final Duration _apiTimeout = const Duration(seconds: 12);
+  final Duration _apiTimeout = const Duration(seconds: 45);
   PusherChannelsFlutter pusher = PusherChannelsFlutter.getInstance();
   bool _isPusherInitialized = false;
   int unreadMessageCount = 0;
@@ -1943,8 +1943,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     final ImagePicker picker = ImagePicker();
     final XFile? photo = await picker.pickImage(
       source: ImageSource.camera,
-      imageQuality: 70,
-      maxWidth: 1200,
+      imageQuality: 40,
+      maxWidth: 800,
     );
 
     if (photo == null) return;

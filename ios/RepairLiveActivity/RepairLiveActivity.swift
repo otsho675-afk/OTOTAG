@@ -5,20 +5,21 @@ import WidgetKit
 import SwiftUI
 
 public struct LiveActivitiesAppAttributes: ActivityAttributes, Identifiable {
-    public typealias LiveDeliveryStatus = ContentState
+    // Paket için bu satır zorunludur:
+    public typealias LiveDeliveryData = ContentState
 
-    public struct ContentState: Codable, Hashable {
-        public var activityType: String?       // "job_alert", "offer_tracking", "provider_tracking"
-        public var title: String?              // İş başlığı veya müşteri adı
-        public var subtitle: String?           // Mesafe, teklif tutarı veya ek bilgi
-        public var statusText: String?         // Durum açıklaması
-        public var remainingMinutes: Int?      // Kalan dakika (usta takip)
-        public var remainingSeconds: Int?      // Kalan kabul süresi (yeni iş)
-        public var providerName: String?       // Usta adı
-    }
+    public struct ContentState: Codable, Hashable { }
 
     public var id = UUID()
 }
+
+extension LiveActivitiesAppAttributes {
+    func prefixedKey(_ key: String) -> String {
+        return "\(id)_\(key)"
+    }
+}
+
+let sharedDefault = UserDefaults(suiteName: "group.com.ototag.app")
 
 @main
 struct RepairLiveActivityBundle: WidgetBundle {
@@ -30,22 +31,31 @@ struct RepairLiveActivityBundle: WidgetBundle {
 struct RepairLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: LiveActivitiesAppAttributes.self) { context in
-            // Kilit Ekranı ve Bildirim Çekmecesi Görünümü
-            HStack(spacing: 16) {
-                Image("logo2")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 44, height: 44)
-                    .padding(8)
-                    .background(Color.white.opacity(0.12))
-                    .clipShape(Circle())
+            // Flutter'dan gelen verileri App Group'tan çekiyoruz
+            let title = sharedDefault?.string(forKey: context.attributes.prefixedKey("title")) ?? "OTOTAG"
+            let subtitle = sharedDefault?.string(forKey: context.attributes.prefixedKey("subtitle"))
+            let statusText = sharedDefault?.string(forKey: context.attributes.prefixedKey("statusText")) ?? "İşlem devam ediyor"
+            let remainingSeconds = sharedDefault?.integer(forKey: context.attributes.prefixedKey("remainingSeconds")) ?? 0
+            let remainingMinutes = sharedDefault?.integer(forKey: context.attributes.prefixedKey("remainingMinutes")) ?? 0
+            let activityType = sharedDefault?.string(forKey: context.attributes.prefixedKey("activityType")) ?? ""
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(context.state.title ?? context.state.providerName ?? "OtoTag")
+            // Kilit Ekranı ve Bildirim Çekmecesi Görünümü
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(Color.orange.opacity(0.2))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: activityType == "job_alert" ? "wrench.and.screwdriver.fill" : "car.fill")
+                        .foregroundColor(.orange)
+                        .font(.system(size: 20))
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
                         .font(.system(size: 15, weight: .bold))
                         .foregroundColor(.white)
                         .lineLimit(1)
-                    Text(context.state.statusText ?? "İşlem devam ediyor")
+                    Text(statusText)
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.white.opacity(0.7))
                         .lineLimit(2)
@@ -54,46 +64,51 @@ struct RepairLiveActivity: Widget {
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 2) {
-                    if let seconds = context.state.remainingSeconds {
-                        Text("\(seconds)")
-                            .font(.system(size: 28, weight: .heavy, design: .rounded))
+                    if remainingSeconds > 0 {
+                        Text("\(remainingSeconds)")
+                            .font(.system(size: 26, weight: .heavy, design: .rounded))
                             .foregroundColor(.orange)
                         Text("saniye")
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(.white.opacity(0.6))
-                    } else if let minutes = context.state.remainingMinutes {
-                        Text("\(minutes)")
-                            .font(.system(size: 28, weight: .heavy, design: .rounded))
+                    } else if remainingMinutes > 0 {
+                        Text("\(remainingMinutes)")
+                            .font(.system(size: 26, weight: .heavy, design: .rounded))
                             .foregroundColor(Color(red: 0.0, green: 1.0, blue: 0.64))
                         Text("dakika")
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(.white.opacity(0.6))
-                    } else if let sub = context.state.subtitle {
+                    } else if let sub = subtitle, !sub.isEmpty {
                         Text(sub)
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: 15, weight: .bold))
                             .foregroundColor(.white)
                     }
                 }
             }
             .padding(16)
-            .background(Color(red: 0.02, green: 0.02, blue: 0.03))
-            .activityBackgroundTint(Color(red: 0.02, green: 0.02, blue: 0.03))
+            .background(Color(red: 0.06, green: 0.06, blue: 0.07))
+            .activityBackgroundTint(Color(red: 0.06, green: 0.06, blue: 0.07))
 
         } dynamicIsland: { context in
-            DynamicIsland {
-                // Dynamic Island'a Uzun Basılınca Açılan Genişletilmiş Görünüm
+            let title = sharedDefault?.string(forKey: context.attributes.prefixedKey("title")) ?? "OTOTAG"
+            let subtitle = sharedDefault?.string(forKey: context.attributes.prefixedKey("subtitle")) ?? ""
+            let statusText = sharedDefault?.string(forKey: context.attributes.prefixedKey("statusText")) ?? ""
+            let remainingSeconds = sharedDefault?.integer(forKey: context.attributes.prefixedKey("remainingSeconds")) ?? 0
+            let remainingMinutes = sharedDefault?.integer(forKey: context.attributes.prefixedKey("remainingMinutes")) ?? 0
+            let activityType = sharedDefault?.string(forKey: context.attributes.prefixedKey("activityType")) ?? ""
+
+            return DynamicIsland {
+                // Ada Genişletilmiş Durum (Uzun basınca)
                 DynamicIslandExpandedRegion(.leading) {
-                    HStack(spacing: 8) {
-                        Image("logo2")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 26, height: 26)
+                    HStack(spacing: 6) {
+                        Image(systemName: activityType == "job_alert" ? "wrench.and.screwdriver.fill" : "car.fill")
+                            .foregroundColor(.orange)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(context.state.title ?? context.state.providerName ?? "OtoTag")
+                            Text(title)
                                 .font(.system(size: 13, weight: .bold))
                                 .foregroundColor(.white)
                                 .lineLimit(1)
-                            Text(context.state.statusText ?? "")
+                            Text(statusText)
                                 .font(.system(size: 11))
                                 .foregroundColor(.white.opacity(0.7))
                                 .lineLimit(1)
@@ -104,20 +119,18 @@ struct RepairLiveActivity: Widget {
 
                 DynamicIslandExpandedRegion(.trailing) {
                     VStack(alignment: .trailing, spacing: 1) {
-                        if let seconds = context.state.remainingSeconds {
-                            Text("\(seconds)")
-                                .font(.system(size: 20, weight: .heavy, design: .rounded))
+                        if remainingSeconds > 0 {
+                            Text("\(remainingSeconds) sn")
+                                .font(.system(size: 13, weight: .heavy, design: .rounded))
                                 .foregroundColor(.orange)
-                            Text("sn")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(.white.opacity(0.6))
-                        } else if let minutes = context.state.remainingMinutes {
-                            Text("\(minutes)")
-                                .font(.system(size: 20, weight: .heavy, design: .rounded))
+                        } else if remainingMinutes > 0 {
+                            Text("\(remainingMinutes) dk")
+                                .font(.system(size: 13, weight: .heavy, design: .rounded))
                                 .foregroundColor(Color(red: 0.0, green: 1.0, blue: 0.64))
-                            Text("dk")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(.white.opacity(0.6))
+                        } else if !subtitle.isEmpty {
+                            Text(subtitle)
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundColor(.orange)
                         }
                     }
                     .padding(.trailing, 8)
@@ -125,64 +138,51 @@ struct RepairLiveActivity: Widget {
 
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack(spacing: 8) {
-                        if context.state.activityType == "job_alert" {
-                            Image(systemName: "bell.fill")
-                                .foregroundColor(.orange)
-                                .font(.system(size: 12))
-                        } else if context.state.activityType == "offer_tracking" {
-                            Image(systemName: "doc.text.fill")
-                                .foregroundColor(.green)
-                                .font(.system(size: 12))
-                        } else {
-                            Image(systemName: "car.fill")
-                                .foregroundColor(Color(red: 0.0, green: 1.0, blue: 0.64))
-                                .font(.system(size: 12))
-                        }
-                        
-                        if let sub = context.state.subtitle {
-                            Text(sub)
-                                .font(.system(size: 14, weight: .bold))
+                        Image(systemName: activityType == "job_alert" ? "bell.fill" : "car.fill")
+                            .foregroundColor(activityType == "job_alert" ? .orange : Color(red: 0.0, green: 1.0, blue: 0.64))
+                            .font(.system(size: 12))
+
+                        if !subtitle.isEmpty {
+                            Text(subtitle)
+                                .font(.system(size: 13, weight: .bold))
                                 .foregroundColor(.white)
-                        } else {
-                            ProgressView(value: 0.7)
-                                .tint(context.state.activityType == "job_alert" ? .orange : Color(red: 0.0, green: 1.0, blue: 0.64))
                         }
-                        
                         Spacer()
                     }
                     .padding(.horizontal, 12)
                     .padding(.top, 4)
                 }
             } compactLeading: {
-                // Sol Bölüm: logo2.png
-                Image("logo2")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 18, height: 18)
+                // Ada Küçük Sol Simge
+                Image(systemName: activityType == "job_alert" ? "wrench.fill" : "car.fill")
+                    .foregroundColor(.orange)
                     .padding(.leading, 4)
             } compactTrailing: {
-                // Sağ Bölüm: Dakika, Saniye veya Onay İkonu
-                if let seconds = context.state.remainingSeconds {
-                    Text("\(seconds)s")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                // Ada Küçük Sağ Bilgi
+                if remainingSeconds > 0 {
+                    Text("\(remainingSeconds)s")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
                         .foregroundColor(.orange)
                         .padding(.trailing, 4)
-                } else if let minutes = context.state.remainingMinutes {
-                    Text("\(minutes)m")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
+                } else if remainingMinutes > 0 {
+                    Text("\(remainingMinutes)m")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundColor(Color(red: 0.0, green: 1.0, blue: 0.64))
+                        .padding(.trailing, 4)
+                } else if !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.orange)
                         .padding(.trailing, 4)
                 } else {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.green)
-                        .font(.system(size: 13))
+                        .font(.system(size: 12))
                         .padding(.trailing, 4)
                 }
             } minimal: {
-                Image("logo2")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 14, height: 14)
+                Image(systemName: activityType == "job_alert" ? "wrench.fill" : "car.fill")
+                    .foregroundColor(.orange)
             }
         }
     }

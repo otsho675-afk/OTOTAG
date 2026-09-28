@@ -20,7 +20,7 @@ class LiveActivityService {
   }
 
   // ---------------------------------------------------------------------------
-  // USTA PANELİ: Yeni İş Talebi Geldiğinde Canlı Ada Tetikleme
+  // USTA PANELİ: Yeni İş Fırsatı Geldiğinde Canlı Ada Tetikleme
   // ---------------------------------------------------------------------------
   Future<void> startJobAlert({
     required String jobId,
@@ -34,7 +34,7 @@ class LiveActivityService {
     try {
       final bool areEnabled = await _liveActivities.areActivitiesEnabled();
       if (!areEnabled) {
-        debugPrint('Dynamic Island / Live Activities kapalı.');
+        debugPrint('Dynamic Island / Live Activities cihazda kapalı.');
         return;
       }
 
@@ -51,9 +51,12 @@ class LiveActivityService {
         'subtitle': distanceText,
         'statusText': statusText,
         'remainingSeconds': timeoutSeconds,
-        'createdAt': DateTime.now().millisecondsSinceEpoch,
+        'remainingMinutes': 0,
+        'providerName': '',
+        'offerId': '',
       };
 
+      // 1. parametre: activityId (String), 2. parametre: data (Map)
       final String? result = await _liveActivities.createActivity(
         activityId,
         data,
@@ -67,7 +70,7 @@ class LiveActivityService {
   }
 
   // ---------------------------------------------------------------------------
-  // USTA PANELİ: Teklif Verildiğinde / Teklif Durumu Takibi
+  // USTA PANELİ: Teklif Durumu Takibi
   // ---------------------------------------------------------------------------
   Future<void> startOfferTracking({
     required String offerId,
@@ -79,10 +82,7 @@ class LiveActivityService {
 
     try {
       final bool areEnabled = await _liveActivities.areActivitiesEnabled();
-      if (!areEnabled) {
-        debugPrint('Dynamic Island / Live Activities kapalı.');
-        return;
-      }
+      if (!areEnabled) return;
 
       if (_currentActivityId != null) {
         await endTracking();
@@ -92,13 +92,17 @@ class LiveActivityService {
 
       final Map<String, dynamic> data = {
         'activityType': 'offer_tracking',
-        'offerId': offerId,
+        'jobId': '',
         'title': customerName,
         'subtitle': offerAmount,
         'statusText': statusText,
-        'updatedAt': DateTime.now().millisecondsSinceEpoch,
+        'remainingSeconds': 0,
+        'remainingMinutes': 0,
+        'providerName': '',
+        'offerId': offerId,
       };
 
+      // 1. parametre: activityId (String), 2. parametre: data (Map)
       final String? result = await _liveActivities.createActivity(
         activityId,
         data,
@@ -111,7 +115,7 @@ class LiveActivityService {
     }
   }
 
-  // Teklif durumunu güncelle (Örn: "Müşteri teklifi kabul etti", "Karşı teklif geldi")
+  // Teklif durumunu güncelle
   Future<void> updateOfferStatus({
     required String statusText,
     String? updatedSubtitle,
@@ -123,18 +127,17 @@ class LiveActivityService {
         'activityType': 'offer_tracking',
         'statusText': statusText,
         if (updatedSubtitle != null) 'subtitle': updatedSubtitle,
-        'updatedAt': DateTime.now().millisecondsSinceEpoch,
       };
 
       await _liveActivities.updateActivity(_currentActivityId!, updatedData);
       debugPrint('Teklif durumu güncellendi: $statusText');
     } catch (e) {
-      debugPrint('Teklif durumu güncelleme hatası: $e');
+      debugPrint('Teklif güncelleme hatası: $e');
     }
   }
 
   // ---------------------------------------------------------------------------
-  // MÜŞTERİ PANELİ: Usta Yola Çıktığında Konum/Süre Takibi
+  // MÜŞTERİ PANELİ: Usta Takibi
   // ---------------------------------------------------------------------------
   Future<void> startProviderTracking({
     String? orderId,
@@ -146,10 +149,7 @@ class LiveActivityService {
 
     try {
       final bool areEnabled = await _liveActivities.areActivitiesEnabled();
-      if (!areEnabled) {
-        debugPrint('Dynamic Island / Live Activities kapalı.');
-        return;
-      }
+      if (!areEnabled) return;
 
       if (_currentActivityId != null) {
         await endTracking();
@@ -159,24 +159,30 @@ class LiveActivityService {
 
       final Map<String, dynamic> data = {
         'activityType': 'provider_tracking',
-        'remainingMinutes': initialMinutes,
+        'jobId': orderId ?? '',
+        'title': providerName,
+        'subtitle': '$initialMinutes dk',
         'statusText': statusText,
+        'remainingSeconds': 0,
+        'remainingMinutes': initialMinutes,
         'providerName': providerName,
+        'offerId': '',
       };
 
+      // 1. parametre: activityId (String), 2. parametre: data (Map)
       final String? result = await _liveActivities.createActivity(
         activityId,
         data,
       );
 
       _currentActivityId = result ?? activityId;
-      debugPrint('Live Activity başlatıldı: $_currentActivityId');
+      debugPrint('Müşteri Live Activity başlatıldı: $_currentActivityId');
     } catch (e) {
-      debugPrint('Live Activity başlatma hatası: $e');
+      debugPrint('Müşteri Live Activity başlatma hatası: $e');
     }
   }
 
-  // Kalan dakikayı güncelle (Müşteri ekranı için)
+  // Dakika güncelle
   Future<void> updateRemainingTime({
     required int remainingMinutes,
     required String providerName,
@@ -188,6 +194,7 @@ class LiveActivityService {
       final Map<String, dynamic> updatedData = {
         'activityType': 'provider_tracking',
         'remainingMinutes': remainingMinutes,
+        'subtitle': '$remainingMinutes dk',
         'statusText': statusText,
         'providerName': providerName,
       };
@@ -195,13 +202,11 @@ class LiveActivityService {
       await _liveActivities.updateActivity(_currentActivityId!, updatedData);
       debugPrint('Live Activity güncellendi: $remainingMinutes dk kaldı.');
     } catch (e) {
-      debugPrint('Live Activity güncelleme hatası: $e');
+      debugPrint('Süre güncelleme hatası: $e');
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Ortak Kapatma / Sonlandırma Metodu
-  // ---------------------------------------------------------------------------
+  // Sonlandırma
   Future<void> endTracking() async {
     if (kIsWeb || !Platform.isIOS || _currentActivityId == null) return;
 

@@ -48,15 +48,17 @@
     <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
     
-    <!-- Dynamic Island ve Canlı Etkinlik İzni -->
+    <!-- Dynamic Island ve Canlı Etkinlik İzinleri -->
     <key>NSSupportsLiveActivities</key>
+    <true/>
+    <key>NSSupportsLiveActivitiesFrequentUpdates</key>
     <true/>
     
     <!-- App Store Connect İhracat Uyumluluğu Uyarısını Kapatma -->
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
 
-    <!-- Google Sign-In iOS Client ID (Native Çökmeyi Önleyen Anahtar) -->
+    <!-- Google Sign-In iOS Client ID -->
     <key>GIDClientID</key>
     <string>73273804842-u0lcirptug9aotm2m6gn27g92hftt5ud.apps.googleusercontent.com</string>
 

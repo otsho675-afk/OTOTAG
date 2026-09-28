@@ -235,7 +235,12 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
       ),
       backgroundColor: isError ? const Color(0xFFFF3366) : const Color(0xFF00FFA3).withValues(alpha: 0.95),
       behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      dismissDirection: DismissDirection.up,
+      margin: EdgeInsets.only(
+        bottom: MediaQuery.of(context).size.height - 140, // Dinamik yükseklik hesabı ile bildirimi her sayfada en üste sabitler
+        left: 16,
+        right: 16,
+      ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       elevation: 15,
       duration: const Duration(seconds: 2),

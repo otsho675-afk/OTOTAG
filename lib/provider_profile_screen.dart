@@ -162,188 +162,193 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      useRootNavigator: true, // Modalın diğer sayfaların ve butonların altında kalmasını engeller
       backgroundColor: Colors.transparent,
-      builder: (modalContext) => LayoutBuilder(
-        builder: (context, constraints) {
-          final isSmallScreen = constraints.maxWidth < 400;
-          return SafeArea(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-              child: Center(
-                child: Container(
-                  constraints: BoxConstraints(
-                    maxWidth: 650,
-                    maxHeight: MediaQuery.of(context).size.height * 0.88,
-                  ),
-                  padding: EdgeInsets.only(
-                    bottom: MediaQuery.of(context).viewInsets.bottom + 20, 
-                    left: isSmallScreen ? 16 : 24, 
-                    right: isSmallScreen ? 16 : 24, 
-                    top: 16
-                  ),
-                  decoration: BoxDecoration(
-                    color: panelBlack.withValues(alpha: 0.96),
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.5),
-                    boxShadow: [
-                      BoxShadow(color: pureBlack.withValues(alpha: 0.9), blurRadius: 40, offset: const Offset(0, -10)),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 44, 
-                          height: 5, 
-                          decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10))
-                        )
-                      ),
-                      const SizedBox(height: 18),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(color: neonGreen.withValues(alpha: 0.12), shape: BoxShape.circle),
-                                child: const Icon(Icons.rate_review_rounded, color: neonGreen, size: 22),
-                              ),
-                              SizedBox(width: isSmallScreen ? 8 : 12),
-                              Text(
-                                "Müşteri Değerlendirmeleri", 
-                                style: TextStyle(color: Colors.white, fontSize: isSmallScreen ? 17 : 20, fontWeight: FontWeight.w900, letterSpacing: -0.5)
-                              ),
-                            ],
-                          ),
-                          IconButton(
-                            onPressed: () => Navigator.pop(modalContext),
-                            icon: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.06), shape: BoxShape.circle),
-                              child: const Icon(Icons.close_rounded, color: Colors.white70, size: 18),
-                            ),
+      builder: (modalContext) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (_, scrollController) => LayoutBuilder(
+          builder: (context, constraints) {
+            final isSmallScreen = constraints.maxWidth < 400;
+            return SafeArea(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                child: Center(
+                  child: Container(
+                    constraints: const BoxConstraints(maxWidth: 650),
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(context).viewInsets.bottom + 20, 
+                      left: isSmallScreen ? 16 : 24, 
+                      right: isSmallScreen ? 16 : 24, 
+                      top: 16
+                    ),
+                    decoration: BoxDecoration(
+                      color: panelBlack.withValues(alpha: 0.96),
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.5),
+                      boxShadow: [
+                        BoxShadow(color: pureBlack.withValues(alpha: 0.9), blurRadius: 40, offset: const Offset(0, -10)),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 44, 
+                            height: 5, 
+                            decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10))
                           )
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: surfaceBlack,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: goldAccent.withValues(alpha: 0.2)),
                         ),
-                        child: Row(
+                        const SizedBox(height: 18),
+                        Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.star_rounded, color: goldAccent, size: 24),
-                                const SizedBox(width: 8),
-                                Text(
-                                  providerRating.toStringAsFixed(1), 
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18)
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(color: neonGreen.withValues(alpha: 0.12), shape: BoxShape.circle),
+                                  child: const Icon(Icons.rate_review_rounded, color: neonGreen, size: 22),
                                 ),
-                                const SizedBox(width: 6),
+                                SizedBox(width: isSmallScreen ? 8 : 12),
                                 Text(
-                                  "/ 5.0", 
-                                  style: TextStyle(color: textGray.withValues(alpha: 0.8), fontWeight: FontWeight.w600, fontSize: 14)
+                                  "Müşteri Değerlendirmeleri", 
+                                  style: TextStyle(color: Colors.white, fontSize: isSmallScreen ? 17 : 20, fontWeight: FontWeight.w900, letterSpacing: -0.5)
                                 ),
                               ],
                             ),
-                            Text(
-                              "${reviews.length} Gerçek Yorum", 
-                              style: const TextStyle(color: neonGreen, fontWeight: FontWeight.w800, fontSize: 13)
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Expanded(
-                        child: reviews.isEmpty 
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.speaker_notes_off_rounded, size: 48, color: textGray.withValues(alpha: 0.4)),
-                                  const SizedBox(height: 12),
-                                  const Text("Henüz müşteri yorumu bulunmuyor.", style: TextStyle(color: textGray, fontSize: 15, fontWeight: FontWeight.w600)),
-                                ],
+                            IconButton(
+                              onPressed: () => Navigator.pop(modalContext),
+                              icon: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.06), shape: BoxShape.circle),
+                                child: const Icon(Icons.close_rounded, color: Colors.white70, size: 18),
                               ),
                             )
-                          : ListView.separated(
-                              physics: const BouncingScrollPhysics(),
-                              itemCount: reviews.length,
-                              separatorBuilder: (_, __) => const SizedBox(height: 12),
-                              itemBuilder: (context, index) {
-                                final review = reviews[index];
-                                final double rScore = double.tryParse(review['rating']?.toString() ?? '5') ?? 5.0;
-                                return Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: surfaceBlack.withValues(alpha: 0.7),
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(color: Colors.white.withValues(alpha: 0.06), width: 1.0),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: surfaceBlack,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: goldAccent.withValues(alpha: 0.2)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.star_rounded, color: goldAccent, size: 24),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    providerRating.toStringAsFixed(1), 
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18)
                                   ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Expanded(
-                                            child: Row(
-                                              children: [
-                                                CircleAvatar(
-                                                  radius: 14,
-                                                  backgroundColor: neonGreen.withValues(alpha: 0.15),
-                                                  child: Text(
-                                                    (review['customer_name'] != null && review['customer_name'].toString().isNotEmpty)
-                                                        ? review['customer_name'][0].toUpperCase()
-                                                        : "M",
-                                                    style: const TextStyle(color: neonGreen, fontSize: 12, fontWeight: FontWeight.w900),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    "/ 5.0", 
+                                    style: TextStyle(color: textGray.withValues(alpha: 0.8), fontWeight: FontWeight.w600, fontSize: 14)
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                "${reviews.length} Gerçek Yorum", 
+                                style: const TextStyle(color: neonGreen, fontWeight: FontWeight.w800, fontSize: 13)
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Expanded(
+                          child: reviews.isEmpty 
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.speaker_notes_off_rounded, size: 48, color: textGray.withValues(alpha: 0.4)),
+                                    const SizedBox(height: 12),
+                                    const Text("Henüz müşteri yorumu bulunmuyor.", style: TextStyle(color: textGray, fontSize: 15, fontWeight: FontWeight.w600)),
+                                  ],
+                                ),
+                              )
+                            : ListView.separated(
+                                controller: scrollController, // DraggableScrollableSheet ile bağlantıyı kurar, akıllı kaydırma sağlar
+                                physics: const BouncingScrollPhysics(),
+                                itemCount: reviews.length,
+                                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                                itemBuilder: (context, index) {
+                                  final review = reviews[index];
+                                  final double rScore = double.tryParse(review['rating']?.toString() ?? '5') ?? 5.0;
+                                  return Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: surfaceBlack.withValues(alpha: 0.7),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: Colors.white.withValues(alpha: 0.06), width: 1.0),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Expanded(
+                                              child: Row(
+                                                children: [
+                                                  CircleAvatar(
+                                                    radius: 14,
+                                                    backgroundColor: neonGreen.withValues(alpha: 0.15),
+                                                    child: Text(
+                                                      (review['customer_name'] != null && review['customer_name'].toString().isNotEmpty)
+                                                          ? review['customer_name'][0].toUpperCase()
+                                                          : "M",
+                                                      style: const TextStyle(color: neonGreen, fontSize: 12, fontWeight: FontWeight.w900),
+                                                    ),
                                                   ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Expanded(
-                                                  child: Text(
-                                                    review['customer_name'] ?? "Müşteri", 
-                                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: isSmallScreen ? 13 : 14),
-                                                    overflow: TextOverflow.ellipsis,
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: Text(
+                                                      review['customer_name'] ?? "Müşteri", 
+                                                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: isSmallScreen ? 13 : 14),
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
                                                   ),
-                                                ),
-                                              ],
+                                                ],
+                                              ),
                                             ),
-                                          ),
-                                          _buildStarRating(rScore, size: isSmallScreen ? 14 : 16),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Text(
-                                        review['comment'] ?? "", 
-                                        style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: isSmallScreen ? 13 : 14, height: 1.4, fontWeight: FontWeight.w500)
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Text(
-                                        review['date'] ?? "", 
-                                        style: TextStyle(color: textGray.withValues(alpha: 0.7), fontSize: isSmallScreen ? 10 : 11, fontWeight: FontWeight.w600)
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
-                      ),
-                    ],
+                                            _buildStarRating(rScore, size: isSmallScreen ? 14 : 16),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Text(
+                                          review['comment'] ?? "", 
+                                          style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: isSmallScreen ? 13 : 14, height: 1.4, fontWeight: FontWeight.w500)
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Text(
+                                          review['date'] ?? "", 
+                                          style: TextStyle(color: textGray.withValues(alpha: 0.7), fontSize: isSmallScreen ? 10 : 11, fontWeight: FontWeight.w600)
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        }
-      )
+            );
+          }
+        ),
+      ),
     );
   }
 

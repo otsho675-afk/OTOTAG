@@ -262,7 +262,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       ),
       backgroundColor: isError ? alertRed : neonGreen.withValues(alpha: 0.95),
       behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.all(20),
+      dismissDirection: DismissDirection.up,
+      margin: EdgeInsets.only(
+        bottom: MediaQuery.of(context).size.height - (MediaQuery.of(context).padding.top + 120),
+        left: 20,
+        right: 20,
+      ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 0,
       duration: const Duration(seconds: 4),

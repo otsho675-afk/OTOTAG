@@ -175,10 +175,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           : (isError ? _dangerColor : _primaryColor.withValues(alpha: 0.95)),
         behavior: SnackBarBehavior.floating,
         margin: EdgeInsets.only(
-          bottom: MediaQuery.of(context).size.height * 0.05,
+          bottom: MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).padding.bottom + 24,
           left: 16,
           right: 16
         ),
+        dismissDirection: DismissDirection.horizontal,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 20,
         duration: const Duration(seconds: 3),
@@ -550,30 +551,22 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                         _buildGlassTextField(_ibanController, "IBAN Numarası", Icons.account_balance_rounded, _primaryColor, action: TextInputAction.done),
                       ],
                       const SizedBox(height: 28),
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          gradient: const LinearGradient(colors: [_primaryColor, _secondaryColor]),
-                          boxShadow: [
-                            BoxShadow(color: _primaryColor.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 5))
-                          ]
+                      ElevatedButton(
+                        onPressed: isSaving ? null : () async {
+                          await _updateProfile(onSuccess: () {
+                            if (modalCtx.mounted) Navigator.pop(modalCtx);
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _primaryColor,
+                          foregroundColor: Colors.black,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
-                        child: ElevatedButton(
-                          onPressed: isSaving ? null : () async {
-                            await _updateProfile(onSuccess: () {
-                              if (modalCtx.mounted) Navigator.pop(modalCtx);
-                            });
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                          ),
-                          child: isSaving 
-                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3))
-                            : const Text("Bilgileri Kaydet", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16)),
-                        ),
+                        child: isSaving 
+                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3))
+                          : const Text("Bilgileri Kaydet", textScaler: const TextScaler.linear(1.0), style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
                       ),
                     ],
                   ),
@@ -624,7 +617,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                           ),
                           const SizedBox(width: 12),
                           const Expanded(
-                            child: Text("Şifre Değiştir", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white), overflow: TextOverflow.ellipsis),
+                            child: Text("Şifre Değiştir", textScaler: const TextScaler.linear(1.0), style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white), overflow: TextOverflow.ellipsis),
                           ),
                         ],
                       ),
@@ -660,8 +653,16 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                             if (mounted) setModalState(() => isUpdating = false);
                           }
                         },
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent, padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                        child: isUpdating ? const CircularProgressIndicator(color: Colors.white) : const Text("Şifreyi Güncelle", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _primaryColor,
+                          foregroundColor: Colors.black,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
+                        ),
+                        child: isUpdating 
+                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3)) 
+                          : const Text("Şifreyi Güncelle", textScaler: const TextScaler.linear(1.0), style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
                       ),
                     ],
                   ),
@@ -719,7 +720,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                             ),
                             const SizedBox(width: 12),
                             const Expanded(
-                              child: Text("Geri Bildirim Gönder", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white), overflow: TextOverflow.ellipsis),
+                              child: Text("Geri Bildirim Gönder", textScaler: const TextScaler.linear(1.0), style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white), overflow: TextOverflow.ellipsis),
                             ),
                           ],
                         ),
@@ -761,8 +762,16 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                               if (mounted) setModalState(() => isSending = false);
                             }
                           },
-                          style: ElevatedButton.styleFrom(backgroundColor: _warningColor, padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                          child: isSending ? const CircularProgressIndicator(color: Colors.white) : const Text("Gönder", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _warningColor, 
+                            foregroundColor: Colors.black,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 18), 
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
+                          ),
+                          child: isSending 
+                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3)) 
+                            : const Text("Gönder", textScaler: const TextScaler.linear(1.0), style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
                         ),
                       ],
                     ),
@@ -863,15 +872,8 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                           onSubmitted: (_) => FocusScope.of(context).unfocus()
                         ),
                         const SizedBox(height: 24),
-                        Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(color: _dangerColor.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 5))
-                            ],
-                          ),
-                          child: ElevatedButton(
-                            onPressed: isSending ? null : () async {
+                        ElevatedButton(
+                          onPressed: isSending ? null : () async {
                               if (subjectController.text.trim().isEmpty || messageController.text.trim().isEmpty) {
                                 _showCustomSnackBar("Lütfen tüm alanları doldurun.", isError: true);
                                 return;
@@ -906,16 +908,15 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                               }
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: _dangerColor,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 18),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                              elevation: 0,
-                            ),
-                            child: isSending
-                                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                                : const Text("Şikayeti Gönder", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
+                            backgroundColor: _dangerColor,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           ),
+                          child: isSending
+                              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                              : const Text("Şikayeti Gönder", textScaler: const TextScaler.linear(1.0), style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
                         ),
                       ],
                     ),
@@ -989,7 +990,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               ),
               const SizedBox(width: 12),
               const Expanded(
-                child: Text("Hizmeti Tekrarla", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20)),
+                child: Text("Hizmeti Tekrarla", textScaler: const TextScaler.linear(1.0), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20)),
               ),
             ],
           ),
@@ -1005,7 +1006,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   child: TextButton(
                     onPressed: () => Navigator.pop(dialogCtx),
                     style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
-                    child: const Text("Vazgeç", style: TextStyle(color: Colors.white60, fontWeight: FontWeight.bold, fontSize: 15)),
+                    child: const Text("Vazgeç", textScaler: const TextScaler.linear(1.0), style: TextStyle(color: Colors.white60, fontWeight: FontWeight.bold, fontSize: 15)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1022,7 +1023,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                       Navigator.pop(dialogCtx);
                       _showCustomSnackBar("$serviceName talebiniz hazırlanıyor...");
                     },
-                    child: const Text("Tekrarla", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+                    child: const Text("Tekrarla", textScaler: const TextScaler.linear(1.0), style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
                   ),
                 ),
               ],
@@ -1056,11 +1057,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               ),
               const SizedBox(width: 12),
               const Expanded(
-                child: Text("Çıkış Yap", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 22, letterSpacing: -0.5), overflow: TextOverflow.ellipsis),
+                child: Text("Çıkış Yap", textScaler: const TextScaler.linear(1.0), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 22, letterSpacing: -0.5), overflow: TextOverflow.ellipsis),
               ),
             ],
           ),
-          content: const Text("Hesabınızdan güvenli bir şekilde çıkış yapmak istediğinize emin misiniz?", style: TextStyle(color: _subtitleColor, fontSize: 16, height: 1.5, fontWeight: FontWeight.w500)),
+          content: const Text("Hesabınızdan güvenli bir şekilde çıkış yapmak istediğinize emin misiniz?", textScaler: const TextScaler.linear(1.0), style: TextStyle(color: _subtitleColor, fontSize: 16, height: 1.5, fontWeight: FontWeight.w500)),
           actionsPadding: const EdgeInsets.all(20),
           actions: [
             Row(
@@ -1068,8 +1069,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 Expanded(
                   child: TextButton(
                     onPressed: () => Navigator.pop(dialogContext),
-                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                    child: const Text("İptal", style: TextStyle(color: Colors.white60, fontWeight: FontWeight.w800, fontSize: 16)),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), 
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+                    ),
+                    child: const Text("İptal", textScaler: const TextScaler.linear(1.0), style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white54, fontSize: 14)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1077,9 +1081,10 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _dangerColor, 
+                      foregroundColor: Colors.white,
                       elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      padding: const EdgeInsets.symmetric(vertical: 16)
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12)
                     ),
                     onPressed: () async {
                       Navigator.pop(dialogContext);
@@ -1101,7 +1106,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                         );
                       }
                     },
-                    child: const FittedBox(child: Text("Çıkış Yap", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
+                    child: const FittedBox(child: Text("Çıkış Yap", textScaler: const TextScaler.linear(1.0), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
                   ),
                 ),
               ],
@@ -1135,11 +1140,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   ),
                   const SizedBox(width: 12),
                   const Expanded(
-                    child: Text("Hesabı Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 22, letterSpacing: -0.5), overflow: TextOverflow.ellipsis),
+                    child: Text("Hesabı Sil", textScaler: const TextScaler.linear(1.0), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 22, letterSpacing: -0.5), overflow: TextOverflow.ellipsis),
                   ),
                 ],
               ),
-              content: const Text("Hesabınız ve tüm verileriniz kalıcı olarak silinecektir. Bu işlem geri alınamaz. Emin misiniz?", style: TextStyle(color: _subtitleColor, fontSize: 16, height: 1.5, fontWeight: FontWeight.w500)),
+              content: const Text("Hesabınız ve tüm verileriniz kalıcı olarak silinecektir. Bu işlem geri alınamaz. Emin misiniz?", textScaler: const TextScaler.linear(1.0), style: TextStyle(color: _subtitleColor, fontSize: 16, height: 1.5, fontWeight: FontWeight.w500)),
               actionsPadding: const EdgeInsets.all(20),
               actions: [
                 Row(
@@ -1147,8 +1152,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                     Expanded(
                       child: TextButton(
                         onPressed: isDeletingAccount ? null : () => Navigator.pop(dialogContext),
-                        style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                        child: const Text("İptal", style: TextStyle(color: Colors.white60, fontWeight: FontWeight.w800, fontSize: 16)),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), 
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+                        ),
+                        child: const Text("İptal", textScaler: const TextScaler.linear(1.0), style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white54, fontSize: 14)),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -1156,9 +1164,10 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _dangerColor,
+                          foregroundColor: Colors.white,
                           elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          padding: const EdgeInsets.symmetric(vertical: 16)
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12)
                         ),
                         onPressed: isDeletingAccount ? null : () async {
                           setDialogState(() => isDeletingAccount = true);
@@ -1190,7 +1199,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                         },
                         child: isDeletingAccount 
                             ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : const FittedBox(child: Text("Kalıcı Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
+                            : const FittedBox(child: Text("Kalıcı Sil", textScaler: const TextScaler.linear(1.0), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
                       ),
                     ),
                   ],
@@ -1565,13 +1574,13 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
-                            child: const Text("Kaldır", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+                            child: const Text("Kaldır", textScaler: const TextScaler.linear(1.0), style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
                           )
                         else
                           ElevatedButton.icon(
                             onPressed: isLinkingOAuth ? null : _linkGoogleAccount,
                             icon: const Icon(Icons.link_rounded, size: 16),
-                            label: const Text("Bağla", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+                            label: const Text("Bağla", textScaler: const TextScaler.linear(1.0), style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryColor,
                               foregroundColor: Colors.black,
@@ -1626,13 +1635,13 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
-                            child: const Text("Kaldır", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+                            child: const Text("Kaldır", textScaler: const TextScaler.linear(1.0), style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
                           )
                         else
                           ElevatedButton.icon(
                             onPressed: isLinkingOAuth ? null : _linkAppleAccount,
                             icon: const Icon(Icons.link_rounded, size: 16),
-                            label: const Text("Bağla", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+                            label: const Text("Bağla", textScaler: const TextScaler.linear(1.0), style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryColor,
                               foregroundColor: Colors.black,
@@ -2011,7 +2020,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
             ),
-            child: Text("Sayfa $_historyPage / $_totalHistoryPages", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
+            child: Text("Sayfa $_historyPage / $_totalHistoryPages", textScaler: const TextScaler.linear(1.0), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
           ),
           const SizedBox(width: 16),
           Container(
@@ -2112,9 +2121,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text("OTOTAG", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1.0)),
+                                const Text("OTOTAG", textScaler: const TextScaler.linear(1.0), style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1.0)),
                                 const SizedBox(height: 4),
-                                Text("$displayDate • $startTimeStr", style: const TextStyle(fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w500)),
+                                Text("$displayDate • $startTimeStr", textScaler: const TextScaler.linear(1.0), style: const TextStyle(fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w500)),
                               ],
                             ),
                           ),
@@ -2123,9 +2132,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                             children: [
                               const Icon(Icons.star_rounded, color: Colors.amber, size: 20),
                               const SizedBox(width: 4),
-                              Text(existingRating > 0 ? existingRating.toStringAsFixed(1) : "5.0", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                              Text(existingRating > 0 ? existingRating.toStringAsFixed(1) : "5.0", textScaler: const TextScaler.linear(1.0), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                               const SizedBox(width: 4),
-                              Text(personName.split(' ').first, style: const TextStyle(color: Colors.white, fontSize: 16), overflow: TextOverflow.ellipsis),
+                              Text(personName.split(' ').first, textScaler: const TextScaler.linear(1.0), style: const TextStyle(color: Colors.white, fontSize: 16), overflow: TextOverflow.ellipsis),
                             ],
                           )
                         ],
@@ -2154,7 +2163,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                                       margin: const EdgeInsets.all(8),
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.7), borderRadius: BorderRadius.circular(8)),
-                                      child: const Text("ÖNCESİ", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)),
+                                      child: const Text("ÖNCESİ", textScaler: const TextScaler.linear(1.0), style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)),
                                     ),
                                   ),
                                 ),
@@ -2177,7 +2186,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                                       margin: const EdgeInsets.all(8),
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(color: const Color(0xFF00FFA3).withValues(alpha: 0.9), borderRadius: BorderRadius.circular(8)),
-                                      child: const Text("SONRASI", style: TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.w900)),
+                                      child: const Text("SONRASI", textScaler: const TextScaler.linear(1.0), style: TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.w900)),
                                     ),
                                   ),
                                 ),
@@ -2221,7 +2230,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                       
                       const SizedBox(height: 24),
 
-                      const Text("Rota Bilgilerim", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      const Text("Rota Bilgilerim", textScaler: const TextScaler.linear(1.0), style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 16),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2241,16 +2250,16 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    const Expanded(child: Text("Usta Başlangıç", style: TextStyle(color: Colors.white, fontSize: 15))),
-                                    Text(startTimeStr, style: const TextStyle(color: Colors.white54, fontSize: 14)),
+                                    const Expanded(child: Text("Usta Başlangıç", textScaler: const TextScaler.linear(1.0), style: TextStyle(color: Colors.white, fontSize: 15))),
+                                    Text(startTimeStr, textScaler: const TextScaler.linear(1.0), style: const TextStyle(color: Colors.white54, fontSize: 14)),
                                   ],
                                 ),
                                 const SizedBox(height: 20),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Expanded(child: Text(city, style: const TextStyle(color: Colors.white, fontSize: 15), overflow: TextOverflow.ellipsis)),
-                                    Text(endTimeStr, style: const TextStyle(color: Colors.white54, fontSize: 14)),
+                                    Expanded(child: Text(city, textScaler: const TextScaler.linear(1.0), style: const TextStyle(color: Colors.white, fontSize: 15), overflow: TextOverflow.ellipsis)),
+                                    Text(endTimeStr, textScaler: const TextScaler.linear(1.0), style: const TextStyle(color: Colors.white54, fontSize: 14)),
                                   ],
                                 ),
                               ],
@@ -2267,7 +2276,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text("Değerlendirme", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                          const Text("Değerlendirme", textScaler: const TextScaler.linear(1.0), style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                           Row(
                             children: List.generate(5, (index) => GestureDetector(
                               onTap: () {
@@ -2291,7 +2300,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                         child: Divider(color: Colors.white10, thickness: 1.5),
                       ),
 
-                      const Text("Ödeme Bilgileri", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      const Text("Ödeme Bilgileri", textScaler: const TextScaler.linear(1.0), style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 16),
                       Row(
                         children: [
@@ -2301,9 +2310,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                             child: const Icon(Icons.payments_rounded, color: Colors.white, size: 14),
                           ),
                           const SizedBox(width: 12),
-                          const Expanded(child: Text("Nakit / Banka Havalesi", style: TextStyle(color: Colors.white, fontSize: 15), overflow: TextOverflow.ellipsis)),
+                          const Expanded(child: Text("Nakit / Banka Havalesi", textScaler: const TextScaler.linear(1.0), style: TextStyle(color: Colors.white, fontSize: 15), overflow: TextOverflow.ellipsis)),
                           const SizedBox(width: 8),
-                          Text("$agreedPrice ₺", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text("$agreedPrice ₺", textScaler: const TextScaler.linear(1.0), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                         ],
                       ),
                       
@@ -2320,7 +2329,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                           children: [
                             Icon(Icons.help_outline_rounded, color: Colors.white54, size: 20),
                             SizedBox(width: 8),
-                            Expanded(child: Text("Sorun mu var? Destek al", style: TextStyle(color: Colors.white54, fontSize: 14))),
+                            Expanded(child: Text("Sorun mu var? Destek al", textScaler: const TextScaler.linear(1.0), style: TextStyle(color: Colors.white54, fontSize: 14))),
                           ],
                         ),
                       ),
@@ -2370,7 +2379,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                       children: [
                         Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
                         const SizedBox(height: 24),
-                        const Text("Hizmeti Değerlendirin", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white)),
+                        const Text("Hizmeti Değerlendirin", textScaler: const TextScaler.linear(1.0), style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white)),
                         const SizedBox(height: 16),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -2442,14 +2451,15 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                               }
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF00FFA3),
+                              backgroundColor: _primaryColor,
                               foregroundColor: Colors.black,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 18),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                             ),
                             child: isSubmitting
-                                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
-                                : const Text("Gönder", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3))
+                                : const Text("Gönder", textScaler: const TextScaler.linear(1.0), style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
                           ),
                         ),
                       ],
@@ -2603,11 +2613,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 ),
                 child: Row(
                   children: [
-                    Text("${selectedJobs.length} seçildi", style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 14)),
+                    Text("${selectedJobs.length} seçildi", textScaler: const TextScaler.linear(1.0), style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 14)),
                     const Spacer(),
                     ElevatedButton.icon(
                       icon: const Icon(Icons.delete_forever_rounded, color: Colors.white, size: 16),
-                      label: const Text("Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
+                      label: const Text("Sil", textScaler: const TextScaler.linear(1.0), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _dangerColor, 
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8), 
@@ -2823,7 +2833,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 children: [
                   Container(width: 6, height: 28, decoration: BoxDecoration(color: primaryColor, borderRadius: BorderRadius.circular(12))),
                   const SizedBox(width: 12),
-                  const Expanded(child: Text("Kazanç & İstatistik", style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5), overflow: TextOverflow.ellipsis)),
+                  const Expanded(child: Text("Kazanç & İstatistik", textScaler: const TextScaler.linear(1.0), style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5), overflow: TextOverflow.ellipsis)),
                 ],
               ),
               const SizedBox(height: 32),
@@ -2908,9 +2918,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title, style: TextStyle(fontSize: isMain ? 16 : 14, color: _subtitleColor, fontWeight: FontWeight.w700, letterSpacing: 0.5), overflow: TextOverflow.ellipsis),
+                      Text(title, textScaler: const TextScaler.linear(1.0), style: TextStyle(fontSize: isMain ? 16 : 14, color: _subtitleColor, fontWeight: FontWeight.w700, letterSpacing: 0.5), overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 6),
-                      Text(value, style: TextStyle(fontSize: isMain ? 36 : 28, color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: -1.0), overflow: TextOverflow.ellipsis),
+                      Text(value, textScaler: const TextScaler.linear(1.0), style: TextStyle(fontSize: isMain ? 36 : 28, color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: -1.0), overflow: TextOverflow.ellipsis),
                     ],
                   ),
                 ),

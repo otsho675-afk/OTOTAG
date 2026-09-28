@@ -1045,6 +1045,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
 
   void _showTopSnackBar(String message, {bool isError = false}) {
     if (mounted) {
+      final size = MediaQuery.sizeOf(context);
+      final topPadding = MediaQuery.paddingOf(context).top;
+      
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Row(
@@ -1072,10 +1075,16 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
         ),
         backgroundColor: isError ? _dangerColor : _primaryColor.withValues(alpha: 0.95),
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
+        // Akıllı ve responsive yerleşim: Ekran genişliğine ve çentik boşluğuna göre en üstte konumlanır, alt butonları kapatmaz.
+        margin: EdgeInsets.only(
+          bottom: size.height - (topPadding > 0 ? topPadding + 80 : 100),
+          left: size.width > 600 ? (size.width - 400) / 2 : 16,
+          right: size.width > 600 ? (size.width - 400) / 2 : 16,
+        ),
+        dismissDirection: DismissDirection.up,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 0,
-        duration: const Duration(seconds: 2),
+        elevation: 10,
+        duration: const Duration(seconds: 3),
       ));
     }
   }
@@ -2520,6 +2529,16 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   
   @override
   Widget build(BuildContext context) {
+    // Cihazın font ayarları büyütülse bile tasarımı %100 oranında korur ve taşmaları engeller
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: const TextScaler.linear(1.0), 
+      ),
+      child: _buildResponsiveContent(context),
+    );
+  }
+
+  Widget _buildResponsiveContent(BuildContext context) {
     final Size size = MediaQuery.sizeOf(context);
     final double horizontalPadding = size.width > 600 ? 32.0 : 16.0;
 

@@ -321,32 +321,69 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
   }
 
   void _showTopSnackBar(String message, {bool isError = false}) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).clearSnackBars();
-
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: Colors.white.withValues(alpha:0.2), shape: BoxShape.circle),
-              child: Icon(isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded, color: Colors.white, size: 20),
+    if (!mounted) return;
+    
+    final overlay = Overlay.of(context);
+    late OverlayEntry overlayEntry;
+    
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: MediaQuery.of(context).padding.top + 16,
+        left: 20,
+        right: 20,
+        child: Material(
+          color: Colors.transparent,
+          child: TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeOutBack,
+            builder: (context, value, child) {
+              return Transform.translate(
+                offset: Offset(0, -50 * (1 - value)),
+                child: Opacity(
+                  opacity: value.clamp(0.0, 1.0),
+                  child: child,
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: isError ? alertRed : neonGreen,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(color: pureBlack.withValues(alpha: 0.4), blurRadius: 15, offset: const Offset(0, 6))
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.25), shape: BoxShape.circle),
+                    child: Icon(isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded, color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      message, 
+                      style: const TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.2)
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(message, style: const TextStyle(color: pureBlack, fontWeight: FontWeight.w800, fontSize: 14, letterSpacing: 0.2))
-            ),
-          ],
+          ),
         ),
-        backgroundColor: isError ? alertRed : neonGreen,
-        behavior: SnackBarBehavior.floating,
-        dismissDirection: DismissDirection.up,
-        margin: const EdgeInsets.only(bottom: 24, left: 20, right: 20),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        elevation: 0,
-        duration: const Duration(seconds: 2),
-      ));
-    }
+      ),
+    );
+
+    overlay.insert(overlayEntry);
+    
+    Future.delayed(const Duration(seconds: 3), () {
+      if (overlayEntry.mounted) {
+        overlayEntry.remove();
+      }
+    });
   }
 
   String _generateListHash(List list) {
@@ -989,7 +1026,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
         final bool isWideScreen = constraints.maxWidth > 800;
         final displayJobs = paginatedBids;
 
-        return Scaffold(
+        return MediaQuery(data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.0)), child: Scaffold(
           backgroundColor: pureBlack,
           extendBodyBehindAppBar: true,
           appBar: AppBar(
@@ -1149,7 +1186,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
               ),
             ],
           ),
-        );
+        ));
       },
     );
   }

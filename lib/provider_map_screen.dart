@@ -23,6 +23,7 @@ import 'profile_screen.dart';
 import 'provider_bids_screen.dart'; 
 import 'package:firebase_analytics/firebase_analytics.dart'; 
 import 'package:firebase_crashlytics/firebase_crashlytics.dart'; 
+import 'services/live_activity_service.dart'; 
 
 class ProviderMapScreen extends StatefulWidget {
   final int providerId;
@@ -662,6 +663,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                         if (!isMine) {
                            HapticFeedback.heavyImpact();
                            _playAlertSound();
+                           LiveActivityService().updateOfferStatus(
+                             statusText: "Müşteriden Karşı Teklif Geldi!",
+                             updatedSubtitle: "${newBubble['price']} ₺",
+                           );
                         }
                       }
                     }
@@ -764,20 +769,24 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                     ],
                                   ),
                                 ),
-                                Container(
+                               Container(
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.05),
+                                    color: neonGreen.withValues(alpha: 0.15),
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white.withValues(alpha: 0.1))
+                                    border: Border.all(color: neonGreen.withValues(alpha: 0.3))
                                   ),
                                   child: IconButton(
                                     onPressed: isSubmitting ? null : () {
                                       HapticFeedback.selectionClick();
-                                      if (context.mounted) Navigator.pop(context);
+                                      if (context.mounted) {
+                                        Navigator.pop(context);
+                                        _showTopSnackBar("İş askıya alındı. Arka planda takip ediliyor, hareket olduğunda bildirilecek.");
+                                      }
                                     },
-                                    icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20)
+                                    tooltip: "Askıya Al (Aşağıya İndir)",
+                                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: neonGreen, size: 26)
                                   ),
-                                )
+                                ),
                               ],
                             ),
                             const SizedBox(height: 16),
@@ -964,6 +973,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                       final data = json.decode(response.body);
                                       if (data['status'] == 'success') {
                                         _showTopSnackBar("Anlaşma sağlandı! İşlem başlatılıyor.");
+                                        LiveActivityService().endTracking();
                                         if (_isModalOpen) {
                                           Navigator.of(context, rootNavigator: true).pop();
                                           _isModalOpen = false;
@@ -1145,6 +1155,14 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                         } catch(e) {}
                                         
                                         _lastBidPrice = priceController.text.trim();
+
+                                        // Dynamic Island: Teklif Verildi / İnceleme Takibi Başlatıldı
+                                        LiveActivityService().startOfferTracking(
+                                          offerId: jobId.toString(),
+                                          customerName: "$serviceName Talebi",
+                                          offerAmount: "${priceController.text.trim()} ₺",
+                                          statusText: "Müşteri teklifinizi inceliyor",
+                                        );
                                         
                                         if (_isModalOpen) {
                                           setDialogState(() {
@@ -1253,10 +1271,23 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
               });
             }
           } 
-          else if (event.eventName == "job_matched" || event.eventName == "status_update" || event.eventName == "bid_update" || event.eventName == "counter_bid") {
+          else if (event.eventName == "job_matched" || event.eventName == "status_update") {
             if (mounted && !_isNavigating) {
               HapticFeedback.heavyImpact();
               _checkActiveJob();
+            }
+          } else if (event.eventName == "bid_update" || event.eventName == "counter_bid") {
+            if (mounted && !_isNavigating) {
+              HapticFeedback.heavyImpact();
+              _playAlertSound();
+              _showTopSnackBar("🔔 Askıdaki iş için müşteriden yeni bir teklif/yanıt geldi!", isNewJob: true);
+              if (!_isModalOpen) {
+                setState(() {
+                  _showJobCard = true;
+                  _isJobCardExpanded = true;
+                });
+              }
+              _fetchNearbyJobs(isAuto: true, radius: _searchRadius.toInt());
             }
           }
         },
@@ -1579,6 +1610,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     _mapRotationNotifier.dispose();
     _googleMapController?.dispose();
     _appleMapController = null;
+    LiveActivityService().endTracking();
     super.dispose();
   }
 
@@ -1848,7 +1880,11 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         backgroundColor: isNewJob ? neonGreen : (isError ? alertRed : neonGreen),
         behavior: SnackBarBehavior.floating,
         dismissDirection: DismissDirection.up,
-        margin: EdgeInsets.only(bottom: 24, left: screenWidth * 0.05, right: screenWidth * 0.05),
+        margin: EdgeInsets.only(
+          bottom: MediaQuery.of(context).size.height - 140, // Bildirimi her sayfada en üste iter, butonları kapatmaz
+          left: screenWidth * 0.05, 
+          right: screenWidth * 0.05,
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         elevation: 25,
         duration: const Duration(seconds: 2), 
@@ -1900,6 +1936,16 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
               _playAlertSound();
               _showLocalNotification("📍 Yakınınızda yeni bir iş var!", "${_getServiceName(newJobData['service_type']?.toString() ?? '')} için bölgenizde yeni bir iş talebi var!");
             }
+            
+            // Dynamic Island: Usta için Yeni İş Fırsatı Bildirimi
+            final double jobDist = newJobData['distance'] != null ? _parseDouble(newJobData['distance']) : 0.0;
+            LiveActivityService().startJobAlert(
+              jobId: newJobId.toString(),
+              serviceTitle: "${_getServiceName(newJobData['service_type']?.toString() ?? '')} Talebi",
+              distanceText: "${jobDist.toStringAsFixed(1)} KM",
+              timeoutSeconds: 60,
+              statusText: "Yeni İş Fırsatı!",
+            );
             
             setState(() {
               _showJobCard = true; 
@@ -1998,6 +2044,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       }
     } else {
       HapticFeedback.selectionClick();
+      LiveActivityService().endTracking();
       setState(() {
         isOnline = false;
         _showJobCard = false;
@@ -3180,7 +3227,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                 },
                                 onTap: (_) {
                                   FocusScope.of(context).unfocus();
-                                  if (_showJobCard) setState(() => _showJobCard = false);
+                                  if (_isJobCardExpanded) setState(() => _isJobCardExpanded = false);
                                 },
                               )
                             : gmaps.GoogleMap(
@@ -3588,7 +3635,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                               child: GestureDetector(
                                                 onTap: () {
                                                   HapticFeedback.lightImpact();
-                                                  setState(() => _showJobCard = false);
                                                   _showBidDialog(parsedCurrentId, serviceName, probDesc, distance, serviceType);
                                                 },
                                                 child: Container(

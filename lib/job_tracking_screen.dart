@@ -169,12 +169,36 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
   // --- DYNAMIC ISLAND CANLI YÖNETİM METODU ---
   void _syncDynamicIsland({int? minutesOverride, String? statusOverride}) {
-    if (widget.userType != 'customer' || kIsWeb) return;
+    if (kIsWeb) return;
 
     if (jobStatus == 'completed' || jobStatus == 'cancelled') {
       if (_isLiveActivityStarted) {
         LiveActivityService().endTracking();
         _isLiveActivityStarted = false;
+      }
+      return;
+    }
+
+    // Usta tarafında pazarlık aşaması kontrolü
+    if (widget.userType == 'provider' && jobStatus == 'searching') {
+      if (activeBid != null) {
+        bool isWaitingCustomer = activeBid!['last_bidder'] == 'provider';
+        String statusText = isWaitingCustomer ? 'Müşteri yanıtı bekleniyor' : 'Karşı teklif geldi!';
+        String amountText = "${activeBid!['amount']} ₺";
+        if (!_isLiveActivityStarted) {
+          LiveActivityService().startOfferTracking(
+            offerId: widget.jobId.toString(),
+            customerName: contactName.isNotEmpty ? contactName : "Müşteri",
+            offerAmount: amountText,
+            statusText: statusText,
+          );
+          _isLiveActivityStarted = true;
+        } else {
+          LiveActivityService().updateOfferStatus(
+            statusText: statusText,
+            updatedSubtitle: amountText,
+          );
+        }
       }
       return;
     }
@@ -187,21 +211,23 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     if (minutes <= 0 && distanceInKm > 0.05) minutes = 1;
     if (distanceInKm <= 0.05) minutes = 0;
 
-    String statusDesc = statusOverride ?? "Usta adrese geliyor";
+    String statusDesc = statusOverride ?? (widget.userType == 'customer' ? "Usta adrese geliyor" : "Müşteriye gidiliyor");
     if (distanceInKm <= 0.1) {
-      statusDesc = "Usta adrese ulaştı!";
+      statusDesc = widget.userType == 'customer' ? "Usta adrese ulaştı!" : "Müşteri adresine ulaştınız!";
     } else if (distanceInKm <= 0.5) {
-      statusDesc = "Usta sokağınızda (500m)";
+      statusDesc = widget.userType == 'customer' ? "Usta sokağınızda (500m)" : "Hedefe 500m kaldı";
     } else if (distanceInKm <= 1.0) {
-      statusDesc = "Usta çok yaklaştı (1 KM)";
+      statusDesc = widget.userType == 'customer' ? "Usta çok yaklaştı (1 KM)" : "Hedefe 1 KM kaldı";
     }
 
-    String pName = providerName.isNotEmpty ? providerName : (contactName.isNotEmpty ? contactName : "Usta");
+    String displayName = widget.userType == 'customer'
+        ? (providerName.isNotEmpty ? providerName : (contactName.isNotEmpty ? contactName : "Usta"))
+        : (contactName.isNotEmpty ? contactName : "Müşteri");
 
     if (!_isLiveActivityStarted) {
       LiveActivityService().startProviderTracking(
         orderId: "job_${widget.jobId}",
-        providerName: pName,
+        providerName: displayName,
         initialMinutes: minutes,
         statusText: statusDesc,
       );
@@ -209,7 +235,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     } else {
       LiveActivityService().updateRemainingTime(
         remainingMinutes: minutes,
-        providerName: pName,
+        providerName: displayName,
         statusText: statusDesc,
       );
     }
@@ -1124,7 +1150,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     _appleMapController = null;
     
     // Ekran tamamen kapandığında Live Activity'yi de kapat
-    if (widget.userType == 'customer' && _isLiveActivityStarted) {
+    if (_isLiveActivityStarted) {
       LiveActivityService().endTracking();
     }
     
@@ -1217,7 +1243,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       if (data['status'] == 'success') {
         if (mounted) {
           _positionStream?.cancel(); 
-          if (widget.userType == 'customer') {
+          if (_isLiveActivityStarted) {
             LiveActivityService().endTracking();
             _isLiveActivityStarted = false;
           }
@@ -1263,34 +1289,73 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   }
 
   void _showTopSnackBar(String message, {bool isError = false, bool isNewAlert = false}) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).clearSnackBars();
-    
-    double bottomMargin = MediaQuery.paddingOf(context).bottom + 20;
+    final overlayState = Overlay.maybeOf(context);
+    if (overlayState == null) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2), 
-              shape: BoxShape.circle,
+    late OverlayEntry overlayEntry;
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: MediaQuery.paddingOf(context).top + 16,
+        left: 16,
+        right: 16,
+        child: Material(
+          color: Colors.transparent,
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeOutBack,
+            builder: (context, value, child) {
+              return Transform.translate(
+                offset: Offset(0, -50 * (1 - value)),
+                child: Opacity(
+                  opacity: value.clamp(0.0, 1.0),
+                  child: child,
+                ),
+              );
+            },
+            child: Dismissible(
+              key: UniqueKey(),
+              direction: DismissDirection.up,
+              onDismissed: (_) {
+                if (overlayEntry.mounted) overlayEntry.remove();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: isNewAlert ? neonGreen : (isError ? const Color(0xFFFF3366) : neonGreen),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 5)),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2), 
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(isNewAlert ? Icons.notifications_active_rounded : (isError ? Icons.error_rounded : Icons.check_circle_rounded), color: Colors.white, size: 24),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(message, style: const TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.3))),
+                  ],
+                ),
+              ),
             ),
-            child: Icon(isNewAlert ? Icons.notifications_active_rounded : (isError ? Icons.error_rounded : Icons.check_circle_rounded), color: Colors.white, size: 24),
           ),
-          const SizedBox(width: 12),
-          Expanded(child: Text(message, style: const TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.3))),
-        ],
+        ),
       ),
-      backgroundColor: isNewAlert ? neonGreen : (isError ? const Color(0xFFFF3366) : neonGreen),
-      behavior: SnackBarBehavior.floating,
-      dismissDirection: DismissDirection.up,
-      margin: EdgeInsets.only(bottom: bottomMargin, left: 16, right: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 0,
-      duration: const Duration(seconds: 2),
-    ));
+    );
+
+    overlayState.insert(overlayEntry);
+    
+    Future.delayed(const Duration(seconds: 3), () {
+      if (overlayEntry.mounted) {
+        overlayEntry.remove();
+      }
+    });
   }
 
   Future<void> _fetchJobStatus() async {
@@ -1337,7 +1402,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
         if (newJobStatus == 'cancelled') {
             _positionStream?.cancel(); 
-            if (widget.userType == 'customer') {
+            if (_isLiveActivityStarted) {
               LiveActivityService().endTracking();
               _isLiveActivityStarted = false;
             }
@@ -1513,8 +1578,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           }
 
           if (jobStatus == 'completed') {
-            _positionStream?.cancel();
-            if (widget.userType == 'customer') {
+            _positionStream?.cancel(); 
+            if (_isLiveActivityStarted) {
               LiveActivityService().endTracking();
               _isLiveActivityStarted = false;
             }
@@ -2726,8 +2791,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     final isCustomer = widget.userType == 'customer';
     final int currentStep = _getStatusStep();
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.0)),
+      child: Scaffold(
+        extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text("İş Takibi", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 18, letterSpacing: -0.5)), 
         backgroundColor: Colors.transparent,
@@ -3012,12 +3079,12 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                 },
               ),
             ],
-          );
+        );
         }
       ),
-    );
+    )); // <-- Eksik olan kapanış parantezi eklendi
   }
-  
+
   Widget _buildDesktopPanelContent(int currentStep, Color primaryColor, LinearGradient themeGradient, Color shadowColor, Color cardColor, Color textColor, Color subtitleColor, bool isCustomer) {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),

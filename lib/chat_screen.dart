@@ -1,5 +1,6 @@
 // chat_screen.dart
-import 'package:flutter/material.dart'; import 'core/constants/app_constants.dart';
+import 'package:flutter/material.dart'; 
+import 'core/constants/app_constants.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -279,37 +280,44 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: pureBlack,
-      extendBodyBehindAppBar: true,
-      appBar: _buildAppBar(neonGreen),
-      body: Stack(
-        children: [
-          _buildBackgroundGlow(),
-          SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                if (isUploading)
-                  const LinearProgressIndicator(color: neonGreen, backgroundColor: Colors.transparent, minHeight: 2),
-                Expanded(
-                  child: ListView.builder(
-                    reverse: true, // Listeyi ters çevirir. Klavye açıldığında kusursuz çalışır.
-                    padding: const EdgeInsets.only(top: 20, bottom: 20, left: 16, right: 16),
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: messages.length,
-                    itemBuilder: (context, index) {
-                      final msg = messages[index];
-                      final isMe = msg['sender_id'].toString() == widget.currentUserId.toString();
-                      return _buildMessageBubble(msg, isMe, neonGreen);
-                    },
+    final mediaQueryData = MediaQuery.of(context);
+    
+    return MediaQuery(
+      data: mediaQueryData.copyWith(
+        textScaler: const TextScaler.linear(1.0), 
+      ),
+      child: Scaffold(
+        backgroundColor: pureBlack,
+        extendBodyBehindAppBar: true,
+        appBar: _buildAppBar(neonGreen),
+        body: Stack(
+          children: [
+            _buildBackgroundGlow(),
+            SafeArea(
+              bottom: false,
+              child: Column(
+                children: [
+                  if (isUploading)
+                    const LinearProgressIndicator(color: neonGreen, backgroundColor: Colors.transparent, minHeight: 2),
+                  Expanded(
+                    child: ListView.builder(
+                      reverse: true,
+                      padding: const EdgeInsets.only(top: 20, bottom: 20, left: 16, right: 16),
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: messages.length,
+                      itemBuilder: (context, index) {
+                        final msg = messages[index];
+                        final isMe = msg['sender_id'].toString() == widget.currentUserId.toString();
+                        return _buildMessageBubble(msg, isMe, neonGreen);
+                      },
+                    ),
                   ),
-                ),
-                _buildInputArea(neonGreen),
-              ],
+                  _buildInputArea(neonGreen),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -443,11 +451,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 250),
+                      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.35),
                       child: Image.network(
                         "https://eliteagency.sbs/${msg['media_url']}",
                         fit: BoxFit.cover,
-                        cacheWidth: 800, // EKLENDİ: OOM (Out of Memory) çökmesini kesin olarak önler
+                        cacheWidth: 800, 
                         errorBuilder: (context, error, stackTrace) => Container(
                           height: 100,
                           color: Colors.white10,
@@ -518,8 +526,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             ],
           ),
         ),
-        ), // BackdropFilter Kapanışı
-        ), // ClipRRect Kapanışı
+        ), 
+        ), 
       ),
     );
   }

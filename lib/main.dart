@@ -104,9 +104,18 @@ void main() async {
 
       // Arka plan bildirim yetkisi - Extension dosyalarınız tam ise OS bu hook'u kullanır.
       OneSignal.Notifications.addForegroundWillDisplayListener((event) {
-        // Ön plandayken bildirimlerin görünmesine izin ver
-        event.preventDefault(); 
-        event.notification.display();
+        event.preventDefault(); // Varsayılan ve UI engelleyebilen sistem bildirimini durdur
+        
+        // Hangi sayfada olunursa olunsun navigatorKey üzerinden akıllı overlay bildirimi göster
+        if (navigatorKey.currentContext != null) {
+          SmartNotificationHelper.show(
+            context: navigatorKey.currentContext!,
+            title: event.notification.title ?? 'Yeni Bildirim',
+            body: event.notification.body ?? '',
+          );
+        } else {
+          event.notification.display(); // Bağlam bulunamazsa güvenlik önlemi olarak standardı kullan
+        }
       });
 
     } else {
@@ -137,6 +146,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: const TextScaler.linear(1.0),
+          ),
+          child: child!,
+        );
+      },
       navigatorKey: navigatorKey,
       title: 'Oto Tamir App',
       debugShowCheckedModeBanner: false,
@@ -529,5 +546,123 @@ class RoleSelectionScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+class SmartNotificationHelper {
+  static void show({required BuildContext context, required String title, required String body}) {
+    final overlay = Overlay.of(context);
+    late OverlayEntry overlayEntry;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) {
+        final size = MediaQuery.of(context).size;
+        final topPadding = MediaQuery.of(context).padding.top;
+        
+        // Tablet/Web boyutlarında bildirimi ortala ve genişliğini kısıtla, mobilde tam genişlik kullan
+        final double horizontalMargin = size.width > 600 ? (size.width - 400) / 2 : 16.0;
+
+        return Positioned(
+          top: topPadding + 10, // Her zaman güvenli alandan 10 piksel aşağıda çıkar
+          left: horizontalMargin,
+          right: horizontalMargin,
+          child: Material(
+            color: Colors.transparent,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: -100, end: 0),
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.elasticOut,
+              builder: (context, value, child) {
+                return Transform.translate(
+                  offset: Offset(0, value),
+                  child: child,
+                );
+              },
+              child: Dismissible(
+                key: UniqueKey(),
+                direction: DismissDirection.up,
+                onDismissed: (_) {
+                  if (overlayEntry.mounted) overlayEntry.remove();
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF151518),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.5),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                    border: Border.all(color: const Color(0xFF00FFA3).withValues(alpha: 0.6), width: 1.5),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00FFA3).withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.notifications_active_rounded, color: Color(0xFF00FFA3), size: 24),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              title,
+                              style: const TextStyle(
+                                color: Colors.white, 
+                                fontSize: 16, 
+                                fontWeight: FontWeight.w800,
+                                fontFamily: 'Inter',
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              body,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.8), 
+                                fontSize: 14,
+                                fontFamily: 'Inter',
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          if (overlayEntry.mounted) overlayEntry.remove();
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.only(left: 8.0),
+                          child: Icon(Icons.close_rounded, color: Colors.white54, size: 22),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    overlay.insert(overlayEntry);
+
+    // Bildirimi 4 saniye sonra otomatik ekrandan kaldır
+    Future.delayed(const Duration(seconds: 4), () {
+      if (overlayEntry.mounted) {
+        overlayEntry.remove();
+      }
+    });
   }
 }

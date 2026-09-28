@@ -368,10 +368,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         isTicketSelectionMode = false;
       }
     });
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text("Seçilen öğeler panonuzdan gizlendi."),
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: const Text("Seçilen öğeler panonuzdan gizlendi."),
       backgroundColor: Colors.blueAccent,
       behavior: SnackBarBehavior.floating,
+      margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ));
   }
 
@@ -432,10 +434,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     await _fetchAllData();
     if (mounted) {
       // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text("Seçilen öğeler kalıcı olarak silindi."), 
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text("Seçilen öğeler kalıcı olarak silindi."), 
         backgroundColor: Colors.redAccent,
         behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ));
     }
   }
@@ -451,20 +455,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         await _fetchTickets();
         if (mounted) {
           // ignore: use_build_context_synchronously
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text("Şikayet durumu güncellendi."), 
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: const Text("Şikayet durumu güncellendi."), 
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ));
         }
       }
     } catch (e) {
       if (mounted) {
         // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Hata oluştu."), 
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text("Hata oluştu."), 
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ));
       }
     }
@@ -485,29 +493,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (data is Map && data['status'] == 'success') {
         if (mounted) {
           // ignore: use_build_context_synchronously
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text("Bildirim başarıyla gönderildi!"), 
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: const Text("Bildirim başarıyla gönderildi!"), 
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ));
         }
       } else {
         if (mounted) {
           // ignore: use_build_context_synchronously
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text("Bildirim gönderilemedi."), 
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: const Text("Bildirim gönderilemedi."), 
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ));
         }
       }
     } catch (e) {
       if (mounted) {
         // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Bağlantı hatası oluştu."), 
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text("Bağlantı hatası oluştu."), 
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ));
       }
     }
@@ -658,7 +672,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               ),
                               onPressed: isSending ? null : () async {
                                 if (titleController.text.trim().isEmpty || messageController.text.trim().isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Lütfen başlık ve mesajı doldurun."), backgroundColor: Colors.red));
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                    content: const Text("Lütfen başlık ve mesajı doldurun."), 
+                                    backgroundColor: Colors.red,
+                                    behavior: SnackBarBehavior.floating,
+                                    margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ));
                                   return;
                                 }
                                 setModalState(() => isSending = true);
@@ -771,12 +791,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           )
         );
       } else {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Yorumlar yüklenemedi.")));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text("Yorumlar yüklenemedi."),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
       }
     } catch (e) {
       if (mounted) {
         Navigator.pop(context); 
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Bağlantı hatası.")));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text("Bağlantı hatası."),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
       }
     }
   }
@@ -820,28 +850,53 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         );
         final data = json.decode(response.body);
         if (data is Map && data['status'] == 'success' && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text("Şifre başarıyla güncellendi."), 
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: const Text("Şifre başarıyla güncellendi."), 
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ));
         }
       } catch (e) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Şifre güncellenemedi."), backgroundColor: Colors.red));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text("Şifre güncellenemedi."), 
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
       }
     }
   }
 
   Future<void> _backupDatabase() async {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Yedekleme başlatıldı, lütfen bekleyin..."), behavior: SnackBarBehavior.floating));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: const Text("Yedekleme başlatıldı, lütfen bekleyin..."), 
+      behavior: SnackBarBehavior.floating,
+      margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ));
     try {
       final response = await http.get(Uri.parse("$baseUrl?action=admin_backup_db"));
       final data = json.decode(response.body);
       if (data is Map && data['status'] == 'success' && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Veritabanı yedeği başarıyla alındı!"), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text("Veritabanı yedeği başarıyla alındı!"), 
+          backgroundColor: Colors.green, 
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Yedekleme hatası."), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text("Yedekleme hatası."), 
+        backgroundColor: Colors.red, 
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
     }
   }
 
@@ -886,7 +941,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     if (!confirm) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Derin optimizasyon başlatıldı, lütfen bekleyin..."), behavior: SnackBarBehavior.floating));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: const Text("Derin optimizasyon başlatıldı, lütfen bekleyin..."), 
+      behavior: SnackBarBehavior.floating,
+      margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ));
     
     try {
       final response = await http.post(Uri.parse("$baseUrl?action=admin_optimize_system"));
@@ -924,10 +984,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           )
         );
       } else {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data?['message']?.toString() ?? "Optimizasyon başarısız oldu."), backgroundColor: Colors.red));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(data?['message']?.toString() ?? "Optimizasyon başarısız oldu."), 
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Optimizasyon sırasında hata oluştu."), backgroundColor: Colors.red));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text("Optimizasyon sırasında hata oluştu."), 
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
     }
   }
 
@@ -945,12 +1017,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             content: Text(action == 'approve_provider' ? "Usta başarıyla onaylandı." : "İşlem başarılı."),
             backgroundColor: action == 'approve_provider' ? Colors.green : Colors.blue,
             behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ));
         }
       }
     } catch (e) {
       if (mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("İşlem sırasında bir hata oluştu."), behavior: SnackBarBehavior.floating));
+         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text("İşlem sırasında bir hata oluştu."), 
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
       }
     }
   }
@@ -1059,16 +1138,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (response.statusCode == 200) {
         await _fetchAllData();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data?['message']?.toString() ?? "Cezai işlem uygulandı."), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(data?['message']?.toString() ?? "Cezai işlem uygulandı."), 
+            backgroundColor: Colors.green, 
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ));
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data?['message']?.toString() ?? "İşlem başarısız oldu."), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(data?['message']?.toString() ?? "İşlem başarısız oldu."), 
+            backgroundColor: Colors.red, 
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ));
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Bağlantı hatası."), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text("Bağlantı hatası."), 
+          backgroundColor: Colors.red, 
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
       }
     }
   }
@@ -1110,12 +1207,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (response.statusCode == 200) {
         await _fetchAllData();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Kullanıcı başarıyla silindi."), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: const Text("Kullanıcı başarıyla silindi."), 
+            backgroundColor: Colors.green, 
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ));
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Silme işlemi başarısız."), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text("Silme işlemi başarısız."), 
+          backgroundColor: Colors.red, 
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
       }
     }
   }
@@ -1157,12 +1266,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (response.statusCode == 200) {
         await _fetchAllData();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("İşlem başarıyla silindi."), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: const Text("İşlem başarıyla silindi."), 
+            backgroundColor: Colors.green, 
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ));
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Silme işlemi başarısız."), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text("Silme işlemi başarısız."), 
+          backgroundColor: Colors.red, 
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
       }
     }
   }
@@ -1206,13 +1327,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       });
       final data = json.decode(res.body);
       if (data['status'] == 'success') {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("İlan başarıyla kaldırıldı."), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text("İlan başarıyla kaldırıldı."), 
+          backgroundColor: Colors.green, 
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
         await _fetchAllData();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['message'] ?? "İşlem başarısız."), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(data['message'] ?? "İşlem başarısız."), 
+          backgroundColor: Colors.red, 
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Bağlantı hatası."), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text("Bağlantı hatası."), 
+        backgroundColor: Colors.red, 
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
     } finally {
       setState(() => isLoading = false);
     }
@@ -1224,7 +1363,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final Uri url = Uri.parse(cleanUrl);
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Belge açılamadı."), behavior: SnackBarBehavior.floating));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text("Belge açılamadı."), 
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
       }
     }
   }
@@ -1642,7 +1786,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   final Uri url = Uri.parse("https://www.google.com/maps/search/?api=1&query=$lat,$lng");
                   if (await canLaunchUrl(url)) await launchUrl(url, mode: LaunchMode.externalApplication);
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Bu işlem için konum bilgisi mevcut değil."), behavior: SnackBarBehavior.floating));
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: const Text("Bu işlem için konum bilgisi mevcut değil."), 
+                    behavior: SnackBarBehavior.floating,
+                    margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ));
                 }
               },
             ),
@@ -1773,7 +1922,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           duration: const Duration(seconds: 1),
           backgroundColor: Colors.blueGrey,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ));
       },
       borderRadius: BorderRadius.circular(10),
@@ -2797,7 +2947,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ElevatedButton(
                       onPressed: isSavingAd ? null : () async {
                         if (titleCtrl.text.trim().isEmpty) {
-                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Başlık zorunludur.")));
+                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: const Text("Başlık zorunludur."),
+                            behavior: SnackBarBehavior.floating,
+                            margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                           ));
                            return;
                         }
                         setSheetState(() => isSavingAd = true);
@@ -2825,10 +2980,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             onSuccess();
                             if (mounted) { Navigator.pop(context); }
                           } else {
-                            if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Reklam eklenemedi.")));
+                            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: const Text("Reklam eklenemedi."),
+                              behavior: SnackBarBehavior.floating,
+                              margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ));
                           }
                         } catch (e) {
-                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Bağlantı hatası: $e")));
+                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text("Bağlantı hatası: $e"),
+                            behavior: SnackBarBehavior.floating,
+                            margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ));
                         } finally {
                           setSheetState(() => isSavingAd = false);
                         }
@@ -2958,7 +3123,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ElevatedButton(
                       onPressed: isSavingAd ? null : () async {
                         if (titleCtrl.text.trim().isEmpty) {
-                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Başlık zorunludur.")));
+                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: const Text("Başlık zorunludur."),
+                            behavior: SnackBarBehavior.floating,
+                            margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                           ));
                            return;
                         }
                         setSheetState(() => isSavingAd = true);
@@ -2988,10 +3158,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             onSuccess();
                             if (mounted) { Navigator.pop(context); }
                           } else {
-                            if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Reklam güncellenemedi.")));
+                            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: const Text("Reklam güncellenemedi."),
+                              behavior: SnackBarBehavior.floating,
+                              margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ));
                           }
                         } catch (e) {
-                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Bağlantı hatası: $e")));
+                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text("Bağlantı hatası: $e"),
+                            behavior: SnackBarBehavior.floating,
+                            margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ));
                         } finally {
                           setSheetState(() => isSavingAd = false);
                         }
@@ -3039,7 +3219,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         await _fetchAds();
         onSuccess();
       } catch (e) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Hata oluştu.")));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text("Hata oluştu."),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
       }
     }
   }
@@ -3281,7 +3466,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
     final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
 
-    return Scaffold(
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.0)),
+      child: Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
         title: const Text("Yönetim Paneli", style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: -0.5, fontSize: 18)),
@@ -3376,7 +3563,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildLowPerformanceAlerts(Color cardColor) {

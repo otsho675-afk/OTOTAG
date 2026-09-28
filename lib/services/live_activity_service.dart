@@ -19,7 +19,123 @@ class LiveActivityService {
     }
   }
 
-  // Usta yola çıktığında Dynamic Island bildirimini tetikle
+  // ---------------------------------------------------------------------------
+  // USTA PANELİ: Yeni İş Talebi Geldiğinde Canlı Ada Tetikleme
+  // ---------------------------------------------------------------------------
+  Future<void> startJobAlert({
+    required String jobId,
+    required String serviceTitle,
+    required String distanceText,
+    required int timeoutSeconds,
+    String statusText = 'Yeni İş Fırsatı!',
+  }) async {
+    if (kIsWeb || !Platform.isIOS) return;
+
+    try {
+      final bool areEnabled = await _liveActivities.areActivitiesEnabled();
+      if (!areEnabled) {
+        debugPrint('Dynamic Island / Live Activities kapalı.');
+        return;
+      }
+
+      if (_currentActivityId != null) {
+        await endTracking();
+      }
+
+      final String activityId = 'job_$jobId';
+
+      final Map<String, dynamic> data = {
+        'activityType': 'job_alert',
+        'jobId': jobId,
+        'title': serviceTitle,
+        'subtitle': distanceText,
+        'statusText': statusText,
+        'remainingSeconds': timeoutSeconds,
+        'createdAt': DateTime.now().millisecondsSinceEpoch,
+      };
+
+      final String? result = await _liveActivities.createActivity(
+        activityId,
+        data,
+      );
+
+      _currentActivityId = result ?? activityId;
+      debugPrint('Usta Yeni İş Live Activity başlatıldı: $_currentActivityId');
+    } catch (e) {
+      debugPrint('Yeni İş Live Activity başlatma hatası: $e');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // USTA PANELİ: Teklif Verildiğinde / Teklif Durumu Takibi
+  // ---------------------------------------------------------------------------
+  Future<void> startOfferTracking({
+    required String offerId,
+    required String customerName,
+    required String offerAmount,
+    String statusText = 'Müşteri teklifinizi inceliyor',
+  }) async {
+    if (kIsWeb || !Platform.isIOS) return;
+
+    try {
+      final bool areEnabled = await _liveActivities.areActivitiesEnabled();
+      if (!areEnabled) {
+        debugPrint('Dynamic Island / Live Activities kapalı.');
+        return;
+      }
+
+      if (_currentActivityId != null) {
+        await endTracking();
+      }
+
+      final String activityId = 'offer_$offerId';
+
+      final Map<String, dynamic> data = {
+        'activityType': 'offer_tracking',
+        'offerId': offerId,
+        'title': customerName,
+        'subtitle': offerAmount,
+        'statusText': statusText,
+        'updatedAt': DateTime.now().millisecondsSinceEpoch,
+      };
+
+      final String? result = await _liveActivities.createActivity(
+        activityId,
+        data,
+      );
+
+      _currentActivityId = result ?? activityId;
+      debugPrint('Teklif Live Activity başlatıldı: $_currentActivityId');
+    } catch (e) {
+      debugPrint('Teklif Live Activity başlatma hatası: $e');
+    }
+  }
+
+  // Teklif durumunu güncelle (Örn: "Müşteri teklifi kabul etti", "Karşı teklif geldi")
+  Future<void> updateOfferStatus({
+    required String statusText,
+    String? updatedSubtitle,
+  }) async {
+    if (kIsWeb || !Platform.isIOS || _currentActivityId == null) return;
+
+    try {
+      final Map<String, dynamic> updatedData = {
+        'activityType': 'offer_tracking',
+        'statusText': statusText,
+        if (updatedSubtitle != null) 'subtitle': updatedSubtitle,
+        'updatedAt': DateTime.now().millisecondsSinceEpoch,
+      };
+
+      await _liveActivities.updateActivity(_currentActivityId!, updatedData);
+      debugPrint('Teklif durumu güncellendi: $statusText');
+    } catch (e) {
+      debugPrint('Teklif durumu güncelleme hatası: $e');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // MÜŞTERİ PANELİ: Usta Yola Çıktığında Konum/Süre Takibi
+  // ---------------------------------------------------------------------------
   Future<void> startProviderTracking({
     String? orderId,
     required String providerName,
@@ -39,16 +155,15 @@ class LiveActivityService {
         await endTracking();
       }
 
-      // Etkinlik için benzersiz bir ID belirlenir (Varsa sipariş ID'si, yoksa zaman damgası)
       final String activityId = orderId ?? 'provider_${DateTime.now().millisecondsSinceEpoch}';
 
       final Map<String, dynamic> data = {
+        'activityType': 'provider_tracking',
         'remainingMinutes': initialMinutes,
         'statusText': statusText,
         'providerName': providerName,
       };
 
-      // 1. Parametre: activityId (String), 2. Parametre: data (Map<String, dynamic>)
       final String? result = await _liveActivities.createActivity(
         activityId,
         data,
@@ -61,7 +176,7 @@ class LiveActivityService {
     }
   }
 
-  // Kalan dakika azaldıkça güncelle (Örn: 7 -> 6 -> 5)
+  // Kalan dakikayı güncelle (Müşteri ekranı için)
   Future<void> updateRemainingTime({
     required int remainingMinutes,
     required String providerName,
@@ -71,6 +186,7 @@ class LiveActivityService {
 
     try {
       final Map<String, dynamic> updatedData = {
+        'activityType': 'provider_tracking',
         'remainingMinutes': remainingMinutes,
         'statusText': statusText,
         'providerName': providerName,
@@ -83,7 +199,9 @@ class LiveActivityService {
     }
   }
 
-  // Usta hedefe ulaştığında bildirimi adadan kaldır
+  // ---------------------------------------------------------------------------
+  // Ortak Kapatma / Sonlandırma Metodu
+  // ---------------------------------------------------------------------------
   Future<void> endTracking() async {
     if (kIsWeb || !Platform.isIOS || _currentActivityId == null) return;
 

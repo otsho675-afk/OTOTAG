@@ -170,75 +170,57 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
     return "${isMySale ? 'sale' : 'list'}_${item['id']}";
   }
 
-  OverlayEntry? _topSnackBarEntry;
-
   void _dismissTopSnackBar() {
-    _topSnackBarEntry?.remove();
-    _topSnackBarEntry = null;
+    if (mounted) ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
   }
 
   void _showTopSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
     _dismissTopSnackBar();
 
-    final overlay = Overlay.maybeOf(context);
-    if (overlay == null) return;
-
-    final double topPadding = MediaQuery.of(context).padding.top;
-
-    late OverlayEntry entry;
-    entry = OverlayEntry(
-      builder: (context) => Positioned(
-        top: topPadding + 10,
-        left: 20,
-        right: 20,
-        child: Material(
-          color: Colors.transparent,
-          child: GestureDetector(
-            onTap: () => _dismissTopSnackBar(),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                color: isError ? alertRed : neonGreen,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.4),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        elevation: 0,
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        padding: EdgeInsets.zero,
+        margin: const EdgeInsets.only(bottom: 24, left: 20, right: 20),
+        duration: const Duration(milliseconds: 2500),
+        content: GestureDetector(
+          onTap: () => _dismissTopSnackBar(),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: isError ? alertRed : neonGreen,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
+                  child: Icon(isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded, color: Colors.white, size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    message,
+                    style: const TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.2),
                   ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
-                    child: Icon(isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded, color: Colors.white, size: 22),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Text(
-                      message,
-                      style: const TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.2),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
       ),
     );
-
-    _topSnackBarEntry = entry;
-    overlay.insert(entry);
-
-    Future.delayed(const Duration(milliseconds: 2500), () {
-      if (_topSnackBarEntry == entry) {
-        _dismissTopSnackBar();
-      }
-    });
   }
 
   Future<void> _fetchAllData() async {
@@ -2767,7 +2749,9 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
+      child: Scaffold(
       backgroundColor: pureBlack,
       extendBodyBehindAppBar: true,
       appBar: PreferredSize(
@@ -2878,7 +2862,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
           label: const Text("Yeni İlan", style: TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildMarketTab(BoxConstraints constraints) {

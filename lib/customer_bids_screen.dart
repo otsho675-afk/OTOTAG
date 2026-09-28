@@ -1,4 +1,7 @@
-import 'package:flutter/material.dart'; import 'core/constants/app_constants.dart';
+// customer_bids_screen.dart
+
+import 'package:flutter/material.dart'; 
+import 'core/constants/app_constants.dart';
 import 'package:flutter/services.dart'; 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -12,6 +15,7 @@ import 'job_tracking_screen.dart';
 import 'provider_profile_screen.dart';
 import 'customer_dashboard_screen.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
+import 'services/live_activity_service.dart';
 
 
 class CustomerBidsScreen extends StatefulWidget {
@@ -76,6 +80,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
       } catch (_) {}
     });
   }
+  
   final List<String> _radarStatusMessages = [
     "📡 Bölgesel GPS radarı aktif edildi...",
     "🛰️ Çevredeki uzman ustalara çağrı sinyali iletiliyor...",
@@ -127,6 +132,16 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
   void _startTimers() {
     _initWebSocket(); 
     _fetchBids(); 
+
+    // Dynamic Island: Müşteri arama ve teklif takibini başlat
+    if (!kIsWeb) {
+      LiveActivityService().startOfferTracking(
+        offerId: widget.jobId.toString(),
+        customerName: "Ustalar Taranıyor",
+        offerAmount: "$currentRadius KM",
+        statusText: "Bölgenizdeki ustalar aranıyor...",
+      );
+    }
     
     _radiusTimer?.cancel();
     
@@ -184,6 +199,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _cleanupTimers();
+    if (!_isNavigating) {
+      LiveActivityService().endTracking();
+    }
     pusher.unsubscribe(channelName: "job_${widget.jobId}");
     pusher.disconnect();
     _httpClient.close();
@@ -243,10 +261,17 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     }
   }
 
+  // --- AKILLI BİLDİRİM GÜNCELLEMESİ (CTRL+H İLE DEĞİŞTİRİLEN KÖK ÇÖZÜM) ---
   void _showTopSnackBar(String message, {bool isError = false, bool isNewJob = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).clearSnackBars();
     
+    // Alt butonları, bottomSheet'leri veya modal pencereleri engellememesi için
+    // bildirim dinamik olarak ekranın en üstüne (Top) konumlandırılır.
+    final double screenHeight = MediaQuery.sizeOf(context).height;
+    final double topPadding = MediaQuery.paddingOf(context).top;
+    final double smartBottomMargin = screenHeight - topPadding - 100; // 100px üstten boşluk bırakır
+
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Row(
         children: [
@@ -256,7 +281,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
               color: isNewJob ? Colors.black.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.2), 
               shape: BoxShape.circle,
             ),
-            child: Icon(isError ? Icons.error_outline_rounded : Icons.radar_rounded, color: isNewJob ? _bgColor : Colors.white, size: 20),
+            child: Icon(isError ? Icons.error_outline_rounded : Icons.notifications_active_rounded, color: isNewJob ? _bgColor : Colors.white, size: 20),
           ),
           const SizedBox(width: 14),
           Expanded(child: Text(message, style: TextStyle(color: isNewJob ? _bgColor : Colors.white, fontWeight: FontWeight.w800, fontSize: 14))),
@@ -264,16 +289,18 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
       ),
       backgroundColor: isError ? const Color(0xFFFF3366) : (isNewJob ? _primaryColor : _primaryColor.withValues(alpha: 0.9)),
       behavior: SnackBarBehavior.floating,
+      dismissDirection: DismissDirection.up, // Bildirim yukarı itilerek hemen kapatılabilir
       margin: EdgeInsets.only(
         left: 20, 
         right: 20, 
-        bottom: MediaQuery.paddingOf(context).bottom + 20
+        bottom: smartBottomMargin > 0 ? smartBottomMargin : 20 // Sıkışmalara karşı korumalı akıllı margin
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: isNewJob ? 10 : 0,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 4),
     ));
   }
+  // -------------------------------------------------------------------------
 
   Future<void> _fetchBids() async {
     if (!mounted || _isFetching || _isDialogActive) return;
@@ -364,6 +391,10 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                   _showTopSnackBar("${newBid['provider_name'] ?? 'Usta'} yeni fiyat teklif etti: ${newBid['amount']} ₺", isNewJob: true);
                   HapticFeedback.heavyImpact();
                   SystemSound.play(SystemSoundType.alert);
+                  LiveActivityService().updateOfferStatus(
+                    statusText: "${newBid['provider_name'] ?? 'Usta'} yeni teklif verdi",
+                    updatedSubtitle: "${newBid['amount']} ₺",
+                  );
                   
                   if (!_isDialogActive && !_isNavigating) {
                     Future.delayed(const Duration(milliseconds: 300), () {
@@ -377,8 +408,8 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
             }
           }
 
+          double minPrice = double.infinity;
           if (newBidsList.isNotEmpty) {
-            double minPrice = double.infinity;
             double maxScore = -double.infinity;
             int bestIdx = -1;
             int cheapIdx = -1;
@@ -453,6 +484,15 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                 _waitStartTime = null;
               }
             }
+
+            if (newBidsList.isNotEmpty) {
+              final double lowest = minPrice < double.infinity ? minPrice : 0;
+              LiveActivityService().updateOfferStatus(
+                statusText: "${newBidsList.length} Usta Teklif Verdi!",
+                updatedSubtitle: lowest > 0 ? "${lowest.toStringAsFixed(0)} ₺'den başlayan" : null,
+              );
+            }
+
             setState(() => bids = newBidsList);
           }
         }
@@ -489,6 +529,10 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
       final data = json.decode(response.body);
       if (data['status'] == 'success') {
         _showTopSnackBar("Karşı teklifiniz ustaya iletildi.", isNewJob: true);
+        LiveActivityService().updateOfferStatus(
+          statusText: "Karşı teklifiniz iletildi",
+          updatedSubtitle: "$amount ₺",
+        );
         _fetchBids();
       } else {
         _showTopSnackBar(data['message'] ?? "İşlem başarısız.", isError: true);
@@ -533,9 +577,11 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
           final bottomInset = MediaQuery.of(context).viewInsets.bottom;
           double dialogWidth = constraints.maxWidth > 500 ? 450 : constraints.maxWidth * 0.9;
           
-          return BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-            child: Dialog(
+          return MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.0)),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+              child: Dialog(
               backgroundColor: _cardColor,
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -687,6 +733,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                 ),
               ),
             ),
+            ),
           );
         }
       ),
@@ -768,9 +815,11 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     bool confirm = await showDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.85),
-      builder: (ctx) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: AlertDialog(
+      builder: (ctx) => MediaQuery(
+        data: MediaQuery.of(ctx).copyWith(textScaler: const TextScaler.linear(1.0)),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: AlertDialog(
           backgroundColor: _cardColor,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: BorderSide(color: Colors.white.withValues(alpha: 0.05))),
           title: const Text("Aramayı İptal Et", style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 20)),
@@ -805,6 +854,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
           ],
         ),
       ),
+      ),
     ).whenComplete(() => _isDialogActive = false) ?? false;
 
     if (!confirm) return;
@@ -834,6 +884,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
         );
         _isNavigating = true; 
         _cleanupTimers();
+        LiveActivityService().endTracking();
         HapticFeedback.mediumImpact();
         _showTopSnackBar("Talebiniz iptal edildi.");
         Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => CustomerDashboardScreen(customerId: widget.customerId)), (route) => false);
@@ -849,7 +900,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.0)),
+      child: PopScope(
       canPop: false,
       onPopInvoked: (didPop) {
         if (!didPop) _cancelJob();
@@ -933,6 +986,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -1575,9 +1629,11 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
             final double bottomInset = MediaQuery.viewInsetsOf(context).bottom;
             final double safeBottom = MediaQuery.paddingOf(context).bottom;
 
-            return BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-              child: Container(
+            return MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.0)),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                child: Container(
                 constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.88),
                 padding: EdgeInsets.only(
                   left: 20, 
@@ -1769,7 +1825,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                                 onPressed: canNegotiate
                                     ? () { 
                                         Navigator.pop(context); 
-                                        _showCounterBidDialog(bidId, providerId, displayPrice); 
+                                        Future.delayed(const Duration(milliseconds: 350), () {
+                                          _showCounterBidDialog(bidId, providerId, displayPrice); 
+                                        });
                                       }
                                     : () {
                                         HapticFeedback.selectionClick();
@@ -1812,6 +1870,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                     ],
                   ),
                 ),
+              ),
               ),
             );
           },

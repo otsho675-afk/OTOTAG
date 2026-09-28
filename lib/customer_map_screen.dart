@@ -383,47 +383,62 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     if (_isNotifModalOpen) return;
     _isNotifModalOpen = true;
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      backgroundColor: Colors.transparent,
-      useSafeArea: true,
-      isScrollControlled: true,
+      barrierColor: pureBlack.withValues(alpha: 0.65),
       builder: (context) {
         final double screenWidth = MediaQuery.sizeOf(context).width;
-        return BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: panelBlack.withValues(alpha:0.9),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-              border: Border.all(color: neonGreen.withValues(alpha:0.2), width: 1.5),
-              boxShadow: [BoxShadow(color: pureBlack.withValues(alpha:0.9), blurRadius: 40, offset: const Offset(0, -10))],
-            ),
-            child: SafeArea(
+        final double screenHeight = MediaQuery.sizeOf(context).height;
+        
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+          alignment: Alignment.center, // Alt paneldeki butonları kapatmamak için merkeze hizalanır
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: 450,
+                maxHeight: screenHeight * 0.75, // Responsive yapı: İçerik taşmasını önler
+              ),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: panelBlack.withValues(alpha: 0.95),
+                borderRadius: BorderRadius.circular(32),
+                border: Border.all(color: neonGreen.withValues(alpha: 0.3), width: 1.5),
+                boxShadow: [BoxShadow(color: pureBlack.withValues(alpha: 0.9), blurRadius: 40, offset: const Offset(0, 10))],
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
-                  const SizedBox(height: 24),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: neonGreen.withValues(alpha:0.1),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: neonGreen.withValues(alpha:0.3)),
-                      boxShadow: [BoxShadow(color: neonGreen.withValues(alpha:0.2), blurRadius: 20, offset: const Offset(0, 5))],
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: neonGreen.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: neonGreen.withValues(alpha: 0.3)),
+                        boxShadow: [BoxShadow(color: neonGreen.withValues(alpha: 0.2), blurRadius: 20, offset: const Offset(0, 5))],
+                      ),
+                      child: const Icon(Icons.notifications_active_rounded, color: neonGreen, size: 36),
                     ),
-                    child: const Icon(Icons.notifications_active_rounded, color: neonGreen, size: 36),
                   ),
                   const SizedBox(height: 16),
-                  Text("Araç Hatırlatmaları", textAlign: TextAlign.center, style: TextStyle(fontSize: screenWidth < 400 ? 18 : 22, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
+                  Text(
+                    "Araç Hatırlatmaları", 
+                    textAlign: TextAlign.center, 
+                    style: TextStyle(fontSize: screenWidth < 400 ? 18 : 22, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)
+                  ),
                   const SizedBox(height: 24),
                   if (reminderAlerts.isEmpty)
                     const Padding(
                       padding: EdgeInsets.only(bottom: 20),
-                      child: Text("Şu an için yaklaşan bir hatırlatmanız yok.", textAlign: TextAlign.center, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: textGray)),
+                      child: Text(
+                        "Şu an için yaklaşan bir hatırlatmanız yok.", 
+                        textAlign: TextAlign.center, 
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: textGray)
+                      ),
                     )
                   else
                     Flexible(
@@ -437,9 +452,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                               margin: const EdgeInsets.only(bottom: 12),
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                               decoration: BoxDecoration(
-                                color: isDanger ? const Color(0xFFFF3366).withValues(alpha:0.1) : neonGreen.withValues(alpha:0.05),
+                                color: isDanger ? const Color(0xFFFF3366).withValues(alpha: 0.1) : neonGreen.withValues(alpha: 0.05),
                                 borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: isDanger ? const Color(0xFFFF3366).withValues(alpha:0.4) : neonGreen.withValues(alpha:0.4), width: 1.5),
+                                border: Border.all(color: isDanger ? const Color(0xFFFF3366).withValues(alpha: 0.4) : neonGreen.withValues(alpha: 0.4), width: 1.5),
                               ),
                               child: Row(
                                 children: [
@@ -457,17 +472,17 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                   Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
-                      boxShadow: [BoxShadow(color: pureBlack.withValues(alpha:0.5), blurRadius: 10, offset: const Offset(0, 5))],
+                      boxShadow: [BoxShadow(color: pureBlack.withValues(alpha: 0.5), blurRadius: 10, offset: const Offset(0, 5))],
                     ),
                     child: ElevatedButton(
                       onPressed: () => Navigator.pop(context),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: pureBlack, 
                         padding: const EdgeInsets.symmetric(vertical: 18), 
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: Colors.white.withValues(alpha:0.1))), 
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: Colors.white.withValues(alpha: 0.1))), 
                         elevation: 0
                       ),
-                      child: const Text("Paneli Kapat", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
+                      child: const Text("Kapat", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
                     ),
                   )
                 ],
@@ -1110,7 +1125,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
         final finalBottomPadding = viewInsetsBottom > 0 ? viewInsetsBottom + 12.0 : paddingBottom + 12.0;
         final selectedServiceData = services.firstWhere((s) => s['id'] == selectedService, orElse: () => services[0]);
 
-        return Scaffold(
+        return MediaQuery(data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling), child: Scaffold(
           backgroundColor: pureBlack,
           extendBodyBehindAppBar: true,
           resizeToAvoidBottomInset: false, 
@@ -1770,7 +1785,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
               ),
             ],
           ),
-        );
+        ));
       },
     );
   }

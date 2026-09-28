@@ -1044,49 +1044,60 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   }
 
   void _showTopSnackBar(String message, {bool isError = false}) {
-    if (mounted) {
-      final size = MediaQuery.sizeOf(context);
-      final topPadding = MediaQuery.paddingOf(context).top;
-      
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    if (!mounted) return;
+    final size = MediaQuery.sizeOf(context);
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final Color activeColor = isError ? _dangerColor : _primaryColor;
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
         content: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: activeColor.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
+                border: Border.all(color: activeColor.withValues(alpha: 0.4), width: 1.2),
               ),
               child: Icon(
-                isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded,
-                color: Colors.white,
-                size: 20,
+                isError ? Icons.error_outline_rounded : Icons.check_circle_rounded,
+                color: activeColor,
+                size: 18,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 message,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14, letterSpacing: 0.2),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13.5,
+                  letterSpacing: 0.2,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
         ),
-        backgroundColor: isError ? _dangerColor : _primaryColor.withValues(alpha: 0.95),
+        backgroundColor: const Color(0xFF111116).withValues(alpha: 0.96),
         behavior: SnackBarBehavior.floating,
-        // Akıllı ve responsive yerleşim: Ekran genişliğine ve çentik boşluğuna göre en üstte konumlanır, alt butonları kapatmaz.
         margin: EdgeInsets.only(
-          bottom: size.height - (topPadding > 0 ? topPadding + 80 : 100),
-          left: size.width > 600 ? (size.width - 400) / 2 : 16,
-          right: size.width > 600 ? (size.width - 400) / 2 : 16,
+          bottom: bottomInset > 0 ? bottomInset + 12 : 20,
+          left: size.width > 600 ? (size.width - 440) / 2 : 16,
+          right: size.width > 600 ? (size.width - 440) / 2 : 16,
         ),
-        dismissDirection: DismissDirection.up,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 10,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: activeColor.withValues(alpha: 0.4), width: 1.2),
+        ),
+        elevation: 16,
         duration: const Duration(seconds: 3),
-      ));
-    }
+      ),
+    );
   }
 
   Future<void> _performLogout() async {

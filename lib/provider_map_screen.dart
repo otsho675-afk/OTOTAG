@@ -601,8 +601,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      enableDrag: true,
-      isDismissible: true,
+      enableDrag: false, // Kullanıcının paneli aşağı kaydırarak kapatmasını engeller
+      isDismissible: false, // Panelin dışındaki siyah alana tıklanarak kapatılmasını engeller
       barrierColor: pureBlack.withValues(alpha: 0.50), 
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder( 
@@ -1843,54 +1843,60 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   }
 
   void _showTopSnackBar(String message, {bool isError = false, bool isNewJob = false}) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).clearSnackBars();
-      
-      final double screenWidth = MediaQuery.of(context).size.width;
+    if (!mounted) return;
+    final size = MediaQuery.sizeOf(context);
+    final Color activeColor = isNewJob ? const Color(0xFFF59E0B) : (isError ? alertRed : neonGreen);
 
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
         content: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.white.withValues(alpha: 0.4), Colors.white.withValues(alpha: 0.15)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: activeColor.withValues(alpha: 0.18),
                 shape: BoxShape.circle,
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 10)],
+                border: Border.all(color: activeColor.withValues(alpha: 0.45), width: 1.2),
               ),
               child: Icon(
-                isNewJob ? Icons.notifications_active_rounded : (isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded),
-                color: pureBlack,
-                size: screenWidth < 400 ? 20 : 24,
+                isNewJob ? Icons.notifications_active_rounded : (isError ? Icons.error_outline_rounded : Icons.check_circle_rounded),
+                color: activeColor,
+                size: 20,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
-                message, 
-                style: TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: screenWidth < 400 ? 13 : 15, letterSpacing: 0.3)
+                message,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13.5,
+                  letterSpacing: 0.2,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
         ),
-        backgroundColor: isNewJob ? neonGreen : (isError ? alertRed : neonGreen),
+        backgroundColor: panelBlack.withValues(alpha: 0.96),
         behavior: SnackBarBehavior.floating,
-        dismissDirection: DismissDirection.up,
         margin: EdgeInsets.only(
-          bottom: MediaQuery.of(context).size.height - 140, // Bildirimi her sayfada en üste iter, butonları kapatmaz
-          left: screenWidth * 0.05, 
-          right: screenWidth * 0.05,
+          bottom: (jobList.isNotEmpty && _showJobCard) ? 175.0 : 16.0,
+          left: size.width > 600 ? (size.width - 440) / 2 : 16,
+          right: size.width > 600 ? (size.width - 440) / 2 : 16,
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        elevation: 25,
-        duration: const Duration(seconds: 2), 
-      ));
-      setState(() { isLoading = false; isRefreshing = false; });
-    }
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: activeColor.withValues(alpha: 0.4), width: 1.2),
+        ),
+        elevation: 20,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+    if (mounted) setState(() { isLoading = false; isRefreshing = false; });
   }
 
   void _playAlertSound() {

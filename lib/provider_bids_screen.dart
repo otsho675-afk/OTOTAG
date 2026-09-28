@@ -322,68 +322,59 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
 
   void _showTopSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
-    
-    final overlay = Overlay.of(context);
-    late OverlayEntry overlayEntry;
-    
-    overlayEntry = OverlayEntry(
-      builder: (context) => Positioned(
-        top: MediaQuery.of(context).padding.top + 16,
-        left: 20,
-        right: 20,
-        child: Material(
-          color: Colors.transparent,
-          child: TweenAnimationBuilder<double>(
-            tween: Tween<double>(begin: 0, end: 1),
-            duration: const Duration(milliseconds: 400),
-            curve: Curves.easeOutBack,
-            builder: (context, value, child) {
-              return Transform.translate(
-                offset: Offset(0, -50 * (1 - value)),
-                child: Opacity(
-                  opacity: value.clamp(0.0, 1.0),
-                  child: child,
-                ),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    final size = MediaQuery.sizeOf(context);
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final Color activeColor = isError ? alertRed : neonGreen;
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: isError ? alertRed : neonGreen,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(color: pureBlack.withValues(alpha: 0.4), blurRadius: 15, offset: const Offset(0, 6))
-                ],
+                color: activeColor.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+                border: Border.all(color: activeColor.withValues(alpha: 0.4), width: 1.2),
               ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.25), shape: BoxShape.circle),
-                    child: Icon(isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded, color: Colors.white, size: 20),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Text(
-                      message, 
-                      style: const TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.2)
-                    ),
-                  ),
-                ],
+              child: Icon(
+                isError ? Icons.error_outline_rounded : Icons.check_circle_rounded,
+                color: activeColor,
+                size: 18,
               ),
             ),
-          ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13.5,
+                  letterSpacing: 0.2,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
+        backgroundColor: panelBlack.withValues(alpha: 0.96),
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.only(
+          bottom: bottomInset > 0 ? bottomInset + 12 : 20,
+          left: size.width > 600 ? (size.width - 440) / 2 : 16,
+          right: size.width > 600 ? (size.width - 440) / 2 : 16,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: activeColor.withValues(alpha: 0.4), width: 1.2),
+        ),
+        elevation: 16,
+        duration: const Duration(seconds: 3),
       ),
     );
-
-    overlay.insert(overlayEntry);
-    
-    Future.delayed(const Duration(seconds: 3), () {
-      if (overlayEntry.mounted) {
-        overlayEntry.remove();
-      }
-    });
   }
 
   String _generateListHash(List list) {

@@ -224,7 +224,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
             child: Icon(isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded, color: Colors.white, size: 22),
           ),
           const SizedBox(width: 14),
@@ -233,7 +233,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
           ),
         ],
       ),
-      backgroundColor: isError ? const Color(0xFFFF3366) : const Color(0xFF00FFA3).withOpacity(0.95),
+      backgroundColor: isError ? const Color(0xFFFF3366) : const Color(0xFF00FFA3).withValues(alpha: 0.95),
       behavior: SnackBarBehavior.floating,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -279,12 +279,12 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     HapticFeedback.lightImpact();
     final bool confirm = await showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.8),
+      barrierColor: Colors.black.withValues(alpha: 0.8),
       builder: (ctx) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: AlertDialog(
           backgroundColor: const Color(0xFF161822),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: BorderSide(color: Colors.white.withOpacity(0.1))),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
           title: const Text("İşlem Kaydını Sil", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
           content: const Text("Bu işlem geçmişi kaydı kalıcı olarak silinecektir. Emin misiniz?", style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.4)),
           actionsPadding: const EdgeInsets.all(12),
@@ -392,88 +392,116 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     
     if (insDate != null) {
       final int days = insDate.difference(nowNormalized).inDays;
-      if (days < 0) alerts.add("Trafik Sigortanızın süresi ${days.abs()} gün geçmiş!");
-      else if (days <= 15) alerts.add("Trafik Sigortanızın bitmesine $days gün kaldı.");
+      if (days < 0) {
+        alerts.add("Trafik Sigortanızın süresi ${days.abs()} gün geçmiş!");
+      } else if (days <= 15) alerts.add("Trafik Sigortanızın bitmesine $days gün kaldı.");
     }
     if (_effectiveInspectionDate != null) {
       final int days = _effectiveInspectionDate!.difference(nowNormalized).inDays;
-      if (days < 0) alerts.add("Araç Muayene süreniz ${days.abs()} gün geçmiş!");
-      else if (days <= 15) alerts.add("Araç Muayenenizin bitmesine $days gün kaldı.");
+      if (days < 0) {
+        alerts.add("Araç Muayene süreniz ${days.abs()} gün geçmiş!");
+      } else if (days <= 15) alerts.add("Araç Muayenenizin bitmesine $days gün kaldı.");
     }
 
     if (alerts.isNotEmpty && mounted) {
       HapticFeedback.mediumImpact();
-      showDialog(
+      showModalBottomSheet(
         context: context,
-        barrierColor: Colors.black.withOpacity(0.8),
-        builder: (context) {
-          return BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 320),
-                child: AlertDialog(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
-                    side: BorderSide(color: Colors.white.withOpacity(0.1), width: 1.5)
-                  ),
-                  backgroundColor: const Color(0xFF161822),
-                  elevation: 24,
-                  title: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10), 
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF3366).withOpacity(0.15), 
-                          shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: const Color(0xFFFF3366).withOpacity(0.3), blurRadius: 12)]
-                        ), 
-                        child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFFF3366), size: 26)
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text("Hatırlatmalar", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: Colors.white, letterSpacing: -0.5))
-                      ),
-                    ],
-                  ),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: alerts.map((a) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (modalCtx) {
+          final bottomInset = MediaQuery.of(modalCtx).viewInsets.bottom;
+          return GestureDetector(
+            onTap: () => FocusScope.of(context).unfocus(),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: Container(
+                    padding: EdgeInsets.only(bottom: bottomInset > 0 ? bottomInset + 16 : 24, left: 24, right: 24, top: 20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF161822).withValues(alpha: 0.98),
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                      border: Border.all(color: const Color(0xFFFF3366).withValues(alpha: 0.4), width: 1.5),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 40, offset: const Offset(0, -10))],
+                    ),
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const Padding(
-                            padding: EdgeInsets.only(top: 6),
-                            child: Icon(Icons.circle, size: 8, color: Color(0xFFFF3366)),
+                          Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
+                          const SizedBox(height: 24),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFF3366).withValues(alpha: 0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFFF3366), size: 28),
+                              ),
+                              const SizedBox(width: 14),
+                              const Expanded(
+                                child: Text("Hatırlatmalar", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 22, color: Colors.white, letterSpacing: -0.5)),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 20),
+                                onPressed: () => Navigator.pop(modalCtx),
+                              )
+                            ],
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(child: Text(a, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white.withOpacity(0.85), height: 1.4))),
+                          const SizedBox(height: 24),
+                          ...alerts.map((a) => Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF3366).withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFFFF3366).withValues(alpha: 0.2)),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Padding(
+                                    padding: EdgeInsets.only(top: 2),
+                                    child: Icon(Icons.error_outline_rounded, size: 18, color: Color(0xFFFF3366)),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(a, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.9), height: 1.4)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )),
+                          const SizedBox(height: 24),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF00FFA3),
+                                foregroundColor: Colors.black,
+                                padding: const EdgeInsets.symmetric(vertical: 18),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                elevation: 0,
+                              ),
+                              onPressed: () {
+                                HapticFeedback.selectionClick();
+                                Navigator.pop(modalCtx);
+                              },
+                              child: const Text("Anladım, Kapat", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                            ),
+                          )
                         ],
                       ),
-                    )).toList(),
+                    ),
                   ),
-                  actionsPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-                  actions: [
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          HapticFeedback.selectionClick();
-                          Navigator.pop(context);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF00FFA3), 
-                          foregroundColor: Colors.black,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), 
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          elevation: 0,
-                        ),
-                        child: const Text("Anladım", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
-                      ),
-                    )
-                  ],
                 ),
               ),
             ),
@@ -532,11 +560,11 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
               constraints: const BoxConstraints(maxWidth: 600),
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: const Color(0xFF13151F).withOpacity(0.98),
+                color: const Color(0xFF13151F).withValues(alpha: 0.98),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.5),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.6), blurRadius: 30, offset: const Offset(0, -5))
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 30, offset: const Offset(0, -5))
                 ]
               ),
               child: SingleChildScrollView(
@@ -557,10 +585,10 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                         Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: color.withOpacity(0.15),
+                            color: color.withValues(alpha: 0.15),
                             shape: BoxShape.circle,
-                            border: Border.all(color: color.withOpacity(0.5), width: 2),
-                            boxShadow: [BoxShadow(color: color.withOpacity(0.2), blurRadius: 15)]
+                            border: Border.all(color: color.withValues(alpha: 0.5), width: 2),
+                            boxShadow: [BoxShadow(color: color.withValues(alpha: 0.2), blurRadius: 15)]
                           ),
                           child: Icon(icon, color: color, size: 28),
                         ),
@@ -571,7 +599,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                             children: [
                               Text(type.toUpperCase(), style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: 0.5)),
                               const SizedBox(height: 4),
-                              Text(DateFormat('dd.MM.yyyy - HH:mm').format(date), style: TextStyle(color: Colors.white.withOpacity(0.6), fontWeight: FontWeight.w600, fontSize: 13)),
+                              Text(DateFormat('dd.MM.yyyy - HH:mm').format(date), style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontWeight: FontWeight.w600, fontSize: 13)),
                             ],
                           ),
                         ),
@@ -582,29 +610,29 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                     const SizedBox(height: 20),
 
                     if (cost > 0) ...[
-                      Text("İşlem Tutarı", style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13, fontWeight: FontWeight.w600)),
+                      Text("İşlem Tutarı", style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 6),
                       Text("${cost.toStringAsFixed(2)} ₺", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 30, letterSpacing: -0.5)),
                       const SizedBox(height: 20),
                     ],
 
                     if (description.isNotEmpty) ...[
-                      Text("Açıklama / Detay", style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13, fontWeight: FontWeight.w600)),
+                      Text("Açıklama / Detay", style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: const Color(0xFF1B1E2B),
                           borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: Colors.white.withOpacity(0.06))
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.06))
                         ),
-                        child: Text(description, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14, height: 1.5, fontWeight: FontWeight.w500)),
+                        child: Text(description, style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 14, height: 1.5, fontWeight: FontWeight.w500)),
                       ),
                       const SizedBox(height: 20),
                     ],
 
                     if (record['document_url'] != null || record['image_url'] != null) ...[
-                      Text("Ekli Belgeler & Görseller", style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13, fontWeight: FontWeight.w600)),
+                      Text("Ekli Belgeler & Görseller", style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 12),
                       Row(
                         children: [
@@ -618,7 +646,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                                 icon: const Icon(Icons.image_rounded, size: 18),
                                 label: const Text("Görseli Aç"),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF00FFA3).withOpacity(0.12),
+                                  backgroundColor: const Color(0xFF00FFA3).withValues(alpha: 0.12),
                                   foregroundColor: const Color(0xFF00FFA3),
                                   elevation: 0,
                                   padding: const EdgeInsets.symmetric(vertical: 10),
@@ -637,7 +665,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                                 icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
                                 label: const Text("Belgeyi Aç"),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFFF3366).withOpacity(0.12),
+                                  backgroundColor: const Color(0xFFFF3366).withValues(alpha: 0.12),
                                   foregroundColor: const Color(0xFFFF3366),
                                   elevation: 0,
                                   padding: const EdgeInsets.symmetric(vertical: 10),
@@ -730,15 +758,15 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [const Color(0xFF161822), color.withOpacity(0.08)],
+          colors: [const Color(0xFF161822), color.withValues(alpha: 0.08)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
         boxShadow: [
-          BoxShadow(color: color.withOpacity(0.15), blurRadius: 20, offset: const Offset(0, 8)),
-          BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 4))
+          BoxShadow(color: color.withValues(alpha: 0.15), blurRadius: 20, offset: const Offset(0, 8)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 10, offset: const Offset(0, 4))
         ]
       ),
       child: Column(
@@ -750,17 +778,17 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.15), 
+                  color: color.withValues(alpha: 0.15), 
                   shape: BoxShape.circle,
-                  boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 12)]
+                  boxShadow: [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 12)]
                 ),
                 child: Icon(icon, color: color, size: 24),
               ),
-              Icon(Icons.arrow_outward_rounded, color: Colors.white24, size: 20),
+              const Icon(Icons.arrow_outward_rounded, color: Colors.white24, size: 20),
             ],
           ),
           const SizedBox(height: 24),
-          Text(title, style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.3), overflow: TextOverflow.ellipsis),
+          Text(title, style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.3), overflow: TextOverflow.ellipsis),
           const SizedBox(height: 8),
           FittedBox(
             fit: BoxFit.scaleDown,
@@ -781,8 +809,8 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
       decoration: BoxDecoration(
         color: const Color(0xFF161822),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: Colors.white.withOpacity(0.06), width: 1.5),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 8))]
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06), width: 1.5),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8))]
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -790,9 +818,9 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildInfoRow("Trafik Sigortası", _effectiveInsuranceDate, Icons.shield_rounded, 365),
-            Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Divider(height: 1, color: Colors.white.withOpacity(0.08))),
+            Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Divider(height: 1, color: Colors.white.withValues(alpha: 0.08))),
             _buildInfoRow("Araç Muayenesi", _effectiveInspectionDate, Icons.fact_check_rounded, 365),
-            Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Divider(height: 1, color: Colors.white.withOpacity(0.08))),
+            Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Divider(height: 1, color: Colors.white.withValues(alpha: 0.08))),
             _buildMaintenanceRow(cKm, mKm),
           ],
         ),
@@ -815,7 +843,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
           children: [
             Container(
               padding: const EdgeInsets.all(10), 
-              decoration: BoxDecoration(color: statusColor.withOpacity(0.12), borderRadius: BorderRadius.circular(14)), 
+              decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)), 
               child: Icon(icon, color: statusColor, size: 22)
             ),
             const SizedBox(width: 14),
@@ -825,16 +853,16 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                 children: [
                   Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.3), overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 4),
-                  Text(date == null ? "Tarih Belirtilmedi" : DateFormat('dd.MM.yyyy').format(date), style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.55), fontWeight: FontWeight.w600)),
+                  Text(date == null ? "Tarih Belirtilmedi" : DateFormat('dd.MM.yyyy').format(date), style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.55), fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.1),
+                color: statusColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: statusColor.withOpacity(0.3))
+                border: Border.all(color: statusColor.withValues(alpha: 0.3))
               ),
               child: Text(
                 date == null ? "Belirsiz" : (daysLeft < 0 ? "${daysLeft.abs()} Gün Geçti" : "$daysLeft Gün"), 
@@ -847,7 +875,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
           const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(value: progress, minHeight: 6, backgroundColor: Colors.white.withOpacity(0.06), valueColor: AlwaysStoppedAnimation<Color>(statusColor)),
+            child: LinearProgressIndicator(value: progress, minHeight: 6, backgroundColor: Colors.white.withValues(alpha: 0.06), valueColor: AlwaysStoppedAnimation<Color>(statusColor)),
           ),
         ]
       ],
@@ -866,7 +894,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
           children: [
             Container(
               padding: const EdgeInsets.all(10), 
-              decoration: BoxDecoration(color: statusColor.withOpacity(0.12), borderRadius: BorderRadius.circular(14)), 
+              decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)), 
               child: Icon(Icons.build_circle_rounded, color: statusColor, size: 22)
             ),
             const SizedBox(width: 14),
@@ -876,16 +904,16 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                 children: [
                   const Text("Periyodik Bakım", style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.3), overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 4),
-                  Text("Güncel: $cKm KM", style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.55), fontWeight: FontWeight.w600)),
+                  Text("Güncel: $cKm KM", style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.55), fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.1),
+                color: statusColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: statusColor.withOpacity(0.3))
+                border: Border.all(color: statusColor.withValues(alpha: 0.3))
               ),
               child: Text(
                 remainingKm < 0 ? "${remainingKm.abs()} KM Gecikti" : "$remainingKm KM", 
@@ -897,7 +925,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
         const SizedBox(height: 12),
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: LinearProgressIndicator(value: progress, minHeight: 6, backgroundColor: Colors.white.withOpacity(0.06), valueColor: AlwaysStoppedAnimation<Color>(statusColor)),
+          child: LinearProgressIndicator(value: progress, minHeight: 6, backgroundColor: Colors.white.withValues(alpha: 0.06), valueColor: AlwaysStoppedAnimation<Color>(statusColor)),
         ),
       ],
     );
@@ -913,7 +941,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
             decoration: BoxDecoration(
               color: const Color(0xFF161822),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withOpacity(0.06), width: 1.5),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.06), width: 1.5),
             ),
             child: TextField(
               controller: _searchController,
@@ -924,7 +952,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
               style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
               decoration: InputDecoration(
                 hintText: "İşlem, not veya tutar ara...",
-                hintStyle: TextStyle(color: Colors.white.withOpacity(0.35), fontSize: 14, fontWeight: FontWeight.w500),
+                hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 14, fontWeight: FontWeight.w500),
                 prefixIcon: const Padding(padding: EdgeInsets.only(left: 14, right: 10), child: Icon(Icons.search_rounded, color: Color(0xFF00FFA3), size: 22)),
                 suffixIcon: searchQuery.isNotEmpty 
                   ? IconButton(
@@ -958,9 +986,9 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                     backgroundColor: const Color(0xFF161822),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     elevation: isSelected ? 8 : 0,
-                    shadowColor: const Color(0xFF00FFA3).withOpacity(0.5),
+                    shadowColor: const Color(0xFF00FFA3).withValues(alpha: 0.5),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    side: BorderSide(color: isSelected ? const Color(0xFF00FFA3) : Colors.white.withOpacity(0.1), width: 1.5),
+                    side: BorderSide(color: isSelected ? const Color(0xFF00FFA3) : Colors.white.withValues(alpha: 0.1), width: 1.5),
                     onSelected: (val) {
                       if (val && selectedFilter != f) {
                         HapticFeedback.selectionClick();
@@ -997,15 +1025,15 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                 width: 48, height: 48,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [const Color(0xFF161822), color.withOpacity(0.15)],
+                    colors: [const Color(0xFF161822), color.withValues(alpha: 0.15)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   shape: BoxShape.circle, 
                   border: Border.all(color: color, width: 2.5),
                   boxShadow: [
-                    BoxShadow(color: color.withOpacity(0.4), blurRadius: 16, offset: const Offset(0, 4)),
-                    BoxShadow(color: color.withOpacity(0.1), blurRadius: 4, spreadRadius: 2)
+                    BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 4)),
+                    BoxShadow(color: color.withValues(alpha: 0.1), blurRadius: 4, spreadRadius: 2)
                   ]
                 ),
                 child: Icon(icon, color: color, size: 22),
@@ -1017,7 +1045,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                     margin: const EdgeInsets.symmetric(vertical: 6), 
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [color.withOpacity(0.6), color.withOpacity(0.05)],
+                        colors: [color.withValues(alpha: 0.6), color.withValues(alpha: 0.05)],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                       ),
@@ -1039,13 +1067,13 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                     _showRecordDetailSheet(record);
                   },
                   borderRadius: BorderRadius.circular(22),
-                  splashColor: color.withOpacity(0.1),
-                  highlightColor: color.withOpacity(0.05),
+                  splashColor: color.withValues(alpha: 0.1),
+                  highlightColor: color.withValues(alpha: 0.05),
                   child: Container(
                     decoration: BoxDecoration(
                       color: const Color(0xFF161822),
                       borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: Colors.white.withOpacity(0.06), width: 1.5),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.06), width: 1.5),
                     ),
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -1057,18 +1085,18 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: color.withOpacity(0.12),
+                                color: color.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: color.withOpacity(0.3))
+                                border: Border.all(color: color.withValues(alpha: 0.3))
                               ),
                               child: Text(type.toUpperCase(), style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 0.4)),
                             ),
-                            Text(DateFormat('dd.MM.yyyy').format(date), style: TextStyle(color: Colors.white.withOpacity(0.55), fontWeight: FontWeight.bold, fontSize: 12)),
+                            Text(DateFormat('dd.MM.yyyy').format(date), style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontWeight: FontWeight.bold, fontSize: 12)),
                           ],
                         ),
                         if (description.isNotEmpty) ...[
                           const SizedBox(height: 10),
-                          Text(description, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13, height: 1.4, fontWeight: FontWeight.w500)),
+                          Text(description, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13, height: 1.4, fontWeight: FontWeight.w500)),
                         ],
                         if (cost > 0 || record['document_url'] != null || record['image_url'] != null) ...[
                           const SizedBox(height: 12),
@@ -1085,7 +1113,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                                   children: [
                                     const Icon(Icons.attach_file_rounded, color: Colors.white54, size: 15),
                                     const SizedBox(width: 4),
-                                    Text("Ekler", style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 11, fontWeight: FontWeight.w600)),
+                                    Text("Ekler", style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 11, fontWeight: FontWeight.w600)),
                                   ],
                                 ),
                             ],
@@ -1136,7 +1164,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                             height: 350,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              gradient: RadialGradient(colors: [const Color(0xFF00FFA3).withOpacity(0.07), Colors.transparent]),
+                              gradient: RadialGradient(colors: [const Color(0xFF00FFA3).withValues(alpha: 0.07), Colors.transparent]),
                             ),
                           ),
                         ),
@@ -1156,7 +1184,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                                   expandedHeight: 160.0,
                                   floating: false,
                                   pinned: true,
-                                  backgroundColor: bgColor.withOpacity(0.9),
+                                  backgroundColor: bgColor.withValues(alpha: 0.9),
                                   elevation: 0,
                                   stretch: true,
                                   leading: Container(
@@ -1169,18 +1197,18 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                                           Navigator.pop(context);
                                         },
                                         borderRadius: BorderRadius.circular(16),
-                                        splashColor: const Color(0xFF00FFA3).withOpacity(0.2),
-                                        highlightColor: const Color(0xFF00FFA3).withOpacity(0.1),
+                                        splashColor: const Color(0xFF00FFA3).withValues(alpha: 0.2),
+                                        highlightColor: const Color(0xFF00FFA3).withValues(alpha: 0.1),
                                         child: ClipRRect(
                                           borderRadius: BorderRadius.circular(16),
                                           child: BackdropFilter(
                                             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                                             child: Container(
                                               decoration: BoxDecoration(
-                                                color: const Color(0xFF161822).withOpacity(0.6),
+                                                color: const Color(0xFF161822).withValues(alpha: 0.6),
                                                 borderRadius: BorderRadius.circular(16),
-                                                border: Border.all(color: Colors.white.withOpacity(0.15), width: 1.5),
-                                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))],
+                                                border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1.5),
+                                                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 4))],
                                               ),
                                               child: const Icon(
                                                 Icons.arrow_back_ios_new_rounded, 
@@ -1204,7 +1232,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                                             width: 200, height: 200,
                                             decoration: BoxDecoration(
                                               shape: BoxShape.circle,
-                                              gradient: RadialGradient(colors: [const Color(0xFF00FFA3).withOpacity(0.15), Colors.transparent]),
+                                              gradient: RadialGradient(colors: [const Color(0xFF00FFA3).withValues(alpha: 0.15), Colors.transparent]),
                                             ),
                                           ),
                                         ),
@@ -1221,10 +1249,10 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                                             decoration: BoxDecoration(
-                                              gradient: LinearGradient(colors: [const Color(0xFF00FFA3).withOpacity(0.2), const Color(0xFF00FFA3).withOpacity(0.05)]),
+                                              gradient: LinearGradient(colors: [const Color(0xFF00FFA3).withValues(alpha: 0.2), const Color(0xFF00FFA3).withValues(alpha: 0.05)]),
                                               borderRadius: BorderRadius.circular(12),
                                               border: Border.all(color: const Color(0xFF00FFA3), width: 1.5),
-                                              boxShadow: [BoxShadow(color: const Color(0xFF00FFA3).withOpacity(0.2), blurRadius: 12)]
+                                              boxShadow: [BoxShadow(color: const Color(0xFF00FFA3).withValues(alpha: 0.2), blurRadius: 12)]
                                             ),
                                             child: Text(
                                               currentVehicleData['plate']?.toString().toUpperCase() ?? '', 
@@ -1235,7 +1263,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                                             const SizedBox(width: 12),
                                             Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                              decoration: BoxDecoration(color: Colors.white.withOpacity(0.08), borderRadius: BorderRadius.circular(8)),
+                                              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8)),
                                               child: Text(currentVehicleData['brand_model'] ?? '', style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
                                             ),
                                           ]
@@ -1268,7 +1296,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                                               ),
                                               Container(
                                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                                decoration: BoxDecoration(color: const Color(0xFF00FFA3).withOpacity(0.12), borderRadius: BorderRadius.circular(12)),
+                                                decoration: BoxDecoration(color: const Color(0xFF00FFA3).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
                                                 child: Text("${records.length} Kayıt", style: const TextStyle(color: Color(0xFF00FFA3), fontWeight: FontWeight.w900, fontSize: 13)),
                                               )
                                             ],
@@ -1282,12 +1310,12 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                                             child: Center(
                                               child: Column(
                                                 children: [
-                                                  Icon(Icons.history_toggle_off_rounded, size: 64, color: Colors.white.withOpacity(0.2)),
+                                                  Icon(Icons.history_toggle_off_rounded, size: 64, color: Colors.white.withValues(alpha: 0.2)),
                                                   const SizedBox(height: 16),
                                                   Text(
                                                     records.isEmpty ? "Henüz bu araca ait işlem eklenmedi." : "Arama veya filtreye uygun kayıt bulunamadı.", 
                                                     textAlign: TextAlign.center, 
-                                                    style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 15, fontWeight: FontWeight.bold)
+                                                    style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 15, fontWeight: FontWeight.bold)
                                                   ),
                                                 ],
                                               ),
@@ -1318,8 +1346,8 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
-                  BoxShadow(color: const Color(0xFF00FFA3).withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 8)),
-                  BoxShadow(color: const Color(0xFF00FFA3).withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 4))
+                  BoxShadow(color: const Color(0xFF00FFA3).withValues(alpha: 0.4), blurRadius: 20, offset: const Offset(0, 8)),
+                  BoxShadow(color: const Color(0xFF00FFA3).withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 4))
                 ]
               ),
               child: FloatingActionButton.extended(
@@ -1442,14 +1470,14 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
             child: Icon(isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded, color: Colors.white, size: 22),
           ),
           const SizedBox(width: 14),
           Expanded(child: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14, letterSpacing: 0.2))),
         ],
       ),
-      backgroundColor: isError ? const Color(0xFFFF3366) : const Color(0xFF00FFA3).withOpacity(0.95),
+      backgroundColor: isError ? const Color(0xFFFF3366) : const Color(0xFF00FFA3).withValues(alpha: 0.95),
       behavior: SnackBarBehavior.floating,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -1924,21 +1952,21 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
-        splashColor: color.withOpacity(0.1),
-        highlightColor: color.withOpacity(0.05),
+        splashColor: color.withValues(alpha: 0.1),
+        highlightColor: color.withValues(alpha: 0.05),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: const Color(0xFF1B1E2B),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: color.withOpacity(0.3), width: 1.5),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))],
+            border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 4))],
           ),
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
                 child: Icon(icon, color: color, size: 22),
               ),
               const SizedBox(width: 14),
@@ -1946,7 +1974,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 12, fontWeight: FontWeight.w600)),
+                    Text(title, style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 12, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 4),
                     Text(
                       date != null ? DateFormat('dd.MM.yyyy').format(date) : emptyText,
@@ -1955,7 +1983,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                   ],
                 ),
               ),
-              Icon(Icons.edit_calendar_rounded, color: color.withOpacity(0.8), size: 20),
+              Icon(Icons.edit_calendar_rounded, color: color.withValues(alpha: 0.8), size: 20),
             ],
           ),
         ),
@@ -1968,8 +1996,8 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
       decoration: BoxDecoration(
         color: const Color(0xFF1B1E2B), 
         borderRadius: BorderRadius.circular(18), 
-        border: Border.all(color: Colors.white.withOpacity(0.06), width: 1.5),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 10, offset: const Offset(0, 4))]
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06), width: 1.5),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 10, offset: const Offset(0, 4))]
       ),
       child: TextField(
         controller: controller,
@@ -1979,13 +2007,13 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
         style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 15),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 13, fontWeight: FontWeight.w500),
-          prefixIcon: Padding(padding: const EdgeInsets.only(left: 14, right: 10), child: Icon(icon, color: color.withOpacity(0.8), size: 20)),
+          labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 13, fontWeight: FontWeight.w500),
+          prefixIcon: Padding(padding: const EdgeInsets.only(left: 14, right: 10), child: Icon(icon, color: color.withValues(alpha: 0.8), size: 20)),
           filled: true,
           fillColor: Colors.transparent,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide(color: color.withOpacity(0.7), width: 2)),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide(color: color.withValues(alpha: 0.7), width: 2)),
         ),
       ),
     );
@@ -2009,11 +2037,11 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
           maxHeight: screenHeight * 0.90, 
         ),
         decoration: BoxDecoration(
-          color: const Color(0xFF13151F).withOpacity(0.98), 
+          color: const Color(0xFF13151F).withValues(alpha: 0.98), 
           borderRadius: BorderRadius.circular(32),
-          border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.5),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.6), blurRadius: 40, offset: const Offset(0, 10))
+            BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 40, offset: const Offset(0, 10))
           ]
         ),
         child: ClipRRect(
@@ -2044,7 +2072,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF00FFA3).withOpacity(0.12),
+                                color: const Color(0xFF00FFA3).withValues(alpha: 0.12),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(isEditing ? Icons.edit_note_rounded : Icons.post_add_rounded, color: const Color(0xFF00FFA3), size: 22),
@@ -2056,7 +2084,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                               icon: Container(
                                 padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.05),
+                                  color: Colors.white.withValues(alpha: 0.05),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(Icons.close_rounded, color: Colors.white70, size: 18),
@@ -2100,12 +2128,12 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                         Container(
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [const Color(0xFF00FFA3).withOpacity(0.12), const Color(0xFF161822)],
+                              colors: [const Color(0xFF00FFA3).withValues(alpha: 0.12), const Color(0xFF161822)],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                             borderRadius: BorderRadius.circular(22),
-                            border: Border.all(color: const Color(0xFF00FFA3).withOpacity(0.35), width: 1.5),
+                            border: Border.all(color: const Color(0xFF00FFA3).withValues(alpha: 0.35), width: 1.5),
                           ),
                           padding: const EdgeInsets.all(16),
                           child: Column(
@@ -2115,7 +2143,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                                 children: [
                                   Container(
                                     padding: const EdgeInsets.all(6),
-                                    decoration: BoxDecoration(color: const Color(0xFF00FFA3).withOpacity(0.15), shape: BoxShape.circle),
+                                    decoration: BoxDecoration(color: const Color(0xFF00FFA3).withValues(alpha: 0.15), shape: BoxShape.circle),
                                     child: const Icon(Icons.auto_awesome_rounded, color: Color(0xFF00FFA3), size: 16),
                                   ),
                                   const SizedBox(width: 8),
@@ -2145,7 +2173,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                                       onSubmitted: (_) => _processSmartNote(),
                                       decoration: InputDecoration(
                                         hintText: "Örn: Dün Opet'te 45 lt mazot aldım 1950 TL km 142000",
-                                        hintStyle: TextStyle(color: Colors.white.withOpacity(0.35), fontSize: 13),
+                                        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 13),
                                         border: InputBorder.none,
                                         isDense: true,
                                         contentPadding: EdgeInsets.zero,
@@ -2179,9 +2207,9 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                                   children: parsedEntities.map((e) => Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: (e['color'] as Color).withOpacity(0.15),
+                                      color: (e['color'] as Color).withValues(alpha: 0.15),
                                       borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: (e['color'] as Color).withOpacity(0.5), width: 1),
+                                      border: Border.all(color: (e['color'] as Color).withValues(alpha: 0.5), width: 1),
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
@@ -2219,7 +2247,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                         ),
                         const SizedBox(height: 20),
 
-                        Text("İşlem Kategorisi", style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12, fontWeight: FontWeight.w700)),
+                        Text("İşlem Kategorisi", style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 10),
                         SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
@@ -2245,7 +2273,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                                   backgroundColor: const Color(0xFF1B1E2B),
                                   avatar: Icon(type['icon'], color: isSelected ? Colors.black : color, size: 16),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                  side: BorderSide(color: isSelected ? color : Colors.white.withOpacity(0.06), width: 1.5),
+                                  side: BorderSide(color: isSelected ? color : Colors.white.withValues(alpha: 0.06), width: 1.5),
                                 ),
                               );
                             }).toList(),
@@ -2253,7 +2281,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                         ),
                         const SizedBox(height: 20),
 
-                        Text("Tarih Ayarları", style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12, fontWeight: FontWeight.w700)),
+                        Text("Tarih Ayarları", style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 10),
                         _buildDatePickerCard(
                           title: "İşlem Tarihi",
@@ -2292,9 +2320,9 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                           const SizedBox(height: 10),
                           Container(
                             decoration: BoxDecoration(
-                              color: const Color(0xFF00FFA3).withOpacity(0.06), 
+                              color: const Color(0xFF00FFA3).withValues(alpha: 0.06), 
                               borderRadius: BorderRadius.circular(16), 
-                              border: Border.all(color: const Color(0xFF00FFA3).withOpacity(0.2))
+                              border: Border.all(color: const Color(0xFF00FFA3).withValues(alpha: 0.2))
                             ),
                             child: Material(
                               color: Colors.transparent,
@@ -2305,7 +2333,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                                   setState(() => enableNotification = val);
                                 },
                                 activeThumbColor: const Color(0xFF00FFA3),
-                                activeTrackColor: const Color(0xFF00FFA3).withOpacity(0.3),
+                                activeTrackColor: const Color(0xFF00FFA3).withValues(alpha: 0.3),
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
                                 title: const Text("Vakti Yaklaşınca Hatırlat (3 Gün Önce)", style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white)),
                                 secondary: const Icon(Icons.notifications_active_rounded, color: Color(0xFF00FFA3), size: 22),
@@ -2315,7 +2343,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                         ],
                         
                         const SizedBox(height: 20),
-                        Text("Detay & Maliyet Bilgileri", style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12, fontWeight: FontWeight.w700)),
+                        Text("Detay & Maliyet Bilgileri", style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 10),
 
                         LayoutBuilder(
@@ -2357,7 +2385,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                         _buildGlassInput(descController, selectedType == 'Yakıt Alımı' ? "Alınan Litre, İstasyon vb." : "Yapılan İşlemler / Parça Notları", Icons.notes_rounded, Colors.white, maxLines: 3),
                         
                         const SizedBox(height: 20),
-                        Text("Belge & Fatura Yükleme", style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12, fontWeight: FontWeight.w700)),
+                        Text("Belge & Fatura Yükleme", style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 10),
                         
                         Row(
@@ -2373,7 +2401,7 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                           onPressed: isSaving ? null : _saveRecord,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF00FFA3),
-                            disabledBackgroundColor: const Color(0xFF00FFA3).withOpacity(0.5),
+                            disabledBackgroundColor: const Color(0xFF00FFA3).withValues(alpha: 0.5),
                             foregroundColor: Colors.black,
                             elevation: 0,
                             padding: const EdgeInsets.symmetric(vertical: 18),
@@ -2415,9 +2443,9 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.04),
+            color: Colors.white.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.08)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
           ),
           child: Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w700)),
         ),
@@ -2437,8 +2465,8 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
       child: Container(
         height: 80,
         decoration: BoxDecoration(
-          color: selectedImage != null ? const Color(0xFF00FFA3).withOpacity(0.12) : const Color(0xFF1B1E2B),
-          border: Border.all(color: selectedImage != null ? const Color(0xFF00FFA3) : Colors.white.withOpacity(0.06), width: 1.5),
+          color: selectedImage != null ? const Color(0xFF00FFA3).withValues(alpha: 0.12) : const Color(0xFF1B1E2B),
+          border: Border.all(color: selectedImage != null ? const Color(0xFF00FFA3) : Colors.white.withValues(alpha: 0.06), width: 1.5),
           borderRadius: BorderRadius.circular(16)
         ),
         child: selectedImage != null && !kIsWeb
@@ -2484,8 +2512,8 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
         height: 80,
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
-          color: selectedDoc != null ? const Color(0xFFB388FF).withOpacity(0.12) : const Color(0xFF1B1E2B),
-          border: Border.all(color: selectedDoc != null ? const Color(0xFFB388FF) : Colors.white.withOpacity(0.06), width: 1.5),
+          color: selectedDoc != null ? const Color(0xFFB388FF).withValues(alpha: 0.12) : const Color(0xFF1B1E2B),
+          border: Border.all(color: selectedDoc != null ? const Color(0xFFB388FF) : Colors.white.withValues(alpha: 0.06), width: 1.5),
           borderRadius: BorderRadius.circular(16)
         ),
         child: selectedDoc != null
@@ -2502,9 +2530,9 @@ class __RecordFormSheetState extends State<_RecordFormSheet> {
                   )
                 ],
               )
-            : Column(
+            : const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
+                children: [
                   Icon(Icons.upload_file_rounded, color: Colors.white54, size: 24),
                   SizedBox(height: 6),
                   Text("Ruhsat / Belge", style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Colors.white54)),

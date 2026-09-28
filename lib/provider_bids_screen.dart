@@ -44,6 +44,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
   bool isSelectionMode = false;
   final Set<String> selectedJobIds = {};
   bool isDeleting = false;
+  bool _isModalOpen = false;
 
   // Ana Siber Tema Renk Paleti
   static const Color neonGreen = Color(0xFF00FFA3);
@@ -180,46 +181,48 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
   }
 
   Future<void> _confirmBatchDelete() async {
-    if (selectedJobIds.isEmpty) return;
+    if (selectedJobIds.isEmpty || _isModalOpen || isDeleting) return;
+    _isModalOpen = true;
     HapticFeedback.heavyImpact();
 
     final count = selectedJobIds.length;
     final bool? confirmed = await showDialog<bool>(
       context: context,
-      barrierColor: Colors.black87,
+      barrierColor: Colors.black.withValues(alpha: 0.85),
       builder: (ctx) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
         child: Dialog(
-          backgroundColor: panelBlack,
+          backgroundColor: panelBlack.withValues(alpha: 0.98),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
             side: BorderSide(color: alertRed.withValues(alpha: 0.4), width: 1.5),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(22),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: alertRed.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
+                    border: Border.all(color: alertRed.withValues(alpha: 0.35)),
                   ),
-                  child: const Icon(Icons.delete_sweep_rounded, color: alertRed, size: 36),
+                  child: const Icon(Icons.delete_sweep_rounded, color: alertRed, size: 32),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 16),
                 Text(
                   "$count İşlem Silinecek",
-                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: -0.4),
+                  style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w900, letterSpacing: -0.4),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 Text(
                   "Seçtiğiniz $count adet geçmiş işlem kaydı listenizden kalıcı olarak temizlenecektir. Bu işlem geri alınamaz.",
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 13, height: 1.45, fontWeight: FontWeight.w600),
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 13, height: 1.45, fontWeight: FontWeight.w500),
                 ),
-                const SizedBox(height: 26),
+                const SizedBox(height: 24),
                 Row(
                   children: [
                     Expanded(
@@ -252,7 +255,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen> with TickerProv
           ),
         ),
       ),
-    );
+    ).whenComplete(() => _isModalOpen = false);
 
     if (confirmed == true) {
       await _executeBatchDelete();

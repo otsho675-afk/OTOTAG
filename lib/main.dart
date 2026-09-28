@@ -309,7 +309,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF00FFA3).withOpacity(0.25), 
+                        color: const Color(0xFF00FFA3).withValues(alpha: 0.25), 
                         blurRadius: 50, 
                         spreadRadius: 10
                       )
@@ -354,7 +354,7 @@ class RoleSelectionScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [const Color(0xFF00FFA3).withOpacity(0.12), Colors.transparent],
+                  colors: [const Color(0xFF00FFA3).withValues(alpha: 0.12), Colors.transparent],
                   stops: const [0.1, 0.8]
                 ),
               ),
@@ -413,7 +413,7 @@ class RoleSelectionScreen extends StatelessWidget {
                               const SizedBox(height: 12),
                               Text(
                                 "Lütfen devam etmek istediğiniz rolü seçin",
-                                style: TextStyle(fontSize: 16, color: Colors.white.withOpacity(0.6), fontWeight: FontWeight.w500, height: 1.4),
+                                style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), fontWeight: FontWeight.w500, height: 1.4),
                                 textAlign: TextAlign.center,
                               ),
                               const SizedBox(height: 60),
@@ -471,17 +471,17 @@ class RoleSelectionScreen extends StatelessWidget {
         );
       },
       borderRadius: BorderRadius.circular(28),
-      splashColor: const Color(0xFF00FFA3).withOpacity(0.2),
+      splashColor: const Color(0xFF00FFA3).withValues(alpha: 0.2),
       highlightColor: Colors.transparent,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         decoration: BoxDecoration(
-          color: isOutline ? Colors.white.withOpacity(0.02) : const Color(0xFF00FFA3),
+          color: isOutline ? Colors.white.withValues(alpha: 0.02) : const Color(0xFF00FFA3),
           borderRadius: BorderRadius.circular(28),
-          border: isOutline ? Border.all(color: const Color(0xFF00FFA3).withOpacity(0.8), width: 2) : null,
+          border: isOutline ? Border.all(color: const Color(0xFF00FFA3).withValues(alpha: 0.8), width: 2) : null,
           boxShadow: isOutline ? [] : [
-            BoxShadow(color: const Color(0xFF00FFA3).withOpacity(0.35), blurRadius: 25, offset: const Offset(0, 8))
+            BoxShadow(color: const Color(0xFF00FFA3).withValues(alpha: 0.35), blurRadius: 25, offset: const Offset(0, 8))
           ],
         ),
         child: Row(
@@ -489,7 +489,7 @@ class RoleSelectionScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: isOutline ? const Color(0xFF00FFA3).withOpacity(0.15) : Colors.black.withOpacity(0.15),
+                color: isOutline ? const Color(0xFF00FFA3).withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(20)
               ),
               child: Icon(icon, size: 30, color: isOutline ? const Color(0xFF00FFA3) : Colors.black87),

@@ -240,7 +240,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text("Mesaj gönderilemedi, bağlantınızı kontrol edin.", style: TextStyle(color: Colors.white)), 
-            backgroundColor: const Color(0xFFFF3366).withOpacity(0.9),
+            backgroundColor: const Color(0xFFFF3366).withValues(alpha: 0.9),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
@@ -321,15 +321,15 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: AppBar(
-            backgroundColor: panelBlack.withOpacity(0.65),
+            backgroundColor: panelBlack.withValues(alpha: 0.65),
             elevation: 0,
-            shadowColor: primaryColor.withOpacity(0.2),
+            shadowColor: primaryColor.withValues(alpha: 0.2),
             surfaceTintColor: Colors.transparent,
-            shape: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.05), width: 1)),
+            shape: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.05), width: 1)),
             leading: IconButton(
               icon: Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle, border: Border.all(color: Colors.white10)),
+                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), shape: BoxShape.circle, border: Border.all(color: Colors.white10)),
                 child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.white),
               ),
               onPressed: () => Navigator.pop(context),
@@ -338,7 +338,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: primaryColor.withOpacity(0.15), shape: BoxShape.circle, border: Border.all(color: primaryColor.withOpacity(0.3))),
+                  decoration: BoxDecoration(color: primaryColor.withValues(alpha: 0.15), shape: BoxShape.circle, border: Border.all(color: primaryColor.withValues(alpha: 0.3))),
                   child: Icon(Icons.person_rounded, color: primaryColor, size: 20),
                 ),
                 const SizedBox(width: 14),
@@ -368,8 +368,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             height: 300,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: RadialGradient(colors: [neonGreen.withOpacity(0.12), Colors.transparent]),
-              boxShadow: [BoxShadow(color: neonGreen.withOpacity(0.1), blurRadius: 100, spreadRadius: 50)],
+              gradient: RadialGradient(colors: [neonGreen.withValues(alpha: 0.12), Colors.transparent]),
+              boxShadow: [BoxShadow(color: neonGreen.withValues(alpha: 0.1), blurRadius: 100, spreadRadius: 50)],
             ),
           ),
         ),
@@ -381,8 +381,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             height: 350,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: RadialGradient(colors: [neonCyan.withOpacity(0.1), Colors.transparent]),
-              boxShadow: [BoxShadow(color: neonCyan.withOpacity(0.1), blurRadius: 100, spreadRadius: 50)],
+              gradient: RadialGradient(colors: [neonCyan.withValues(alpha: 0.1), Colors.transparent]),
+              boxShadow: [BoxShadow(color: neonCyan.withValues(alpha: 0.1), blurRadius: 100, spreadRadius: 50)],
             ),
           ),
         ),
@@ -408,18 +408,18 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         margin: const EdgeInsets.only(bottom: 14),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
         decoration: BoxDecoration(
-          color: isMe ? primaryColor : panelBlack.withOpacity(0.7), 
+          color: isMe ? primaryColor : panelBlack.withValues(alpha: 0.7), 
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(24),
             topRight: const Radius.circular(24),
             bottomLeft: isMe ? const Radius.circular(24) : const Radius.circular(6),
             bottomRight: isMe ? const Radius.circular(6) : const Radius.circular(24),
           ),
-          border: isMe ? null : Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
+          border: isMe ? null : Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.5),
           boxShadow: isMe ? [
-            BoxShadow(color: primaryColor.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 5))
+            BoxShadow(color: primaryColor.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 5))
           ] : [
-            BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 5))
+            BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 10, offset: const Offset(0, 5))
           ],
         ),
         child: ClipRRect(
@@ -500,7 +500,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   Text(
                     timeString,
                     style: TextStyle(
-                      color: isMe ? const Color(0xFF0A2B1D).withOpacity(0.6) : Colors.white54,
+                      color: isMe ? const Color(0xFF0A2B1D).withValues(alpha: 0.6) : Colors.white54,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                     ),
@@ -510,7 +510,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                     Icon(
                       isRead ? Icons.done_all_rounded : Icons.check_rounded, 
                       size: 14,
-                      color: isRead ? const Color(0xFF0A2B1D) : const Color(0xFF0A2B1D).withOpacity(0.5), 
+                      color: isRead ? const Color(0xFF0A2B1D) : const Color(0xFF0A2B1D).withValues(alpha: 0.5), 
                     ),
                   ]
                 ],
@@ -527,9 +527,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   Widget _buildInputArea(Color primaryColor) {
     return Container(
       decoration: BoxDecoration(
-        color: panelBlack.withOpacity(0.75),
-        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.08), width: 1.5)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 20, offset: const Offset(0, -5))],
+        color: panelBlack.withValues(alpha: 0.75),
+        border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.08), width: 1.5)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 20, offset: const Offset(0, -5))],
       ),
       child: ClipRect(
         child: BackdropFilter(
@@ -551,9 +551,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.05), 
+                          color: Colors.white.withValues(alpha: 0.05), 
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white.withOpacity(0.1))
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.1))
                         ),
                         child: Icon(Icons.add_rounded, color: primaryColor, size: 22),
                       ),
@@ -563,9 +563,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.3),
+                        color: Colors.black.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.5),
                       ),
                       child: TextField(
                         controller: _msgController,
@@ -575,7 +575,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                         textCapitalization: TextCapitalization.sentences,
                         decoration: InputDecoration(
                           hintText: "Mesaj gönder...",
-                          hintStyle: TextStyle(color: Colors.white.withOpacity(0.4), fontWeight: FontWeight.w500),
+                          hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontWeight: FontWeight.w500),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                           border: InputBorder.none,
                           isDense: true,
@@ -592,11 +592,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                         duration: const Duration(milliseconds: 200),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: _isTyping ? primaryColor : Colors.white.withOpacity(0.05), 
+                          color: _isTyping ? primaryColor : Colors.white.withValues(alpha: 0.05), 
                           shape: BoxShape.circle,
-                          border: Border.all(color: _isTyping ? primaryColor : Colors.white.withOpacity(0.1)),
+                          border: Border.all(color: _isTyping ? primaryColor : Colors.white.withValues(alpha: 0.1)),
                           boxShadow: _isTyping ? [
-                            BoxShadow(color: primaryColor.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))
+                            BoxShadow(color: primaryColor.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 4))
                           ] : [],
                         ),
                         child: Icon(
@@ -625,9 +625,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
         child: Container(
           decoration: BoxDecoration(
-            color: panelBlack.withOpacity(0.9),
+            color: panelBlack.withValues(alpha: 0.9),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-            border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5)
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.5)
           ),
           child: SafeArea(
             child: Wrap(
@@ -637,7 +637,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   child: Center(
                     child: Container(
                       width: 48, height: 5, 
-                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(10))
+                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(10))
                     )
                   ),
                 ),
@@ -649,7 +649,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
                   leading: Container(
                     padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: primaryColor.withOpacity(0.15), shape: BoxShape.circle, border: Border.all(color: primaryColor.withOpacity(0.3))),
+                    decoration: BoxDecoration(color: primaryColor.withValues(alpha: 0.15), shape: BoxShape.circle, border: Border.all(color: primaryColor.withValues(alpha: 0.3))),
                     child: Icon(Icons.camera_alt_rounded, color: primaryColor, size: 22),
                   ),
                   title: const Text("Fotoğraf Çek", style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
@@ -659,7 +659,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
                   leading: Container(
                     padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: neonCyan.withOpacity(0.15), shape: BoxShape.circle, border: Border.all(color: neonCyan.withOpacity(0.3))),
+                    decoration: BoxDecoration(color: neonCyan.withValues(alpha: 0.15), shape: BoxShape.circle, border: Border.all(color: neonCyan.withValues(alpha: 0.3))),
                     child: const Icon(Icons.image_rounded, color: neonCyan, size: 22),
                   ),
                   title: const Text("Galeriden Seç", style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
@@ -669,7 +669,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
                   leading: Container(
                     padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: alertRed.withOpacity(0.15), shape: BoxShape.circle, border: Border.all(color: alertRed.withOpacity(0.3))),
+                    decoration: BoxDecoration(color: alertRed.withValues(alpha: 0.15), shape: BoxShape.circle, border: Border.all(color: alertRed.withValues(alpha: 0.3))),
                     child: const Icon(Icons.videocam_rounded, color: alertRed, size: 22),
                   ),
                   title: const Text("Video Çek", style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),

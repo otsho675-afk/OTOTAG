@@ -708,7 +708,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
   }
 
   void _showNotificationsDialog() {
-    if (_isNotifModalOpen) return;
+    if (_isNotifModalOpen || _isVehicleModalOpen) return;
     _isNotifModalOpen = true;
     _markNotificationsRead();
 
@@ -719,229 +719,304 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
+          final double screenHeight = MediaQuery.sizeOf(context).height;
+          final double screenWidth = MediaQuery.sizeOf(context).width;
+
           return BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+            filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
             child: Container(
-              height: MediaQuery.sizeOf(context).height * 0.85,
+              height: screenHeight * 0.85,
+              padding: const EdgeInsets.only(top: 14),
               decoration: BoxDecoration(
-                color: _cardColor.withOpacity(0.95),
+                color: const Color(0xFF0F172A).withValues(alpha: 0.98),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5),
+                border: Border.all(color: _primaryColor.withValues(alpha: 0.35), width: 1.5),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.8), blurRadius: 40, offset: const Offset(0, -10))
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.9), blurRadius: 40, offset: const Offset(0, -10)),
+                  BoxShadow(color: _primaryColor.withValues(alpha: 0.08), blurRadius: 25),
                 ],
               ),
               child: SafeArea(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 600),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 12),
-                        Center(
-                          child: Container(
-                            width: 48, 
-                            height: 6, 
+                child: Column(
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 44, 
+                        height: 5, 
+                        decoration: BoxDecoration(
+                          color: Colors.white24, 
+                          borderRadius: BorderRadius.circular(10)
+                        )
+                      )
+                    ),
+                    const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.white24, 
-                              borderRadius: BorderRadius.circular(10)
-                            )
-                          )
-                        ),
-                        const SizedBox(height: 16),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: _primaryColor.withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(Icons.notifications_active_rounded, color: _primaryColor, size: 24),
+                              gradient: LinearGradient(
+                                colors: [_primaryColor.withValues(alpha: 0.25), _primaryColor.withValues(alpha: 0.08)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text("Bildirimler", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _textColor, letterSpacing: -0.5), overflow: TextOverflow.ellipsis),
-                                    Text("${notifications.length} yeni duyuru", style: const TextStyle(fontSize: 13, color: _subtitleColor, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
-                                  ],
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: _primaryColor.withValues(alpha: 0.4)),
+                            ),
+                            child: const Icon(Icons.notifications_active_rounded, color: _primaryColor, size: 24),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Bildirimler & Duyurular", 
+                                  style: TextStyle(
+                                    fontSize: screenWidth < 380 ? 18 : 20, 
+                                    fontWeight: FontWeight.w900, 
+                                    color: Colors.white, 
+                                    letterSpacing: -0.4
+                                  ), 
+                                  overflow: TextOverflow.ellipsis
                                 ),
-                              ),
-                              if (notifications.isNotEmpty)
-                                TextButton.icon(
-                                  onPressed: () async {
-                                    bool confirm = await showDialog(
-                                      context: context,
-                                      builder: (ctx) => AlertDialog(
-                                        backgroundColor: _cardColor,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: Colors.white10)),
-                                        title: const Text("Tümünü Temizle?", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
-                                        content: const Text("Tüm bildirimler kalıcı olarak silinecektir.", style: TextStyle(fontSize: 14, color: Colors.white70)),
+                                const SizedBox(height: 3),
+                                Text(
+                                  notifications.isEmpty ? "Aktif bildirim yok" : "${notifications.length} sistem duyurusu", 
+                                  style: const TextStyle(fontSize: 12, color: Colors.white60, fontWeight: FontWeight.w600), 
+                                  overflow: TextOverflow.ellipsis
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (notifications.isNotEmpty)
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () async {
+                                  bool confirm = await showDialog(
+                                    context: context,
+                                    builder: (ctx) => BackdropFilter(
+                                      filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                                      child: AlertDialog(
+                                        backgroundColor: const Color(0xFF1E293B),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(22), 
+                                          side: BorderSide(color: Colors.white.withValues(alpha: 0.1))
+                                        ),
+                                        title: const Text("Tümünü Temizle?", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 18)),
+                                        content: const Text("Tüm bildirimler listenizden kalıcı olarak temizlenecektir.", style: TextStyle(fontSize: 13, color: Colors.white70, height: 1.4)),
+                                        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                                         actions: [
-                                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("İptal", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white54))),
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(ctx, false), 
+                                            child: const Text("Vazgeç", style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white54))
+                                          ),
                                           ElevatedButton(
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor: _dangerColor, 
                                               elevation: 0,
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10)
                                             ),
                                             onPressed: () => Navigator.pop(ctx, true), 
-                                            child: const Text("Tümünü Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+                                            child: const Text("Temizle", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900))
                                           )
                                         ],
-                                      )
-                                    ) ?? false;
-
-                                    if (confirm) {
-                                      await _clearAllNotifications();
-                                      setModalState(() {});
-                                    }
-                                  },
-                                  icon: const Icon(Icons.delete_sweep_rounded, color: _dangerColor, size: 18),
-                                  label: const Text("Temizle", style: TextStyle(color: _dangerColor, fontWeight: FontWeight.bold, fontSize: 13)),
-                                  style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                    backgroundColor: _dangerColor.withOpacity(0.1),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
-                                  ),
-                                )
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Divider(height: 1, color: Colors.white.withOpacity(0.05)),
-                        Expanded(
-                          child: notifications.isEmpty
-                            ? Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(24.0),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(24),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.03),
-                                          shape: BoxShape.circle
-                                        ),
-                                        child: Icon(Icons.notifications_off_rounded, size: 48, color: _subtitleColor.withOpacity(0.3)),
                                       ),
-                                      const SizedBox(height: 20),
-                                      const Text("Henüz Bildiriminiz Yok", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _textColor)),
-                                      const SizedBox(height: 8),
-                                      const Text("Yöneticiden veya işlemlerinizden gelen duyurular burada görüntülenecektir.", textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: _subtitleColor, height: 1.4, fontWeight: FontWeight.w500)),
+                                    ),
+                                  ) ?? false;
+
+                                  if (confirm) {
+                                    await _clearAllNotifications();
+                                    setModalState(() {});
+                                  }
+                                },
+                                borderRadius: BorderRadius.circular(14),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: _dangerColor.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(color: _dangerColor.withValues(alpha: 0.3)),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.delete_sweep_rounded, color: _dangerColor, size: 16),
+                                      SizedBox(width: 4),
+                                      Text("Temizle", style: TextStyle(color: _dangerColor, fontWeight: FontWeight.w800, fontSize: 12)),
                                     ],
                                   ),
                                 ),
-                              )
-                            : ListView.separated(
-                                physics: const BouncingScrollPhysics(),
-                                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                                itemCount: notifications.length,
-                                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                                itemBuilder: (context, index) {
-                                  final notif = notifications[index];
-                                  final int notifId = int.tryParse(notif['id']?.toString() ?? '0') ?? 0;
-                                  
-                                  String formattedDate = "Yeni";
-                                  if (notif['created_at'] != null) {
-                                    try {
-                                      final dt = DateTime.tryParse(notif['created_at'].toString());
-                                      if (dt != null) {
-                                        formattedDate = DateFormat('dd.MM.yyyy HH:mm').format(dt);
-                                      }
-                                    } catch (_) {}
-                                  }
-
-                                  return Dismissible(
-                                    key: Key("notif_${notif['id'] ?? index}"),
-                                    direction: DismissDirection.endToStart,
-                                    background: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                                      alignment: Alignment.centerRight,
-                                      decoration: BoxDecoration(
-                                        color: _dangerColor,
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      child: const Row(
-                                        mainAxisAlignment: MainAxisAlignment.end,
-                                        children: [
-                                          Text("Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
-                                          SizedBox(width: 8),
-                                          Icon(Icons.delete_outline_rounded, color: Colors.white, size: 28),
-                                        ],
-                                      ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(height: 1, width: double.infinity, color: Colors.white.withValues(alpha: 0.06)),
+                    Expanded(
+                      child: notifications.isEmpty
+                        ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(32.0),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(22),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.03),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
                                     ),
-                                    onDismissed: (_) {
-                                      _deleteNotification(notifId);
-                                      setModalState(() {});
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.02),
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.0),
+                                    child: const Icon(Icons.mark_email_read_rounded, size: 48, color: Colors.white24),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  const Text("Tüm Bildirimler Okundu", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.3)),
+                                  const SizedBox(height: 8),
+                                  const Text("Şu an için yeni bir sistem uyarısı veya duyuru bulunmuyor.", textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: Colors.white54, height: 1.4, fontWeight: FontWeight.w500)),
+                                ],
+                              ),
+                            ),
+                          )
+                        : ListView.separated(
+                            physics: const BouncingScrollPhysics(),
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                            itemCount: notifications.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 10),
+                            itemBuilder: (context, index) {
+                              final notif = notifications[index];
+                              final int notifId = int.tryParse(notif['id']?.toString() ?? '0') ?? 0;
+                              final String title = notif['title']?.toString() ?? 'Duyuru';
+                              final String message = notif['message']?.toString() ?? '';
+                              
+                              String formattedDate = "Yeni";
+                              if (notif['created_at'] != null) {
+                                try {
+                                  final dt = DateTime.tryParse(notif['created_at'].toString());
+                                  if (dt != null) {
+                                    formattedDate = DateFormat('dd.MM.yyyy HH:mm').format(dt);
+                                  }
+                                } catch (_) {}
+                              }
+
+                              return Dismissible(
+                                key: Key("notif_${notif['id'] ?? index}"),
+                                direction: DismissDirection.endToStart,
+                                background: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                                  alignment: Alignment.centerRight,
+                                  decoration: BoxDecoration(
+                                    color: _dangerColor.withValues(alpha: 0.85),
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      Text("Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
+                                      SizedBox(width: 8),
+                                      Icon(Icons.delete_outline_rounded, color: Colors.white, size: 20),
+                                    ],
+                                  ),
+                                ),
+                                onDismissed: (_) {
+                                  _deleteNotification(notifId);
+                                  setModalState(() {});
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF1E293B).withValues(alpha: 0.8),
+                                    borderRadius: BorderRadius.circular(18),
+                                    border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.2),
+                                    boxShadow: [
+                                      BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))
+                                    ],
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: _primaryColor.withValues(alpha: 0.12),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: _primaryColor.withValues(alpha: 0.25)),
+                                        ),
+                                        child: const Icon(Icons.campaign_rounded, color: _primaryColor, size: 18),
                                       ),
-                                      child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.all(10),
-                                            decoration: BoxDecoration(
-                                              color: _primaryColor.withOpacity(0.1),
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: const Icon(Icons.campaign_rounded, color: _primaryColor, size: 20),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
-                                                Row(
-                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                  children: [
-                                                    Expanded(
-                                                      child: Text(
-                                                        notif['title'] ?? 'Duyuru', 
-                                                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: _textColor, letterSpacing: -0.3),
-                                                        maxLines: 1, 
-                                                        overflow: TextOverflow.ellipsis
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 8),
-                                                    Text(formattedDate, style: const TextStyle(fontSize: 11, color: _subtitleColor, fontWeight: FontWeight.w500)),
-                                                  ],
+                                                Expanded(
+                                                  child: Text(
+                                                    title, 
+                                                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Colors.white, letterSpacing: -0.2),
+                                                    maxLines: 2, 
+                                                    overflow: TextOverflow.ellipsis
+                                                  ),
                                                 ),
-                                                const SizedBox(height: 6),
-                                                Text(
-                                                  notif['message'] ?? '', 
-                                                  style: TextStyle(fontSize: 14, color: _textColor.withOpacity(0.85), height: 1.4, fontWeight: FontWeight.w400)
+                                                const SizedBox(width: 8),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white.withValues(alpha: 0.05),
+                                                    borderRadius: BorderRadius.circular(6),
+                                                  ),
+                                                  child: Text(formattedDate, style: const TextStyle(fontSize: 10, color: Colors.white54, fontWeight: FontWeight.w700)),
                                                 ),
                                               ],
                                             ),
-                                          ),
-                                        ],
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              message, 
+                                              style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.8), height: 1.4, fontWeight: FontWeight.w500)
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  );
-                                },
-                              ),
-                        ),
-                      ],
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                     ),
-                  ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                      child: Container(
+                        width: double.infinity,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          color: Colors.white.withValues(alpha: 0.05),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                        ),
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: TextButton.styleFrom(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                          child: const Text("Kapat", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           );
-        }
+        },
       ),
     ).whenComplete(() {
       _isNotifModalOpen = false;
@@ -977,7 +1052,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -995,7 +1070,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
             ),
           ],
         ),
-        backgroundColor: isError ? _dangerColor : _primaryColor.withOpacity(0.95),
+        backgroundColor: isError ? _dangerColor : _primaryColor.withValues(alpha: 0.95),
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -1068,13 +1143,13 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
           backgroundColor: _cardColor,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
-            side: BorderSide(color: Colors.white.withOpacity(0.1), width: 1.5)
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 1.5)
           ),
           title: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: _dangerColor.withOpacity(0.15), shape: BoxShape.circle),
+                decoration: BoxDecoration(color: _dangerColor.withValues(alpha: 0.15), shape: BoxShape.circle),
                 child: const Icon(Icons.power_settings_new_rounded, color: _dangerColor, size: 24),
               ),
               const SizedBox(width: 12),
@@ -1341,10 +1416,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
             top: 20
           ),
           decoration: BoxDecoration(
-            color: _cardColor.withOpacity(0.95),
+            color: _cardColor.withValues(alpha: 0.95),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-            border: Border.all(color: Colors.amber.withOpacity(0.3), width: 1.5),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.8), blurRadius: 40, offset: const Offset(0, -10))],
+            border: Border.all(color: Colors.amber.withValues(alpha: 0.3), width: 1.5),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.8), blurRadius: 40, offset: const Offset(0, -10))],
           ),
           child: SafeArea(
             child: Center(
@@ -1362,9 +1437,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                         child: Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: Colors.amber.withOpacity(0.1),
+                            color: Colors.amber.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.amber.withOpacity(0.5)),
+                            border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
                           ),
                           child: const Icon(Icons.workspace_premium_rounded, color: Colors.amber, size: 36),
                         ),
@@ -1381,9 +1456,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                       Container(
                         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.03),
+                          color: Colors.white.withValues(alpha: 0.03),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.amber.withOpacity(0.3), width: 1),
+                          border: Border.all(color: Colors.amber.withValues(alpha: 0.3), width: 1),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1530,11 +1605,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: _cardColor.withOpacity(0.95),
+                    color: _cardColor.withValues(alpha: 0.95),
                     borderRadius: BorderRadius.circular(32),
-                    border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.5),
                     boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.6), blurRadius: 40, offset: const Offset(0, 10))
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 40, offset: const Offset(0, 10))
                     ]
                   ),
                   child: SafeArea(
@@ -1549,7 +1624,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: _primaryColor.withOpacity(0.15),
+                                color: _primaryColor.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: Icon(isEditing ? Icons.edit_rounded : Icons.add_circle_rounded, color: _primaryColor, size: 24),
@@ -1570,7 +1645,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                                 onTap: () => Navigator.pop(context),
                                 child: Container(
                                   padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle),
+                                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), shape: BoxShape.circle),
                                   child: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
                                 ),
                               ),
@@ -1719,7 +1794,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                         children: [
                           if (isEditing) ...[
                             Container(
-                              decoration: BoxDecoration(border: Border.all(color: _dangerColor.withOpacity(0.5), width: 1.5), borderRadius: BorderRadius.circular(16)),
+                              decoration: BoxDecoration(border: Border.all(color: _dangerColor.withValues(alpha: 0.5), width: 1.5), borderRadius: BorderRadius.circular(16)),
                               child: IconButton(
                                 icon: const Icon(Icons.delete_outline_rounded, color: _dangerColor, size: 22),
                                 padding: const EdgeInsets.all(14),
@@ -1738,14 +1813,14 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                                   return _showTopSnackBar("Plaka, Marka ve Model bilgisi zorunludur.", isError: true);
                                 }
                                 
-                                // Değerleri modal kapanıp controller'lar silinmeden ÖNCE güvenli değişkenlere alıyoruz
+                                // Değerleri modal kapanıp controller'lar silinmeden ÖNCE güvenli değişkenlere alıyoruz[cite: 3]
                                 final String finalPlate = plateCtrl.text.trim();
                                 final String finalBrandModel = "$selectedBrand $selectedModel";
                                 final String finalEngineType = engineCtrl.text.trim();
                                 final int finalCKm = int.tryParse(cKmCtrl.text.trim()) ?? 0;
                                 final int finalMKm = int.tryParse(mKmCtrl.text.trim()) ?? 10000;
                                 
-                                // Şimdi modalı güvenle kapatabiliriz
+                                // Şimdi modalı güvenle kapatabiliriz[cite: 3]
                                 Navigator.pop(context);
                                 
                                 await _saveVehicle(
@@ -1814,9 +1889,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
             child: Container(
               height: 56,
               decoration: BoxDecoration(
-                color: enabled ? Colors.white.withOpacity(0.03) : Colors.white.withOpacity(0.01),
+                color: enabled ? Colors.white.withValues(alpha: 0.03) : Colors.white.withValues(alpha: 0.01),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.5),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
@@ -1824,7 +1899,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: enabled ? _primaryColor.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                      color: enabled ? _primaryColor.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(icon, color: enabled ? _primaryColor : Colors.grey, size: 20),
@@ -1878,7 +1953,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                 decoration: BoxDecoration(
                   color: _cardColor,
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                 ),
                 child: SafeArea(
                   child: Column(
@@ -1902,16 +1977,16 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Container(
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.04),
+                            color: Colors.white.withValues(alpha: 0.04),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.white.withOpacity(0.06)),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
                           ),
                           child: TextField(
                             autofocus: true,
                             style: const TextStyle(color: Colors.white, fontSize: 14),
                             decoration: InputDecoration(
                               hintText: "Hemen ara...",
-                              hintStyle: TextStyle(color: Colors.white.withOpacity(0.35)),
+                              hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35)),
                               prefixIcon: const Icon(Icons.search_rounded, color: _primaryColor, size: 20),
                               border: InputBorder.none,
                               contentPadding: const EdgeInsets.symmetric(vertical: 14),
@@ -1931,7 +2006,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                             ? Center(
                                 child: Text(
                                   "Sonuç bulunamadı",
-                                  style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 14),
+                                  style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 14),
                                 ),
                               )
                             : ListView.builder(
@@ -1984,9 +2059,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
         ),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.03),
+            color: Colors.white.withValues(alpha: 0.03),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.5),
           ),
           child: TextField(
             controller: controller,
@@ -1996,13 +2071,13 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: TextStyle(color: Colors.white.withOpacity(0.25), fontSize: 14),
+              hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.25), fontSize: 14),
               prefixIcon: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12), 
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: _primaryColor.withOpacity(0.1),
+                    color: _primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10)
                   ),
                   child: Icon(icon, color: _primaryColor, size: 20)
@@ -2031,9 +2106,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
         ),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.03),
+            color: Colors.white.withValues(alpha: 0.03),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.5),
           ),
           child: Material(
             color: Colors.transparent,
@@ -2047,7 +2122,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                   children: [
                     Container(
                       padding: const EdgeInsets.all(10), 
-                      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)), 
+                      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)), 
                       child: Icon(icon, color: color, size: 20)
                     ),
                     const SizedBox(width: 12),
@@ -2076,8 +2151,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       decoration: BoxDecoration(
         color: _cardColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 5))]
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.5),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 15, offset: const Offset(0, 5))]
       ),
       child: Material(
         color: Colors.transparent,
@@ -2097,7 +2172,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: _primaryColor.withOpacity(0.1), 
+                    color: _primaryColor.withValues(alpha: 0.1), 
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.storefront_rounded, color: _primaryColor, size: 32),
@@ -2142,11 +2217,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: _cardColor.withOpacity(0.95),
+                  color: _cardColor.withValues(alpha: 0.95),
                   borderRadius: BorderRadius.circular(28),
-                  border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.5),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.6), blurRadius: 30, offset: const Offset(0, 10))
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 30, offset: const Offset(0, 10))
                   ]
                 ),
                 child: SafeArea(
@@ -2161,7 +2236,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: _primaryColor.withOpacity(0.15),
+                              color: _primaryColor.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: const Icon(Icons.campaign_rounded, color: _primaryColor, size: 24),
@@ -2178,7 +2253,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 4),
-                                Text("Sponsorlu İçerik", style: TextStyle(fontSize: 12, color: _primaryColor.withOpacity(0.8), fontWeight: FontWeight.w700)),
+                                Text("Sponsorlu İçerik", style: TextStyle(fontSize: 12, color: _primaryColor.withValues(alpha: 0.8), fontWeight: FontWeight.w700)),
                               ],
                             ),
                           ),
@@ -2189,7 +2264,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                               onTap: () => Navigator.pop(context),
                               child: Container(
                                 padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle),
+                                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), shape: BoxShape.circle),
                                 child: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
                               ),
                             ),
@@ -2206,7 +2281,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                             width: double.infinity,
                             decoration: BoxDecoration(
                               color: _bgColor,
-                              border: Border.all(color: Colors.white.withOpacity(0.05)),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
                             ),
                             child: _buildSafeNetworkImage(ad['image_url'], width: double.infinity, fit: BoxFit.cover),
                           ),
@@ -2222,7 +2297,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                           physics: const BouncingScrollPhysics(),
                           child: Text(
                             ad['description'] ?? 'Detaylı bilgi için iletişim kurun.',
-                            style: TextStyle(fontSize: 14, color: _textColor.withOpacity(0.85), height: 1.5, fontWeight: FontWeight.w500)
+                            style: TextStyle(fontSize: 14, color: _textColor.withValues(alpha: 0.85), height: 1.5, fontWeight: FontWeight.w500)
                           ),
                         ),
                       ),
@@ -2295,7 +2370,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                     width: selectedIdx == index ? 24 : 8,
                     height: 6,
                     decoration: BoxDecoration(
-                      color: selectedIdx == index ? _primaryColor : Colors.white.withOpacity(0.2),
+                      color: selectedIdx == index ? _primaryColor : Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -2314,15 +2389,15 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       decoration: BoxDecoration(
         color: _cardColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 8))],
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.5),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 20, offset: const Offset(0, 8))],
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: _primaryColor.withOpacity(0.1),
+              color: _primaryColor.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.bolt_rounded, color: _primaryColor, size: 32),
@@ -2333,9 +2408,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text("Oto Yardım Yanınızda", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white.withOpacity(0.95), letterSpacing: -0.5)),
+                Text("Oto Yardım Yanınızda", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white.withValues(alpha: 0.95), letterSpacing: -0.5)),
                 const SizedBox(height: 6),
-                Text("Araçlarınızı güvenle takip edin, yolda kaldığınızda tek tıkla en yakın ustayı çağırın.", style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.6), height: 1.4, fontWeight: FontWeight.w500)),
+                Text("Araçlarınızı güvenle takip edin, yolda kaldığınızda tek tıkla en yakın ustayı çağırın.", style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.6), height: 1.4, fontWeight: FontWeight.w500)),
               ],
             ),
           )
@@ -2354,8 +2429,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
         decoration: BoxDecoration(
           color: _cardColor,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.5),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 8))],
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.5),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 20, offset: const Offset(0, 8))],
         ),
         clipBehavior: Clip.antiAlias,
         child: Stack(
@@ -2370,8 +2445,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        Colors.black.withOpacity(0.95), 
-                        Colors.black.withOpacity(0.8),
+                        Colors.black.withValues(alpha: 0.95), 
+                        Colors.black.withValues(alpha: 0.8),
                         Colors.transparent,             
                       ],
                       begin: Alignment.centerLeft,
@@ -2387,7 +2462,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: _primaryColor.withOpacity(0.1),
+                      color: _primaryColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.campaign_rounded, color: _primaryColor, size: 24),
@@ -2421,7 +2496,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                           ad['description'] ?? 'Detaylı bilgi için dokunun', 
                           style: TextStyle(
                             fontSize: 12, 
-                            color: Colors.white.withOpacity(0.85), 
+                            color: Colors.white.withValues(alpha: 0.85), 
                             height: 1.3, 
                             fontWeight: FontWeight.w500,
                             shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
@@ -2475,7 +2550,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
               icon: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: _dangerColor.withOpacity(0.1),
+                  color: _dangerColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.power_settings_new_rounded, color: _dangerColor, size: 20),
@@ -2516,7 +2591,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: _primaryColor.withOpacity(0.1), 
+                      color: _primaryColor.withValues(alpha: 0.1), 
                       shape: BoxShape.circle, 
                     ),
                     child: const Icon(Icons.person_rounded, color: _primaryColor, size: 20),
@@ -2544,7 +2619,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
-                          colors: [_primaryColor.withOpacity(0.05), Colors.transparent],
+                          colors: [_primaryColor.withValues(alpha: 0.05), Colors.transparent],
                         ),
                       ),
                     ),
@@ -2576,8 +2651,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                                           margin: const EdgeInsets.only(bottom: 24),
                                           decoration: BoxDecoration(
                                             borderRadius: BorderRadius.circular(20),
-                                            color: _dangerColor.withOpacity(0.1),
-                                            border: Border.all(color: _dangerColor.withOpacity(0.3))
+                                            color: _dangerColor.withValues(alpha: 0.1),
+                                            border: Border.all(color: _dangerColor.withValues(alpha: 0.3))
                                           ),
                                           child: Material(
                                             color: Colors.transparent,
@@ -2591,7 +2666,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                                               ),
                                               trailing: Container(
                                                 padding: const EdgeInsets.all(8),
-                                                decoration: BoxDecoration(color: _dangerColor.withOpacity(0.1), shape: BoxShape.circle),
+                                                decoration: BoxDecoration(color: _dangerColor.withValues(alpha: 0.1), shape: BoxShape.circle),
                                                 child: const Icon(Icons.arrow_forward_ios_rounded, color: _dangerColor, size: 16)
                                               ),
                                               onTap: () {
@@ -2628,8 +2703,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                                           Container(
                                             decoration: BoxDecoration(
                                               borderRadius: BorderRadius.circular(12),
-                                              color: Colors.white.withOpacity(0.05),
-                                              border: Border.all(color: Colors.white.withOpacity(0.1))
+                                              color: Colors.white.withValues(alpha: 0.05),
+                                              border: Border.all(color: Colors.white.withValues(alpha: 0.1))
                                             ),
                                             child: ElevatedButton.icon(
                                               onPressed: () {
@@ -2731,14 +2806,14 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
       decoration: BoxDecoration(
         color: cardColor, 
         borderRadius: BorderRadius.circular(24), 
-        border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.0),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.0),
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.03), shape: BoxShape.circle),
-            child: Icon(Icons.directions_car_rounded, size: 48, color: subtitleColor.withOpacity(0.5))
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.03), shape: BoxShape.circle),
+            child: Icon(Icons.directions_car_rounded, size: 48, color: subtitleColor.withValues(alpha: 0.5))
           ),
           const SizedBox(height: 16),
           Text("Garajınız Şu An Boş", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: textColor)),
@@ -2800,12 +2875,12 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
         ),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isSelected ? _primaryColor.withOpacity(0.55) : Colors.white.withOpacity(0.08),
+          color: isSelected ? _primaryColor.withValues(alpha: 0.55) : Colors.white.withValues(alpha: 0.08),
           width: isSelected ? 1.6 : 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: isSelected ? _primaryColor.withOpacity(0.14) : Colors.black45,
+            color: isSelected ? _primaryColor.withValues(alpha: 0.14) : Colors.black45,
             blurRadius: 18,
             spreadRadius: isSelected ? 1 : 0,
             offset: const Offset(0, 6),
@@ -2825,7 +2900,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    _primaryColor.withOpacity(0.08),
+                    _primaryColor.withValues(alpha: 0.08),
                     Colors.transparent,
                   ],
                 ),
@@ -2855,7 +2930,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                               border: Border.all(color: const Color(0xFF2B2D42), width: 1.5),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.35),
+                                  color: Colors.black.withValues(alpha: 0.35),
                                   blurRadius: 6,
                                   offset: const Offset(0, 2),
                                 ),
@@ -2917,9 +2992,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   margin: const EdgeInsets.only(right: 5),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.08),
+                                    color: Colors.white.withValues(alpha: 0.08),
                                     borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: Colors.white.withOpacity(0.08)),
+                                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                                   ),
                                   child: Text(
                                     vehicle['model_year'].toString(),
@@ -2934,9 +3009,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: _primaryColor.withOpacity(0.12),
+                                    color: _primaryColor.withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: _primaryColor.withOpacity(0.25)),
+                                    border: Border.all(color: _primaryColor.withValues(alpha: 0.25)),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -2971,9 +3046,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                             child: Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: _primaryColor.withOpacity(0.15),
+                                color: _primaryColor.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: _primaryColor.withOpacity(0.3)),
+                                border: Border.all(color: _primaryColor.withValues(alpha: 0.3)),
                               ),
                               child: const Icon(Icons.share_rounded, color: _primaryColor, size: 18),
                             ),
@@ -2989,9 +3064,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                             child: Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.05),
+                                color: Colors.white.withValues(alpha: 0.05),
                                 borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: Colors.white.withOpacity(0.07)),
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
                               ),
                               child: const Icon(Icons.tune_rounded, color: Colors.white70, size: 18),
                             ),
@@ -3011,10 +3086,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: const Color(0xFF161824),
-                        border: Border.all(color: _primaryColor.withOpacity(0.3), width: 1.2),
+                        border: Border.all(color: _primaryColor.withValues(alpha: 0.3), width: 1.2),
                         boxShadow: [
                           BoxShadow(
-                            color: _primaryColor.withOpacity(0.15),
+                            color: _primaryColor.withValues(alpha: 0.15),
                             blurRadius: 12,
                             spreadRadius: -1,
                           ),
@@ -3053,7 +3128,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: _primaryColor.withOpacity(0.24),
+                        color: _primaryColor.withValues(alpha: 0.24),
                         blurRadius: 12,
                         offset: const Offset(0, 3),
                       ),
@@ -3123,9 +3198,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.035),
+        color: Colors.white.withValues(alpha: 0.035),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -3176,7 +3251,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
               width: selectedIdx == index ? 24 : 8,
               height: 8,
               decoration: BoxDecoration(
-                color: selectedIdx == index ? _primaryColor : Colors.white.withOpacity(0.1),
+                color: selectedIdx == index ? _primaryColor : Colors.white.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -3501,7 +3576,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                               ]
                             )
                           );
-                        }).toList(),
+                        }),
                       ]
                     )
                   ),
@@ -3580,7 +3655,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                         pw.Padding(padding: const pw.EdgeInsets.all(10), child: pw.Text(cost.toStringAsFixed(2), style: pw.TextStyle(fontSize: 11, color: PdfColor.fromHex("#111111"), fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
                       ],
                     );
-                  }).toList(),
+                  }),
                   if(records.isEmpty)
                     pw.TableRow(
                       children: [
@@ -3691,10 +3766,10 @@ class __AnimatedServiceCardState extends State<_AnimatedServiceCard> with Ticker
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.0),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.0),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.15 + (_floatController.value * 0.1)),
+                        color: Colors.black.withValues(alpha: 0.15 + (_floatController.value * 0.1)),
                         blurRadius: 15 + (_floatController.value * 5),
                         offset: const Offset(0, 5),
                       ),
@@ -3710,7 +3785,7 @@ class __AnimatedServiceCardState extends State<_AnimatedServiceCard> with Ticker
                           child: Container(
                             width: 80,
                             height: 80,
-                            decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.02)),
+                            decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.02)),
                           ),
                         ),
                         Column(
@@ -3721,7 +3796,7 @@ class __AnimatedServiceCardState extends State<_AnimatedServiceCard> with Ticker
                               child: Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.02),
+                                  color: Colors.white.withValues(alpha: 0.02),
                                   shape: BoxShape.circle,
                                   border: Border.all(color: widget.service['color'].withOpacity(0.2), width: 1.5),
                                 ),

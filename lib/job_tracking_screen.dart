@@ -1,5 +1,7 @@
-// Dosya: job_tracking_screen.dart
+// Dosya: lib/job_tracking_screen.dart
+
 import 'package:flutter/material.dart'; 
+import 'package:url_launcher/url_launcher.dart';
 import 'core/constants/app_constants.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -8,8 +10,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
-import 'package:onesignal_flutter/onesignal_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 import 'package:apple_maps_flutter/apple_maps_flutter.dart' as amaps;
@@ -24,6 +24,7 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:image_picker/image_picker.dart';
+import 'services/live_activity_service.dart';
 
 class JobTrackingScreen extends StatefulWidget {
   final int jobId;
@@ -81,9 +82,12 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   bool _isFetchingRoute = false; 
   bool _isNavigating = false; 
   bool _isRatingModalOpen = false;
+  bool _isComplaintModalOpen = false;
+  bool _isCounterModalOpen = false;
+  bool _isZoomModalOpen = false;
   Map<String, dynamic>? activeBid;
 
-  bool _isPanelExpanded = true;
+  final bool _isPanelExpanded = true;
   bool _autoFollowBounds = true;
   bool _isUserPanning = false; 
   
@@ -96,6 +100,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   bool _notifiedArrived = false;
   bool _notified500m = false;
   String _lastStatusHash = "";
+
+  // Dynamic Island durum takip bayrağı
+  bool _isLiveActivityStarted = false;
 
   final TextEditingController _codeController = TextEditingController();
   final TextEditingController _commentController = TextEditingController();
@@ -139,6 +146,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   final String _baseUrl = AppConstants.baseUrl;
   final Duration _apiTimeout = const Duration(seconds: 12);
   PusherChannelsFlutter pusher = PusherChannelsFlutter.getInstance();
+  bool _isPusherInitialized = false;
   int unreadMessageCount = 0;
   bool _isFirstMessageCheck = true; 
   
@@ -158,6 +166,54 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   String? afterPhotoUrl;
   bool isEvidenceConfirmed = false;
   String? towPlateNumber;
+
+  // --- DYNAMIC ISLAND CANLI YÖNETİM METODU ---
+  void _syncDynamicIsland({int? minutesOverride, String? statusOverride}) {
+    if (widget.userType != 'customer' || kIsWeb) return;
+
+    if (jobStatus == 'completed' || jobStatus == 'cancelled') {
+      if (_isLiveActivityStarted) {
+        LiveActivityService().endTracking();
+        _isLiveActivityStarted = false;
+      }
+      return;
+    }
+
+    if (jobStatus == 'searching') return;
+
+    int minutes = minutesOverride ?? 
+        int.tryParse(_etaString.replaceAll(RegExp(r'[^0-9]'), '')) ?? 
+        (distanceInKm * 2.5).ceil();
+    if (minutes <= 0 && distanceInKm > 0.05) minutes = 1;
+    if (distanceInKm <= 0.05) minutes = 0;
+
+    String statusDesc = statusOverride ?? "Usta adrese geliyor";
+    if (distanceInKm <= 0.1) {
+      statusDesc = "Usta adrese ulaştı!";
+    } else if (distanceInKm <= 0.5) {
+      statusDesc = "Usta sokağınızda (500m)";
+    } else if (distanceInKm <= 1.0) {
+      statusDesc = "Usta çok yaklaştı (1 KM)";
+    }
+
+    String pName = providerName.isNotEmpty ? providerName : (contactName.isNotEmpty ? contactName : "Usta");
+
+    if (!_isLiveActivityStarted) {
+      LiveActivityService().startProviderTracking(
+        orderId: "job_${widget.jobId}",
+        providerName: pName,
+        initialMinutes: minutes,
+        statusText: statusDesc,
+      );
+      _isLiveActivityStarted = true;
+    } else {
+      LiveActivityService().updateRemainingTime(
+        remainingMinutes: minutes,
+        providerName: pName,
+        statusText: statusDesc,
+      );
+    }
+  }
 
   Future<void> _confirmEvidence() async {
     setState(() => isProcessing = true);
@@ -186,48 +242,63 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   }
 
   void _showImageZoomDialog(String imageUrl, String title) {
+    if (_isZoomModalOpen) return;
+    _isZoomModalOpen = true;
+
     showDialog(
       context: context,
+      barrierColor: Colors.black87,
       builder: (ctx) => BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
         child: Dialog(
-          backgroundColor: Colors.transparent,
+          backgroundColor: panelBlack.withValues(alpha: 0.95),
           insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: dynamicTitle(title),
-                children: [
-                  Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded, color: Colors.white, size: 24),
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: InteractiveViewer(
-                  maxScale: 4.0,
-                  child: Image.network(
-                    imageUrl.startsWith("http") ? imageUrl : "https://eliteagency.sbs/$imageUrl",
-                    fit: BoxFit.contain,
-                    loadingBuilder: (_, child, prog) => prog == null ? child : const Center(child: CircularProgressIndicator(color: neonGreen)),
-                    errorBuilder: (_, __, ___) => Container(
-                      height: 200,
-                      color: panelBlack,
-                      child: const Center(child: Icon(Icons.broken_image_rounded, color: Colors.white24, size: 48)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 1.5),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: dynamicTitle(title),
+                  children: [
+                    Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: -0.3)),
+                    IconButton(
+                      icon: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.08), shape: BoxShape.circle),
+                        child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+                      ),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: InteractiveViewer(
+                    maxScale: 4.0,
+                    child: Image.network(
+                      imageUrl.startsWith("http") ? imageUrl : "https://eliteagency.sbs/$imageUrl",
+                      fit: BoxFit.contain,
+                      loadingBuilder: (_, child, prog) => prog == null ? child : const Center(child: CircularProgressIndicator(color: neonGreen)),
+                      errorBuilder: (_, __, ___) => Container(
+                        height: 220,
+                        color: pureBlack,
+                        child: const Center(child: Icon(Icons.broken_image_rounded, color: Colors.white24, size: 48)),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-    );
+    ).whenComplete(() => _isZoomModalOpen = false);
   }
 
   MainAxisAlignment dynamicTitle(String title) => MainAxisAlignment.spaceBetween;
@@ -251,11 +322,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this); 
-
-    if (!kIsWeb && widget.userId != null) {
-      OneSignal.login(widget.userId.toString());
-      OneSignal.Notifications.requestPermission(true);
-    }
     
     googleApiKey = const String.fromEnvironment('MAPS_API_KEY', defaultValue: AppConstants.googleMapsKey);
     
@@ -274,8 +340,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           );
           
           double diff = (_targetHeading - _oldHeading) % 360.0;
-          if (diff > 180.0) diff -= 360.0;
-          else if (diff < -180.0) diff += 360.0;
+          if (diff > 180.0) {
+            diff -= 360.0;
+          } else if (diff < -180.0) diff += 360.0;
           _animatedHeading.value = _oldHeading + diff * _slideController.value;
         }
       });
@@ -364,6 +431,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
             _polylineColor = neonGreen;
             _showTopSnackBar("Daha hızlı bir alternatif rota bulundu.");
           });
+          _syncDynamicIsland();
         }
       }
     });
@@ -534,6 +602,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         _polylineColor = neonGreen;
         _etaString = "${(distanceInKm * 2.5).ceil()} Dk";
       });
+      _syncDynamicIsland();
       if (_autoFollowBounds && !_isUserPanning) {
         _fitMapBounds();
       }
@@ -560,6 +629,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
               _polylineColor = neonGreen;
               _etaString = routeData['duration_text'] ?? "";
             });
+            _syncDynamicIsland();
             if (_autoFollowBounds && !_isUserPanning) {
               _fitMapBounds();
             }
@@ -723,12 +793,13 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   }
 
   Future<void> _initWebSocket() async {
+    if (kIsWeb || _isPusherInitialized) return;
     try {
       await pusher.init(
         apiKey: AppConstants.pusherKey, 
         cluster: "eu",
         onEvent: (event) {
-          if (event.eventName == "status_update" || event.eventName == "bid_update" || event.eventName == "code_verified" || event.eventName == "job_update" || event.eventName == "in_progress" || event.eventName == "rating_submitted" || event.eventName == "job_rated" || event.eventName == "job_completed" || event.eventName == "evidence_uploaded" || event.eventName == "evidence_confirmed") {
+          if (event.eventName == "job_matched" || event.eventName == "status_update" || event.eventName == "bid_update" || event.eventName == "code_verified" || event.eventName == "job_update" || event.eventName == "in_progress" || event.eventName == "rating_submitted" || event.eventName == "job_rated" || event.eventName == "job_completed" || event.eventName == "evidence_uploaded" || event.eventName == "evidence_confirmed" || event.eventName == "counter_bid") {
             if (mounted) _fetchJobStatus();
           } else if (event.eventName == "new_message") {
             if (mounted) _checkUnreadMessages();
@@ -766,6 +837,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                   if (customerLat != 0.0) {
                     distanceInKm = Geolocator.distanceBetween(customerLat, customerLng, providerLat, providerLng) / 1000;
                     _checkSoftGeofences(distanceInKm);
+                    _syncDynamicIsland();
                   }
                 });
               }
@@ -778,6 +850,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         await pusher.subscribe(channelName: "user_location_$providerId");
       }
       await pusher.connect();
+      _isPusherInitialized = true;
     } catch (e) {
       debugPrint("Pusher error: $e");
       Future.delayed(const Duration(seconds: 3), () {
@@ -928,6 +1001,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           }
 
           _checkSoftGeofences(distanceInKm);
+          _syncDynamicIsland();
 
           if ((isInitial || _autoFollowBounds) && !_isUserPanning) {
             _fitMapBounds();
@@ -1010,12 +1084,12 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      pusher.disconnect();
+      if (_isPusherInitialized) pusher.disconnect();
       _statusPollingTimer?.cancel();
       _resumeTrackingTimer?.cancel();
       _rerouteTimer?.cancel();
     } else if (state == AppLifecycleState.resumed) {
-      pusher.connect();
+      if (_isPusherInitialized) pusher.connect();
       if (jobStatus != 'completed' && jobStatus != 'cancelled') _startTimer();
       _startReroutingEngine();
     }
@@ -1024,9 +1098,11 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    pusher.unsubscribe(channelName: "job_${widget.jobId}");
-    if (providerId != null) pusher.unsubscribe(channelName: "user_location_$providerId");
-    pusher.disconnect();
+    if (_isPusherInitialized) {
+      pusher.unsubscribe(channelName: "job_${widget.jobId}");
+      if (providerId != null) pusher.unsubscribe(channelName: "user_location_$providerId");
+      pusher.disconnect();
+    }
     _statusPollingTimer?.cancel();
     _rerouteTimer?.cancel();
     _httpClient.close();
@@ -1046,6 +1122,12 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     _mapRotation.dispose(); 
     _googleMapController?.dispose();
     _appleMapController = null;
+    
+    // Ekran tamamen kapandığında Live Activity'yi de kapat
+    if (widget.userType == 'customer' && _isLiveActivityStarted) {
+      LiveActivityService().endTracking();
+    }
+    
     super.dispose();
   }
 
@@ -1135,6 +1217,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       if (data['status'] == 'success') {
         if (mounted) {
           _positionStream?.cancel(); 
+          if (widget.userType == 'customer') {
+            LiveActivityService().endTracking();
+            _isLiveActivityStarted = false;
+          }
           if (_isNavigating) return;
           _isNavigating = true;
           _showTopSnackBar("İşlem iptal edildi.");
@@ -1180,9 +1266,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     if (!mounted) return;
     ScaffoldMessenger.of(context).clearSnackBars();
     
-    final double screenHeight = MediaQuery.sizeOf(context).height;
-    double bottomMargin = screenHeight - (MediaQuery.paddingOf(context).top + 110); 
-    if (bottomMargin < 20) bottomMargin = 20;
+    double bottomMargin = MediaQuery.paddingOf(context).bottom + 20;
 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Row(
@@ -1234,7 +1318,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       if (!mounted) return;
 
       if (response.statusCode == 200 && data['status'] != 'error') {
-        // Sunucuyla aktif iletişim sağlandığı sürece zaman aşımını yenile
         _lastLocationUpdateTime = DateTime.now();
 
         String rawStatus = (data['job_status'] != null && data['job_status'].toString().isNotEmpty && data['job_status'].toString().toLowerCase() != 'success')
@@ -1254,6 +1337,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
         if (newJobStatus == 'cancelled') {
             _positionStream?.cancel(); 
+            if (widget.userType == 'customer') {
+              LiveActivityService().endTracking();
+              _isLiveActivityStarted = false;
+            }
             if (_isNavigating) return;
             _isNavigating = true;
             if (widget.userType == 'provider') {
@@ -1321,7 +1408,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           
           double apiProvHeading = _parseDouble(data['provider_heading']);
           
-          // Usta hareketsiz dursa dahi sunucudan aktif veri geldikçe bağlantıyı canlı tut
           if (apiProvLat != 0.0 && apiProvLng != 0.0) {
             _lastLocationUpdateTime = DateTime.now();
           }
@@ -1411,6 +1497,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
               _updateRouteProgress(LatLng(providerLat, providerLng));
             }
 
+            _syncDynamicIsland();
+
             if (_autoFollowBounds && !_isUserPanning) {
               _fitMapBounds();
             }
@@ -1426,6 +1514,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
           if (jobStatus == 'completed') {
             _positionStream?.cancel();
+            if (widget.userType == 'customer') {
+              LiveActivityService().endTracking();
+              _isLiveActivityStarted = false;
+            }
             
             if (widget.userType == 'provider') {
                if (!_isNavigating) {
@@ -1535,13 +1627,20 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     }
   }
 
-  Future<void> _sendCounterBid(String amount) async {
+  Future<void> _sendCounterBid(String bidId, String amount) async {
     setState(() => isProcessing = true);
     try {
       final response = await _httpClient.post(
-        Uri.parse("$_baseUrl?action=place_bid"), 
+        Uri.parse("$_baseUrl?action=counter_bid"), 
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
-        body: {"job_id": widget.jobId.toString(), "provider_id": widget.userId.toString(), "amount": amount},
+        body: {
+          "bid_id": bidId.toString(),
+          "job_id": widget.jobId.toString(), 
+          "customer_id": (customerId ?? (widget.userType == 'customer' ? widget.userId : 0)).toString(),
+          "provider_id": (providerId ?? (widget.userType == 'provider' ? widget.userId : 0)).toString(),
+          "user_type": widget.userType,
+          "amount": amount.trim()
+        },
       ).timeout(_apiTimeout);
       final data = json.decode(response.body);
       if (mounted) {
@@ -1592,114 +1691,179 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   }
 
   void _showCounterBidDialog(String bidId, String currentAmount) {
-    TextEditingController counterController = TextEditingController();
+    if (_isCounterModalOpen || _isRatingModalOpen) return;
+    _isCounterModalOpen = true;
+
+    final TextEditingController counterController = TextEditingController();
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => LayoutBuilder(
         builder: (context, constraints) {
           final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-          return SafeArea(
-            child: BackdropFilter(
-              filter: ui.ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-              child: Container(
-                padding: EdgeInsets.only(bottom: bottomInset > 0 ? bottomInset + 20 : 24, left: 24, right: 24, top: 24),
-                decoration: BoxDecoration(
-                  color: panelBlack.withValues(alpha: 0.95),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.5)
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text("Karşı Teklif", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 24, letterSpacing: -0.5), textAlign: TextAlign.center),
-                      const SizedBox(height: 24),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                        decoration: BoxDecoration(color: neonGreen.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: neonGreen.withValues(alpha: 0.2), width: 1.5)),
-                        child: Text("Müşteri: $currentAmount ₺", style: const TextStyle(fontWeight: FontWeight.w900, color: neonGreen, fontSize: 18)),
+          final double safeBottom = MediaQuery.paddingOf(context).bottom;
+          final bool isSmallScreen = constraints.maxWidth < 400;
+
+          return BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              padding: EdgeInsets.only(
+                bottom: bottomInset > 0 ? bottomInset + 16 : safeBottom + 20,
+                left: isSmallScreen ? 16 : 22,
+                right: isSmallScreen ? 16 : 22,
+                top: 20,
+              ),
+              decoration: BoxDecoration(
+                color: panelBlack.withValues(alpha: 0.98),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                border: Border.all(color: neonGreen.withValues(alpha: 0.35), width: 1.5),
+                boxShadow: [
+                  BoxShadow(color: pureBlack.withValues(alpha: 0.9), blurRadius: 40, offset: const Offset(0, -10)),
+                  BoxShadow(color: neonGreen.withValues(alpha: 0.08), blurRadius: 25),
+                ],
+              ),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 44,
+                        height: 5,
+                        decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)),
                       ),
-                      const SizedBox(height: 24),
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.05))
-                        ),
-                        child: TextField(
-                          controller: counterController,
-                          keyboardType: TextInputType.number,
-                          textInputAction: TextInputAction.done,
-                          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white),
-                          textAlign: TextAlign.center,
-                          decoration: InputDecoration(
-                            labelText: "Teklifiniz (TL)",
-                            labelStyle: const TextStyle(fontSize: 14, color: textGray, fontWeight: FontWeight.w600),
-                            filled: true,
-                            fillColor: pureBlack,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
-                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: neonGreen, width: 2.0)),
-                            contentPadding: const EdgeInsets.symmetric(vertical: 20),
-                          ),
-                          onSubmitted: (_) {
-                            FocusScope.of(context).unfocus();
-                          },
-                        ),
+                    ),
+                    const SizedBox(height: 18),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: neonGreen.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: neonGreen.withValues(alpha: 0.3)),
                       ),
-                      const SizedBox(height: 16),
-                      const Text("Maksimum 2 pazarlık hakkınız var.", style: TextStyle(fontSize: 13, color: textGray, fontWeight: FontWeight.w500)),
-                      const SizedBox(height: 24),
-                      Row(
+                      child: const Icon(Icons.handshake_rounded, color: neonGreen, size: 28),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text("Karşı Fiyat Teklifi", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 20, letterSpacing: -0.4), textAlign: TextAlign.center),
+                    const SizedBox(height: 6),
+                    const Text("Müşterinin son teklifini değerlendirip karşı teklifinizi iletin.", textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: textGray, fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 18),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: pureBlack,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: neonGreen.withValues(alpha: 0.25), width: 1.2),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () {
-                                FocusScope.of(context).unfocus();
-                                Navigator.pop(context);
-                              }, 
-                              style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), side: BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 1.5)),
-                              child: const FittedBox(child: Text("İptal", style: TextStyle(color: textGray, fontWeight: FontWeight.w800, fontSize: 16)))
-                            )
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            flex: 2,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(20),
-                                color: neonGreen,
-                              ),
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
-                                onPressed: () {
-                                  FocusScope.of(context).unfocus();
-                                  if (counterController.text.trim().isNotEmpty && int.tryParse(counterController.text.trim()) != null && int.parse(counterController.text.trim()) > 0) {
-                                    final amount = counterController.text.trim();
-                                    Navigator.of(context).pop();
-                                    Future.delayed(const Duration(milliseconds: 300), () {
-                                      _sendCounterBid(amount);
-                                    });
-                                  } else {
-                                    _showTopSnackBar("Geçerli bir tutar girin.", isError: true);
-                                  }
-                                },
-                                child: const FittedBox(child: Text("Gönder", style: TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 16))),
-                              ),
-                            ),
-                          ),
+                          const Text("Müşteri Teklifi:", style: TextStyle(color: textGray, fontSize: 13, fontWeight: FontWeight.w600)),
+                          Text("$currentAmount ₺", style: const TextStyle(fontWeight: FontWeight.w900, color: neonGreen, fontSize: 20)),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.2),
+                      ),
+                      child: TextField(
+                        controller: counterController,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.done,
+                        style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white),
+                        textAlign: TextAlign.center,
+                        decoration: InputDecoration(
+                          labelText: "Yeni Teklifiniz (₺)",
+                          labelStyle: const TextStyle(fontSize: 13, color: textGray, fontWeight: FontWeight.w600),
+                          filled: true,
+                          fillColor: pureBlack,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: neonGreen, width: 2.0)),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 18),
+                        ),
+                        onSubmitted: (_) => FocusScope.of(context).unfocus(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text("İki taraf arasında en fazla 2 pazarlık hakkı bulunmaktadır.", style: TextStyle(fontSize: 11, color: textGray, fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              FocusScope.of(context).unfocus();
+                              Navigator.pop(context);
+                            }, 
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                              side: BorderSide(color: Colors.white.withValues(alpha: 0.15), width: 1.2),
+                            ),
+                            child: const FittedBox(child: Text("Vazgeç", style: TextStyle(color: textGray, fontWeight: FontWeight.w800, fontSize: 14))),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(18),
+                              color: neonGreen,
+                              boxShadow: [
+                                BoxShadow(color: neonGreen.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 4)),
+                              ],
+                            ),
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                              ),
+                              onPressed: () {
+                                FocusScope.of(context).unfocus();
+                                final text = counterController.text.trim();
+                                if (text.isNotEmpty && int.tryParse(text) != null && int.parse(text) > 0) {
+                                  Navigator.of(context).pop();
+                                  Future.delayed(const Duration(milliseconds: 300), () {
+                                    if (bidId.isNotEmpty) {
+                                      _sendCounterBid(bidId, text);
+                                    } else {
+                                      _showTopSnackBar("Teklif bilgisi alınamadı.", isError: true);
+                                    }
+                                  });
+                                } else {
+                                  _showTopSnackBar("Lütfen geçerli bir tutar girin.", isError: true);
+                                }
+                              },
+                              child: const FittedBox(child: Text("Teklifi Gönder", style: TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 15))),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
           );
-        }
+        },
       ),
-    ).whenComplete(() => counterController.dispose());
+    ).whenComplete(() {
+      _isCounterModalOpen = false;
+      Future.delayed(const Duration(milliseconds: 400), () {
+        try { counterController.dispose(); } catch (_) {}
+      });
+    });
   }
 
   void _shareLiveTracking() {
@@ -1876,6 +2040,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
   }
 
   void _showComplaintDialog() {
+    if (_isComplaintModalOpen || _isRatingModalOpen) return;
+    _isComplaintModalOpen = true;
+
     final TextEditingController subjectController = TextEditingController();
     final TextEditingController messageController = TextEditingController();
     bool isSending = false;
@@ -1883,275 +2050,355 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
           final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-          return SafeArea(
-            child: BackdropFilter(
-              filter: ui.ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-              child: Container(
-                padding: EdgeInsets.only(
-                  bottom: bottomInset > 0 ? bottomInset + 20 : 24,
-                  left: 20, right: 20, top: 20
-                ),
-                decoration: BoxDecoration(
-                  color: panelBlack.withValues(alpha: 0.95),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.5),
-                ),
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
-                      const SizedBox(height: 24),
-                      Center(
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
+          final safeBottom = MediaQuery.paddingOf(context).bottom;
+          final double screenWidth = MediaQuery.sizeOf(context).width;
+
+          return BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              padding: EdgeInsets.only(
+                bottom: bottomInset > 0 ? bottomInset + 16 : safeBottom + 20,
+                left: screenWidth < 380 ? 16 : 22,
+                right: screenWidth < 380 ? 16 : 22,
+                top: 20,
+              ),
+              decoration: BoxDecoration(
+                color: panelBlack.withValues(alpha: 0.98),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                border: Border.all(color: Colors.purpleAccent.withValues(alpha: 0.35), width: 1.5),
+                boxShadow: [
+                  BoxShadow(color: pureBlack.withValues(alpha: 0.9), blurRadius: 40, offset: const Offset(0, -10)),
+                  BoxShadow(color: Colors.purpleAccent.withValues(alpha: 0.08), blurRadius: 25),
+                ],
+              ),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 44,
+                        height: 5,
+                        decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.purpleAccent.withValues(alpha: 0.1),
+                            color: Colors.purpleAccent.withValues(alpha: 0.12),
                             shape: BoxShape.circle,
+                            border: Border.all(color: Colors.purpleAccent.withValues(alpha: 0.3)),
                           ),
-                          child: const Icon(Icons.support_agent_rounded, color: Colors.purpleAccent, size: 36),
+                          child: const Icon(Icons.support_agent_rounded, color: Colors.purpleAccent, size: 24),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text("Şikayet Oluştur", textAlign: TextAlign.center, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
-                      const SizedBox(height: 8),
-                      const Text("Bu işlemle ilgili şikayetinizi yetkililere iletin.", textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: textGray, fontWeight: FontWeight.w500)),
-                      const SizedBox(height: 24),
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.05))
-                        ),
-                        child: TextField(
-                          controller: subjectController,
-                          textInputAction: TextInputAction.next,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
-                          decoration: InputDecoration(
-                            labelText: "Konu Başlığı",
-                            labelStyle: const TextStyle(color: textGray, fontWeight: FontWeight.w500, fontSize: 13),
-                            filled: true,
-                            fillColor: pureBlack,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.purpleAccent, width: 2.0)),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18)
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Müşteri Destek & Şikayet", 
+                                style: TextStyle(
+                                  fontSize: screenWidth < 380 ? 18 : 20, 
+                                  fontWeight: FontWeight.w900, 
+                                  color: Colors.white, 
+                                  letterSpacing: -0.4
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              const Text("Talebiniz incelenmek üzere merkeze aktarılır.", style: TextStyle(fontSize: 12, color: textGray, fontWeight: FontWeight.w500)),
+                            ],
                           ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                       ),
-                      const SizedBox(height: 12),
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.05))
-                        ),
-                        child: TextField(
-                          controller: messageController,
-                          textInputAction: TextInputAction.done,
-                          maxLines: 4,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
-                          decoration: InputDecoration(
-                            labelText: "Detaylı Açıklama",
-                            labelStyle: const TextStyle(color: textGray, fontWeight: FontWeight.w500, fontSize: 13),
-                            filled: true,
-                            fillColor: pureBlack,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.purpleAccent, width: 2.0)),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18)
-                          ),
-                          onSubmitted: (_) => FocusScope.of(context).unfocus(),
+                      child: TextField(
+                        controller: subjectController,
+                        textInputAction: TextInputAction.next,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14),
+                        decoration: InputDecoration(
+                          labelText: "Konu Başlığı",
+                          labelStyle: const TextStyle(color: textGray, fontWeight: FontWeight.w500, fontSize: 13),
+                          filled: true,
+                          fillColor: pureBlack,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: Colors.purpleAccent, width: 2.0)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          color: Colors.purpleAccent
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                      ),
+                      child: TextField(
+                        controller: messageController,
+                        textInputAction: TextInputAction.done,
+                        maxLines: 4,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+                        decoration: InputDecoration(
+                          labelText: "Sorununuzu detaylı açıklayın...",
+                          labelStyle: const TextStyle(color: textGray, fontWeight: FontWeight.w500, fontSize: 13),
+                          filled: true,
+                          fillColor: pureBlack,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: Colors.purpleAccent, width: 2.0)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                         ),
-                        child: ElevatedButton(
-                          onPressed: isSending ? null : () async {
-                            FocusScope.of(context).unfocus();
-                            if (subjectController.text.trim().isEmpty || messageController.text.trim().isEmpty) {
-                              _showTopSnackBar("Lütfen tüm alanları doldurun.", isError: true);
-                              return;
-                            }
-                            setModalState(() => isSending = true);
-                            try {
-                              final response = await _httpClient.post(
-                                Uri.parse("$_baseUrl?action=create_ticket"),
-                                headers: {"Content-Type": "application/x-www-form-urlencoded"},
-                                body: {
-                                  "job_id": widget.jobId.toString(),
-                                  "customer_id": customerId.toString(),
-                                  "provider_id": providerId.toString(),
-                                  "subject": subjectController.text.trim(),
-                                  "message": messageController.text.trim(),
-                                }
-                              ).timeout(_apiTimeout);
-                              if (mounted) {
-                                if (response.statusCode == 200) {
-                                  Navigator.pop(context);
-                                  _showTopSnackBar("Şikayetiniz iletildi.");
-                                } else {
-                                  _showTopSnackBar("Şikayet gönderilemedi.", isError: true);
-                                }
+                        onSubmitted: (_) => FocusScope.of(context).unfocus(),
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        color: Colors.purpleAccent,
+                        boxShadow: [
+                          BoxShadow(color: Colors.purpleAccent.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 4)),
+                        ],
+                      ),
+                      child: ElevatedButton(
+                        onPressed: isSending ? null : () async {
+                          FocusScope.of(context).unfocus();
+                          if (subjectController.text.trim().isEmpty || messageController.text.trim().isEmpty) {
+                            _showTopSnackBar("Lütfen tüm alanları doldurun.", isError: true);
+                            return;
+                          }
+                          setModalState(() => isSending = true);
+                          try {
+                            final response = await _httpClient.post(
+                              Uri.parse("$_baseUrl?action=create_ticket"),
+                              headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                              body: {
+                                "job_id": widget.jobId.toString(),
+                                "customer_id": customerId.toString(),
+                                "provider_id": providerId.toString(),
+                                "subject": subjectController.text.trim(),
+                                "message": messageController.text.trim(),
+                              },
+                            ).timeout(_apiTimeout);
+                            if (mounted) {
+                              if (response.statusCode == 200) {
+                                Navigator.pop(context);
+                                _showTopSnackBar("Şikayetiniz yetkili birime iletildi.");
+                              } else {
+                                _showTopSnackBar("Şikayet gönderilemedi.", isError: true);
                               }
-                            } catch (e) {
-                              if (mounted) _showTopSnackBar("Bağlantı hatası.", isError: true);
-                            } finally {
-                              if (mounted) setModalState(() => isSending = false);
                             }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            elevation: 0,
-                          ),
-                          child: isSending
-                              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
-                              : const Text("Şikayeti Gönder", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
+                          } catch (e) {
+                            if (mounted) _showTopSnackBar("Bağlantı hatası.", isError: true);
+                          } finally {
+                            if (mounted) setModalState(() => isSending = false);
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                          elevation: 0,
                         ),
+                        child: isSending
+                            ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2.5))
+                            : const Text("Şikayeti Yetkililere Gönder", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 0.5)),
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("Vazgeç", style: TextStyle(color: textGray, fontWeight: FontWeight.w800, fontSize: 14)),
+                    ),
+                  ],
                 ),
               ),
             ),
           );
-        }
+        },
       ),
     ).whenComplete(() {
+      _isComplaintModalOpen = false;
       subjectController.dispose();
       messageController.dispose();
     });
   }
 
   void _showRatingDialog() {
+    if (_isRatingModalOpen) return;
+    
+    if (_isComplaintModalOpen || _isCounterModalOpen) {
+      try { Navigator.of(context, rootNavigator: true).pop(); } catch (_) {}
+      _isComplaintModalOpen = false;
+      _isCounterModalOpen = false;
+    }
     _isRatingModalOpen = true;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      isDismissible: false, 
+      isDismissible: false,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
           final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-          return SafeArea(
-            child: BackdropFilter(
-              filter: ui.ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-              child: Container(
-                padding: EdgeInsets.only(bottom: bottomInset > 0 ? bottomInset + 20 : 24, left: 24, right: 24, top: 24),
-                decoration: BoxDecoration(
-                  color: panelBlack.withValues(alpha: 0.95), 
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.5),
-                ),
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
-                      const SizedBox(height: 24),
-                      Center(
-                        child: Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.amber.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.star_rounded, color: Colors.amber, size: 48),
-                        ),
+          final safeBottom = MediaQuery.paddingOf(context).bottom;
+          final double screenWidth = MediaQuery.sizeOf(context).width;
+
+          return BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              padding: EdgeInsets.only(
+                bottom: bottomInset > 0 ? bottomInset + 16 : safeBottom + 20,
+                left: screenWidth < 380 ? 16 : 22,
+                right: screenWidth < 380 ? 16 : 22,
+                top: 20,
+              ),
+              decoration: BoxDecoration(
+                color: panelBlack.withValues(alpha: 0.98), 
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                border: Border.all(color: Colors.amber.withValues(alpha: 0.35), width: 1.5),
+                boxShadow: [
+                  BoxShadow(color: pureBlack.withValues(alpha: 0.9), blurRadius: 40, offset: const Offset(0, -10)),
+                  BoxShadow(color: Colors.amber.withValues(alpha: 0.08), blurRadius: 25),
+                ],
+              ),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 44,
+                        height: 5,
+                        decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)),
                       ),
-                      const SizedBox(height: 20),
-                      const Text("Ustayı Değerlendirin", textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
-                      const SizedBox(height: 8),
-                      Text("$providerName isimli ustadan aldığınız hizmeti puanlayın.", textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, color: textGray, fontWeight: FontWeight.w500, height: 1.4)),
-                      const SizedBox(height: 32),
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: 8,
-                        children: List.generate(5, (index) {
-                          return GestureDetector(
-                            onTap: () {
-                              HapticFeedback.lightImpact();
-                              setModalState(() => _selectedRating = index + 1);
-                            },
-                            child: AnimatedScale(
-                              scale: index < _selectedRating ? 1.25 : 1.0,
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeOutBack,
-                              child: Icon(index < _selectedRating ? Icons.star_rounded : Icons.star_border_rounded, color: Colors.amber, size: 44),
-                            ),
-                          );
-                        }),
-                      ),
-                      const SizedBox(height: 32),
-                      Container(
+                    ),
+                    const SizedBox(height: 18),
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.05))
+                          color: Colors.amber.withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
                         ),
-                        child: TextField(
-                          controller: _commentController,
-                          textInputAction: TextInputAction.done,
-                          maxLines: 3,
-                          style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
-                          decoration: InputDecoration(
-                            hintText: "Usta hakkında düşünceleriniz (Opsiyonel)",
-                            hintStyle: const TextStyle(color: textGray, fontWeight: FontWeight.w500, fontSize: 13),
-                            filled: true,
-                            fillColor: pureBlack,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: neonGreen, width: 2.0)),
-                            contentPadding: const EdgeInsets.all(20),
-                          ),
-                          onSubmitted: (_) => FocusScope.of(context).unfocus(),
-                        ),
+                        child: const Icon(Icons.star_rounded, color: Colors.amber, size: 40),
                       ),
-                      const SizedBox(height: 24),
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          color: neonGreen,
-                        ),
-                        child: ElevatedButton(
-                          onPressed: () {
-                            FocusScope.of(context).unfocus();
-                            _submitRating();
+                    ),
+                    const SizedBox(height: 16),
+                    const Text("Hizmeti Değerlendirin", textAlign: TextAlign.center, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.4)),
+                    const SizedBox(height: 6),
+                    Text("$providerName ustadan aldığınız hizmet kalitesini puanlayın.", textAlign: TextAlign.center, style: const TextStyle(fontSize: 13, color: textGray, fontWeight: FontWeight.w500, height: 1.4)),
+                    const SizedBox(height: 24),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 8,
+                      children: List.generate(5, (index) {
+                        return GestureDetector(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            setModalState(() => _selectedRating = index + 1);
                           },
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
-                          child: const Text("Gönder ve Çık", textAlign: TextAlign.center, style: TextStyle(fontSize: 16, color: pureBlack, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-                        ),
+                          child: AnimatedScale(
+                            scale: index < _selectedRating ? 1.2 : 1.0,
+                            duration: const Duration(milliseconds: 250),
+                            curve: Curves.easeOutBack,
+                            child: Icon(
+                              index < _selectedRating ? Icons.star_rounded : Icons.star_border_rounded, 
+                              color: Colors.amber, 
+                              size: screenWidth < 380 ? 38 : 44,
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 24),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                       ),
-                      const SizedBox(height: 16),
-                      TextButton(
-                         onPressed: () {
-                           FocusScope.of(context).unfocus();
-                           if (_isRatingModalOpen) {
-                             Navigator.pop(context);
-                             _isRatingModalOpen = false;
-                           }
-                           setState(() {
-                             isRated = true; 
-                           });
-                         },
-                         child: const Text("Atla", style: TextStyle(color: textGray, fontWeight: FontWeight.w800, fontSize: 14))
-                      )
-                    ],
-                  ),
+                      child: TextField(
+                        controller: _commentController,
+                        textInputAction: TextInputAction.done,
+                        maxLines: 3,
+                        style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                        decoration: InputDecoration(
+                          hintText: "Usta hakkında görüş ve deneyimleriniz (İsteğe Bağlı)",
+                          hintStyle: const TextStyle(color: textGray, fontWeight: FontWeight.w500, fontSize: 13),
+                          filled: true,
+                          fillColor: pureBlack,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: neonGreen, width: 2.0)),
+                          contentPadding: const EdgeInsets.all(16),
+                        ),
+                        onSubmitted: (_) => FocusScope.of(context).unfocus(),
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        color: neonGreen,
+                        boxShadow: [
+                          BoxShadow(color: neonGreen.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 4)),
+                        ],
+                      ),
+                      child: ElevatedButton(
+                        onPressed: () {
+                          FocusScope.of(context).unfocus();
+                          _submitRating();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                        ),
+                        child: const Text("Değerlendirmeyi Kaydet", textAlign: TextAlign.center, style: TextStyle(fontSize: 16, color: pureBlack, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextButton(
+                      onPressed: () {
+                        FocusScope.of(context).unfocus();
+                        if (_isRatingModalOpen) {
+                          Navigator.pop(context);
+                          _isRatingModalOpen = false;
+                        }
+                        setState(() {
+                          isRated = true; 
+                        });
+                      },
+                      child: const Text("Puanlamayı Atla", style: TextStyle(color: textGray, fontWeight: FontWeight.w800, fontSize: 14)),
+                    ),
+                  ],
                 ),
               ),
             ),
           );
-        }
+        },
       ),
     ).whenComplete(() => _isRatingModalOpen = false);
   }
@@ -2211,7 +2458,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     bool isOffline = false;
 
     if (widget.userType == 'customer' && _lastLocationUpdateTime != null) {
-      // Trafik ışıkları ve GPS paket gecikmelerinde sahte kopma uyarısı vermemesi için eşik 45 saniyeye çekildi
       if (DateTime.now().difference(_lastLocationUpdateTime!).inSeconds > 45) {
         isOffline = true;
       }
@@ -2448,7 +2694,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           ),
           zoom: 14.5,
         ),
-        // Android PlatformView dokunma önceliğini haritaya ver
         gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
           Factory<OneSequenceGestureRecognizer>(() => EagerGestureRecognizer()),
         },
@@ -2462,7 +2707,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         rotateGesturesEnabled: true,
         tiltGesturesEnabled: false,
         onCameraMoveStarted: () {
-          // setState kaldırıldı: Harita sürüklenirken widget ağacının yeniden çizilip dokunmayı kesmesi önlenir
           _isUserPanning = true;
           _autoFollowBounds = false;
         },
@@ -2830,15 +3074,15 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Text(widget.userType == 'customer' ? "Doğrulanmış Usta" : "Müşteri", style: TextStyle(fontSize: 12, color: subtitleColor, fontWeight: FontWeight.bold)),
-                              if (widget.userType == 'customer') ...[
-                                const SizedBox(width: 4),
-                                const Icon(Icons.verified_rounded, color: trustBlue, size: 16),
-                              ]
-                            ],
-                          ),
+                         Row(
+                              children: [
+                                Flexible(child: Text(widget.userType == 'customer' ? "Doğrulanmış Usta" : "Müşteri", style: TextStyle(fontSize: 12, color: subtitleColor, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
+                                if (widget.userType == 'customer') ...[
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.verified_rounded, color: trustBlue, size: 16),
+                                ]
+                              ],
+                            ),
                           const SizedBox(height: 4),
                           Text(contactName, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: textColor, letterSpacing: -0.5), maxLines: 1, overflow: TextOverflow.ellipsis),
                         ],
@@ -2923,7 +3167,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                                 borderRadius: BorderRadius.circular(5),
                                 border: Border.all(color: const Color(0xFF2B2D42), width: 1.2),
                                 boxShadow: [
-                                  BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 4, offset: const Offset(0, 1)),
+                                  BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 4, offset: const Offset(0, 1)),
                                 ],
                               ),
                               child: Row(
@@ -2958,9 +3202,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: neonGreen.withOpacity(0.12),
+                          color: neonGreen.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: neonGreen.withOpacity(0.3)),
+                          border: Border.all(color: neonGreen.withValues(alpha: 0.3)),
                         ),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
@@ -3001,8 +3245,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: isEvidenceConfirmed 
-                    ? neonGreen.withOpacity(0.4) 
-                    : (afterPhotoUrl != null ? Colors.amber.withOpacity(0.4) : Colors.white.withOpacity(0.06)),
+                    ? neonGreen.withValues(alpha: 0.4) 
+                    : (afterPhotoUrl != null ? Colors.amber.withValues(alpha: 0.4) : Colors.white.withValues(alpha: 0.06)),
                 width: 1.5,
               ),
             ),
@@ -3030,9 +3274,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: neonGreen.withOpacity(0.15),
+                          color: neonGreen.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: neonGreen.withOpacity(0.4)),
+                          border: Border.all(color: neonGreen.withValues(alpha: 0.4)),
                         ),
                         child: const Text("ONAYLANDI ✓", style: TextStyle(color: neonGreen, fontSize: 10, fontWeight: FontWeight.w900)),
                       ),
@@ -3065,7 +3309,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                                     margin: const EdgeInsets.all(6),
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                                     decoration: BoxDecoration(
-                                      color: Colors.black.withOpacity(0.7),
+                                      color: Colors.black.withValues(alpha: 0.7),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: const Text("ÖNCESİ", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
@@ -3081,7 +3325,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                               height: 130,
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: isEvidenceConfirmed ? neonGreen.withOpacity(0.5) : Colors.white24),
+                                border: Border.all(color: isEvidenceConfirmed ? neonGreen.withValues(alpha: 0.5) : Colors.white24),
                                 image: DecorationImage(
                                   image: NetworkImage(afterPhotoUrl!.startsWith("http") ? afterPhotoUrl! : "https://eliteagency.sbs/$afterPhotoUrl"),
                                   fit: BoxFit.cover,
@@ -3093,7 +3337,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                                   margin: const EdgeInsets.all(6),
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                                   decoration: BoxDecoration(
-                                    color: neonGreen.withOpacity(0.9),
+                                    color: neonGreen.withValues(alpha: 0.9),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: const Text("SONRASI", style: TextStyle(color: pureBlack, fontSize: 10, fontWeight: FontWeight.bold)),
@@ -3142,7 +3386,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                                 borderRadius: BorderRadius.circular(16),
                                 color: neonGreen,
                                 boxShadow: [
-                                  BoxShadow(color: neonGreen.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 3)),
+                                  BoxShadow(color: neonGreen.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 3)),
                                 ],
                               ),
                               child: ElevatedButton.icon(
@@ -3171,9 +3415,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: neonGreen.withOpacity(0.1),
+                          color: neonGreen.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: neonGreen.withOpacity(0.3)),
+                          border: Border.all(color: neonGreen.withValues(alpha: 0.3)),
                         ),
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -3189,9 +3433,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                     Container(
                       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.02),
+                        color: Colors.white.withValues(alpha: 0.02),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.white.withOpacity(0.05)),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
                       ),
                       child: const Row(
                         children: [
@@ -3216,7 +3460,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                         child: Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.03),
+                            color: Colors.white.withValues(alpha: 0.03),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: beforePhotoUrl != null ? neonGreen : Colors.white12),
                           ),
@@ -3235,7 +3479,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                         child: Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.03),
+                            color: Colors.white.withValues(alpha: 0.03),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: afterPhotoUrl != null ? neonGreen : Colors.white12),
                           ),
@@ -3663,13 +3907,13 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         decoration: BoxDecoration(
           color: cardColor,
           borderRadius: BorderRadius.circular(36),
-          border: Border.all(color: Colors.amber.withOpacity(0.5), width: 1.5),
+          border: Border.all(color: Colors.amber.withValues(alpha: 0.5), width: 1.5),
         ),
         child: Column(
           children: [
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(color: Colors.amber.withOpacity(0.1), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: Colors.amber.withValues(alpha: 0.1), shape: BoxShape.circle),
               child: const Icon(Icons.add_a_photo_rounded, color: Colors.amber, size: 40),
             ),
             const SizedBox(height: 24),

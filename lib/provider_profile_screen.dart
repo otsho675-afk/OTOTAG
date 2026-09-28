@@ -150,7 +150,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
         } else if (index < rating && (rating - index) >= 0.5) {
           return Icon(Icons.star_half_rounded, color: goldAccent, size: size);
         } else {
-          return Icon(Icons.star_outline_rounded, color: goldAccent.withOpacity(0.4), size: size);
+          return Icon(Icons.star_outline_rounded, color: goldAccent.withValues(alpha: 0.4), size: size);
         }
       }),
     );
@@ -182,11 +182,11 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
                     top: 16
                   ),
                   decoration: BoxDecoration(
-                    color: panelBlack.withOpacity(0.96),
+                    color: panelBlack.withValues(alpha: 0.96),
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                    border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.5),
                     boxShadow: [
-                      BoxShadow(color: pureBlack.withOpacity(0.9), blurRadius: 40, offset: const Offset(0, -10)),
+                      BoxShadow(color: pureBlack.withValues(alpha: 0.9), blurRadius: 40, offset: const Offset(0, -10)),
                     ],
                   ),
                   child: Column(
@@ -207,7 +207,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
                             children: [
                               Container(
                                 padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(color: neonGreen.withOpacity(0.12), shape: BoxShape.circle),
+                                decoration: BoxDecoration(color: neonGreen.withValues(alpha: 0.12), shape: BoxShape.circle),
                                 child: const Icon(Icons.rate_review_rounded, color: neonGreen, size: 22),
                               ),
                               SizedBox(width: isSmallScreen ? 8 : 12),
@@ -221,7 +221,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
                             onPressed: () => Navigator.pop(modalContext),
                             icon: Container(
                               padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(color: Colors.white.withOpacity(0.06), shape: BoxShape.circle),
+                              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.06), shape: BoxShape.circle),
                               child: const Icon(Icons.close_rounded, color: Colors.white70, size: 18),
                             ),
                           )
@@ -233,7 +233,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
                         decoration: BoxDecoration(
                           color: surfaceBlack,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: goldAccent.withOpacity(0.2)),
+                          border: Border.all(color: goldAccent.withValues(alpha: 0.2)),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -249,7 +249,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
                                 const SizedBox(width: 6),
                                 Text(
                                   "/ 5.0", 
-                                  style: TextStyle(color: textGray.withOpacity(0.8), fontWeight: FontWeight.w600, fontSize: 14)
+                                  style: TextStyle(color: textGray.withValues(alpha: 0.8), fontWeight: FontWeight.w600, fontSize: 14)
                                 ),
                               ],
                             ),
@@ -267,7 +267,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.speaker_notes_off_rounded, size: 48, color: textGray.withOpacity(0.4)),
+                                  Icon(Icons.speaker_notes_off_rounded, size: 48, color: textGray.withValues(alpha: 0.4)),
                                   const SizedBox(height: 12),
                                   const Text("Henüz müşteri yorumu bulunmuyor.", style: TextStyle(color: textGray, fontSize: 15, fontWeight: FontWeight.w600)),
                                 ],
@@ -283,9 +283,9 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
                                 return Container(
                                   padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
-                                    color: surfaceBlack.withOpacity(0.7),
+                                    color: surfaceBlack.withValues(alpha: 0.7),
                                     borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(color: Colors.white.withOpacity(0.06), width: 1.0),
+                                    border: Border.all(color: Colors.white.withValues(alpha: 0.06), width: 1.0),
                                   ),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -298,7 +298,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
                                               children: [
                                                 CircleAvatar(
                                                   radius: 14,
-                                                  backgroundColor: neonGreen.withOpacity(0.15),
+                                                  backgroundColor: neonGreen.withValues(alpha: 0.15),
                                                   child: Text(
                                                     (review['customer_name'] != null && review['customer_name'].toString().isNotEmpty)
                                                         ? review['customer_name'][0].toUpperCase()
@@ -323,12 +323,12 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
                                       const SizedBox(height: 10),
                                       Text(
                                         review['comment'] ?? "", 
-                                        style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: isSmallScreen ? 13 : 14, height: 1.4, fontWeight: FontWeight.w500)
+                                        style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: isSmallScreen ? 13 : 14, height: 1.4, fontWeight: FontWeight.w500)
                                       ),
                                       const SizedBox(height: 10),
                                       Text(
                                         review['date'] ?? "", 
-                                        style: TextStyle(color: textGray.withOpacity(0.7), fontSize: isSmallScreen ? 10 : 11, fontWeight: FontWeight.w600)
+                                        style: TextStyle(color: textGray.withValues(alpha: 0.7), fontSize: isSmallScreen ? 10 : 11, fontWeight: FontWeight.w600)
                                       ),
                                     ],
                                   ),
@@ -365,9 +365,9 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
           decoration: BoxDecoration(
             color: panelBlack,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+            border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
             boxShadow: [
-              BoxShadow(color: pureBlack.withOpacity(0.6), blurRadius: 16, offset: const Offset(0, 6)),
+              BoxShadow(color: pureBlack.withValues(alpha: 0.6), blurRadius: 16, offset: const Offset(0, 6)),
             ],
           ),
           child: Column(
@@ -376,7 +376,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.12), 
+                  color: color.withValues(alpha: 0.12), 
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: color, size: 24),
@@ -418,7 +418,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
           child: IconButton(
             icon: Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: panelBlack.withOpacity(0.8), shape: BoxShape.circle, border: Border.all(color: Colors.white10)),
+              decoration: BoxDecoration(color: panelBlack.withValues(alpha: 0.8), shape: BoxShape.circle, border: Border.all(color: Colors.white10)),
               child: const Icon(Icons.arrow_back_ios_new_rounded, size: 14, color: Colors.white),
             ),
             onPressed: () => Navigator.pop(context),
@@ -430,7 +430,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
             child: IconButton(
               icon: Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: panelBlack.withOpacity(0.8), shape: BoxShape.circle, border: Border.all(color: Colors.white10)),
+                decoration: BoxDecoration(color: panelBlack.withValues(alpha: 0.8), shape: BoxShape.circle, border: Border.all(color: Colors.white10)),
                 child: const Icon(Icons.refresh_rounded, size: 16, color: neonGreen),
               ),
               onPressed: _fetchProviderData,
@@ -440,7 +440,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
         flexibleSpace: ClipRect(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-            child: Container(color: pureBlack.withOpacity(0.55)),
+            child: Container(color: pureBlack.withValues(alpha: 0.55)),
           ),
         ),
       ),
@@ -462,7 +462,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: RadialGradient(
-                                colors: [neonGreen.withOpacity(0.08), Colors.transparent],
+                                colors: [neonGreen.withValues(alpha: 0.08), Colors.transparent],
                               ),
                             ),
                           ),
@@ -570,7 +570,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
           children: [
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(color: Colors.redAccent.withOpacity(0.1), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: Colors.redAccent.withValues(alpha: 0.1), shape: BoxShape.circle),
               child: const Icon(Icons.cloud_off_rounded, color: Colors.redAccent, size: 48),
             ),
             const SizedBox(height: 20),
@@ -621,8 +621,8 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                border: Border.all(color: Colors.white.withOpacity(0.06)),
-                boxShadow: [BoxShadow(color: pureBlack.withOpacity(0.5), blurRadius: 20, offset: const Offset(0, 8))],
+                border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+                boxShadow: [BoxShadow(color: pureBlack.withValues(alpha: 0.5), blurRadius: 20, offset: const Offset(0, 8))],
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(28),
@@ -640,7 +640,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(28),
                 gradient: LinearGradient(
-                  colors: [pureBlack.withOpacity(0.7), Colors.transparent, pureBlack.withOpacity(0.9)],
+                  colors: [pureBlack.withValues(alpha: 0.7), Colors.transparent, pureBlack.withValues(alpha: 0.9)],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
@@ -660,7 +660,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
                         border: Border.all(color: neonGreen, width: 2.5),
                         boxShadow: [
                           BoxShadow(
-                            color: neonGreen.withOpacity(0.25 + (_pulseController.value * 0.2)), 
+                            color: neonGreen.withValues(alpha: 0.25 + (_pulseController.value * 0.2)), 
                             blurRadius: 24, 
                             spreadRadius: 2
                           ),
@@ -692,9 +692,9 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
-              color: neonGreen.withOpacity(0.1),
+              color: neonGreen.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: neonGreen.withOpacity(0.35), width: 1.0),
+              border: Border.all(color: neonGreen.withValues(alpha: 0.35), width: 1.0),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -717,13 +717,13 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [darkGreen.withOpacity(0.7), panelBlack],
+          colors: [darkGreen.withValues(alpha: 0.7), panelBlack],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
       ),
       child: Center(
-        child: Icon(Icons.handyman_rounded, color: neonGreen.withOpacity(0.15), size: 64),
+        child: Icon(Icons.handyman_rounded, color: neonGreen.withValues(alpha: 0.15), size: 64),
       ),
     );
   }
@@ -762,7 +762,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
             decoration: BoxDecoration(
               color: panelBlack,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withOpacity(0.05)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
             ),
             child: const Center(
               child: Text("Henüz müşteri yorumu bulunmuyor.", style: TextStyle(color: textGray, fontSize: 14, fontWeight: FontWeight.w600))
@@ -782,7 +782,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
                 decoration: BoxDecoration(
                   color: panelBlack,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withOpacity(0.05), width: 1.0),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.0),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -803,12 +803,12 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> with Tick
                     const SizedBox(height: 8),
                     Text(
                       review['comment'] ?? "", 
-                      style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: isSmallScreen ? 12 : 13, height: 1.4, fontWeight: FontWeight.w500)
+                      style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: isSmallScreen ? 12 : 13, height: 1.4, fontWeight: FontWeight.w500)
                     ),
                     const SizedBox(height: 8),
                     Text(
                       review['date'] ?? "", 
-                      style: TextStyle(color: textGray.withOpacity(0.7), fontSize: isSmallScreen ? 10 : 11, fontWeight: FontWeight.w600)
+                      style: TextStyle(color: textGray.withValues(alpha: 0.7), fontSize: isSmallScreen ? 10 : 11, fontWeight: FontWeight.w600)
                     ),
                   ],
                 ),

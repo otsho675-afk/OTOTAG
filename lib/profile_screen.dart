@@ -682,27 +682,27 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      useSafeArea: true,
-      isDismissible: true,
-      enableDrag: true,
       backgroundColor: Colors.transparent,
       builder: (modalCtx) => StatefulBuilder(
         builder: (context, setModalState) {
+          final bottomInset = MediaQuery.of(modalCtx).viewInsets.bottom;
           return GestureDetector(
             onTap: () => FocusScope.of(context).unfocus(),
-            behavior: HitTestBehavior.opaque,
-            child: Padding(
-              padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                child: Container(
-                  padding: const EdgeInsets.only(bottom: 24, left: 20, right: 20, top: 20),
-                  decoration: BoxDecoration(
-                    color: _cardColor.withValues(alpha: 0.98),
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                    border: Border.all(color: _warningColor.withValues(alpha: 0.3), width: 1.5),
-                  ),
-                  child: SingleChildScrollView(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: Container(
+                    padding: EdgeInsets.only(bottom: bottomInset > 0 ? bottomInset + 16 : 24, left: 24, right: 24, top: 16),
+                    decoration: BoxDecoration(
+                      color: _cardColor.withValues(alpha: 0.98),
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                      border: Border.all(color: _warningColor.withValues(alpha: 0.4), width: 1.5),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 30, offset: const Offset(0, -5))],
+                    ),
+                    child: SingleChildScrollView(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -770,6 +770,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 ),
               ),
             ),
+            ),
           );
         }
       ),
@@ -792,30 +793,27 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      useSafeArea: true,
-      isDismissible: true,
-      enableDrag: true,
       backgroundColor: Colors.transparent,
       builder: (modalCtx) => StatefulBuilder(
         builder: (context, setModalState) {
+          final bottomInset = MediaQuery.of(modalCtx).viewInsets.bottom;
           return GestureDetector(
             onTap: () => FocusScope.of(context).unfocus(),
-            behavior: HitTestBehavior.opaque,
-            child: Padding(
-              padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                child: Container(
-                  padding: const EdgeInsets.only(bottom: 24, left: 20, right: 20, top: 20),
-                  decoration: BoxDecoration(
-                    color: _cardColor.withValues(alpha: 0.98),
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                    border: Border.all(color: _dangerColor.withValues(alpha: 0.3), width: 1.5),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 40, offset: const Offset(0, -10))
-                    ],
-                  ),
-                  child: SingleChildScrollView(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: Container(
+                    padding: EdgeInsets.only(bottom: bottomInset > 0 ? bottomInset + 16 : 24, left: 24, right: 24, top: 16),
+                    decoration: BoxDecoration(
+                      color: _cardColor.withValues(alpha: 0.98),
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                      border: Border.all(color: _dangerColor.withValues(alpha: 0.4), width: 1.5),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 30, offset: const Offset(0, -5))],
+                    ),
+                    child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -924,6 +922,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   ),
                 ),
               ),
+            ),
             ),
           );
         }
@@ -1460,9 +1459,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                               )
                             ],
                           ),
-                          child: Column(
+                          child: const Column(
                             mainAxisSize: MainAxisSize.min,
-                            children: const [
+                            children: [
                               Icon(Icons.logout_rounded, color: _dangerColor, size: 20),
                               SizedBox(height: 4),
                               Text(
@@ -2317,8 +2316,8 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                           final pId = job['provider_id']?.toString() ?? (widget.userType == 'provider' ? widget.userId.toString() : null);
                           _showComplaintDialog(job['job_id'] ?? job['id'], pId, cId);
                         },
-                        child: Row(
-                          children: const [
+                        child: const Row(
+                          children: [
                             Icon(Icons.help_outline_rounded, color: Colors.white54, size: 20),
                             SizedBox(width: 8),
                             Expanded(child: Text("Sorun mu var? Destek al", style: TextStyle(color: Colors.white54, fontSize: 14))),
@@ -2345,27 +2344,27 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      useSafeArea: true,
-      isDismissible: true,
-      enableDrag: true,
       backgroundColor: Colors.transparent,
       builder: (modalCtx) => StatefulBuilder(
         builder: (context, setModalState) {
+          final bottomInset = MediaQuery.of(modalCtx).viewInsets.bottom;
           return GestureDetector(
             onTap: () => FocusScope.of(context).unfocus(),
-            behavior: HitTestBehavior.opaque,
-            child: Padding(
-              padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                child: Container(
-                  padding: const EdgeInsets.only(bottom: 24, left: 20, right: 20, top: 20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF111115).withValues(alpha: 0.98),
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.5),
-                  ),
-                  child: SingleChildScrollView(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: Container(
+                    padding: EdgeInsets.only(bottom: bottomInset > 0 ? bottomInset + 16 : 24, left: 24, right: 24, top: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF111115).withValues(alpha: 0.98),
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                      border: Border.all(color: Colors.amber.withValues(alpha: 0.4), width: 1.5),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 30, offset: const Offset(0, -5))],
+                    ),
+                    child: SingleChildScrollView(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -2458,6 +2457,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   ),
                 ),
               ),
+            ),
             ),
           );
         }
@@ -2758,9 +2758,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                                     color: const Color(0xFF222227),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
-                                  child: Row(
+                                  child: const Row(
                                     mainAxisSize: MainAxisSize.min,
-                                    children: const [
+                                    children: [
                                       Icon(Icons.replay_rounded, color: Colors.white, size: 16),
                                       SizedBox(width: 6),
                                       Text(

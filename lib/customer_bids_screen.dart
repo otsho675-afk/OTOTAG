@@ -85,10 +85,10 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     "🎯 Radara yeni bir teklif sinyali yaklaşıyor...",
   ];
 
-  // Kurumsal Güven Renk Paleti (Slate & Sertifikalı Zümrüt Yeşili)
-  final Color _bgColor = const Color(0xFF0F172A); // Gece Mavisi / Deep Slate
-  final Color _primaryColor = const Color(0xFF059669); // Sertifikalı Zümrüt Yeşili
-  final Color _cardColor = const Color(0xFF1E293B); // Kurumsal Slate Kartı
+  // OTO TAG Tema Renk Paleti
+  final Color _bgColor = const Color(0xFF030305); // Saf Siyah
+  final Color _primaryColor = const Color(0xFF00FFA3); // Neon Yeşil
+  final Color _cardColor = const Color(0xFF111115); // Panel Siyahı
   final Color _trustBlue = const Color(0xFF2563EB); // Doğrulama Kraliyet Mavisi
 
   @override
@@ -197,6 +197,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
   }
 
   Future<void> _initWebSocket() async {
+    if (kIsWeb) return;
     try {
       await pusher.init(
         apiKey: AppConstants.pusherKey, 
@@ -209,6 +210,10 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                 if (mounted && !_isNavigating) {
                   _isNavigating = true;
                   _cleanupTimers();
+                  if (_isDialogActive) {
+                    Navigator.of(context, rootNavigator: true).pop();
+                    _isDialogActive = false;
+                  }
                   HapticFeedback.mediumImpact();
                   Navigator.pushReplacement(
                     context,
@@ -248,7 +253,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: isNewJob ? Colors.black.withOpacity(0.15) : Colors.white.withOpacity(0.2), 
+              color: isNewJob ? Colors.black.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.2), 
               shape: BoxShape.circle,
             ),
             child: Icon(isError ? Icons.error_outline_rounded : Icons.radar_rounded, color: isNewJob ? _bgColor : Colors.white, size: 20),
@@ -294,6 +299,10 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
           _cleanupTimers();
           if (mounted && !_isNavigating) {
             _isNavigating = true;
+            if (_isDialogActive) {
+              Navigator.of(context, rootNavigator: true).pop();
+              _isDialogActive = false;
+            }
             HapticFeedback.mediumImpact();
             Navigator.pushReplacement(
               context,
@@ -321,12 +330,12 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
               if (mounted && !_isNavigating) {
                 _isNavigating = true;
                 HapticFeedback.mediumImpact();
-                Navigator.pushReplacement(
-                  context,
+                Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
                   PageRouteBuilder(
                     pageBuilder: (_, __, ___) => JobTrackingScreen(jobId: widget.jobId, userType: 'customer', userId: widget.customerId),
                     transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
                   ),
+                  (route) => false,
                 );
               }
               return;
@@ -344,6 +353,30 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
         if (data['status'] == 'success' && mounted) {
           final List newBidsList = List.from(data['bids'] ?? []);
           
+          // MÜŞTERİYE ANLIK KARŞI TEKLİF BİLDİRİMİ VE OTOMATİK MODAL
+          if (bids.isNotEmpty && newBidsList.isNotEmpty) {
+            for (int i = 0; i < newBidsList.length; i++) {
+              var newBid = newBidsList[i];
+              try {
+                var oldBid = bids.firstWhere((b) => b['bid_id'].toString() == newBid['bid_id'].toString());
+                if (oldBid['amount'].toString() != newBid['amount'].toString() && newBid['last_bidder'] == 'provider') {
+                  // Usta yeni teklif verdiyse hem uyarı ver hem de teklif detay modalini otomatik aç
+                  _showTopSnackBar("${newBid['provider_name'] ?? 'Usta'} yeni fiyat teklif etti: ${newBid['amount']} ₺", isNewJob: true);
+                  HapticFeedback.heavyImpact();
+                  SystemSound.play(SystemSoundType.alert);
+                  
+                  if (!_isDialogActive && !_isNavigating) {
+                    Future.delayed(const Duration(milliseconds: 300), () {
+                      if (mounted) {
+                        _showBidDetailModal(newBid, i, MediaQuery.of(context).size.width < 400, [], i == _bestMatchIndex, i == _cheapestIndex);
+                      }
+                    });
+                  }
+                }
+              } catch (_) {}
+            }
+          }
+
           if (newBidsList.isNotEmpty) {
             double minPrice = double.infinity;
             double maxScore = -double.infinity;
@@ -472,6 +505,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     _isDialogActive = true;
     HapticFeedback.lightImpact();
     
+    // YENİ: Kapanışta dispose edilen objeyi state içinde güvenli bir şekilde tanımlıyoruz
     final TextEditingController counterController = TextEditingController();
     double currentAmount = double.tryParse(currentAmountStr.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0.0;
     
@@ -493,7 +527,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
 
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.85),
+      barrierColor: Colors.black.withValues(alpha: 0.85),
       builder: (context) => LayoutBuilder(
         builder: (context, constraints) {
           final bottomInset = MediaQuery.of(context).viewInsets.bottom;
@@ -506,7 +540,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(28), 
-                side: BorderSide(color: Colors.white.withOpacity(0.05), width: 1)
+                side: BorderSide(color: Colors.white.withValues(alpha: 0.05), width: 1)
               ),
               insetPadding: EdgeInsets.only(
                 left: 16, 
@@ -526,9 +560,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                         Container(
                           padding: const EdgeInsets.all(18),
                           decoration: BoxDecoration(
-                            color: _primaryColor.withOpacity(0.1), 
+                            color: _primaryColor.withValues(alpha: 0.1), 
                             shape: BoxShape.circle,
-                            boxShadow: [BoxShadow(color: _primaryColor.withOpacity(0.2), blurRadius: 24)]
+                            boxShadow: [BoxShadow(color: _primaryColor.withValues(alpha: 0.2), blurRadius: 24)]
                           ),
                           child: Icon(Icons.handshake_rounded, color: _primaryColor, size: 36),
                         ),
@@ -542,9 +576,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.03), 
+                                  color: Colors.white.withValues(alpha: 0.03), 
                                   borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: Colors.white.withOpacity(0.05))
+                                  border: Border.all(color: Colors.white.withValues(alpha: 0.05))
                                 ),
                                 child: Column(
                                   children: [
@@ -565,9 +599,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
                                   decoration: BoxDecoration(
-                                    color: _primaryColor.withOpacity(0.08), 
+                                    color: _primaryColor.withValues(alpha: 0.08), 
                                     borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: _primaryColor.withOpacity(0.3))
+                                    border: Border.all(color: _primaryColor.withValues(alpha: 0.3))
                                   ),
                                   child: Column(
                                     children: [
@@ -599,7 +633,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                             labelText: "Sizin Teklifiniz (TL)",
                             labelStyle: const TextStyle(fontSize: 14, color: Colors.white54, fontWeight: FontWeight.w500),
                             filled: true,
-                            fillColor: Colors.white.withOpacity(0.03),
+                            fillColor: Colors.white.withValues(alpha: 0.03),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: _primaryColor, width: 2)),
                             contentPadding: const EdgeInsets.symmetric(vertical: 20),
@@ -658,7 +692,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
       ),
     ).whenComplete(() {
       _isDialogActive = false;
-      counterController.dispose();
+      Future.delayed(const Duration(milliseconds: 500), () {
+        try { counterController.dispose(); } catch(e){}
+      });
     });
   }
 
@@ -696,10 +732,13 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
         HapticFeedback.heavyImpact();
         
         // Çökme Koruması: Önce push yap, state'i sonra temizle
-        await Navigator.pushReplacement(context, PageRouteBuilder(
-          pageBuilder: (_, __, ___) => JobTrackingScreen(jobId: widget.jobId, userType: 'customer', userId: widget.customerId),
-          transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
-        ));
+        await Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+          PageRouteBuilder(
+            pageBuilder: (_, __, ___) => JobTrackingScreen(jobId: widget.jobId, userType: 'customer', userId: widget.customerId),
+            transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
+          ),
+          (route) => false,
+        );
       } else {
         if (mounted) {
           setState(() {
@@ -728,12 +767,12 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
 
     bool confirm = await showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.85),
+      barrierColor: Colors.black.withValues(alpha: 0.85),
       builder: (ctx) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: AlertDialog(
           backgroundColor: _cardColor,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: BorderSide(color: Colors.white.withOpacity(0.05))),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: BorderSide(color: Colors.white.withValues(alpha: 0.05))),
           title: const Text("Aramayı İptal Et", style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 20)),
           content: const Text("Hizmet talebini iptal etmek istediğinize emin misiniz?", style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.4)),
           actionsPadding: const EdgeInsets.all(20),
@@ -823,7 +862,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
             fit: BoxFit.scaleDown,
             child: Text("Ustalar Aranıyor", style: TextStyle(color: _primaryColor, fontWeight: FontWeight.w800, fontSize: 18)),
           ),
-          backgroundColor: Colors.black.withOpacity(0.5),
+          backgroundColor: Colors.black.withValues(alpha: 0.5),
           flexibleSpace: ClipRect(
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
@@ -835,7 +874,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
           leading: IconButton(
             icon: Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), shape: BoxShape.circle),
               child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.white),
             ), 
             onPressed: _cancelJob,
@@ -850,7 +889,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
               IconButton(
                 icon: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: const Color(0xFFFF3366).withOpacity(0.15), shape: BoxShape.circle),
+                  decoration: BoxDecoration(color: const Color(0xFFFF3366).withValues(alpha: 0.15), shape: BoxShape.circle),
                   child: const Icon(Icons.close_rounded, size: 18, color: Color(0xFFFF3366)),
                 ), 
                 onPressed: _cancelJob,
@@ -869,7 +908,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
-                    colors: [_primaryColor.withOpacity(0.05), Colors.transparent],
+                    colors: [_primaryColor.withValues(alpha: 0.05), Colors.transparent],
                   ),
                 ),
               ),
@@ -931,12 +970,12 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                       height: radarSize + 28,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: _primaryColor.withOpacity(0.08), width: 1.5),
+                        border: Border.all(color: _primaryColor.withValues(alpha: 0.08), width: 1.5),
                       ),
                     ),
 
                     // Radar Izgarası
-                    CustomPaint(size: Size(radarSize, radarSize), painter: RadarGridPainter(_primaryColor.withOpacity(0.15))),
+                    CustomPaint(size: Size(radarSize, radarSize), painter: RadarGridPainter(_primaryColor.withValues(alpha: 0.15))),
                     
                     // Radar Dalgası
                     RepaintBoundary(
@@ -965,9 +1004,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                           gradient: SweepGradient(
                             colors: [
                               Colors.transparent, 
-                              _primaryColor.withOpacity(0.04), 
-                              _primaryColor.withOpacity(0.25), 
-                              _primaryColor.withOpacity(0.85), 
+                              _primaryColor.withValues(alpha: 0.04), 
+                              _primaryColor.withValues(alpha: 0.25), 
+                              _primaryColor.withValues(alpha: 0.85), 
                               Colors.transparent
                             ],
                             stops: const [0.0, 0.45, 0.85, 0.99, 1.0],
@@ -1011,12 +1050,12 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                           child: Container(
                             padding: EdgeInsets.all(radarSize * 0.08),
                             decoration: BoxDecoration(
-                              color: _bgColor.withOpacity(0.92), 
+                              color: _bgColor.withValues(alpha: 0.92), 
                               shape: BoxShape.circle,
                               border: Border.all(color: _primaryColor, width: 2.2),
                               boxShadow: [
                                 BoxShadow(
-                                  color: _primaryColor.withOpacity(0.35 + (smoothPulse * 0.45)), 
+                                  color: _primaryColor.withValues(alpha: 0.35 + (smoothPulse * 0.45)), 
                                   blurRadius: 20 + (smoothPulse * 22), 
                                   spreadRadius: 2 + (smoothPulse * 8)
                                 )
@@ -1063,19 +1102,19 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                                 child: Container(
                                   padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: _cardColor.withOpacity(0.95 * opacity),
+                                    color: _cardColor.withValues(alpha: 0.95 * opacity),
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: toolColor.withOpacity(0.75 * opacity), width: 1.8),
+                                    border: Border.all(color: toolColor.withValues(alpha: 0.75 * opacity), width: 1.8),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: toolColor.withOpacity(0.45 * depthFactor * opacity),
+                                        color: toolColor.withValues(alpha: 0.45 * depthFactor * opacity),
                                         blurRadius: 16 * depthFactor + 4,
                                         spreadRadius: 2,
                                       ),
-                                      BoxShadow(color: Colors.black.withOpacity(0.85 * opacity), blurRadius: 8, offset: const Offset(0, 4)),
+                                      BoxShadow(color: Colors.black.withValues(alpha: 0.85 * opacity), blurRadius: 8, offset: const Offset(0, 4)),
                                     ],
                                   ),
-                                  child: Icon(tool['icon'] as IconData, color: toolColor.withOpacity(opacity), size: 22),
+                                  child: Icon(tool['icon'] as IconData, color: toolColor.withValues(alpha: opacity), size: 22),
                                 ),
                               ),
                             );
@@ -1138,12 +1177,12 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                   key: ValueKey<int>(_statusMessageIndex),
                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                   decoration: BoxDecoration(
-                    color: _cardColor.withOpacity(0.9),
+                    color: _cardColor.withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: _primaryColor.withOpacity(0.25), width: 1.2),
+                    border: Border.all(color: _primaryColor.withValues(alpha: 0.25), width: 1.2),
                     boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4)),
-                      BoxShadow(color: _primaryColor.withOpacity(0.08), blurRadius: 16),
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 4)),
+                      BoxShadow(color: _primaryColor.withValues(alpha: 0.08), blurRadius: 16),
                     ],
                   ),
                   child: Text(
@@ -1151,7 +1190,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13, 
-                      color: Colors.white.withOpacity(0.95), 
+                      color: Colors.white.withValues(alpha: 0.95), 
                       fontWeight: FontWeight.w700, 
                       letterSpacing: 0.4,
                       height: 1.3
@@ -1172,9 +1211,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: _primaryColor.withOpacity(0.1),
+                    color: _primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: _primaryColor.withOpacity(0.25))
+                    border: Border.all(color: _primaryColor.withValues(alpha: 0.25))
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1191,9 +1230,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.04),
+                    color: Colors.white.withValues(alpha: 0.04),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withOpacity(0.08))
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.08))
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1206,7 +1245,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                       const SizedBox(width: 8),
                       Text(
                         "Frekans: 5.8 GHz Canlı", 
-                        style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.75), fontWeight: FontWeight.w700)
+                        style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.75), fontWeight: FontWeight.w700)
                       ),
                     ],
                   ),
@@ -1234,9 +1273,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: _primaryColor.withOpacity(0.15), 
+                  color: _primaryColor.withValues(alpha: 0.15), 
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: _primaryColor.withOpacity(0.3))
+                  border: Border.all(color: _primaryColor.withValues(alpha: 0.3))
                 ),
                 child: Icon(Icons.check_circle_rounded, color: _primaryColor, size: 24),
               ),
@@ -1287,426 +1326,502 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     );
   }
 
-  IconData _getBadgeIcon(String iconName) {
-    switch (iconName) {
-      case 'fiber_new_rounded': return Icons.fiber_new_rounded;
-      case 'verified_rounded': return Icons.verified_rounded;
-      case 'military_tech_rounded': return Icons.military_tech_rounded;
-      case 'workspace_premium_rounded': return Icons.workspace_premium_rounded;
-      case 'star_rounded': return Icons.star_rounded;
-      case 'auto_awesome_rounded': return Icons.auto_awesome_rounded;
-      case 'shield_rounded': return Icons.shield_rounded;
-      case 'fact_check_rounded': return Icons.fact_check_rounded;
-      case 'local_fire_department_rounded': return Icons.local_fire_department_rounded;
-      case 'bolt_rounded': return Icons.bolt_rounded;
-      case 'nightlight_round': return Icons.nightlight_round;
-      case 'check_circle_rounded': return Icons.check_circle_rounded;
-      case 'car_repair_rounded': return Icons.car_repair_rounded;
-      case 'local_shipping_rounded': return Icons.local_shipping_rounded;
-      case 'tire_repair_rounded': return Icons.tire_repair_rounded;
-      case 'sync_problem_rounded': return Icons.sync_problem_rounded;
-      case 'local_car_wash_rounded': return Icons.local_car_wash_rounded;
-      case 'water_drop_rounded': return Icons.water_drop_rounded;
-      case 'build_rounded': return Icons.build_rounded;
-      case 'settings_suggest_rounded': return Icons.settings_suggest_rounded;
-      default: return Icons.verified_user_rounded;
-    }
-  }
-
-  Color _parseBadgeColor(String? colorStr, {Color fallback = const Color(0xFF00FFA3)}) {
-    if (colorStr == null || colorStr.isEmpty) return fallback;
-    try {
-      return Color(int.parse(colorStr));
-    } catch (_) {
-      return fallback;
-    }
-  }
+  
 
   Widget _buildBidCard(Map bid, int index, bool isSmallScreen) {
-    final int bidId = int.tryParse(bid['bid_id']?.toString() ?? '0') ?? 0;
-    final int providerId = int.tryParse(bid['provider_id']?.toString() ?? '0') ?? 0;
     final double priceVal = double.tryParse(bid['amount']?.toString() ?? '0') ?? 0;
     final String displayPrice = priceVal > 0 ? "${priceVal.toStringAsFixed(0)} ₺" : "Belirtilmedi";
     final String providerName = bid['provider_name'] ?? 'Bilinmeyen Usta';
     final String rating = bid['average_rating']?.toString() ?? '5.0';
     final String estimatedTime = bid['estimated_time']?.toString() ?? '15';
-    final String note = bid['provider_note']?.toString() ?? '';
     final int completedCount = int.tryParse(bid['completed_jobs_count']?.toString() ?? '0') ?? 0;
-    final String? towPlate = (bid['tow_plate'] != null && bid['tow_plate'].toString().trim().isNotEmpty)
-        ? bid['tow_plate'].toString().trim()
-        : null;
-
-    final int negCount = int.tryParse(bid['negotiation_count']?.toString() ?? '0') ?? 0;
-    final String lastBidder = bid['last_bidder']?.toString() ?? 'provider';
-    final bool canNegotiate = negCount < 2 && lastBidder == 'provider';
-    final bool isWaitingProvider = lastBidder == 'customer';
 
     final bool isBestMatch = index == _bestMatchIndex;
     final bool isCheapest = index == _cheapestIndex;
 
-    final List rawBadges = (bid['badges'] is List) ? bid['badges'] : [];
-
     double startAnim = (index * 0.1).clamp(0.0, 1.0);
     double endAnim = (startAnim + 0.35).clamp(0.0, 1.0);
+    
+    // Ustanın performansına göre 3 dinamik rozet
+    List<Map<String, dynamic>> dynamicBadges = [];
+    double ratingVal = double.tryParse(rating) ?? 5.0;
+    int estTime = int.tryParse(estimatedTime) ?? 15;
+
+    // 1. Puan Rozeti
+    if (ratingVal >= 4.8) {
+      dynamicBadges.add({'icon': Icons.stars_rounded, 'text': 'Elit Usta ($ratingVal)', 'color': const Color(0xFFF59E0B)});
+    } else if (ratingVal >= 4.0) {
+      dynamicBadges.add({'icon': Icons.star_rounded, 'text': 'Güvenilir ($ratingVal)', 'color': const Color(0xFF00FFA3)});
+    } else {
+      dynamicBadges.add({'icon': Icons.star_half_rounded, 'text': 'Yeni/Gelişen', 'color': Colors.white70});
+    }
+
+    // 2. Tecrübe / Tamamlanan İş Rozeti
+    if (completedCount >= 100) {
+      dynamicBadges.add({'icon': Icons.military_tech_rounded, 'text': 'Bölge Uzmanı', 'color': const Color(0xFF3B82F6)});
+    } else if (completedCount >= 20) {
+      dynamicBadges.add({'icon': Icons.verified_rounded, 'text': 'Deneyimli', 'color': const Color(0xFF00FFA3)});
+    } else {
+      dynamicBadges.add({'icon': Icons.check_circle_outline_rounded, 'text': '$completedCount İşlem', 'color': Colors.white70});
+    }
+
+    // 3. Hız / Varış Süresi Rozeti
+    if (estTime <= 15) {
+      dynamicBadges.add({'icon': Icons.bolt_rounded, 'text': 'Çok Hızlı ($estTime Dk)', 'color': const Color(0xFFFF3366)});
+    } else {
+      dynamicBadges.add({'icon': Icons.timer_rounded, 'text': 'Standart ($estTime Dk)', 'color': Colors.white70});
+    }
 
     return SlideTransition(
       position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero).animate(
         CurvedAnimation(parent: _listAnimController, curve: Interval(startAnim, endAnim, curve: Curves.easeOutBack)),
       ),
-      child: Container(
-        padding: EdgeInsets.all(isSmallScreen ? 14 : 18),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1E293B).withOpacity(0.95),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: isBestMatch
-                ? const Color(0xFFF59E0B).withOpacity(0.8)
-                : (isCheapest ? const Color(0xFF3B82F6).withOpacity(0.8) : Colors.white.withOpacity(0.08)),
-            width: (isBestMatch || isCheapest) ? 1.8 : 1.2,
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          _showBidDetailModal(bid, index, isSmallScreen, dynamicBadges, isBestMatch, isCheapest);
+        },
+        child: Container(
+          padding: EdgeInsets.all(isSmallScreen ? 14 : 16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF111115).withValues(alpha: 0.95),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: isBestMatch
+                  ? const Color(0xFFF59E0B).withValues(alpha: 0.8)
+                  : (isCheapest ? const Color(0xFF3B82F6).withValues(alpha: 0.8) : Colors.white.withValues(alpha: 0.08)),
+              width: (isBestMatch || isCheapest) ? 1.8 : 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 8)),
+              if (isBestMatch) BoxShadow(color: const Color(0xFFF59E0B).withValues(alpha: 0.15), blurRadius: 28),
+            ],
           ),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 16, offset: const Offset(0, 8)),
-            if (isBestMatch) BoxShadow(color: const Color(0xFFF59E0B).withOpacity(0.15), blurRadius: 28),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => ProviderProfileScreen(providerId: providerId)));
-                  },
-                  child: Container(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
                     width: isSmallScreen ? 50 : 58,
                     height: isSmallScreen ? 50 : 58,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.05),
+                      color: Colors.white.withValues(alpha: 0.05),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: isBestMatch ? const Color(0xFFF59E0B) : Colors.white.withOpacity(0.2),
+                        color: isBestMatch ? const Color(0xFFF59E0B) : Colors.white.withValues(alpha: 0.2),
                         width: 1.5,
                       ),
                     ),
                     child: Icon(Icons.person_rounded, color: Colors.white, size: isSmallScreen ? 28 : 32),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              providerName,
-                              style: TextStyle(
-                                fontSize: isSmallScreen ? 16 : 18,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
-                                letterSpacing: -0.3,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Icon(Icons.verified_rounded, color: _trustBlue, size: 18),
-                          if (towPlate != null) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF8F9FA),
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: const Color(0xFF2B2D42), width: 1.0),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF0F318A),
-                                      borderRadius: BorderRadius.circular(1.5),
-                                    ),
-                                    child: const Text("TR", style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900)),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    towPlate,
-                                    style: const TextStyle(color: Color(0xFF111111), fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 0.5),
-                                  ),
-                                ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                providerName,
+                                style: TextStyle(
+                                  fontSize: isSmallScreen ? 16 : 18,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                  letterSpacing: -0.3,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            const SizedBox(width: 6),
+                            Icon(Icons.verified_rounded, color: _trustBlue, size: 18),
                           ],
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF59E0B).withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.4)),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 14),
-                                const SizedBox(width: 3),
-                                Text(rating, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: Color(0xFFF59E0B))),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF059669).withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFF059669).withOpacity(0.4)),
-                            ),
-                            child: Text(
-                              completedCount > 0 ? "$completedCount+ Başarılı Yardım" : "Doğrulanmış Usta",
-                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Color(0xFF00FFA3)),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                            decoration: BoxDecoration(
-                              color: _trustBlue.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: _trustBlue.withOpacity(0.4)),
-                            ),
-                            child: Text(
-                              "$estimatedTime Dk • %98 Zamanında",
-                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Color(0xFF60A5FA)),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      if (rawBadges.isNotEmpty)
+                        ),
+                        const SizedBox(height: 6),
                         Wrap(
-                          spacing: 8,
+                          spacing: 6,
                           runSpacing: 6,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: rawBadges.map<Widget>((bData) {
-                            final String title = bData['title'] ?? '';
-                            final String iconName = bData['icon'] ?? '';
-                            final Color badgeColor = _parseBadgeColor(bData['color']);
-
+                          children: dynamicBadges.map((badge) {
                             return Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
                               decoration: BoxDecoration(
-                                color: badgeColor.withOpacity(0.08),
+                                color: (badge['color'] as Color).withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: badgeColor.withOpacity(0.3), width: 1.0),
+                                border: Border.all(color: (badge['color'] as Color).withValues(alpha: 0.4)),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(_getBadgeIcon(iconName), color: badgeColor, size: 13),
+                                  Icon(badge['icon'] as IconData, color: badge['color'] as Color, size: 12),
                                   const SizedBox(width: 4),
-                                  Text(
-                                    title,
-                                    style: TextStyle(color: badgeColor, fontSize: 10.5, fontWeight: FontWeight.w800),
-                                  ),
+                                  Text(badge['text'] as String, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 10, color: badge['color'] as Color)),
                                 ],
                               ),
                             );
                           }).toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      if (isBestMatch)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF59E0B).withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFF59E0B)),
+                          ),
+                          child: const Text("EN İYİ", style: TextStyle(color: Color(0xFFF59E0B), fontSize: 9, fontWeight: FontWeight.w900)),
+                        )
+                      else if (isCheapest)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3B82F6).withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFF3B82F6)),
+                          ),
+                          child: const Text("EN UCUZ", style: TextStyle(color: Color(0xFF3B82F6), fontSize: 9, fontWeight: FontWeight.w900)),
+                        ),
+                      const Text("Teklif", style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white54)),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          displayPrice,
+                          style: TextStyle(
+                            fontSize: priceVal > 0 ? (isBestMatch ? 20 : 18) : 14,
+                            fontWeight: FontWeight.w900,
+                            color: isBestMatch ? const Color(0xFFF59E0B) : Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text("Detayları İncele", style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w800)),
+                    SizedBox(width: 6),
+                    Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 12),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showBidDetailModal(Map initialBid, int index, bool isSmallScreen, List<Map<String, dynamic>> dynamicBadges, bool isBestMatch, bool isCheapest) {
+    if (_isDialogActive || _isNavigating) return;
+    _isDialogActive = true;
+    Timer? modalTimer;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            modalTimer ??= Timer.periodic(const Duration(seconds: 2), (_) {
+              if (mounted && Navigator.canPop(context)) {
+                setModalState(() {});
+              }
+            });
+
+            Map bid = initialBid;
+            final int initialBidId = int.tryParse(initialBid['bid_id']?.toString() ?? '0') ?? 0;
+            try {
+              bid = bids.firstWhere((b) => (int.tryParse(b['bid_id']?.toString() ?? '0') ?? 0) == initialBidId, orElse: () => initialBid);
+            } catch (_) {}
+
+            final int bidId = int.tryParse(bid['bid_id']?.toString() ?? '0') ?? 0;
+            final int providerId = int.tryParse(bid['provider_id']?.toString() ?? '0') ?? 0;
+            final double priceVal = double.tryParse(bid['amount']?.toString() ?? '0') ?? 0;
+            final String displayPrice = priceVal > 0 ? "${priceVal.toStringAsFixed(0)} ₺" : "Belirtilmedi";
+            final String providerName = bid['provider_name'] ?? 'Bilinmeyen Usta';
+            final String note = bid['provider_note']?.toString() ?? '';
+            final String? towPlate = (bid['tow_plate'] != null && bid['tow_plate'].toString().trim().isNotEmpty)
+                ? bid['tow_plate'].toString().trim()
+                : null;
+
+            final int negCount = int.tryParse(bid['negotiation_count']?.toString() ?? '0') ?? 0;
+            final String lastBidder = bid['last_bidder']?.toString() ?? 'provider';
+            final bool canNegotiate = negCount < 2 && lastBidder == 'provider';
+            final bool isWaitingProvider = lastBidder == 'customer';
+            final double bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+            final double safeBottom = MediaQuery.paddingOf(context).bottom;
+
+            return BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+              child: Container(
+                constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.88),
+                padding: EdgeInsets.only(
+                  left: 20, 
+                  right: 20, 
+                  top: 20, 
+                  bottom: bottomInset > 0 ? bottomInset + 16 : safeBottom + 20
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF030305).withValues(alpha: 0.98),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                  border: Border.all(color: _primaryColor.withValues(alpha: 0.35), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.8), blurRadius: 40, offset: const Offset(0, -10))
+                  ],
+                ),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 44, height: 5,
+                          decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Container(
+                            width: 56, height: 56,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.05),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: isBestMatch ? const Color(0xFFF59E0B) : _primaryColor.withValues(alpha: 0.4), width: 2),
+                            ),
+                            child: const Icon(Icons.person_rounded, color: Colors.white, size: 30),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        providerName, 
+                                        style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.3), 
+                                        maxLines: 1, 
+                                        overflow: TextOverflow.ellipsis
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Icon(Icons.verified_rounded, color: _trustBlue, size: 18),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Wrap(
+                                  spacing: 6, runSpacing: 6,
+                                  children: dynamicBadges.map((badge) {
+                                    final Color bColor = badge['color'] as Color;
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: bColor.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: bColor.withValues(alpha: 0.4)),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(badge['icon'] as IconData, color: bColor, size: 12),
+                                          const SizedBox(width: 4),
+                                          Text(badge['text'] as String, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: bColor)),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      if (towPlate != null) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.04), 
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.06))
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text("Hizmet Aracı Plakası:", style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8F9FA),
+                                  borderRadius: BorderRadius.circular(5),
+                                  border: Border.all(color: const Color(0xFF2B2D42), width: 1.2),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                                      decoration: BoxDecoration(color: const Color(0xFF0F318A), borderRadius: BorderRadius.circular(2)),
+                                      child: const Text("TR", style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900)),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(towPlate, style: const TextStyle(color: Color(0xFF111111), fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 0.6)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      if (note.isNotEmpty) ...[
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: _primaryColor.withValues(alpha: 0.08), 
+                            borderRadius: BorderRadius.circular(16), 
+                            border: Border.all(color: _primaryColor.withValues(alpha: 0.25))
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.format_quote_rounded, size: 16, color: _primaryColor),
+                                  const SizedBox(width: 6),
+                                  const Text("Ustanın Notu", style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w800)),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(note, style: const TextStyle(color: Colors.white, fontSize: 13, fontStyle: FontStyle.italic, height: 1.4)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF111115), 
+                          borderRadius: BorderRadius.circular(20), 
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.08))
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text("Teklif Edilen Tutar", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white70)),
+                            Text(displayPrice, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: isBestMatch ? const Color(0xFFF59E0B) : _primaryColor)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      if (isWaitingProvider)
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF59E0B).withValues(alpha: 0.12), 
+                            borderRadius: BorderRadius.circular(16), 
+                            border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4))
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.hourglass_top_rounded, color: Color(0xFFF59E0B), size: 20),
+                              SizedBox(width: 8),
+                              Text("Ustanın yanıtı bekleniyor...", style: TextStyle(color: Color(0xFFF59E0B), fontWeight: FontWeight.w800, fontSize: 14)),
+                            ],
+                          ),
                         )
                       else
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 4,
-                          children: const [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.shield_rounded, color: Color(0xFF059669), size: 13),
-                                SizedBox(width: 3),
-                                Text("İşçilik Garantili", style: TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.bold)),
-                              ],
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                icon: Icon(canNegotiate ? Icons.handshake_rounded : Icons.person_search_rounded, size: 18),
+                                onPressed: canNegotiate
+                                    ? () { 
+                                        Navigator.pop(context); 
+                                        _showCounterBidDialog(bidId, providerId, displayPrice); 
+                                      }
+                                    : () {
+                                        HapticFeedback.selectionClick();
+                                        Navigator.pop(context);
+                                        Navigator.push(context, MaterialPageRoute(builder: (_) => ProviderProfileScreen(providerId: providerId)));
+                                      },
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  side: BorderSide(color: canNegotiate ? _primaryColor : Colors.white24, width: 1.5),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  foregroundColor: canNegotiate ? _primaryColor : Colors.white70,
+                                ),
+                                label: FittedBox(child: Text(canNegotiate ? "Pazarlık Yap" : "Profili İncele", style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14))),
+                              ),
                             ),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.receipt_long_rounded, color: Color(0xFFF59E0B), size: 13),
-                                SizedBox(width: 3),
-                                Text("Kayıtlı Sanayi Esnafı", style: TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.bold)),
-                              ],
-                            ),
+                            if (priceVal > 0) ...[
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  icon: isProcessing ? const SizedBox.shrink() : const Icon(Icons.verified_rounded, color: Colors.black, size: 20),
+                                  onPressed: isProcessing ? null : () { 
+                                    Navigator.pop(context); 
+                                    _acceptBid(bidId, providerId, bid['amount'].toString()); 
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _primaryColor,
+                                    foregroundColor: Colors.black,
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  ),
+                                  label: isProcessing
+                                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2.5))
+                                      : const FittedBox(child: Text("Kabul Et", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 15))),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (isBestMatch)
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 6),
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF59E0B).withOpacity(0.18),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFF59E0B)),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.auto_awesome_rounded, color: Color(0xFFF59E0B), size: 12),
-                            SizedBox(width: 4),
-                            Text("EN İYİ", style: TextStyle(color: Color(0xFFF59E0B), fontSize: 10, fontWeight: FontWeight.w900)),
-                          ],
-                        ),
-                      )
-                    else if (isCheapest)
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 6),
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF3B82F6).withOpacity(0.18),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFF3B82F6)),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.savings_rounded, color: Color(0xFF3B82F6), size: 12),
-                            SizedBox(width: 4),
-                            Text("EN UCUZ", style: TextStyle(color: Color(0xFF3B82F6), fontSize: 10, fontWeight: FontWeight.w900)),
-                          ],
-                        ),
-                      ),
-                    const Text("Teklif", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white54)),
-                    const SizedBox(height: 2),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        displayPrice,
-                        style: TextStyle(
-                          fontSize: priceVal > 0 ? (isBestMatch ? 24 : 22) : 16,
-                          fontWeight: FontWeight.w900,
-                          color: isBestMatch ? const Color(0xFFF59E0B) : Colors.white,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-
-            if (note.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.02),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white.withOpacity(0.04)),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.format_quote_rounded, size: 18, color: Color(0xFF00FFA3)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        note,
-                        style: const TextStyle(color: Colors.white70, fontSize: 12, fontStyle: FontStyle.italic),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
               ),
-            ],
-
-            const SizedBox(height: 16),
-
-            if (isWaitingProvider)
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF59E0B).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.3)),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.hourglass_top_rounded, color: Color(0xFFF59E0B), size: 20),
-                    SizedBox(width: 8),
-                    Text("Ustanın yanıtı bekleniyor...", style: TextStyle(color: Color(0xFFF59E0B), fontWeight: FontWeight.w800, fontSize: 13)),
-                  ],
-                ),
-              )
-            else
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      icon: Icon(canNegotiate ? Icons.handshake_rounded : Icons.person_search_rounded, size: 16),
-                      onPressed: canNegotiate
-                          ? () => _showCounterBidDialog(bidId, providerId, displayPrice)
-                          : () {
-                              HapticFeedback.selectionClick();
-                              Navigator.push(context, MaterialPageRoute(builder: (_) => ProviderProfileScreen(providerId: providerId)));
-                            },
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: BorderSide(color: canNegotiate ? const Color(0xFF00FFA3) : Colors.white24, width: 1.5),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        foregroundColor: canNegotiate ? const Color(0xFF00FFA3) : Colors.white70,
-                      ),
-                      label: FittedBox(child: Text(canNegotiate ? "Pazarlık" : "Profili İncele", style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13))),
-                    ),
-                  ),
-                  if (priceVal > 0) ...[
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        icon: isProcessing ? const SizedBox.shrink() : const Icon(Icons.verified_rounded, color: Colors.black, size: 18),
-                        onPressed: isProcessing ? null : () => _acceptBid(bidId, providerId, bid['amount'].toString()),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF00FFA3),
-                          foregroundColor: Colors.black,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        ),
-                        label: isProcessing
-                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2.5))
-                            : const FittedBox(child: Text("Kabul Et", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 14))),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-          ],
-        ),
-      ),
-    );
+            );
+          },
+        );
+      },
+    ).whenComplete(() {
+      modalTimer?.cancel();
+      modalTimer = null;
+      _isDialogActive = false;
+    });
   }
 }
 
@@ -1750,7 +1865,7 @@ class RipplePainter extends CustomPainter {
       final double circleProgress = (progress + (i * 0.33)) % 1.0;
       final double smoothProgress = Curves.easeOutCubic.transform(circleProgress);
       final double radius = maxRadius * smoothProgress;
-      paint.color = color.withOpacity(((1.0 - smoothProgress) * 0.65).clamp(0.0, 1.0));
+      paint.color = color.withValues(alpha: ((1.0 - smoothProgress) * 0.65).clamp(0.0, 1.0));
       canvas.drawCircle(center, radius, paint);
     }
   }
@@ -1776,10 +1891,10 @@ class BlipPainter extends CustomPainter {
       
       final currentGlowPaint = Paint()
         ..isAntiAlias = true
-        ..color = color.withOpacity(0.25 * opacity);
+        ..color = color.withValues(alpha: 0.25 * opacity);
       final currentPaint = Paint()
         ..isAntiAlias = true
-        ..color = color.withOpacity(opacity)
+        ..color = color.withValues(alpha: opacity)
         ..style = PaintingStyle.fill;
         
       // iOS Impeller çökmesini önlemek için MaskFilter kaldırıldı, daha geniş opak daire çiziliyor

@@ -6,15 +6,15 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import 'dart:ui';
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'login_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
-  const AdminDashboardScreen({Key? key}) : super(key: key);
+  const AdminDashboardScreen({super.key});
 
   @override
+  // ignore: library_private_types_in_public_api
   _AdminDashboardScreenState createState() => _AdminDashboardScreenState();
 }
 
@@ -210,7 +210,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       return Container(
         width: width,
         height: height,
-        color: Colors.blueGrey.withOpacity(0.08),
+        color: Colors.blueGrey.withValues(alpha:0.08),
         alignment: Alignment.center,
         child: Icon(fallbackIcon, size: 28, color: Colors.orange.shade400),
       );
@@ -221,13 +221,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       height: height,
       fit: fit,
       loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
+        if (loadingProgress == null) { return child; }
         final expected = loadingProgress.expectedTotalBytes;
         final loaded = loadingProgress.cumulativeBytesLoaded;
         return Container(
           width: width,
           height: height,
-          color: Colors.blueGrey.withOpacity(0.05),
+          color: Colors.blueGrey.withValues(alpha:0.05),
           alignment: Alignment.center,
           child: SizedBox(
             width: 22,
@@ -244,7 +244,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return Container(
           width: width,
           height: height,
-          color: Colors.blueGrey.withOpacity(0.08),
+          color: Colors.blueGrey.withValues(alpha:0.08),
           alignment: Alignment.center,
           child: Icon(fallbackIcon, size: 28, color: Colors.orange.shade400),
         );
@@ -431,6 +431,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     await _fetchAllData();
     if (mounted) {
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text("Seçilen öğeler kalıcı olarak silindi."), 
         backgroundColor: Colors.redAccent,
@@ -449,6 +450,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (response.statusCode == 200) {
         await _fetchTickets();
         if (mounted) {
+          // ignore: use_build_context_synchronously
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text("Şikayet durumu güncellendi."), 
             backgroundColor: Colors.green,
@@ -458,6 +460,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       }
     } catch (e) {
       if (mounted) {
+        // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text("Hata oluştu."), 
           backgroundColor: Colors.red,
@@ -481,6 +484,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       final data = json.decode(response.body);
       if (data is Map && data['status'] == 'success') {
         if (mounted) {
+          // ignore: use_build_context_synchronously
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text("Bildirim başarıyla gönderildi!"), 
             backgroundColor: Colors.green,
@@ -489,6 +493,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         }
       } else {
         if (mounted) {
+          // ignore: use_build_context_synchronously
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text("Bildirim gönderilemedi."), 
             backgroundColor: Colors.red,
@@ -498,6 +503,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       }
     } catch (e) {
       if (mounted) {
+        // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text("Bağlantı hatası oluştu."), 
           backgroundColor: Colors.red,
@@ -512,100 +518,164 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final messageController = TextEditingController();
     String selectedTarget = userId != null ? userId.toString() : 'all';
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    bool isSending = false;
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) {
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalCtx) {
         return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-              title: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: Colors.orange.withOpacity(0.15), shape: BoxShape.circle),
-                    child: const Icon(Icons.notifications_active_rounded, color: Colors.orange, size: 20),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      userId == null ? "Toplu Bildirim Gönder" : "${userName ?? 'Kullanıcı'}'e Bildirim", 
-                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (userId == null) ...[
-                      DropdownButtonFormField<String>(
-                        isExpanded: true,
-                        value: selectedTarget,
-                        decoration: InputDecoration(
-                          labelText: "Hedef Kitle",
-                          filled: true,
-                          fillColor: isDark ? Colors.black12 : const Color(0xFFF8FAFC),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.withOpacity(0.2))),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.withOpacity(0.2))),
+          builder: (context, setModalState) {
+            final bottomInset = MediaQuery.of(modalCtx).viewInsets.bottom;
+            return GestureDetector(
+              onTap: () => FocusScope.of(context).unfocus(),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 600),
+                    child: Container(
+                      padding: EdgeInsets.only(bottom: bottomInset > 0 ? bottomInset + 16 : 24, left: 24, right: 24, top: 16),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                        border: Border.all(color: Colors.orange.withValues(alpha: 0.3), width: 1.5),
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 30, offset: const Offset(0, -5))],
+                      ),
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(10)))),
+                            const SizedBox(height: 24),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.15), shape: BoxShape.circle),
+                                  child: const Icon(Icons.notifications_active_rounded, color: Colors.orange, size: 28),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        userId == null ? "Toplu Bildirim Gönder" : "Kullanıcıya Bildirim",
+                                        style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: isDark ? Colors.white : Colors.black87, letterSpacing: -0.5),
+                                      ),
+                                      if (userId != null && userName != null)
+                                        Text(userName, style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 13)),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.close_rounded, color: Colors.grey),
+                                  onPressed: () => Navigator.pop(modalCtx),
+                                )
+                              ],
+                            ),
+                            const SizedBox(height: 24),
+                            
+                            if (userId == null) ...[
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: isDark ? Colors.white10 : const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                                ),
+                                child: DropdownButtonFormField<String>(
+                                  isExpanded: true,
+                                  initialValue: selectedTarget,
+                                  dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                                  style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold, fontSize: 14),
+                                  decoration: InputDecoration(
+                                    labelText: "Hedef Kitle",
+                                    labelStyle: const TextStyle(color: Colors.grey, fontSize: 13),
+                                    prefixIcon: const Icon(Icons.groups_rounded, color: Colors.orange, size: 20),
+                                    border: InputBorder.none,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  ),
+                                  items: const [
+                                    DropdownMenuItem(value: 'all', child: Text("Tüm Kullanıcılar")),
+                                    DropdownMenuItem(value: 'customer', child: Text("Sadece Müşteriler")),
+                                    DropdownMenuItem(value: 'provider', child: Text("Sadece Ustalar")),
+                                  ],
+                                  onChanged: (val) {
+                                    if (val != null) setModalState(() => selectedTarget = val);
+                                  },
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                            
+                            TextField(
+                              controller: titleController,
+                              style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.w600, fontSize: 14),
+                              decoration: InputDecoration(
+                                labelText: "Bildirim Başlığı",
+                                labelStyle: const TextStyle(color: Colors.grey, fontSize: 13),
+                                prefixIcon: const Icon(Icons.title_rounded, color: Colors.orange, size: 20),
+                                filled: true,
+                                fillColor: isDark ? Colors.white10 : const Color(0xFFF8FAFC),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.orange.withValues(alpha: 0.5), width: 1.5)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            
+                            TextField(
+                              controller: messageController,
+                              maxLines: 4,
+                              style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.w500, fontSize: 14),
+                              decoration: InputDecoration(
+                                labelText: "Mesajınız (Bildirim İçeriği)",
+                                labelStyle: const TextStyle(color: Colors.grey, fontSize: 13),
+                                prefixIcon: const Padding(
+                                  padding: EdgeInsets.only(bottom: 50),
+                                  child: Icon(Icons.message_rounded, color: Colors.orange, size: 20),
+                                ),
+                                filled: true,
+                                fillColor: isDark ? Colors.white10 : const Color(0xFFF8FAFC),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.orange.withValues(alpha: 0.5), width: 1.5)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange,
+                                padding: const EdgeInsets.symmetric(vertical: 18),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                elevation: 0,
+                              ),
+                              onPressed: isSending ? null : () async {
+                                if (titleController.text.trim().isEmpty || messageController.text.trim().isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Lütfen başlık ve mesajı doldurun."), backgroundColor: Colors.red));
+                                  return;
+                                }
+                                setModalState(() => isSending = true);
+                                await _sendNotification(selectedTarget, titleController.text.trim(), messageController.text.trim());
+                                if (modalCtx.mounted) Navigator.pop(modalCtx);
+                              },
+                              child: isSending 
+                                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                : const Text("Bildirimi Gönder", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
+                            ),
+                          ],
                         ),
-                        items: const [
-                          DropdownMenuItem(value: 'all', child: Text("Tüm Kullanıcılar")),
-                          DropdownMenuItem(value: 'customer', child: Text("Sadece Müşteriler")),
-                          DropdownMenuItem(value: 'provider', child: Text("Sadece Ustalar")),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) setStateDialog(() => selectedTarget = val);
-                        },
-                      ),
-                      const SizedBox(height: 14),
-                    ],
-                    TextField(
-                      controller: titleController,
-                      decoration: InputDecoration(
-                        labelText: "Bildirim Başlığı",
-                        filled: true,
-                        fillColor: isDark ? Colors.black12 : const Color(0xFFF8FAFC),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.withOpacity(0.2))),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.withOpacity(0.2))),
                       ),
                     ),
-                    const SizedBox(height: 14),
-                    TextField(
-                      controller: messageController,
-                      maxLines: 4,
-                      decoration: InputDecoration(
-                        labelText: "Mesajınız",
-                        filled: true,
-                        fillColor: isDark ? Colors.black12 : const Color(0xFFF8FAFC),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.withOpacity(0.2))),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.withOpacity(0.2))),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-              actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text("İptal")),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
-                  ),
-                  onPressed: () {
-                    if (titleController.text.isNotEmpty && messageController.text.isNotEmpty) {
-                      Navigator.pop(context);
-                      _sendNotification(selectedTarget, titleController.text, messageController.text);
-                    }
-                  },
-                  child: const Text("Gönder", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                ),
-              ],
             );
           }
         );
@@ -622,16 +692,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     try {
       final response = await http.get(Uri.parse("$baseUrl?action=get_provider_profile&provider_id=$providerId"));
-      if (mounted) Navigator.pop(context); 
+      // ignore: use_build_context_synchronously
+      if (mounted) { Navigator.pop(context); } 
       
       final data = json.decode(response.body);
       if (response.statusCode == 200 && data is Map && data['status'] == 'success') {
         final reviews = (data['reviews'] is List) ? data['reviews'] as List : [];
         final stats = (data['stats'] is Map) ? data['stats'] : {};
+        // ignore: use_build_context_synchronously
         final isDark = Theme.of(context).brightness == Brightness.dark;
 
         if (!mounted) return;
         showDialog(
+          // ignore: use_build_context_synchronously
           context: context,
           builder: (context) => AlertDialog(
             backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
@@ -668,7 +741,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         child: ListTile(
                           contentPadding: EdgeInsets.zero,
                           leading: CircleAvatar(
-                            backgroundColor: Colors.orange.withOpacity(0.15),
+                            backgroundColor: Colors.orange.withValues(alpha:0.15),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -896,7 +969,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Center(child: Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10)))),
+                  Center(child: Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.grey.withValues(alpha:0.3), borderRadius: BorderRadius.circular(10)))),
                   const SizedBox(height: 16),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -1184,7 +1257,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 Container(
                   height: 160,
                   alignment: Alignment.center,
-                  decoration: BoxDecoration(color: Colors.red.withOpacity(0.08), borderRadius: BorderRadius.circular(16)),
+                  decoration: BoxDecoration(color: Colors.red.withValues(alpha:0.08), borderRadius: BorderRadius.circular(16)),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -1286,12 +1359,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1E293B) : Colors.white,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 25, offset: const Offset(0, -5))]
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.2), blurRadius: 25, offset: const Offset(0, -5))]
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Center(child: Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10)))),
+                Center(child: Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.grey.withValues(alpha:0.3), borderRadius: BorderRadius.circular(10)))),
                 const SizedBox(height: 20),
                 Expanded(
                   child: SingleChildScrollView(
@@ -1301,7 +1374,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       children: [
                         CircleAvatar(
                           radius: 40,
-                          backgroundColor: isBanned ? Colors.red.withOpacity(0.12) : Colors.blue.withOpacity(0.12),
+                          backgroundColor: isBanned ? Colors.red.withValues(alpha:0.12) : Colors.blue.withValues(alpha:0.12),
                           child: Icon(isBanned ? Icons.block : (isCustomer ? Icons.person : Icons.engineering), size: 40, color: isBanned ? Colors.red : Colors.blue),
                         ),
                         const SizedBox(height: 14),
@@ -1313,18 +1386,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(color: isCustomer ? Colors.blue.withOpacity(0.1) : Colors.purple.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                              decoration: BoxDecoration(color: isCustomer ? Colors.blue.withValues(alpha:0.1) : Colors.purple.withValues(alpha:0.1), borderRadius: BorderRadius.circular(10)),
                               child: Text(isCustomer ? "Müşteri Hesabı" : "Usta (${_translateServiceType(user['service_category']?.toString())})", style: TextStyle(color: isCustomer ? Colors.blue : Colors.purple, fontWeight: FontWeight.bold, fontSize: 12)),
                             ),
                             if (isPremium)
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                                decoration: BoxDecoration(color: Colors.orange.withValues(alpha:0.1), borderRadius: BorderRadius.circular(10)),
                                 child: const Text("Premium Üye", style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12)),
                               ),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(color: Colors.amber.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                              decoration: BoxDecoration(color: Colors.amber.withValues(alpha:0.1), borderRadius: BorderRadius.circular(10)),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -1339,7 +1412,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         const SizedBox(height: 20),
                         Container(
                           padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(color: isDark ? Colors.white10 : const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.grey.withOpacity(0.15))),
+                          decoration: BoxDecoration(color: isDark ? Colors.white10 : const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.grey.withValues(alpha:0.15))),
                           child: Column(
                             children: [
                               _detailRow("Telefon", user['phone']?.toString() ?? '-', isDark),
@@ -1430,13 +1503,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF1E293B) : Colors.white,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 25, offset: const Offset(0, -5))]
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.2), blurRadius: 25, offset: const Offset(0, -5))]
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Center(child: Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10)))),
+              Center(child: Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.grey.withValues(alpha:0.3), borderRadius: BorderRadius.circular(10)))),
               const SizedBox(height: 16),
               
               if (photos.isNotEmpty)
@@ -1453,7 +1526,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         margin: const EdgeInsets.only(right: 12),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                          border: Border.all(color: Colors.grey.withValues(alpha:0.2)),
                         ),
                         clipBehavior: Clip.antiAlias,
                         child: _buildSafeNetworkImage(imgUrl, fit: BoxFit.cover),
@@ -1473,7 +1546,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(color: typeColor.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
+                            decoration: BoxDecoration(color: typeColor.withValues(alpha:0.12), borderRadius: BorderRadius.circular(8)),
                             child: Text(typeText, style: TextStyle(color: typeColor, fontWeight: FontWeight.bold, fontSize: 11)),
                           ),
                           const SizedBox(width: 8),
@@ -1496,7 +1569,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(color: isDark ? Colors.white10 : const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.withOpacity(0.15))),
+                        decoration: BoxDecoration(color: isDark ? Colors.white10 : const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.withValues(alpha:0.15))),
                         child: Text(item['description']?.toString() ?? 'Açıklama girilmemiş.', style: TextStyle(fontSize: 13, color: isDark ? Colors.white70 : Colors.black87, height: 1.4)),
                       ),
                       const SizedBox(height: 16),
@@ -1505,7 +1578,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       const SizedBox(height: 6),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
-                        leading: CircleAvatar(backgroundColor: Colors.blue.withOpacity(0.1), child: const Icon(Icons.person, color: Colors.blue)),
+                        leading: CircleAvatar(backgroundColor: Colors.blue.withValues(alpha:0.1), child: const Icon(Icons.person, color: Colors.blue)),
                         title: Text(item['customer_name']?.toString() ?? 'Bilinmiyor', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                         subtitle: Text(item['customer_phone']?.toString() ?? 'Numara Yok', style: const TextStyle(fontSize: 12)),
                         trailing: IconButton(
@@ -1659,7 +1732,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 decoration: BoxDecoration(
                   color: isDark ? Colors.white12 : const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.withOpacity(0.15))
+                  border: Border.all(color: Colors.grey.withValues(alpha:0.15))
                 ),
                 child: Text(ticket['message']?.toString() ?? 'Mesaj yok.', style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontSize: 13, height: 1.4)),
               )
@@ -1707,7 +1780,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 10.0),
         decoration: BoxDecoration(
-          color: isHighlight ? (statusColor ?? Colors.green).withOpacity(0.1) : Colors.transparent,
+          color: isHighlight ? (statusColor ?? Colors.green).withValues(alpha:0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
@@ -1813,7 +1886,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               child: Column(
                 children: [
                   const SizedBox(height: 12),
-                  Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10))),
+                  Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.grey.withValues(alpha:0.3), borderRadius: BorderRadius.circular(10))),
                   const SizedBox(height: 16),
                   
                   const Padding(
@@ -1859,12 +1932,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               color: isDark ? Colors.white10 : const Color(0xFFF8FAFC),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
-                                side: BorderSide(color: (isPremium ? Colors.orange : Colors.blue).withOpacity(0.25)),
+                                side: BorderSide(color: (isPremium ? Colors.orange : Colors.blue).withValues(alpha:0.25)),
                               ),
                               child: ListTile(
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                                 leading: CircleAvatar(
-                                  backgroundColor: isPremium ? Colors.orange.withOpacity(0.15) : Colors.blue.withOpacity(0.15),
+                                  backgroundColor: isPremium ? Colors.orange.withValues(alpha:0.15) : Colors.blue.withValues(alpha:0.15),
                                   child: Icon(isPremium ? Icons.star_rounded : Icons.autorenew_rounded, color: isPremium ? Colors.orange : Colors.blue, size: 20),
                                 ),
                                 title: Text(purchase['user_name']?.toString() ?? 'Bilinmeyen Kullanıcı', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
@@ -1883,7 +1956,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                   children: [
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(color: (isApple ? Colors.black87 : Colors.green).withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                                      decoration: BoxDecoration(color: (isApple ? Colors.black87 : Colors.green).withValues(alpha:0.1), borderRadius: BorderRadius.circular(6)),
                                       child: Text(isApple ? "Apple" : "Google", style: TextStyle(color: isApple ? (isDark ? Colors.white : Colors.black87) : Colors.green, fontWeight: FontWeight.bold, fontSize: 9)),
                                     ),
                                     const SizedBox(height: 4),
@@ -1957,7 +2030,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     width: 44,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.3),
+                      color: Colors.grey.withValues(alpha:0.3),
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
@@ -1972,7 +2045,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             Container(
                               padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
-                                color: Colors.tealAccent.withOpacity(0.15),
+                                color: Colors.tealAccent.withValues(alpha:0.15),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Icon(Icons.analytics_rounded, color: Colors.teal, size: 18),
@@ -2005,7 +2078,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       decoration: BoxDecoration(
                         color: cardBg,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                        border: Border.all(color: Colors.grey.withValues(alpha:0.2)),
                       ),
                       child: TextField(
                         onChanged: (val) => setModalState(() => telemetrySearchQuery = val),
@@ -2062,7 +2135,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               Expanded(
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                  decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.blue.withOpacity(0.3))),
+                                  decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.blue.withValues(alpha:0.3))),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
@@ -2081,7 +2154,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               Expanded(
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                  decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.orange.withOpacity(0.3))),
+                                  decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.orange.withValues(alpha:0.3))),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
@@ -2104,7 +2177,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               Expanded(
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                  decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.amber.withOpacity(0.5))),
+                                  decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.amber.withValues(alpha:0.5))),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
@@ -2123,7 +2196,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               Expanded(
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                  decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.red.withOpacity(0.4))),
+                                  decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.red.withValues(alpha:0.4))),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
@@ -2167,7 +2240,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                       decoration: BoxDecoration(
                                         color: cardBg,
                                         borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: Colors.grey.withOpacity(0.12)),
+                                        border: Border.all(color: Colors.grey.withValues(alpha:0.12)),
                                       ),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2176,7 +2249,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                             children: [
                                               CircleAvatar(
                                                 radius: 10,
-                                                backgroundColor: (isProviderAction ? Colors.orange : Colors.blue).withOpacity(0.15),
+                                                backgroundColor: (isProviderAction ? Colors.orange : Colors.blue).withValues(alpha:0.15),
                                                 child: Text("${idx + 1}", style: TextStyle(color: isProviderAction ? Colors.orange : Colors.blue, fontSize: 10, fontWeight: FontWeight.bold)),
                                               ),
                                               const SizedBox(width: 8),
@@ -2192,7 +2265,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                               const SizedBox(width: 6),
                                               Container(
                                                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                                decoration: BoxDecoration(color: (isProviderAction ? Colors.orange : Colors.blue).withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                                                decoration: BoxDecoration(color: (isProviderAction ? Colors.orange : Colors.blue).withValues(alpha:0.1), borderRadius: BorderRadius.circular(6)),
                                                 child: Text("$clicks tık", style: TextStyle(color: isProviderAction ? Colors.orange : Colors.blue, fontWeight: FontWeight.w900, fontSize: 10)),
                                               ),
                                             ],
@@ -2203,7 +2276,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                             child: LinearProgressIndicator(
                                               value: ratio,
                                               minHeight: 4,
-                                              backgroundColor: Colors.grey.withOpacity(0.1),
+                                              backgroundColor: Colors.grey.withValues(alpha:0.1),
                                               valueColor: AlwaysStoppedAnimation<Color>(isProviderAction ? Colors.orangeAccent : Colors.blueAccent),
                                             ),
                                           ),
@@ -2238,7 +2311,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
                                     return Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                      decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: riskColor.withOpacity(0.3))),
+                                      decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: riskColor.withValues(alpha:0.3))),
                                       child: Row(
                                         children: [
                                           Icon(Icons.timer_outlined, color: riskColor, size: 20),
@@ -2291,9 +2364,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                     return Container(
                                       padding: const EdgeInsets.all(10),
                                       decoration: BoxDecoration(
-                                        color: Colors.amber.withOpacity(0.06),
+                                        color: Colors.amber.withValues(alpha:0.06),
                                         borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: Colors.amber.withOpacity(0.35)),
+                                        border: Border.all(color: Colors.amber.withValues(alpha:0.35)),
                                       ),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2311,7 +2384,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                               const SizedBox(width: 8),
                                               Container(
                                                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                                decoration: BoxDecoration(color: Colors.amber.withOpacity(0.2), borderRadius: BorderRadius.circular(6)),
+                                                decoration: BoxDecoration(color: Colors.amber.withValues(alpha:0.2), borderRadius: BorderRadius.circular(6)),
                                                 child: Text("$count Kez", style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.w900, fontSize: 10)),
                                               ),
                                             ],
@@ -2346,9 +2419,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                     return Container(
                                       padding: const EdgeInsets.all(10),
                                       decoration: BoxDecoration(
-                                        color: Colors.red.withOpacity(0.06),
+                                        color: Colors.red.withValues(alpha:0.06),
                                         borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: Colors.red.withOpacity(0.35)),
+                                        border: Border.all(color: Colors.red.withValues(alpha:0.35)),
                                       ),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2366,7 +2439,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                               const SizedBox(width: 8),
                                               Container(
                                                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                                decoration: BoxDecoration(color: Colors.red.withOpacity(0.2), borderRadius: BorderRadius.circular(6)),
+                                                decoration: BoxDecoration(color: Colors.red.withValues(alpha:0.2), borderRadius: BorderRadius.circular(6)),
                                                 child: Text("$count Kez", style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w900, fontSize: 10)),
                                               ),
                                             ],
@@ -2476,7 +2549,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       }
     } catch (_) {}
 
-    if (mounted) Navigator.pop(context);
+    if (mounted) { Navigator.pop(context); }
 
     showModalBottomSheet(
       context: context,
@@ -2492,7 +2565,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           child: Column(
             children: [
               const SizedBox(height: 12),
-              Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10))),
+              Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.grey.withValues(alpha:0.3), borderRadius: BorderRadius.circular(10))),
               const SizedBox(height: 16),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
@@ -2515,12 +2588,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           color: isDark ? Colors.white10 : const Color(0xFFF8FAFC),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
-                            side: BorderSide(color: Colors.amber.withOpacity(0.25)),
+                            side: BorderSide(color: Colors.amber.withValues(alpha:0.25)),
                           ),
                           child: ListTile(
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                             leading: CircleAvatar(
-                              backgroundColor: Colors.amber.withOpacity(0.15),
+                              backgroundColor: Colors.amber.withValues(alpha:0.15),
                               child: const Icon(Icons.person, color: Colors.orange, size: 20),
                             ),
                             title: Text(fb['user_name']?.toString() ?? 'Bilinmeyen Kullanıcı', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
@@ -2562,7 +2635,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               child: Column(
                 children: [
                   const SizedBox(height: 12),
-                  Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10))),
+                  Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.grey.withValues(alpha:0.3), borderRadius: BorderRadius.circular(10))),
                   const SizedBox(height: 16),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -2599,7 +2672,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               color: isDark ? Colors.white10 : const Color(0xFFF8FAFC),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
-                                side: BorderSide(color: Colors.grey.withOpacity(0.18)),
+                                side: BorderSide(color: Colors.grey.withValues(alpha:0.18)),
                               ),
                               clipBehavior: Clip.antiAlias,
                               child: ListTile(
@@ -2607,7 +2680,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                   width: 48,
                                   height: 48,
                                   decoration: BoxDecoration(
-                                    color: Colors.blueAccent.withOpacity(0.15),
+                                    color: Colors.blueAccent.withValues(alpha:0.15),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   clipBehavior: Clip.antiAlias,
@@ -2685,7 +2758,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         decoration: BoxDecoration(
                           color: isDark ? Colors.black12 : const Color(0xFFF8FAFC),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.blueAccent.withOpacity(0.4)),
+                          border: Border.all(color: Colors.blueAccent.withValues(alpha:0.4)),
                         ),
                         child: selectedImageBytes != null
                             ? ClipRRect(
@@ -2695,7 +2768,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             : Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.add_photo_alternate_rounded, size: 36, color: Colors.blueAccent.withOpacity(0.7)),
+                                  Icon(Icons.add_photo_alternate_rounded, size: 36, color: Colors.blueAccent.withValues(alpha:0.7)),
                                   const SizedBox(height: 6),
                                   const Text("Resim Seçmek İçin Dokunun", style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: 13)),
                                 ],
@@ -2750,7 +2823,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           if (response.statusCode == 200 || response.statusCode == 201) {
                             await _fetchAds();
                             onSuccess();
-                            if (mounted) Navigator.pop(context);
+                            if (mounted) { Navigator.pop(context); }
                           } else {
                             if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Reklam eklenemedi.")));
                           }
@@ -2820,7 +2893,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         decoration: BoxDecoration(
                           color: isDark ? Colors.black12 : const Color(0xFFF8FAFC),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.blueAccent.withOpacity(0.4)),
+                          border: Border.all(color: Colors.blueAccent.withValues(alpha:0.4)),
                         ),
                         child: selectedImageBytes != null
                             ? ClipRRect(
@@ -2856,7 +2929,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 : Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(Icons.add_photo_alternate_rounded, size: 36, color: Colors.blueAccent.withOpacity(0.7)),
+                                      Icon(Icons.add_photo_alternate_rounded, size: 36, color: Colors.blueAccent.withValues(alpha:0.7)),
                                       const SizedBox(height: 6),
                                       const Text("Resim Seçmek İçin Dokunun", style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: 13)),
                                     ],
@@ -2913,7 +2986,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           if (response.statusCode == 200) {
                             await _fetchAds();
                             onSuccess();
-                            if (mounted) Navigator.pop(context);
+                            if (mounted) { Navigator.pop(context); }
                           } else {
                             if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Reklam güncellenemedi.")));
                           }
@@ -2985,9 +3058,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF1E293B) : Colors.white,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            border: Border.all(color: Colors.orange.withOpacity(0.3), width: 1.2),
+            border: Border.all(color: Colors.orange.withValues(alpha:0.3), width: 1.2),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 30, offset: const Offset(0, -8))
+              BoxShadow(color: Colors.black.withValues(alpha:0.4), blurRadius: 30, offset: const Offset(0, -8))
             ]
           ),
           child: SafeArea(
@@ -3086,7 +3159,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     width: selectedIdx == index ? 20 : 6,
                     height: 5,
                     decoration: BoxDecoration(
-                      color: selectedIdx == index ? Colors.blueAccent : Colors.grey.withOpacity(0.3),
+                      color: selectedIdx == index ? Colors.blueAccent : Colors.grey.withValues(alpha:0.3),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -3105,8 +3178,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.blueAccent.withOpacity(0.2), width: 1.2),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 15, offset: const Offset(0, 5))],
+        border: Border.all(color: Colors.blueAccent.withValues(alpha:0.2), width: 1.2),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.04), blurRadius: 15, offset: const Offset(0, 5))],
       ),
       child: Row(
         children: [
@@ -3115,7 +3188,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             decoration: BoxDecoration(
               gradient: const LinearGradient(colors: [Colors.blueAccent, Colors.lightBlue], begin: Alignment.topLeft, end: Alignment.bottomRight),
               shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: Colors.blueAccent.withOpacity(0.35), blurRadius: 10, offset: const Offset(0, 4))]
+              boxShadow: [BoxShadow(color: Colors.blueAccent.withValues(alpha:0.35), blurRadius: 10, offset: const Offset(0, 4))]
             ),
             child: const Icon(Icons.bolt_rounded, color: Colors.white, size: 28),
           ),
@@ -3147,8 +3220,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1E293B) : Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.orange.withOpacity(0.35), width: 1.2),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 15, offset: const Offset(0, 5))],
+          border: Border.all(color: Colors.orange.withValues(alpha:0.35), width: 1.2),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.04), blurRadius: 15, offset: const Offset(0, 5))],
         ),
         clipBehavior: Clip.antiAlias,
         child: Stack(
@@ -3156,7 +3229,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             if (hasImage)
               Positioned.fill(
                 child: ColorFiltered(
-                  colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.3), BlendMode.darken),
+                  colorFilter: ColorFilter.mode(Colors.black.withValues(alpha:0.3), BlendMode.darken),
                   child: _buildSafeNetworkImage(cleanImgUrl, fit: BoxFit.cover),
                 ),
               ),
@@ -3167,7 +3240,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(colors: [Colors.orange, Colors.deepOrange], begin: Alignment.topLeft, end: Alignment.bottomRight),
                     shape: BoxShape.circle,
-                    boxShadow: [BoxShadow(color: Colors.orange.withOpacity(0.35), blurRadius: 10, offset: const Offset(0, 4))]
+                    boxShadow: [BoxShadow(color: Colors.orange.withValues(alpha:0.35), blurRadius: 10, offset: const Offset(0, 4))]
                   ),
                   child: const Icon(Icons.campaign_rounded, color: Colors.white, size: 28),
                 ),
@@ -3244,7 +3317,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(28),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 20, offset: const Offset(0, 6))
+            BoxShadow(color: Colors.black.withValues(alpha:0.12), blurRadius: 20, offset: const Offset(0, 6))
           ],
         ),
         child: ClipRRect(
@@ -3273,8 +3346,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   _partSearchCtrl.clear();
                 });
               },
-              backgroundColor: cardColor.withOpacity(isDark ? 0.75 : 0.90),
-              indicatorColor: Colors.blueAccent.withOpacity(0.18),
+              backgroundColor: cardColor.withValues(alpha:isDark ? 0.75 : 0.90),
+              indicatorColor: Colors.blueAccent.withValues(alpha:0.18),
               labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
               animationDuration: const Duration(milliseconds: 350),
               destinations: [
@@ -3328,15 +3401,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             return Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.05),
+                color: Colors.red.withValues(alpha:0.05),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.red.withOpacity(0.25))
+                border: Border.all(color: Colors.red.withValues(alpha:0.25))
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: Colors.red.withOpacity(0.12), shape: BoxShape.circle),
+                    decoration: BoxDecoration(color: Colors.red.withValues(alpha:0.12), shape: BoxShape.circle),
                     child: const Icon(Icons.star_half_rounded, color: Colors.red, size: 20),
                   ),
                   const SizedBox(width: 12),
@@ -3446,9 +3519,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha:0.08),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.25))
+          border: Border.all(color: color.withValues(alpha:0.25))
         ),
         child: Column(
           children: [
@@ -3482,7 +3555,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             color: cardColor, 
             borderRadius: BorderRadius.circular(20), 
             border: Border.all(color: Colors.orange.shade300, width: 1.2),
-            boxShadow: [BoxShadow(color: Colors.orange.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))]
+            boxShadow: [BoxShadow(color: Colors.orange.withValues(alpha:0.04), blurRadius: 10, offset: const Offset(0, 4))]
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -3622,7 +3695,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
               const SizedBox(width: 8),
               Container(
-                decoration: BoxDecoration(color: isUserSelectionMode ? Colors.blue.withOpacity(0.2) : cardColor, borderRadius: BorderRadius.circular(16)),
+                decoration: BoxDecoration(color: isUserSelectionMode ? Colors.blue.withValues(alpha:0.2) : cardColor, borderRadius: BorderRadius.circular(16)),
                 child: IconButton(
                   icon: Icon(isUserSelectionMode ? Icons.close_rounded : Icons.checklist_rounded, color: Colors.blueAccent),
                   onPressed: () {
@@ -3643,7 +3716,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ? Container(
                 margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.blue.withOpacity(0.3))),
+                decoration: BoxDecoration(color: Colors.blue.withValues(alpha:0.1), borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.blue.withValues(alpha:0.3))),
                 child: Wrap(
                   alignment: WrapAlignment.spaceBetween,
                   crossAxisAlignment: WrapCrossAlignment.center,
@@ -3725,8 +3798,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     onTap: () {
                       if (isUserSelectionMode) {
                         setState(() {
-                          if (isSelected) selectedUsers.remove(userId);
-                          else selectedUsers.add(userId);
+                          if (isSelected) { selectedUsers.remove(userId); }
+                          else { selectedUsers.add(userId); }
                         });
                       } else {
                         _showUserDetailsModal(Map<String, dynamic>.from(user), cardColor, isDark);
@@ -3741,10 +3814,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     child: Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 3))]
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.02), blurRadius: 8, offset: const Offset(0, 3))]
                       ),
                       child: Material(
-                        color: isSelected ? Colors.blue.withOpacity(0.1) : (isBanned ? Colors.red.withOpacity(0.05) : cardColor),
+                        color: isSelected ? Colors.blue.withValues(alpha:0.1) : (isBanned ? Colors.red.withValues(alpha:0.05) : cardColor),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                           side: BorderSide(color: isSelected ? Colors.blueAccent : Colors.transparent, width: 1.5),
@@ -3756,7 +3829,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             ? Icon(isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, color: isSelected ? Colors.blueAccent : Colors.grey)
                             : CircleAvatar(
                                 radius: 20,
-                                backgroundColor: isBanned ? Colors.red.withOpacity(0.12) : (isCustomer ? Colors.blue.withOpacity(0.12) : Colors.purple.withOpacity(0.12)),
+                                backgroundColor: isBanned ? Colors.red.withValues(alpha:0.12) : (isCustomer ? Colors.blue.withValues(alpha:0.12) : Colors.purple.withValues(alpha:0.12)),
                                 child: Icon(isBanned ? Icons.block : (isCustomer ? Icons.person : Icons.engineering), color: isBanned ? Colors.red : (isCustomer ? Colors.blue : Colors.purple), size: 18),
                               ),
                           title: Row(
@@ -3976,13 +4049,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         decoration: BoxDecoration(
                           color: cardColor,
                           borderRadius: BorderRadius.circular(16),
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 3))]
+                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.02), blurRadius: 8, offset: const Offset(0, 3))]
                         ),
                         child: Row(
                           children: [
                             Container(
                               padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(color: typeColor.withOpacity(0.12), shape: BoxShape.circle),
+                              decoration: BoxDecoration(color: typeColor.withValues(alpha:0.12), shape: BoxShape.circle),
                               child: Icon(isForSale ? Icons.sell : Icons.search_rounded, color: typeColor, size: 20),
                             ),
                             const SizedBox(width: 12),
@@ -4071,7 +4144,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
               const SizedBox(width: 8),
               Container(
-                decoration: BoxDecoration(color: isJobSelectionMode ? Colors.blue.withOpacity(0.2) : cardColor, borderRadius: BorderRadius.circular(16)),
+                decoration: BoxDecoration(color: isJobSelectionMode ? Colors.blue.withValues(alpha:0.2) : cardColor, borderRadius: BorderRadius.circular(16)),
                 child: IconButton(
                   icon: Icon(isJobSelectionMode ? Icons.close_rounded : Icons.checklist_rounded, color: Colors.blueAccent),
                   onPressed: () {
@@ -4092,7 +4165,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ? Container(
                 margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.blue.withOpacity(0.3))),
+                decoration: BoxDecoration(color: Colors.blue.withValues(alpha:0.1), borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.blue.withValues(alpha:0.3))),
                 child: Wrap(
                   alignment: WrapAlignment.spaceBetween,
                   crossAxisAlignment: WrapCrossAlignment.center,
@@ -4168,8 +4241,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     onTap: () {
                       if (isJobSelectionMode) {
                         setState(() {
-                          if (isSelected) selectedJobs.remove(jobId);
-                          else selectedJobs.add(jobId);
+                          if (isSelected) { selectedJobs.remove(jobId); }
+                          else { selectedJobs.add(jobId); }
                         });
                       } else {
                         _showJobDetailsDialog(Map<String, dynamic>.from(job), cardColor);
@@ -4184,10 +4257,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: isSelected ? Colors.blue.withOpacity(0.1) : cardColor,
+                        color: isSelected ? Colors.blue.withValues(alpha:0.1) : cardColor,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: isSelected ? Colors.blueAccent : Colors.transparent, width: 1.5),
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 3))]
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.02), blurRadius: 8, offset: const Offset(0, 3))]
                       ),
                       child: Row(
                         children: [
@@ -4198,7 +4271,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.12),
+                              color: statusColor.withValues(alpha:0.12),
                               shape: BoxShape.circle
                             ),
                             child: Icon(statusIcon, color: statusColor, size: 20),
@@ -4216,7 +4289,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                   children: [
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                      decoration: BoxDecoration(color: Colors.blueGrey.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                                      decoration: BoxDecoration(color: Colors.blueGrey.withValues(alpha:0.1), borderRadius: BorderRadius.circular(6)),
                                       child: Text(_translateServiceType(job['service_type']?.toString()), style: const TextStyle(color: Colors.blueGrey, fontSize: 9, fontWeight: FontWeight.bold)),
                                     ),
                                     Text(_translateStatus(status), style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold)),
@@ -4267,9 +4340,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       final search = ticketSearchQuery.toLowerCase();
       
       final matchesSearch = subject.contains(search) || customerName.contains(search) || providerName.contains(search);
-      final matchesStatus = ticketFilter == 'all' || ticket['status'] == ticketFilter;
       
-      return matchesSearch && matchesStatus;
+      bool matchesFilter = false;
+      if (ticketFilter == 'all') {
+        matchesFilter = true;
+      } else if (ticketFilter == 'open' || ticketFilter == 'closed') {
+        matchesFilter = ticket['status'] == ticketFilter;
+      } else if (ticketFilter == 'from_customer') {
+        matchesFilter = ticket['creator_type'] == 'customer';
+      } else if (ticketFilter == 'from_provider') {
+        matchesFilter = ticket['creator_type'] == 'provider';
+      }
+      
+      return matchesSearch && matchesFilter;
     }).toList();
 
     return Column(
@@ -4285,7 +4368,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   onChanged: (value) => setState(() => ticketSearchQuery = value),
                   style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 13),
                   decoration: InputDecoration(
-                    hintText: "Müşteri veya Konu...",
+                    hintText: "Müşteri, Usta veya Konu Ara...",
                     hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
                     prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
                     suffixIcon: ticketSearchQuery.isNotEmpty 
@@ -4300,7 +4383,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
               const SizedBox(width: 8),
               Container(
-                decoration: BoxDecoration(color: isTicketSelectionMode ? Colors.blue.withOpacity(0.2) : cardColor, borderRadius: BorderRadius.circular(16)),
+                decoration: BoxDecoration(color: isTicketSelectionMode ? Colors.blue.withValues(alpha:0.2) : cardColor, borderRadius: BorderRadius.circular(16)),
                 child: IconButton(
                   icon: Icon(isTicketSelectionMode ? Icons.close_rounded : Icons.checklist_rounded, color: Colors.blueAccent),
                   onPressed: () {
@@ -4321,7 +4404,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ? Container(
                 margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.blue.withOpacity(0.3))),
+                decoration: BoxDecoration(color: Colors.blue.withValues(alpha:0.1), borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.blue.withValues(alpha:0.3))),
                 child: Wrap(
                   alignment: WrapAlignment.spaceBetween,
                   crossAxisAlignment: WrapCrossAlignment.center,
@@ -4369,6 +4452,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               _buildFilterChip("Açık", "open", ticketFilter, (val) => setState(() => ticketFilter = val)),
               const SizedBox(width: 8),
               _buildFilterChip("Kapalı", "closed", ticketFilter, (val) => setState(() => ticketFilter = val)),
+              const SizedBox(width: 8),
+              _buildFilterChip("Müşteriden", "from_customer", ticketFilter, (val) => setState(() => ticketFilter = val)),
+              const SizedBox(width: 8),
+              _buildFilterChip("Ustadan", "from_provider", ticketFilter, (val) => setState(() => ticketFilter = val)),
             ],
           ),
         ),
@@ -4395,8 +4482,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     onTap: () {
                       if (isTicketSelectionMode) {
                         setState(() {
-                          if (isSelected) selectedTickets.remove(ticketId);
-                          else selectedTickets.add(ticketId);
+                          if (isSelected) { selectedTickets.remove(ticketId); }
+                          else { selectedTickets.add(ticketId); }
                         });
                       } else {
                         _showTicketDetailsDialog(Map<String, dynamic>.from(ticket), cardColor);
@@ -4411,10 +4498,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: isSelected ? Colors.blue.withOpacity(0.1) : cardColor,
+                        color: isSelected ? Colors.blue.withValues(alpha:0.1) : cardColor,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: isSelected ? Colors.blueAccent : statusColor.withOpacity(0.25), width: 1.2),
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 3))]
+                        border: Border.all(color: isSelected ? Colors.blueAccent : statusColor.withValues(alpha:0.25), width: 1.2),
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.02), blurRadius: 8, offset: const Offset(0, 3))]
                       ),
                       child: Row(
                         children: [
@@ -4425,7 +4512,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.12),
+                              color: statusColor.withValues(alpha:0.12),
                               shape: BoxShape.circle
                             ),
                             child: Icon(statusIcon, color: statusColor, size: 20),
@@ -4447,7 +4534,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                                decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                                decoration: BoxDecoration(color: statusColor.withValues(alpha:0.1), borderRadius: BorderRadius.circular(6)),
                                 child: Text(status == 'open' ? "Açık" : "Kapalı", style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 10)),
                               ),
                               const SizedBox(height: 6),
@@ -4462,7 +4549,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                   },
                                   child: Container(
                                     padding: const EdgeInsets.all(5),
-                                    decoration: BoxDecoration(color: const Color(0xFF10B981).withOpacity(0.15), shape: BoxShape.circle),
+                                    decoration: BoxDecoration(color: const Color(0xFF10B981).withValues(alpha:0.15), shape: BoxShape.circle),
                                     child: const Icon(Icons.call, color: Color(0xFF10B981), size: 14),
                                   ),
                                 )
@@ -4599,7 +4686,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       label: Text(label, style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.white : Colors.grey.shade600, fontSize: 12)),
       selected: isSelected,
       selectedColor: Colors.blue.shade600,
-      backgroundColor: Colors.grey.withOpacity(0.08),
+      backgroundColor: Colors.grey.withValues(alpha:0.08),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Colors.transparent)),
       onSelected: (bool selected) {
         if (selected) onSelected(value);
@@ -4632,7 +4719,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     Widget buttonContent = Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: hasDoc ? Colors.blue.withOpacity(0.08) : Colors.grey.withOpacity(0.08),
+        color: hasDoc ? Colors.blue.withValues(alpha:0.08) : Colors.grey.withValues(alpha:0.08),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: hasDoc ? Colors.blue.shade300 : Colors.grey.shade300)
       ),
@@ -4670,10 +4757,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           gradient: LinearGradient(colors: gradientColors, begin: Alignment.topLeft, end: Alignment.bottomRight),
-          border: Border.all(color: Colors.white.withOpacity(0.2), width: 1.2),
+          border: Border.all(color: Colors.white.withValues(alpha:0.2), width: 1.2),
           boxShadow: [
-            BoxShadow(color: gradientColors.last.withOpacity(0.25), blurRadius: 12, offset: const Offset(0, 6)),
-            BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 4, offset: const Offset(0, 2))
+            BoxShadow(color: gradientColors.last.withValues(alpha:0.25), blurRadius: 12, offset: const Offset(0, 6)),
+            BoxShadow(color: Colors.black.withValues(alpha:0.08), blurRadius: 4, offset: const Offset(0, 2))
           ],
         ),
         child: Column(
@@ -4684,8 +4771,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(icon, color: Colors.white.withOpacity(0.95), size: 24),
-                Icon(Icons.auto_graph_rounded, color: Colors.white.withOpacity(0.35), size: 18),
+                Icon(icon, color: Colors.white.withValues(alpha:0.95), size: 24),
+                Icon(Icons.auto_graph_rounded, color: Colors.white.withValues(alpha:0.35), size: 18),
               ],
             ),
             const SizedBox(height: 8),

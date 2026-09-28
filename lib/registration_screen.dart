@@ -853,7 +853,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: DropdownButtonFormField<String>(
             isExpanded: true,
-            value: value,
+            initialValue: value,
             icon: const Icon(Icons.keyboard_arrow_down_rounded, color: neonGreen),
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
             dropdownColor: panelBlack,

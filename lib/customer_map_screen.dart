@@ -90,9 +90,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
   bool _isMapReady = false;
 
   // Kurumsal Güven Paleti (Slate & Sertifikalı Zümrüt Yeşili)
-  static const Color neonGreen = Color(0xFF059669); 
-  static const Color pureBlack = Color(0xFF0F172A); 
-  static const Color panelBlack = Color(0xFF1E293B); 
+  static const Color neonGreen = Color(0xFF00FFA3); 
+  static const Color pureBlack = Color(0xFF08080A); 
+  static const Color panelBlack = Color(0xFF111115); 
   static const Color textGray = Colors.white60; 
 
   static const List<Map<String, dynamic>> services = [
@@ -994,23 +994,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
     }
   }
 
-  void _zoomIn() {
-    HapticFeedback.lightImpact();
-    setState(() {
-      _currentZoom = (_currentZoom + 1).clamp(4.5, 18.0);
-      final center = _pinLocationNotifier.value ?? const LatLng(39.92, 32.85);
-      _animatedMapMove(center, _currentZoom);
-    });
-  }
-
-  void _zoomOut() {
-    HapticFeedback.lightImpact();
-    setState(() {
-      _currentZoom = (_currentZoom - 1).clamp(4.5, 18.0);
-      final center = _pinLocationNotifier.value ?? const LatLng(39.92, 32.85);
-      _animatedMapMove(center, _currentZoom);
-    });
-  }
+  
 
   void _updateNativeMarkers(List<Map<String, dynamic>> vehicles) {
     if (!mounted || _isMapMovingNotifier.value) return;
@@ -1094,18 +1078,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                   );
                 },
               ),
-              IconButton(
-                tooltip: "Yakınlaş",
-                icon: const Icon(Icons.add_rounded, color: Colors.white, size: 24),
-                onPressed: _zoomIn,
-              ),
-              Container(margin: const EdgeInsets.symmetric(vertical: 4), width: 28, height: 1, color: Colors.white.withValues(alpha:0.1)),
-              IconButton(
-                tooltip: "Uzaklaş",
-                icon: const Icon(Icons.remove_rounded, color: Colors.white, size: 24),
-                onPressed: _zoomOut,
-              ),
-              Container(margin: const EdgeInsets.symmetric(vertical: 4), width: 28, height: 1, color: Colors.white.withValues(alpha:0.1)),
+              // Yakınlaştırma butonları kaldırıldı
               IconButton(
                 tooltip: "Konumuma Git",
                 icon: Icon(

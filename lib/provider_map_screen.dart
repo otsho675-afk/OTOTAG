@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
 import 'package:flutter/services.dart'; 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'dart:typed_data';
 import 'package:latlong2/latlong.dart' hide Path;
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
@@ -823,7 +824,17 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                                     _showJobCard = false;
                                                     _isModalOpen = false;
                                                   });
-                                                  _showTopSnackBar("Teklifiniz iletildi. Müşteri yanıtı bekleniyor.");
+                                                  
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (_) => JobTrackingScreen(
+                                                        jobId: jobId,
+                                                        userType: 'provider',
+                                                        userId: widget.providerId,
+                                                      ),
+                                                    ),
+                                                  );
                                                 });
                                               } else {
                                                 setDialogState(() => isSubmitting = false);
@@ -911,7 +922,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
               });
             }
           } 
-          else if (event.eventName == "job_matched" || event.eventName == "status_update") {
+          else if (event.eventName == "job_matched" || event.eventName == "status_update" || event.eventName == "bid_update" || event.eventName == "counter_bid") {
             if (mounted && !_isNavigating) {
               HapticFeedback.heavyImpact();
               _checkActiveJob();
@@ -2754,11 +2765,21 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                   ),
                                   zoom: 15.0,
                                 ),
+                                gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                                  Factory<OneSequenceGestureRecognizer>(() => EagerGestureRecognizer()),
+                                },
                                 myLocationEnabled: true,
                                 myLocationButtonEnabled: false,
                                 compassEnabled: true,
                                 trafficEnabled: false,
                                 zoomControlsEnabled: false,
+                                scrollGesturesEnabled: true,
+                                zoomGesturesEnabled: true,
+                                rotateGesturesEnabled: true,
+                                tiltGesturesEnabled: false,
+                                onCameraMoveStarted: () {
+                                  _isUserPanning = true;
+                                },
                                 markers: {
                                   if (providerPos != null)
                                     gmaps.Marker(

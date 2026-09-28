@@ -7,6 +7,7 @@ import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:latlong2/latlong.dart' hide Path;
@@ -124,7 +125,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
 
   Future<void> _loadCarIcon() async {
     try {
-      final Uint8List? carBytes = await _getBytesFromAsset('assets/images/car_top_view.png', 45);
+      final Uint8List? carBytes = await _getBytesFromAsset('assets/images/car_top_view.png', 100);
       if (carBytes != null) {
         _providerCarIconGmaps = gmaps.BitmapDescriptor.fromBytes(carBytes);
         _providerCarIconAmaps = amaps.BitmapDescriptor.fromBytes(carBytes);
@@ -739,6 +740,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                   providerLat = double.tryParse(data['lat']?.toString() ?? '0.0') ?? providerLat;
                   providerLng = double.tryParse(data['lng']?.toString() ?? '0.0') ?? providerLng;
                   double apiProvHeading = double.tryParse(data['heading']?.toString() ?? '0.0') ?? 0.0;
+                  _lastLocationUpdateTime = DateTime.now();
                   
                   LatLng newPos = LatLng(providerLat, providerLng);
                   if (_animatedProviderPos.value == null) {
@@ -1232,6 +1234,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
       if (!mounted) return;
 
       if (response.statusCode == 200 && data['status'] != 'error') {
+        // Sunucuyla aktif iletişim sağlandığı sürece zaman aşımını yenile
+        _lastLocationUpdateTime = DateTime.now();
+
         String rawStatus = (data['job_status'] != null && data['job_status'].toString().isNotEmpty && data['job_status'].toString().toLowerCase() != 'success')
             ? data['job_status'].toString()
             : (data['status']?.toString() ?? 'matched');
@@ -1316,7 +1321,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           
           double apiProvHeading = _parseDouble(data['provider_heading']);
           
-          if (apiProvLat != providerLat || apiProvLng != providerLng) {
+          // Usta hareketsiz dursa dahi sunucudan aktif veri geldikçe bağlantıyı canlı tut
+          if (apiProvLat != 0.0 && apiProvLng != 0.0) {
             _lastLocationUpdateTime = DateTime.now();
           }
 
@@ -2205,7 +2211,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     bool isOffline = false;
 
     if (widget.userType == 'customer' && _lastLocationUpdateTime != null) {
-      if (DateTime.now().difference(_lastLocationUpdateTime!).inSeconds > 15) {
+      // Trafik ışıkları ve GPS paket gecikmelerinde sahte kopma uyarısı vermemesi için eşik 45 saniyeye çekildi
+      if (DateTime.now().difference(_lastLocationUpdateTime!).inSeconds > 45) {
         isOffline = true;
       }
     }
@@ -2364,10 +2371,14 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         annotations: appleAnnotations,
         myLocationEnabled: true,
         myLocationButtonEnabled: false,
+        onCameraMoveStarted: () {
+          _isUserPanning = true;
+          _autoFollowBounds = false;
+        },
         onMapCreated: (controller) {
           _appleMapController = controller;
           _isMapReady = true;
-          if (_autoFollowBounds) {
+          if (_autoFollowBounds && !_isUserPanning) {
             _fitMapBounds();
           }
         },
@@ -2437,15 +2448,28 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
           ),
           zoom: 14.5,
         ),
+        // Android PlatformView dokunma önceliğini haritaya ver
+        gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+          Factory<OneSequenceGestureRecognizer>(() => EagerGestureRecognizer()),
+        },
         polylines: googlePolylines,
         markers: googleMarkers,
         myLocationEnabled: true,
         myLocationButtonEnabled: false,
         zoomControlsEnabled: false,
+        scrollGesturesEnabled: true,
+        zoomGesturesEnabled: true,
+        rotateGesturesEnabled: true,
+        tiltGesturesEnabled: false,
+        onCameraMoveStarted: () {
+          // setState kaldırıldı: Harita sürüklenirken widget ağacının yeniden çizilip dokunmayı kesmesi önlenir
+          _isUserPanning = true;
+          _autoFollowBounds = false;
+        },
         onMapCreated: (controller) {
           _googleMapController = controller;
           _isMapReady = true;
-          if (_autoFollowBounds) {
+          if (_autoFollowBounds && !_isUserPanning) {
             _fitMapBounds();
           }
         },

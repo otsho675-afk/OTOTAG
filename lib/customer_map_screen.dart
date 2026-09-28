@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 import 'package:apple_maps_flutter/apple_maps_flutter.dart' as amaps;
@@ -1189,12 +1190,18 @@ class _CustomerMapScreenState extends State<CustomerMapScreen> with TickerProvid
                         ),
                         zoom: _currentZoom,
                       ),
+                      gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                        Factory<OneSequenceGestureRecognizer>(() => EagerGestureRecognizer()),
+                      },
                       myLocationEnabled: true,
                       myLocationButtonEnabled: false,
                       compassEnabled: true,
                       trafficEnabled: false,
                       zoomControlsEnabled: false,
-                      scrollGesturesEnabled: true, // Kaydırma aktifleştirildi
+                      scrollGesturesEnabled: true,
+                      zoomGesturesEnabled: true,
+                      rotateGesturesEnabled: true,
+                      tiltGesturesEnabled: false,
                       markers: _googleMarkersNotifier.value,
                       
                       onMapCreated: (gmaps.GoogleMapController controller) {

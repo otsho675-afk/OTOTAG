@@ -436,7 +436,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     }
   }
 
-  Future<void> _sendCounterBid(int bidId, String amount) async {
+  Future<void> _sendCounterBid(int bidId, int providerId, String amount) async {
     if (!mounted) return;
     HapticFeedback.mediumImpact();
     setState(() => isProcessing = true);
@@ -448,6 +448,8 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
           "bid_id": bidId.toString(), 
           "job_id": widget.jobId.toString(),
           "customer_id": widget.customerId.toString(),
+          "provider_id": providerId.toString(),
+          "user_type": "customer",
           "amount": amount
         },
       );
@@ -465,7 +467,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     }
   }
 
-  void _showCounterBidDialog(int bidId, String currentAmountStr) {
+  void _showCounterBidDialog(int bidId, int providerId, String currentAmountStr) {
     if (_isDialogActive) return;
     _isDialogActive = true;
     HapticFeedback.lightImpact();
@@ -636,7 +638,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                                     // Önce dialog'u güvenli şekilde kapatıp ardından asenkron isteği başlatıyoruz
                                     Navigator.of(context).pop();
                                     Future.delayed(const Duration(milliseconds: 300), () {
-                                      _sendCounterBid(bidId, amount);
+                                      _sendCounterBid(bidId, providerId, amount);
                                     });
                                   }
                                 },
@@ -1666,7 +1668,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
                     child: OutlinedButton.icon(
                       icon: Icon(canNegotiate ? Icons.handshake_rounded : Icons.person_search_rounded, size: 16),
                       onPressed: canNegotiate
-                          ? () => _showCounterBidDialog(bidId, displayPrice)
+                          ? () => _showCounterBidDialog(bidId, providerId, displayPrice)
                           : () {
                               HapticFeedback.selectionClick();
                               Navigator.push(context, MaterialPageRoute(builder: (_) => ProviderProfileScreen(providerId: providerId)));

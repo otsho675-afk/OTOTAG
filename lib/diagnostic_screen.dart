@@ -2445,4 +2445,4 @@ class _DiagnosticScreenState extends State<DiagnosticScreen> with SingleTickerPr
       ),
     );
   }
-}
+} 

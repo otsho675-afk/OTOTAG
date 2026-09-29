@@ -55,7 +55,8 @@ assets_path = 'RepairLiveActivity/Assets.xcassets'
 full_assets_path = File.join('ios', assets_path)
 
 if File.exist?(full_assets_path)
-  existing_ref = project.files.find { |f| f.path == assets_path || f.path == 'Assets.xcassets' }
+  # DÜZELTME BURADA: Ana uygulamanın ikonlarını silmemesi için "|| f.path == 'Assets.xcassets'" kısmı kaldırıldı[cite: 6].
+  existing_ref = project.files.find { |f| f.path == assets_path }
   existing_ref.remove_from_project if existing_ref
 
   assets_file = group.new_file(assets_path)

@@ -577,7 +577,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     if (_isModalOpen) return;
     setState(() => _isModalOpen = true);
 
-    // Askıya alınan işi çoklu listeye ekle
     _suspendedJobs[jobId] = {
       'serviceName': serviceName,
       'probDesc': probDesc,
@@ -593,7 +592,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     bool isSubmitting = false; 
     
     List<Map<String, dynamic>> bidHistory = [];
-    Timer? dialogPollingTimer; 
+    Timer? dialogPollingTimer;
+    Timer? countdownTimer;
+    int remainingSeconds = 20;
 
     void scrollToBottom() {
       if (scrollController.hasClients) {
@@ -612,11 +613,32 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       isScrollControlled: true,
       enableDrag: false,
       isDismissible: false,
-      barrierColor: pureBlack.withValues(alpha: 0.50), 
+      barrierColor: pureBlack.withValues(alpha: 0.60), 
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder( 
         builder: (context, setDialogState) {
           
+          void onTimeout() {
+            if (mounted && _isModalOpen) {
+              _suspendedJobs.remove(jobId);
+              Navigator.of(context, rootNavigator: true).pop();
+              _showTopSnackBar("⏱️ Süre doldu, teklif ekranı kapandı.", isError: true);
+            }
+          }
+
+          void resetAndStartTimer() {
+            countdownTimer?.cancel();
+            setDialogState(() => remainingSeconds = 20);
+            countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+              if (remainingSeconds > 0) {
+                setDialogState(() => remainingSeconds--);
+              } else {
+                timer.cancel();
+                onTimeout();
+              }
+            });
+          }
+
           Future<void> fetchBidsData() async {
             if (!mounted || !_isModalOpen) return;
             try {
@@ -643,7 +665,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                   List bids = data['bids'] ?? [];
                   if (bids.isNotEmpty) {
                     List<Map<String, dynamic>> parsedHistory = [];
-                    // Tüm pazarlık geçmişini eski -> yeni sırasıyla ekle
                     for (var b in bids.reversed) {
                       bool isMine = (b['last_bidder'] == 'provider');
                       parsedHistory.add({
@@ -672,6 +693,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                         statusText: "Müşteriden Karşı Teklif Geldi!",
                         updatedSubtitle: "${parsedHistory.last['price']} ₺",
                       );
+                      resetAndStartTimer(); 
                     }
                   }
                 }
@@ -679,11 +701,13 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             } catch (_) {}
           }
 
-          // Modal açıldığı milisaniyede 3 saniye beklemeden İLK SORGULAMAYI ÇALIŞTIR
           if (dialogPollingTimer == null) {
+            resetAndStartTimer(); 
             fetchBidsData();
             dialogPollingTimer = Timer.periodic(const Duration(seconds: 2), (_) => fetchBidsData());
           }
+
+          final bool isMyTurn = bidHistory.isEmpty || bidHistory.last['is_mine'] == false;
 
           return PopScope(
             canPop: !isSubmitting,
@@ -693,10 +717,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                 final double dialogWidth = constraints.maxWidth > 600 ? 550 : constraints.maxWidth;
                 final bottomInset = MediaQuery.of(context).viewInsets.bottom;
                 
-                final double availableHeight = MediaQuery.of(context).size.height - bottomInset;
-                // SABİTLENEN KISIM: RenderFlex taşmasını engellemek için yükseklik hesaplaması güvenli hale getirildi.
-                final double dialogHeight = (bottomInset > 0 ? availableHeight * 0.95 : MediaQuery.of(context).size.height * 0.75).clamp(200.0, 900.0);
-                
                 return Padding(
                   padding: EdgeInsets.only(bottom: bottomInset),
                   child: ClipRRect(
@@ -705,12 +725,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                       filter: ui.ImageFilter.blur(sigmaX: 30, sigmaY: 30),
                       child: Container(
                         width: dialogWidth,
-                        height: dialogHeight, // Safe Height
-                        padding: EdgeInsets.only(
-                          bottom: 24, 
-                          left: isSmallScreen ? 16 : 24, 
-                          right: isSmallScreen ? 16 : 24, 
-                          top: 16
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.of(context).size.height * 0.88,
                         ),
                         decoration: BoxDecoration(
                           color: panelBlack.withValues(alpha: 0.95),
@@ -721,117 +737,163 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                           ]
                         ),
                         child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Center(
-                              child: Container(
-                                width: 48,
-                                height: 5,
-                                margin: const EdgeInsets.only(bottom: 16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white24,
-                                  borderRadius: BorderRadius.circular(10)
-                                ),
+                            Padding(
+                              padding: EdgeInsets.only(
+                                left: isSmallScreen ? 16 : 24, 
+                                right: isSmallScreen ? 16 : 24, 
+                                top: 16,
+                                bottom: 12
                               ),
-                            ),
-                            Row(
-                              children: [
-                                Container(
-                                  padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [neonGreen.withValues(alpha: 0.25), neonGreen.withValues(alpha: 0.05)], 
-                                      begin: Alignment.topLeft, 
-                                      end: Alignment.bottomRight
-                                    ),
-                                    borderRadius: BorderRadius.circular(22),
-                                    border: Border.all(color: neonGreen.withValues(alpha: 0.5), width: 1.5),
-                                    boxShadow: [BoxShadow(color: neonGreen.withValues(alpha: 0.15), blurRadius: 15)]
-                                  ),
-                                  child: Icon(_getServiceIcon(serviceType), color: neonGreen, size: isSmallScreen ? 24 : 28),
-                                ),
-                                SizedBox(width: isSmallScreen ? 12 : 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "$serviceName Talebi", 
-                                        style: TextStyle(color: Colors.white, fontSize: isSmallScreen ? 18 : 22, fontWeight: FontWeight.w900, letterSpacing: -0.5), 
-                                        maxLines: 1, 
-                                        overflow: TextOverflow.ellipsis
+                              child: Column(
+                                children: [
+                                  Center(
+                                    child: Container(
+                                      width: 48,
+                                      height: 5,
+                                      margin: const EdgeInsets.only(bottom: 16),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white24,
+                                        borderRadius: BorderRadius.circular(10)
                                       ),
-                                      const SizedBox(height: 6),
-                                      Row(
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.all(4),
-                                            decoration: BoxDecoration(color: alertRed.withValues(alpha: 0.2), shape: BoxShape.circle),
-                                            child: const Icon(Icons.location_on_rounded, color: alertRed, size: 12),
+                                    ),
+                                  ),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [neonGreen.withValues(alpha: 0.25), neonGreen.withValues(alpha: 0.05)], 
+                                            begin: Alignment.topLeft, 
+                                            end: Alignment.bottomRight
                                           ),
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            "$distance KM Uzaklıkta", 
-                                            style: TextStyle(color: textGray.withValues(alpha: 0.9), fontSize: isSmallScreen ? 12 : 13, fontWeight: FontWeight.w700)
+                                          borderRadius: BorderRadius.circular(22),
+                                          border: Border.all(color: neonGreen.withValues(alpha: 0.5), width: 1.5),
+                                          boxShadow: [BoxShadow(color: neonGreen.withValues(alpha: 0.15), blurRadius: 15)]
+                                        ),
+                                        child: Icon(_getServiceIcon(serviceType), color: neonGreen, size: isSmallScreen ? 24 : 28),
+                                      ),
+                                      SizedBox(width: isSmallScreen ? 12 : 16),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              "$serviceName Talebi", 
+                                              style: TextStyle(color: Colors.white, fontSize: isSmallScreen ? 18 : 22, fontWeight: FontWeight.w900, letterSpacing: -0.5), 
+                                              maxLines: 1, 
+                                              overflow: TextOverflow.ellipsis
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Row(
+                                              children: [
+                                                Container(
+                                                  padding: const EdgeInsets.all(4),
+                                                  decoration: BoxDecoration(color: alertRed.withValues(alpha: 0.2), shape: BoxShape.circle),
+                                                  child: const Icon(Icons.location_on_rounded, color: alertRed, size: 12),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Text(
+                                                  "$distance KM Uzaklıkta", 
+                                                  style: TextStyle(color: textGray.withValues(alpha: 0.9), fontSize: isSmallScreen ? 12 : 13, fontWeight: FontWeight.w700)
+                                                ),
+                                              ],
+                                            )
+                                          ],
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: isMyTurn 
+                                              ? (remainingSeconds <= 5 ? alertRed : neonGreen).withValues(alpha: 0.15) 
+                                              : Colors.white.withValues(alpha: 0.05),
+                                          borderRadius: BorderRadius.circular(16),
+                                          border: Border.all(
+                                            color: isMyTurn 
+                                                ? (remainingSeconds <= 5 ? alertRed : neonGreen).withValues(alpha: 0.4) 
+                                                : Colors.white24,
                                           ),
-                                        ],
-                                      )
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              isMyTurn ? Icons.timer_rounded : Icons.hourglass_top_rounded, 
+                                              color: isMyTurn ? (remainingSeconds <= 5 ? alertRed : neonGreen) : Colors.white70, 
+                                              size: 16
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              isMyTurn ? "${remainingSeconds}s" : "Bekleniyor",
+                                              style: TextStyle(
+                                                color: isMyTurn ? (remainingSeconds <= 5 ? alertRed : neonGreen) : Colors.white70,
+                                                fontWeight: FontWeight.w900,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          color: neonGreen.withValues(alpha: 0.15),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: neonGreen.withValues(alpha: 0.3))
+                                        ),
+                                        child: IconButton(
+                                          onPressed: isSubmitting ? null : () {
+                                            HapticFeedback.selectionClick();
+                                            _suspendedJobs[jobId] = {
+                                              'serviceName': serviceName,
+                                              'probDesc': probDesc,
+                                              'distance': distance,
+                                              'serviceType': serviceType,
+                                            };
+                                            if (context.mounted) {
+                                              Navigator.pop(context);
+                                              _showTopSnackBar("İş askıya alındı. Müşteri karşı teklif verdiğinde ekranınız otomatik açılacaktır.");
+                                            }
+                                          },
+                                          tooltip: "Askıya Al",
+                                          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: neonGreen, size: 24)
+                                        ),
+                                      ),
                                     ],
                                   ),
-                                ),
-                               Container(
-                                  decoration: BoxDecoration(
-                                    color: neonGreen.withValues(alpha: 0.15),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: neonGreen.withValues(alpha: 0.3))
-                                  ),
-                                  child: IconButton(
-                                    onPressed: isSubmitting ? null : () {
-                                      HapticFeedback.selectionClick();
-                                      _suspendedJobs[jobId] = {
-                                        'serviceName': serviceName,
-                                        'probDesc': probDesc,
-                                        'distance': distance,
-                                        'serviceType': serviceType,
-                                      };
-                                      if (context.mounted) {
-                                        Navigator.pop(context);
-                                        _showTopSnackBar("İş askıya alındı. Müşteri karşı teklif verdiğinde ekranınız otomatik açılacaktır.");
-                                      }
-                                    },
-                                    tooltip: "Askıya Al (Aşağıya İndir)",
-                                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: neonGreen, size: 26)
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: pureBlack, 
-                                borderRadius: BorderRadius.circular(20), 
-                                border: const Border(left: BorderSide(color: neonGreen, width: 4))
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Icon(Icons.format_quote_rounded, color: neonGreen, size: 20),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      probDesc.isNotEmpty ? probDesc : "Müşteri detaylı bir açıklama belirtmedi. Gerekirse teklif sonrası detayları öğrenebilirsiniz.", 
-                                      style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: isSmallScreen ? 12 : 13, height: 1.4, fontWeight: FontWeight.w600)
+                                  const SizedBox(height: 16),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: pureBlack, 
+                                      borderRadius: BorderRadius.circular(20), 
+                                      border: const Border(left: BorderSide(color: neonGreen, width: 4))
+                                    ),
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Icon(Icons.format_quote_rounded, color: neonGreen, size: 20),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            probDesc.isNotEmpty ? probDesc : "Müşteri detaylı bir açıklama belirtmedi. Gerekirse teklif sonrası detayları öğrenebilirsiniz.", 
+                                            style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: isSmallScreen ? 12 : 13, height: 1.4, fontWeight: FontWeight.w600)
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 16),
                             
-                            Expanded(
+                            Flexible(
                               child: Container(
+                                margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
                                 decoration: BoxDecoration(
                                   color: pureBlack.withValues(alpha: 0.6),
                                   borderRadius: BorderRadius.circular(24),
@@ -839,8 +901,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                 ),
                                 child: bidHistory.isEmpty 
                                   ? Center(
-                                      child: SingleChildScrollView(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(20),
                                         child: Column(
+                                          mainAxisSize: MainAxisSize.min,
                                           mainAxisAlignment: MainAxisAlignment.center,
                                           children: [
                                             Container(
@@ -863,6 +927,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                       controller: scrollController,
                                       padding: const EdgeInsets.all(16),
                                       physics: const BouncingScrollPhysics(),
+                                      shrinkWrap: true,
                                       itemCount: bidHistory.length,
                                       itemBuilder: (context, index) {
                                         final bid = bidHistory[index];
@@ -960,309 +1025,359 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                     ),
                               ),
                             ),
-                            const SizedBox(height: 12),
-
-                            if (bidHistory.isNotEmpty && bidHistory.last['is_mine'] == false) ...[
-                              Container(
-                                width: double.infinity,
-                                margin: const EdgeInsets.only(bottom: 12),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(22),
-                                  color: neonGreen,
-                                  boxShadow: [BoxShadow(color: neonGreen.withValues(alpha: 0.4), blurRadius: 20, offset: const Offset(0, 6))]
-                                ),
-                                child: ElevatedButton(
-                                  onPressed: isSubmitting ? null : () async {
-                                    setDialogState(() => isSubmitting = true);
-                                    try {
-                                      final response = await _httpClient.post(
-                                        Uri.parse("$baseUrl?action=accept_bid"),
-                                        headers: {"Content-Type": "application/x-www-form-urlencoded"},
-                                        body: {
-                                          "job_id": jobId.toString(),
-                                          "bid_id": bidHistory.last["bid_id"].toString(),
-                                          "provider_id": widget.providerId.toString(),
-                                          "amount": bidHistory.last["price"].toString(),
-                                          "user_type": "provider"
-                                        }
-                                      ).timeout(_apiTimeout);
-                                      final data = json.decode(response.body);
-                                      if (data['status'] == 'success') {
-                                        _showTopSnackBar("Anlaşma sağlandı! İşlem başlatılıyor.");
-                                        LiveActivityService().endTracking();
-                                        if (_isModalOpen) {
-                                          Navigator.of(context, rootNavigator: true).pop();
-                                          _isModalOpen = false;
-                                        }
-                                        _checkActiveJob();
-                                      } else {
-                                        setDialogState(() => isSubmitting = false);
-                                        _showTopSnackBar(data['message'] ?? "Hata oluştu.", isError: true);
-                                      }
-                                    } catch (e) {
-                                      setDialogState(() => isSubmitting = false);
-                                      _showTopSnackBar("Bağlantı hatası.", isError: true);
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.transparent,
-                                    shadowColor: Colors.transparent,
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))
-                                  ),
-                                  child: isSubmitting 
-                                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 3.5))
-                                      : Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            const Icon(Icons.handshake_rounded, color: pureBlack, size: 20),
-                                            const SizedBox(width: 8),
-                                            Text("Teklifi Kabul Et (${bidHistory.last['price']} ₺)", style: TextStyle(color: pureBlack, fontSize: isSmallScreen ? 14 : 16, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-                                          ],
-                                        ),
-                                )
+                            
+                            Container(
+                              margin: const EdgeInsets.only(top: 16),
+                              padding: EdgeInsets.fromLTRB(
+                                isSmallScreen ? 16 : 24, 
+                                16, 
+                                isSmallScreen ? 16 : 24, 
+                                24 + MediaQuery.paddingOf(context).bottom
                               ),
-                            ],
-
-                            Row(
-                              children: [
-                                Expanded(
-                                  flex: 2,
-                                  child: Container(
-                                    height: 54,
-                                    decoration: BoxDecoration(
-                                      color: pureBlack,
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1.5),
+                              decoration: BoxDecoration(
+                                color: pureBlack,
+                                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                                border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.05), width: 1.5))
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (bidHistory.isNotEmpty && bidHistory.last['is_mine'] == false) ...[
+                                    Container(
+                                      width: double.infinity,
+                                      margin: const EdgeInsets.only(bottom: 12),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(22),
+                                        color: neonGreen,
+                                        boxShadow: [BoxShadow(color: neonGreen.withValues(alpha: 0.4), blurRadius: 20, offset: const Offset(0, 6))]
+                                      ),
+                                      child: ElevatedButton(
+                                        onPressed: isSubmitting ? null : () async {
+                                          setDialogState(() => isSubmitting = true);
+                                          countdownTimer?.cancel();
+                                          try {
+                                            final response = await _httpClient.post(
+                                              Uri.parse("$baseUrl?action=accept_bid"),
+                                              headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                                              body: {
+                                                "job_id": jobId.toString(),
+                                                "bid_id": bidHistory.last["bid_id"].toString(),
+                                                "provider_id": widget.providerId.toString(),
+                                                "amount": bidHistory.last["price"].toString(),
+                                                "user_type": "provider"
+                                              }
+                                            ).timeout(_apiTimeout);
+                                            final data = json.decode(response.body);
+                                            if (data['status'] == 'success') {
+                                              _showTopSnackBar("Anlaşma sağlandı! İşlem başlatılıyor.");
+                                              LiveActivityService().endTracking();
+                                              if (_isModalOpen) {
+                                                Navigator.of(context, rootNavigator: true).pop();
+                                                _isModalOpen = false;
+                                              }
+                                              _checkActiveJob();
+                                            } else {
+                                              setDialogState(() {
+                                                isSubmitting = false;
+                                                resetAndStartTimer();
+                                              });
+                                              _showTopSnackBar(data['message'] ?? "Hata oluştu.", isError: true);
+                                            }
+                                          } catch (e) {
+                                            setDialogState(() {
+                                              isSubmitting = false;
+                                              resetAndStartTimer();
+                                            });
+                                            _showTopSnackBar("Bağlantı hatası.", isError: true);
+                                          }
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.transparent,
+                                          shadowColor: Colors.transparent,
+                                          padding: const EdgeInsets.symmetric(vertical: 16),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))
+                                        ),
+                                        child: isSubmitting 
+                                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 3.5))
+                                            : Row(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  const Icon(Icons.handshake_rounded, color: pureBlack, size: 20),
+                                                  const SizedBox(width: 8),
+                                                  Text("Teklifi Kabul Et (${bidHistory.last['price']} ₺)", style: TextStyle(color: pureBlack, fontSize: isSmallScreen ? 14 : 16, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                                                ],
+                                              ),
+                                      )
                                     ),
-                                    child: Row(
-                                      children: [
-                                        const Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Icon(Icons.payments_rounded, color: neonGreen, size: 20)),
-                                        Expanded(
-                                          child: TextField(
-                                            controller: priceController,
-                                            keyboardType: TextInputType.number,
-                                            inputFormatters: [FilteringTextInputFormatter.digitsOnly], 
-                                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
-                                            decoration: InputDecoration(
-                                              hintText: "Fiyat (₺)",
-                                              hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 14, fontWeight: FontWeight.w600),
-                                              border: InputBorder.none,
-                                              contentPadding: const EdgeInsets.only(bottom: 4),
-                                            ),
+                                  ],
+      
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        flex: 2,
+                                        child: Container(
+                                          height: 56,
+                                          decoration: BoxDecoration(
+                                            color: panelBlack,
+                                            borderRadius: BorderRadius.circular(20),
+                                            border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1.5),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              const Padding(padding: EdgeInsets.symmetric(horizontal: 14), child: Icon(Icons.payments_rounded, color: neonGreen, size: 22)),
+                                              Expanded(
+                                                child: TextField(
+                                                  controller: priceController,
+                                                  keyboardType: TextInputType.number,
+                                                  inputFormatters: [FilteringTextInputFormatter.digitsOnly], 
+                                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18),
+                                                  decoration: InputDecoration(
+                                                    hintText: "Fiyat (₺)",
+                                                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 15, fontWeight: FontWeight.w600),
+                                                    border: InputBorder.none,
+                                                    contentPadding: const EdgeInsets.only(bottom: 6),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  flex: 1,
-                                  child: Container(
-                                    height: 54,
-                                    decoration: BoxDecoration(
-                                      color: neonGreen.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(color: neonGreen.withValues(alpha: 0.3), width: 1.5),
-                                    ),
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        const Text("Tahmini Süre", style: TextStyle(color: neonGreen, fontSize: 9, fontWeight: FontWeight.w700)),
-                                        const SizedBox(height: 2),
-                                        FittedBox(fit: BoxFit.scaleDown, child: Text("$autoTimeStr Dk", style: const TextStyle(color: neonGreen, fontWeight: FontWeight.w900, fontSize: 14))),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            
-                            const SizedBox(height: 10),
-                            SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              physics: const BouncingScrollPhysics(),
-                              child: Row(
-                                children: [500, 750, 1000, 1500, 2000].map((quickVal) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(right: 8),
-                                    child: InkWell(
-                                      onTap: () {
-                                        HapticFeedback.selectionClick();
-                                        setDialogState(() => priceController.text = quickVal.toString());
-                                      },
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withValues(alpha: 0.05),
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.2),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        flex: 1,
+                                        child: Container(
+                                          height: 56,
+                                          decoration: BoxDecoration(
+                                            color: neonGreen.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(20),
+                                            border: Border.all(color: neonGreen.withValues(alpha: 0.3), width: 1.5),
+                                          ),
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              const Text("Süre", style: TextStyle(color: neonGreen, fontSize: 10, fontWeight: FontWeight.w700)),
+                                              const SizedBox(height: 2),
+                                              FittedBox(fit: BoxFit.scaleDown, child: Text("$autoTimeStr Dk", style: const TextStyle(color: neonGreen, fontWeight: FontWeight.w900, fontSize: 15))),
+                                            ],
+                                          ),
                                         ),
-                                        child: Text("$quickVal ₺", style: const TextStyle(color: neonGreen, fontWeight: FontWeight.w800, fontSize: 13)),
                                       ),
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                            
-                            const SizedBox(height: 12),
-                            
-                            Row(
-                              children: [
-                                Expanded(
-                                  flex: 1,
-                                  child: Container(
-                                    height: 54,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(22),
-                                      color: pureBlack,
-                                      border: Border.all(color: alertRed.withValues(alpha: 0.6), width: 1.5)
-                                    ),
-                                    child: ElevatedButton(
-                                      onPressed: isSubmitting ? null : () async {
-                                        HapticFeedback.heavyImpact();
-                                        _suspendedJobs.remove(jobId);
-                                        
-                                        // Eğer backend tarafında da işin reddedildiğini bildiren bir endpoint'iniz varsa burayı aktifleştirebilirsiniz:
-                                        // try {
-                                        //   await _httpClient.post(Uri.parse("$baseUrl?action=reject_bid"), body: {"job_id": jobId.toString(), "provider_id": widget.providerId.toString()});
-                                        // } catch (e) {}
-                                        
-                                        if (context.mounted) {
-                                          Navigator.pop(context);
-                                          _showTopSnackBar("İşlem reddedildi. Yeni çağrılar bekleniyor.", isError: true);
-                                        }
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.transparent,
-                                        shadowColor: Colors.transparent,
-                                        padding: EdgeInsets.zero,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))
-                                      ),
-                                      child: Text("Vazgeç", style: TextStyle(color: alertRed, fontSize: isSmallScreen ? 13 : 15, fontWeight: FontWeight.w900)),
+                                    ],
+                                  ),
+                                  
+                                  const SizedBox(height: 12),
+                                  SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    physics: const BouncingScrollPhysics(),
+                                    child: Row(
+                                      children: [500, 750, 1000, 1500, 2000].map((quickVal) {
+                                        return Padding(
+                                          padding: const EdgeInsets.only(right: 10),
+                                          child: InkWell(
+                                            onTap: () {
+                                              HapticFeedback.selectionClick();
+                                              setDialogState(() => priceController.text = quickVal.toString());
+                                            },
+                                            borderRadius: BorderRadius.circular(14),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withValues(alpha: 0.05),
+                                                borderRadius: BorderRadius.circular(14),
+                                                border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.2),
+                                              ),
+                                              child: Text("$quickVal ₺", style: const TextStyle(color: neonGreen, fontWeight: FontWeight.w800, fontSize: 14)),
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  flex: 2,
-                                  child: Container(
-                                    height: 54,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(22),
-                                      color: neonGreen,
-                                      boxShadow: [BoxShadow(color: neonGreen.withValues(alpha: 0.4), blurRadius: 20, offset: const Offset(0, 6))]
-                                    ),
-                                    child: ElevatedButton(
-                                      onPressed: isSubmitting ? null : () async {
-                                        if (priceController.text.isEmpty) {
-                                          _showTopSnackBar("Lütfen geçerli bir fiyat teklifi girin.", isError: true);
-                                          return;
-                                        }
-                                        
-                                        setDialogState(() => isSubmitting = true);
-                                        
-                                        String finalTime = autoTimeStr;
-                                        String actionType = bidHistory.isEmpty ? "place_bid" : "counter_bid";
-                                        Map<String, String> requestBody = {
-                                          "job_id": jobId.toString(),
-                                          "provider_id": widget.providerId.toString(),
-                                          "amount": priceController.text.trim(),
-                                          "estimated_time": finalTime, 
-                                          "user_type": "provider", 
-                                        };
-                                        
-                                        if (bidHistory.isNotEmpty) {
-                                          requestBody["bid_id"] = bidHistory.last["bid_id"].toString();
-                                        }
-                                        
-                                        try {
-                                          final response = await _httpClient.post(
-                                            Uri.parse("$baseUrl?action=$actionType"),
-                                            headers: {"Content-Type": "application/x-www-form-urlencoded"},
-                                            body: requestBody,
-                                          ).timeout(_apiTimeout);
-
-                                          final data = json.decode(response.body);
-                                          
-                                          if (mounted) {
-                                            if (data['status'] == 'success') {
-                                              _sendTelemetry(
-                                                eventType: 'button_click',
-                                                eventName: 'usta_teklif_gonderdi',
-                                                meta: {
-                                                  'job_id': jobId,
-                                                  'amount': priceController.text.trim(),
-                                                  'estimated_time': finalTime,
-                                                  'service_type': serviceType
-                                                },
-                                              );
-                                              _showTopSnackBar("Teklifiniz başarıyla iletildi, müşteriden yanıt bekleniyor.");
+                                  
+                                  const SizedBox(height: 16),
+                                  
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        flex: 1,
+                                        child: Container(
+                                          height: 54,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(22),
+                                            color: panelBlack,
+                                            border: Border.all(color: alertRed.withValues(alpha: 0.6), width: 1.5)
+                                          ),
+                                          child: ElevatedButton(
+                                            onPressed: isSubmitting ? null : () async {
+                                              HapticFeedback.heavyImpact();
+                                              countdownTimer?.cancel();
+                                              _suspendedJobs.remove(jobId);
+                                              
+                                              setDialogState(() => isSubmitting = true);
+                                              
+                                              if (bidHistory.isNotEmpty) {
+                                                try {
+                                                  await _httpClient.post(
+                                                    Uri.parse("$baseUrl?action=reject_bid"),
+                                                    headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                                                    body: {"bid_id": bidHistory.last["bid_id"].toString()},
+                                                  ).timeout(_apiTimeout);
+                                                } catch (e) {}
+                                              }
+                                              
+                                              if (context.mounted) {
+                                                Navigator.pop(context);
+                                                _showTopSnackBar("İşlem reddedildi. Yeni çağrılar bekleniyor.", isError: true);
+                                              }
+                                            },
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.transparent,
+                                              shadowColor: Colors.transparent,
+                                              padding: EdgeInsets.zero,
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))
+                                            ),
+                                            child: isSubmitting 
+                                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: alertRed, strokeWidth: 3))
+                                                : Text("Vazgeç", style: TextStyle(color: alertRed, fontSize: isSmallScreen ? 13 : 15, fontWeight: FontWeight.w900)),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        flex: 2,
+                                        child: Container(
+                                          height: 54,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(22),
+                                            color: neonGreen,
+                                            boxShadow: [BoxShadow(color: neonGreen.withValues(alpha: 0.4), blurRadius: 20, offset: const Offset(0, 6))]
+                                          ),
+                                          child: ElevatedButton(
+                                            onPressed: isSubmitting ? null : () async {
+                                              if (!isMyTurn) {
+                                                 _showTopSnackBar("Şu anda müşterinin yanıt vermesi bekleniyor.", isError: true);
+                                                 return;
+                                              }
+                                              if (priceController.text.isEmpty) {
+                                                _showTopSnackBar("Lütfen geçerli bir fiyat teklifi girin.", isError: true);
+                                                return;
+                                              }
+                                              
+                                              setDialogState(() => isSubmitting = true);
+                                              countdownTimer?.cancel(); 
+                                              
+                                              String finalTime = autoTimeStr;
+                                              String actionType = bidHistory.isEmpty ? "place_bid" : "counter_bid";
+                                              Map<String, String> requestBody = {
+                                                "job_id": jobId.toString(),
+                                                "provider_id": widget.providerId.toString(),
+                                                "amount": priceController.text.trim(),
+                                                "estimated_time": finalTime, 
+                                                "user_type": "provider", 
+                                              };
+                                              
+                                              if (bidHistory.isNotEmpty) {
+                                                requestBody["bid_id"] = bidHistory.last["bid_id"].toString();
+                                              }
                                               
                                               try {
-                                                FirebaseAnalytics.instance.logEvent(
-                                                  name: 'provider_bid_placed',
-                                                  parameters: {'amount': priceController.text.trim()},
-                                                );
-                                              } catch(e) {}
-                                              
-                                              _lastBidPrice = priceController.text.trim();
-
-                                              LiveActivityService().startOfferTracking(
-                                                offerId: jobId.toString(),
-                                                customerName: "$serviceName Talebi",
-                                                offerAmount: "${priceController.text.trim()} ₺",
-                                                statusText: "Müşteri teklifinizi inceliyor",
-                                              );
-                                              
-                                              if (_isModalOpen) {
-                                                setDialogState(() {
-                                                  isSubmitting = false;
-                                                  bidHistory = [{
-                                                    "bid_id": requestBody["bid_id"] ?? "",
-                                                    "price": priceController.text.trim(),
-                                                    "time": finalTime,
-                                                    "is_mine": true,
-                                                    "status": "Müşteri Onayı Bekleniyor..."
-                                                  }];
-                                                  priceController.clear();
-                                                });
-                                                scrollToBottom();
+                                                final response = await _httpClient.post(
+                                                  Uri.parse("$baseUrl?action=$actionType"),
+                                                  headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                                                  body: requestBody,
+                                                ).timeout(_apiTimeout);
+      
+                                                final data = json.decode(response.body);
+                                                
+                                                if (mounted) {
+                                                  if (data['status'] == 'success') {
+                                                    _sendTelemetry(
+                                                      eventType: 'button_click',
+                                                      eventName: 'usta_teklif_gonderdi',
+                                                      meta: {
+                                                        'job_id': jobId,
+                                                        'amount': priceController.text.trim(),
+                                                        'estimated_time': finalTime,
+                                                        'service_type': serviceType
+                                                      },
+                                                    );
+                                                    _showTopSnackBar("Teklifiniz başarıyla iletildi, müşteriden yanıt bekleniyor.");
+                                                    
+                                                    try {
+                                                      FirebaseAnalytics.instance.logEvent(
+                                                        name: 'provider_bid_placed',
+                                                        parameters: {'amount': priceController.text.trim()},
+                                                      );
+                                                    } catch(e) {}
+                                                    
+                                                    _lastBidPrice = priceController.text.trim();
+      
+                                                    LiveActivityService().startOfferTracking(
+                                                      offerId: jobId.toString(),
+                                                      customerName: "$serviceName Talebi",
+                                                      offerAmount: "${priceController.text.trim()} ₺",
+                                                      statusText: "Müşteri teklifinizi inceliyor",
+                                                    );
+                                                    
+                                                    if (_isModalOpen) {
+                                                      setDialogState(() {
+                                                        isSubmitting = false;
+                                                        bidHistory = [{
+                                                          "bid_id": requestBody["bid_id"] ?? "",
+                                                          "price": priceController.text.trim(),
+                                                          "time": finalTime,
+                                                          "is_mine": true,
+                                                          "status": "Müşteri Onayı Bekleniyor..."
+                                                        }];
+                                                        priceController.clear();
+                                                      });
+                                                      scrollToBottom();
+                                                    }
+                                                    _checkActiveJob(); 
+      
+                                                  } else {
+                                                    if (_isModalOpen) {
+                                                      setDialogState(() {
+                                                        isSubmitting = false;
+                                                        resetAndStartTimer();
+                                                      });
+                                                    }
+                                                    _showTopSnackBar(data['message'] ?? "İşlem başarısız, müşteri iptal etmiş olabilir.", isError: true);
+                                                  }
+                                                }
+                                              } catch (e) {
+                                                if (_isModalOpen) {
+                                                  setDialogState(() {
+                                                    isSubmitting = false;
+                                                    resetAndStartTimer();
+                                                  });
+                                                }
+                                                if (mounted) _showTopSnackBar("Bağlantı hatası oluştu.", isError: true);
                                               }
-                                              _checkActiveJob(); 
-
-                                            } else {
-                                              if (_isModalOpen) setDialogState(() => isSubmitting = false);
-                                              _showTopSnackBar(data['message'] ?? "İşlem başarısız, müşteri iptal etmiş olabilir.", isError: true);
-                                            }
-                                          }
-                                        } catch (e) {
-                                          if (_isModalOpen) setDialogState(() => isSubmitting = false);
-                                          if (mounted) _showTopSnackBar("Bağlantı hatası oluştu.", isError: true);
-                                        }
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.transparent,
-                                        shadowColor: Colors.transparent,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))
-                                      ),
-                                      child: isSubmitting 
-                                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 3.5))
-                                          : Row(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              children: [
-                                                const Icon(Icons.send_rounded, color: pureBlack, size: 20),
-                                                const SizedBox(width: 10),
-                                                Text("Teklifi İlet", style: TextStyle(color: pureBlack, fontSize: isSmallScreen ? 14 : 16, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-                                              ],
+                                            },
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.transparent,
+                                              shadowColor: Colors.transparent,
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))
                                             ),
-                                    ),
+                                            child: isSubmitting 
+                                                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 3.5))
+                                                : Row(
+                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    children: [
+                                                      const Icon(Icons.send_rounded, color: pureBlack, size: 20),
+                                                      const SizedBox(width: 10),
+                                                      Text("Teklifi İlet", style: TextStyle(color: pureBlack, fontSize: isSmallScreen ? 14 : 16, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                                                    ],
+                                                  ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ],
                         ),
@@ -1277,6 +1392,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       )
     ).then((_) {
       dialogPollingTimer?.cancel(); 
+      countdownTimer?.cancel();
       if (mounted) setState(() => _isModalOpen = false);
       Future.delayed(const Duration(milliseconds: 500), () {
         priceController.dispose();

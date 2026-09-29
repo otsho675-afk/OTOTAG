@@ -1149,7 +1149,6 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
     _googleMapController?.dispose();
     _appleMapController = null;
     
-    // Ekran tamamen kapandığında Live Activity'yi de kapat
     if (_isLiveActivityStarted) {
       LiveActivityService().endTracking();
     }
@@ -1642,6 +1641,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
                  _showTopSnackBar("Müşteriden yeni bir karşı teklif geldi!", isNewAlert: true);
                  _speak("Müşteri karşı teklif verdi.");
               }
+              // ADA (LIVE ACTIVITY) TETIKLEME DÜZELTMESI BURADA:
+              _syncDynamicIsland();
             } else {
               if (activeBid != null) {
                  final String verifyStamp = DateTime.now().millisecondsSinceEpoch.toString();
@@ -3082,7 +3083,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> with TickerProvid
         );
         }
       ),
-    )); // <-- Eksik olan kapanış parantezi eklendi
+    )); 
   }
 
   Widget _buildDesktopPanelContent(int currentStep, Color primaryColor, LinearGradient themeGradient, Color shadowColor, Color cardColor, Color textColor, Color subtitleColor, bool isCustomer) {

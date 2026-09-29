@@ -1110,118 +1110,159 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                             
                             const SizedBox(height: 12),
                             
-                            Container(
-                              height: 54,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(22),
-                                color: neonGreen,
-                                boxShadow: [BoxShadow(color: neonGreen.withValues(alpha: 0.4), blurRadius: 20, offset: const Offset(0, 6))]
-                              ),
-                              child: ElevatedButton(
-                                onPressed: isSubmitting ? null : () async {
-                                  if (priceController.text.isEmpty) {
-                                    _showTopSnackBar("Lütfen geçerli bir fiyat teklifi girin.", isError: true);
-                                    return;
-                                  }
-                                  
-                                  setDialogState(() => isSubmitting = true);
-                                  
-                                  String finalTime = autoTimeStr;
-                                  String actionType = bidHistory.isEmpty ? "place_bid" : "counter_bid";
-                                  Map<String, String> requestBody = {
-                                    "job_id": jobId.toString(),
-                                    "provider_id": widget.providerId.toString(),
-                                    "amount": priceController.text.trim(),
-                                    "estimated_time": finalTime, 
-                                    "user_type": "provider", 
-                                  };
-                                  
-                                  if (bidHistory.isNotEmpty) {
-                                    requestBody["bid_id"] = bidHistory.last["bid_id"].toString();
-                                  }
-                                  
-                                  try {
-                                    final response = await _httpClient.post(
-                                      Uri.parse("$baseUrl?action=$actionType"),
-                                      headers: {"Content-Type": "application/x-www-form-urlencoded"},
-                                      body: requestBody,
-                                    ).timeout(_apiTimeout);
-
-                                    final data = json.decode(response.body);
-                                    
-                                    if (mounted) {
-                                      if (data['status'] == 'success') {
-                                        _sendTelemetry(
-                                          eventType: 'button_click',
-                                          eventName: 'usta_teklif_gonderdi',
-                                          meta: {
-                                            'job_id': jobId,
-                                            'amount': priceController.text.trim(),
-                                            'estimated_time': finalTime,
-                                            'service_type': serviceType
-                                          },
-                                        );
-                                        _showTopSnackBar("Teklifiniz başarıyla iletildi, müşteriden yanıt bekleniyor.");
+                            Row(
+                              children: [
+                                Expanded(
+                                  flex: 1,
+                                  child: Container(
+                                    height: 54,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(22),
+                                      color: pureBlack,
+                                      border: Border.all(color: alertRed.withValues(alpha: 0.6), width: 1.5)
+                                    ),
+                                    child: ElevatedButton(
+                                      onPressed: isSubmitting ? null : () async {
+                                        HapticFeedback.heavyImpact();
+                                        _suspendedJobs.remove(jobId);
+                                        
+                                        // Eğer backend tarafında da işin reddedildiğini bildiren bir endpoint'iniz varsa burayı aktifleştirebilirsiniz:
+                                        // try {
+                                        //   await _httpClient.post(Uri.parse("$baseUrl?action=reject_bid"), body: {"job_id": jobId.toString(), "provider_id": widget.providerId.toString()});
+                                        // } catch (e) {}
+                                        
+                                        if (context.mounted) {
+                                          Navigator.pop(context);
+                                          _showTopSnackBar("İşlem reddedildi. Yeni çağrılar bekleniyor.", isError: true);
+                                        }
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.transparent,
+                                        shadowColor: Colors.transparent,
+                                        padding: EdgeInsets.zero,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))
+                                      ),
+                                      child: Text("Vazgeç", style: TextStyle(color: alertRed, fontSize: isSmallScreen ? 13 : 15, fontWeight: FontWeight.w900)),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  flex: 2,
+                                  child: Container(
+                                    height: 54,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(22),
+                                      color: neonGreen,
+                                      boxShadow: [BoxShadow(color: neonGreen.withValues(alpha: 0.4), blurRadius: 20, offset: const Offset(0, 6))]
+                                    ),
+                                    child: ElevatedButton(
+                                      onPressed: isSubmitting ? null : () async {
+                                        if (priceController.text.isEmpty) {
+                                          _showTopSnackBar("Lütfen geçerli bir fiyat teklifi girin.", isError: true);
+                                          return;
+                                        }
+                                        
+                                        setDialogState(() => isSubmitting = true);
+                                        
+                                        String finalTime = autoTimeStr;
+                                        String actionType = bidHistory.isEmpty ? "place_bid" : "counter_bid";
+                                        Map<String, String> requestBody = {
+                                          "job_id": jobId.toString(),
+                                          "provider_id": widget.providerId.toString(),
+                                          "amount": priceController.text.trim(),
+                                          "estimated_time": finalTime, 
+                                          "user_type": "provider", 
+                                        };
+                                        
+                                        if (bidHistory.isNotEmpty) {
+                                          requestBody["bid_id"] = bidHistory.last["bid_id"].toString();
+                                        }
                                         
                                         try {
-                                          FirebaseAnalytics.instance.logEvent(
-                                            name: 'provider_bid_placed',
-                                            parameters: {'amount': priceController.text.trim()},
-                                          );
-                                        } catch(e) {}
-                                        
-                                        _lastBidPrice = priceController.text.trim();
+                                          final response = await _httpClient.post(
+                                            Uri.parse("$baseUrl?action=$actionType"),
+                                            headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                                            body: requestBody,
+                                          ).timeout(_apiTimeout);
 
-                                        // Dynamic Island: Teklif Verildi / İnceleme Takibi Başlatıldı
-                                        LiveActivityService().startOfferTracking(
-                                          offerId: jobId.toString(),
-                                          customerName: "$serviceName Talebi",
-                                          offerAmount: "${priceController.text.trim()} ₺",
-                                          statusText: "Müşteri teklifinizi inceliyor",
-                                        );
-                                        
-                                        if (_isModalOpen) {
-                                          setDialogState(() {
-                                            isSubmitting = false;
-                                            bidHistory.add({
-                                              "bid_id": requestBody["bid_id"] ?? "",
-                                              "price": priceController.text.trim(),
-                                              "time": finalTime,
-                                              "is_mine": true,
-                                              "status": "Müşteri Onayı Bekleniyor..."
-                                            });
-                                            priceController.clear();
-                                          });
-                                          scrollToBottom();
+                                          final data = json.decode(response.body);
+                                          
+                                          if (mounted) {
+                                            if (data['status'] == 'success') {
+                                              _sendTelemetry(
+                                                eventType: 'button_click',
+                                                eventName: 'usta_teklif_gonderdi',
+                                                meta: {
+                                                  'job_id': jobId,
+                                                  'amount': priceController.text.trim(),
+                                                  'estimated_time': finalTime,
+                                                  'service_type': serviceType
+                                                },
+                                              );
+                                              _showTopSnackBar("Teklifiniz başarıyla iletildi, müşteriden yanıt bekleniyor.");
+                                              
+                                              try {
+                                                FirebaseAnalytics.instance.logEvent(
+                                                  name: 'provider_bid_placed',
+                                                  parameters: {'amount': priceController.text.trim()},
+                                                );
+                                              } catch(e) {}
+                                              
+                                              _lastBidPrice = priceController.text.trim();
+
+                                              LiveActivityService().startOfferTracking(
+                                                offerId: jobId.toString(),
+                                                customerName: "$serviceName Talebi",
+                                                offerAmount: "${priceController.text.trim()} ₺",
+                                                statusText: "Müşteri teklifinizi inceliyor",
+                                              );
+                                              
+                                              if (_isModalOpen) {
+                                                setDialogState(() {
+                                                  isSubmitting = false;
+                                                  bidHistory = [{
+                                                    "bid_id": requestBody["bid_id"] ?? "",
+                                                    "price": priceController.text.trim(),
+                                                    "time": finalTime,
+                                                    "is_mine": true,
+                                                    "status": "Müşteri Onayı Bekleniyor..."
+                                                  }];
+                                                  priceController.clear();
+                                                });
+                                                scrollToBottom();
+                                              }
+                                              _checkActiveJob(); 
+
+                                            } else {
+                                              if (_isModalOpen) setDialogState(() => isSubmitting = false);
+                                              _showTopSnackBar(data['message'] ?? "İşlem başarısız, müşteri iptal etmiş olabilir.", isError: true);
+                                            }
+                                          }
+                                        } catch (e) {
+                                          if (_isModalOpen) setDialogState(() => isSubmitting = false);
+                                          if (mounted) _showTopSnackBar("Bağlantı hatası oluştu.", isError: true);
                                         }
-                                        _checkActiveJob(); 
-
-                                      } else {
-                                        if (_isModalOpen) setDialogState(() => isSubmitting = false);
-                                        _showTopSnackBar(data['message'] ?? "İşlem başarısız, müşteri iptal etmiş olabilir.", isError: true);
-                                      }
-                                    }
-                                  } catch (e) {
-                                    if (_isModalOpen) setDialogState(() => isSubmitting = false);
-                                    if (mounted) _showTopSnackBar("Bağlantı hatası oluştu.", isError: true);
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.transparent,
-                                  shadowColor: Colors.transparent,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))
-                                ),
-                                child: isSubmitting 
-                                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 3.5))
-                                    : Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          const Icon(Icons.send_rounded, color: pureBlack, size: 20),
-                                          const SizedBox(width: 10),
-                                          Text("Teklifi İlet", style: TextStyle(color: pureBlack, fontSize: isSmallScreen ? 14 : 16, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-                                        ],
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.transparent,
+                                        shadowColor: Colors.transparent,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))
                                       ),
-                              ),
+                                      child: isSubmitting 
+                                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 3.5))
+                                          : Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                const Icon(Icons.send_rounded, color: pureBlack, size: 20),
+                                                const SizedBox(width: 10),
+                                                Text("Teklifi İlet", style: TextStyle(color: pureBlack, fontSize: isSmallScreen ? 14 : 16, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                                              ],
+                                            ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),

@@ -32,3 +32,9 @@ Runner/GeneratedPluginRegistrant.*
 !default.mode2v3
 !default.pbxuser
 !default.perspectivev3
+
+# Xcode paylasilan sema ve proje ayarlari istisnalari (Codemagic build icin zorunlu)
+!**/xcshareddata/
+!**/xcschemes/
+!**/xcschemes/*.xcscheme
+!Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme

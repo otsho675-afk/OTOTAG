@@ -14,6 +14,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'diagnostic_screen.dart';
 
 final NotificationHelper notificationHelper = NotificationHelper();
 
@@ -805,6 +806,69 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
     );
   }
 
+  Widget _buildDiagnosticBanner() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.mediumImpact();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DiagnosticScreen(
+                userType: 'customer',
+                vehiclePlate: currentVehicleData['plate']?.toString(),
+                vehicleModel: currentVehicleData['brand_model']?.toString(),
+              ),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(22),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [const Color(0xFF161822), const Color(0xFF00E5FF).withValues(alpha: 0.1)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: const Color(0xFF00E5FF).withValues(alpha: 0.35), width: 1.5),
+            boxShadow: [
+              BoxShadow(color: const Color(0xFF00E5FF).withValues(alpha: 0.1), blurRadius: 16, offset: const Offset(0, 4)),
+              BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 10, offset: const Offset(0, 4)),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00E5FF).withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFF00E5FF).withValues(alpha: 0.3)),
+                ),
+                child: const Icon(Icons.car_crash_rounded, color: Color(0xFF00E5FF), size: 24),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Arıza Teşhisi & OBD-II Rehberi", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: -0.3)),
+                    SizedBox(height: 3),
+                    Text("Hata kodu sorgula veya şikayetini yapay zekaya anlat", style: TextStyle(color: Colors.white60, fontSize: 11.5, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF00E5FF), size: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildVerticalSummary() {
     final int cKm = int.tryParse(currentVehicleData['current_km']?.toString() ?? '0') ?? 0;
     final int mKm = int.tryParse(currentVehicleData['maintenance_km']?.toString() ?? '10000') ?? 10000;
@@ -1285,6 +1349,8 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen> with TickerProv
                                       children: [
                                         const SizedBox(height: 8),
                                         _buildExpenseCards(),
+                                        const SizedBox(height: 6),
+                                        _buildDiagnosticBanner(),
                                         const SizedBox(height: 10),
                                         _buildVerticalSummary(),
                                         Padding(

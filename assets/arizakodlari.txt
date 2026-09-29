@@ -1,0 +1,3464 @@
+P0000	ISO / SAE Saklıdır
+P0001	Yakıt Hacmi Regülatörü Kontrol Devresi / Açık
+P0002	Yakıt Hacmi Regülatörü Kontrol Devresi Aralığı / Performansı
+P0003	Yakıt Hacmi Regülatörü Kontrol Devresi Düşük
+P0004	Yakıt Hacmi Regülatörü Kontrol Devresi Yüksek
+P0005	Yakıt Kapatma Valfı “A” Kontrol Devresi / Açık
+P0006	Yakıt Kapatma Valfı “A” Kontrol Devresi Düşük
+P0007	Yakıt Kapatma Valfı “A” Kontrol Devresi Yüksek
+P0008	Motor Konumları Sistemi Performans Bank 1
+P0009	Motor Konum Sistemi Performans Bank 2
+P000A	“A” Eksantrik Mili Pozisyonu Yavaş Tepki Bank 1
+P000B	“B” Eksantrik Mili Konum Yavaş Tepki Bank 1
+P000C	“A” Eksantrik Mili Pozisyonu Yavaş Tepki Bank 2
+P000D	“B” Eksantrik Mili Pozisyonu Yavaş Tepki Bank 2
+P0010	“A” Eksantrik Mili Konum Ayar Elemanı Devresi (Sıra 1)
+P0011	“A” Eksantrik Mili Konumu – Aşırı Gelişmiş veya Sistem Performansı(Sıra 1)
+P0012	“A” Eksantrik Mili Konumu – Aşırı Gecikmeli Zamanlama (Sıra 1)
+P0013	“B” Eksantrik Mili Konumu – Aktüatör Devresi (Sıra 1)
+P0014	“B” Eksantrik Mili Konumu – Aşırı Gelişmiş veya Sistem Performansı(Sıra 1)
+P0015	“B” Eksantrik Mili Konumunun Aşırı Gecikmeli Zamanlanması (Sıra 1)
+P0016	Krank Mili Konumu – Eksantrik Mili Konumu Korelasyonu (Sıra 1 SensörA)
+P0017	Krank Mili Konumu – Eksantrik Mili Konumu Korelasyonu (Sıra 1 SensörB)
+P0018	Krank Mili Konumu – Eksantrik Mili Konumu Korelasyonu (Sıra 2 SensörA)
+P0019	Krank Mili Konumu – Eksantrik Mili Konumu İlişkisi (Sıra 2 SensörB)
+P0020	“A” Eksantrik Mili Konum Ayar Elemanı Devresi (Sıra 2)
+P0021	“A” Eksantrik Mili Konumu – Zaman Aşırı Gelişmiş veya Sistem Performansı (Sıra 2)
+P0022	“A” Eksantrik Mili Konumu – Aşırı Gecikmeli Zamanlama (Sıra 2)
+P0023	“B” Eksantrik Mili Konumu – Aktüatör Devresi (Sıra 2)
+P0024	“B” Eksantrik Mili Konumu – Aşırı Gelişmiş veya Sistem Performansı(Sıra 2)
+P0025	“B” Eksantrik Mili Konumu – Aşırı Gecikmeli Zamanlama (Sıra 2)
+P0026	Emme Valf Kontrol Solenoidi Devresi Menzili / Performans Sıra 1
+P0027	Egzoz Valf Kontrol Solenoidi Devresi Menzili / Performans Sıra 1
+P0028	Giriş valfi Kontrol Solenoidi Devresi Menzili / Performans Sıra 2
+P0029	Egzoz Valf Kontrol Solenoidi Devresi Menzili / Performans Sıra 2
+P0030	HO2S Isıtıcı Kontrol Devresi (Sıra 1 Sensör 1)
+P0031	HO2S Isıtıcı Kontrol Devresi Düşük (Sıra 1 Sensör 1)
+P0032	HO2S Isıtıcı Kontrol Devresi Yüksek (Sıra 1 Sensör 1)
+P0033	Turbo Şarj Cihazı Baypas Valf Kontrol Devresi
+P0034	Turbo Şarj Cihazı Baypas Valf Kontrol Devresi Düşük
+P0035	Turbo Şarj Cihazı Baypas Valf Kontrol Devresi Yüksek
+P0036	HO2S Isıtıcı Kontrol Devresi (Sıra 1 Sensör 2)
+P0037	HO2S Isıtıcı Kontrol Devresi Düşük (Sıra 1 Sensör 2)
+P0038	HO2S Isıtıcı Kontrol Devresi Yüksek (Sıra 1 Sensör 2)
+P0039	Turbo / Süper Şarj Cihazı Baypas Valf Kontrol Devresi Aralığı / Performansı
+P0040	Upstream Oksijen Sensörleri Bankdan Bankya Geçti
+P0041	Downstream Oksijen Sensörleri Bankdan Bankya Geçti
+P0042	HO2S Isıtıcı Kontrol Devresi (Sıra 1 Sensör 3)
+P0043	HO2S Isıtıcı Kontrol Devresi Düşük (Sıra 1 Sensör 3)
+P0044	HO2S Isıtıcı Kontrol Devresi Yüksek (Sıra 1 Sensör 3)
+P0045	Turboşarj / Aşırı Yükleyici Boost Kontrolü “A” Devresi / Açık
+P0046	Turbo / Supercharger Boost Kontrolü “A” Devre Menzili / Performansı
+P0047	Turbo Şarjı / Süper Şarj Takviyesi Yükseltme Kontrolü “A” DevresiDüşük
+P0048	Turbo / Supercharger Boost Kontrolü “A” Devresi Yüksek
+P0049	Turbo / Supercharger Türbin Aşırı Hızı
+P004A	Turbo Şarjı / Süper Şarj Takviye Boost Kontrolü “B” Devresi / Açık
+P004B	Turboşarj / Süper Şarj Takviye Boost Kontrolü “B” Devre Menzili /Performansı P004C Turbo / Supercharger Boost Kontrolü “B” Devresi Düşük
+P004C	TurboŞarj / SüperŞarj Takviye Kontrolü B Devresi Düşük
+P004D	Turbo / Supercharger Boost Kontrolü “B” Devresi Yüksek
+P004E	Turbo / Supercharger Boost Kontrolü “A” Devre Kesintili / Düzensiz
+P004F	Turbo / Supercharger Boost Kontrolü “B” Devresi Aralıklı / Düzensiz
+P0050	HO2S Isıtıcı Kontrol Devresi (Sıra 2 Sensör 1)
+P0051	HO2S Isıtıcı Kontrol Devresi Düşük (Sıra 2 Sensör 1)
+P0052	HO2S Isıtıcı Kontrol Devresi Yüksek (Sıra 2 Sensör 1)
+P0053	HO2S Isıtıcı Direnci (Sıra 1, Sensör 1)
+P0054	HO2S Isıtıcı Direnci (Sıra 1, Sensör 2)
+P0055	HO2S Isıtıcı Direnci (Sıra 1, Sensör 3)
+P0056	HO2S Isıtıcı Kontrol Devresi (Sıra 2 Sensör 2)
+P0057	HO2S Isıtıcı Kontrol Devresi Düşük (Sıra 2 Sensör 2)
+P0058	HO2S Isıtıcı Kontrol Devresi Yüksek (Sıra 2 Sensör 2)
+P0059	HO2S Isıtıcı Direnci (Sıra 2, Sensör 1)
+P0060	HO2S Isıtıcı Direnci (Sıra 2, Sensör 2) P0061 HO2S Isıtıcı Direnci(Sıra 2, Sensör 3)
+P0061	H02S Isıtıcı Rezistansı (Sıra 2 Sensör 3)
+P0062	HO2S Isıtıcı Kontrol Devresi (Sıra 2 Sensör 3)
+P0063	HO2S Isıtıcı Kontrol Devresi Düşük (Sıra 2 Sensör 3)
+P0064	HO2S Isıtıcı Kontrol Devresi Yüksek (Sıra 2 Sensör 3)
+P0065	Hava Destekli Enjektör Kontrol Aralığı / Performansı
+P0066	Hava Destekli Enjektör Kontrol Devresi veya Düşük Devre
+P0067	Hava Destekli Enjektör Kontrol Devresi Yüksek
+P0068	MAP / MAF – Gaz Kelebeği Konum İlişkisi
+P0069	Manifold Mutlak Basıncı – Barometrik Basınç Korelasyonu
+P006A	MAP – Kütle veya Hacim Hava Akışı Korelasyon Bank 1
+P006B	MAP – Egzoz Basıncı Korelasyonu
+P006C	MAP – Turboşarj / Süperşarjör Giriş Basıncı Korelasyonu
+P006D	Barometrik Basınç – Turboşarj / Supercharger Giriş Basıncı Korelasyonu
+P0070	Ortam Hava Sıcaklığı Sensörü Devresi
+P0071	Ortam Hava Sıcaklığı Sensörü Menzili / Performansı
+P0072	Ortam Hava Sıcaklığı Sensörü Devresi Düşük Giriş
+P0073	Ortam Hava Sıcaklığı Sensörü Devresi Yüksek Giriş
+P0074	Ortam Hava Sıcaklığı Sensörü Devresi Aralıklı
+P0075	Emme Valf Kontrol Solenoidi Devresi (Sıra 1)
+P0076	Emme Valf Kontrol Solenoidi Devresi Düşük (Sıra 1)
+P0077	Emme Valfi Kontrol Solenoidi Devresi Yüksek (Sıra 1)
+P0078	Egzoz Valf Kontrol Solenoidi Devresi (Sıra 1)
+P0079	Egzoz Valf Kontrol Solenoidi Devresi Düşük (Sıra 1)
+P007F	Şarj Hava Soğutucu Sıcaklık Sensörü Bank1 / Bank2 Korelasyonu
+P0080	Egzoz Valfi Kontrol Solenoidi Devresi Yüksek (Sıra 1)
+P0081	Giriş valfi Kontrol Solenoidi Devresi (Sıra 2)
+P0082	Emme Valf Kontrol Solenoidi Devresi Düşük (Sıra 2)
+P0083	Emme Valf Kontrol Solenoidi Devresi Yüksek (Sıra 2)
+P0084	Egzoz Valf Kontrol Solenoidi Devresi (Sıra 2)
+P0085	Egzoz Valf Kontrol Solenoidi Devresi Düşük (Sıra 2)
+P0086	Egzoz Valfi Kontrol Solenoidi Devresi Yüksek (Sıra 2)
+P0087	Yakıt Rayı / Sistem Basıncı – Çok Düşük
+P0088	Yakıt Rayı / Sistem Basıncı – Çok Yüksek
+P0089	Yakıt Basınç Regülatörü 1 Performansı
+P008A	Düşük Basınçlı Yakıt Sistemi Basıncı – Çok Düşük
+P008B	Düşük Basınçlı Yakıt Sistemi Basıncı – Çok Yüksek
+P008C	Yakıt Soğutucu Pompası Kontrol Devresi Açık
+P008D	Yakıt Soğutucu Pompası Kontrol Devresi Düşük
+P008E	Yakıt Soğutucu Pompası Kontrol Devresi Yüksek
+P008F	Motor Soğutucu Sıcaklığı / Yakıt Sıcaklığı Korelasyonu
+P0090	Yakıt Basınç Regülatörü 1 Kontrol Devresi
+P0091	Yakıt Basınç Regülatörü 1 Kontrol Devresi Düşük
+P0092	Yakıt Basınç Regülatörü 1 Kontrol Devresi Yüksek
+P0093	Yakıt Sistemi Sızıntısı Tespit Edildi – Büyük Sızıntı
+P0094	Yakıt Sistemi Sızıntısı Tespit Edildi – Küçük Sızıntı
+P0095	Emme Havası Sıcaklık Sensörü 2 Devre Sıra 1
+P0096	Emme Havası Sıcaklık Sensörü 2 Devre Menzili / Performans Sıra 1
+P0097	Emme Havası Sıcaklık Sensörü 2 Devresi Düşük Sıra 1
+P0098	Emme Havası Sıcaklık Sensörü 2 Devresi Yüksek Sıra 1
+P0099	Emme Havası Sıcaklık Sensörü 2 Devresi Aralıklı / Düzensiz Sıra 1
+P009A	Emme Havası Sıcaklığı / Ortam Hava Sıcaklığı Korelasyonu
+P009C	Yakıt Basıncı Tahliye Kontrol Devresi Düşük
+P00A9	Emme Havası Sıcaklık Sensörü 2 Devresi Aralıklı / Düzensiz Sıra 2
+P00AE	Emme Havası Sıcaklık Sensörü 1 Devresi Aralıklı / Düzensiz Sıra 2
+P00B1	Radyatör Soğutucu Sıcaklık Sensörü Devresi
+P00B2	Radyatör Soğutucu Sıcaklık Sensörü Devresi Menzili / Performansı
+P00B3	Radyatör Soğutucu Sıcaklık Sensörü Devresi Düşük
+P00B4	Radyatör Soğutucu Sıcaklık Sensörü Devresi Yüksek
+P00B5	Radyatör Soğutucu Sıcaklık Sensörü Devresi Aralıklı / Düzensiz
+P00B6	Radyatör Soğutucu Sıcaklığı / Motor Soğutucu Sıcaklığı Korelasyonu
+P00B7	Motor Soğutucu Akışı Düşük / Performans
+P00B8	MAP – Kütle veya Hacim Hava Akış Korelasyonu Sıra 2
+P00B9	Düşük Basınçlı Yakıt Sistemi Basıncı – Çok Düşük, Düşük Ortam Sıcaklığı
+P00BA	Düşük Yakıt Basıncı – Zorla Sınırlı Güç
+P00BB	Yakıt Enjektörü Yetersiz Akış – Zorunlu Sınırlı Güç
+P00C0	– P00FF ISO / SAE Saklıdır
+P0100	KÜTLE HAVA AKIŞ DEVRE ARIZASI
+P0101	KÜTLE HAVA AKIŞ DEVRE SINIRI / PERFORMANS SORUNU
+P0102	MAF DEVRE DÜŞÜK GİRİŞİ
+P0103	MAF DEVRE YÜKSEK GİRİŞİ
+P0104	MAF DEVRE ARALIĞI
+P0105	MAP/BP DEVRE ARIZASI
+P0106	MAP/BP SENSOR SINIRI/PERFORMANS SORUNU
+P0107	MAP/BP SENSOR DÜŞÜK GİRİŞİ
+P0108	MAP/BP SENSOR YÜKSEK GİRİŞİ
+P0109	MAP/BP DEVRE ARALIKLARI
+P010A	Kütle Hava Akışı Düşük B Devresi
+P010B	Kütle Hava Akışı Düşük B Devresi Aralıklı / Düzensiz / Performansı
+P010C	Kütle Hava Akışı Düşük B Devresi Düşük
+P010D	Kütle Hava Akışı Düşük B Devresi Yüksek
+P010E	Kütle Hava Akışı Düşük B Devresi Aralıklı / Düzensiz
+P010F	Kütle veya Toplu Hava Akış Sensörü A / B korelasyon
+P0110	İAT DEVRE ARIZASI
+P0111	İAT DEVRE SINIRI /PERFORMANS SORUNU
+P0112	İAT DEVRE DÜŞÜK GİRİŞİ
+P0113	İAT DEVRE YÜKSEK GİRİŞİ
+P0114	İAT DEVRE ARALIKLARI
+P0115	ECT DEVRE ARIZASI
+P0116	ECT DEVRE SINIRI /PERFORMANS SORUNU
+P0117	ECT DEVRE DÜŞÜK GİRİŞİ
+P0118	ECT DEVRE YÜKSEK GİRİŞİ
+P0119	ECT DEVRE ARALIKLARI
+P011A	Motor Soğutucu Sıcaklık Sensörü 1/2 Korelasyon
+P0120	TP SENSOR A DEVRE ARIZASI
+P0121	TP SENSOR A SINIRI /PERFORMANS SORUNU
+P0122	TP SENSOR A DÜŞÜK GİRİŞ
+P0123	TP SENSOR A YÜKSEK GİRİŞ
+P0124	TP SENSOR A DEVRE ARALIKLARI
+P0125	KAPALİDEVRE YAKIT KONTROLÜ İÇİN YETERSİZ SOĞUTMA SIVISI ISISI
+P0126	SABİT ÇALIŞMA İÇİN YETERSİZ SOĞUTMA SIVISI ISISI
+P0127	Emme Manifolt Hava Sıcaklığı Çok Yüksek
+P0128	SOĞUTMA SIVISI TERMOSTAT ARIZASI
+P0129	Barometrik Basınç Çok Düşük
+P012A	Turbo / Supercharger Giriş Basıncı Sensörü Devresi (gaz vanasının Mansap)
+P012B	(Gaz vanasının Mansap) Turbo / Supercharger Giriş Basıncı Sensörü Devre Aralığı / Performans
+P012C	Turbo / Supercharger Giriş Basıncı Sensörü Devresi Düşük (gaz vanasının Mansap)
+P012D	Turbo / Supercharger Giriş Basıncı Sensörü Devresi Yüksek (gaz vanasının Mansap)
+P012E	Turbo / Supercharger Giriş Basıncı Sensörü Devre Aralıklı / Düzensiz (gaz vanasının Mansap
+P0130	ISITILMIŞ 02 SENSORU DEVRE ARIZASI (BANK 1, SENSOR 1)
+P0131	ISITILMIŞ 02 SENSORU DÜŞÜK VOLTAJ (BANK 1, SENSOR 1)
+P0132	ISITILMIŞ 02 SENSOR DEVRESİ YÜKSEK VOLTAJ (BANK 1, SENSOR 1)
+P0133	ISITILMIŞ 02 SENSOR DEVRESİ YAVAŞ TEPKİ (BANK 1, SENSOR 1)
+P0134	ISITILMIŞ 02 SENSOR DEVRESİNDE HAREKETLİLİK TESPİT EDİLEMEDİ (BANK1, SENSOR1)
+P0135	ISITILMIŞ 02 SENSOR ISITICI DEVRE ARIZASI (BANK 1, SENSOR 1)
+P0136	ISITILMIŞ 02 SENSOR DEVRESİ ARIZASI (BANK 1, SENSOR 2)
+P0137	ISITILMIŞ 02 SENSOR DEVRESİ DÜŞÜK VOLTAJ (BANK 1, SENSOR 2)
+P0138	ISITILMIŞ 02 SENSOR DEVRESİ YÜKSEK VOLTAJ (BANK 1, SENSOR 2)
+P0139	ISITILMIŞ 02 SENSOR DEVRESİ YAVAŞ TEPKİ (BANK 1, SENSOR 2)
+P013A	O2 Oksijen Sensörü Yavaş Tepki Veriyor - Zengin to Fakir Bank 1 Sensör 2
+P013B	O2 Oksijen Sensörü Yavaş Tepki Veriyor - Fakir to Zengin Bank 1 Sensör 2
+P013C	O2 Oksijen Sensörü Yavaş Tepki Veriyor - Zengin to Fakir Bank 2 Sensör 2
+P013D	O2 Oksijen Sensörü Yavaş Tepki Veriyor - Fakir to Zengin Bank 2 Sensör 2
+P013E	O2 Oksijen Sensörü Gecikmeli Tepki Veriyor - Zengin to Fakir Bank 1 Sensör 2
+P013F	O2 Oksijen Sensörü Gecikmeli Tepki Veriyor - Fakir to Zengin Bank 1 Sensör 2
+P0140	ISITILMIŞ 02 SENSOR DEVRESİ HAREKETLİLİK TESPİT EDİLEMEDİ (BANK 1, SENSOR 2)
+P0141	ISITILMIŞ 02 SENSOR ISITICI DEVRESİ ARIZASI (BANK 1, SENSOR 2)
+P0142	ISITILMIŞ 02 SENSOR DEVRESİ ARIZASI (BANK 1, SENSOR 3)
+P0143	ISITILMIŞ 02 SENSOR DEVRESİ DÜŞÜK VOLTAJ (BANK 1, SENSOR 3)
+P0144	ISITILMIŞ 02 SENSOR DEVRESİ YÜKSEK VOLTAJ (BANK 1, SENSOR 3)
+P0145	ISITILMIŞ 02 SENSOR DEVRESİ YAVAŞ TEPKİ (BANK 1, SENSOR 3)
+P0146	ISITILMIŞ 02 SENSOR DEVRESİ HAREKETLİLİK TESPİT EDİLEMEDİ (BANK 1, SENSOR 3)
+P0147	ISITILMIŞ 02 SENSOR ISITICI DEVRESİ ARIZASI (BANK 1, SENSOR 3)
+P0148	Yakıt Dağıtımında Hata
+P0149	Yakıt Zamanlamasında Hata
+P014A	O2 Sensör Gecikmeli Tepki Veriyor - Zengin to Fakir Bank 2 Sensör 2
+P014B	O2 Sensör Gecikmeli Tepki Veriyor - Fakir to Zengin Bank 2 Sensör 2
+P014C	O2 Sensör Yavaş Tepki Veriyor - Zengin to Fakir Bank 1 Sensör 1
+P014D	O2 Sensör Yavaş Tepki Veriyor - Fakir to Zengin Bank 1 Sensör 1
+P014E	O2 Sensör Yavaş Tepki Veriyor - Zengin to Fakir Bank 2 Sensör 1
+P014F	O2 Sensör Yavaş Tepki Veriyor - Fakir to Zengin Bank 2 Sensör 1
+P0150	ISITILMIŞ 02 SENSOR DEVRE ARIZASI (BANK 2, SENSOR 1)
+P0151	ISITILMIŞ 02 SENSOR DEVRESİ DÜŞÜK VOLTAJ (BANK 2, SENSOR 1)
+P0152	ISITILMIŞ 02 SENSOR DEVRESİ YÜKSEK VOLTAJ (BANK 2, SENSOR 1)
+P0153	ISITILMIŞ 02 SENSOR DEVRESİ YAVAŞ TEPKİ (BANK 2, SENSOR 1)
+P0154	ISITILMIŞ 02 SENSOR DEVRESİ HAREKETLİLİK TESPİT EDİLMEDİ (BANK 2, SENSOR 1)
+P0155	ISITILMIŞ 02 SENSOR ISITICI DEVRESİ ARIZASI (BANK 2, SENSOR 1)
+P0156	ISITILMIŞ 02 SENSOR DEVRE ARIZASI (BANK 2, SENSOR 1)
+P0157	ISITILMIŞ 02 SENSOR DEVRESİ DÜŞÜK VOLTAJ (BANK 2, SENSOR 2)
+P0158	ISITILMIŞ 02 SENSOR DEVRESİ YÜKSEK VOLTAJ (BANK 2, SENSOR 2)
+P0159	ISITILMIŞ 02 SENSOR DEVRESİ YAVAŞ TEPKİ (BANK 2, SENSOR 2)
+P015A	O2 Oksijen Sensörü Gecikmeli Tepki Veriyor - Zengin to Fakir Bank 1 Sensör 1
+P015B	O2 Oksijen Sensörü Gecikmeli Tepki Veriyor - Fakir to Zengin Bank 1 Sensör 1
+P015C	O2 Oksijen Sensörü Gecikmeli Tepki Veriyor - Zengin to Fakir Bank 2 Sensör 1
+P015D	O2 Oksijen Sensörü Gecikmeli Tepki Veriyor - Fakir to Zengin Bank 2 Sensör 1
+P0160	ISITILMIŞ 02 SENSOR DEVRESİ HAREKETLİLİK TESPİT EDİLEMEDİ (BANK 2, SENSOR 2)
+P0161	ISITILMIŞ 02 SENSOR ISITICI DEVRESİ ARIZASI (BANK 2, SENSOR 2)
+P0162	02 Sensör Devresi (Sıra 2 Sensör 3)
+P0163	02 Sensör Devresi Düşük Voltaj (Sıra 2 Sensör 3)
+P0164	02 Sensör Devresi Düşük Voltaj (Sıra 2 Sensör 3)
+P0165	02 Sensör Devresi Yavaş Çalışma (Sıra 2 Sensör 3)
+P0166	02 Sensör Devresi Çalışmama Tespit Edildi
+P0167	02 Sensör Isıtıcı Devresi (Sıra 2 Sensör 3)
+P0168	Yakıt Isısı Çok Yüksek
+P0169	Yanlış Yakıt Düzenlemesi
+P0170	YAKIT AYAR ARIZASI (BANK 1)
+P0171	SİSTEM ÇOK ZAYIF (BANK 1)
+P0172	SİSTEM ÇOK ZENGİN (BANK 1)
+P0173	YAKIT AYAR ARIZASI (BANK 2)
+P0174	SİSTEM ÇOK ZAYIF (BANK 2)
+P0175	SİSTEM ÇOK ZENGİN (BANK 2)
+P0176	YAKIT KARIŞIM SENSOR DEVRE ARIZASI
+P0177	YAKIT KARIŞIM SENSOR DEVRE SINIRI/PERFORMANSI
+P0178	YAKIT KARIŞIM SENSOR DEVRESİ DÜŞÜK GİRİŞİ
+P0179	YAKIT KARIŞIM SENSOR DEVRESİ YÜKSEK GİRİŞİ
+P0180	YAKIT İŞİ SENSORU A DEVRESİ ARIZASI
+P0181	YAKIT İŞİ SENSORU A DEVRESİ SINIRI/PERFORMANSI
+P0182	YAKIT İŞİ SENSORU A DEVRESİ DÜŞÜK GİRİŞİ
+P0183	YAKIT İŞİ SENSORU A DEVRESİ YÜKSEK GİRİŞİ
+P0184	YAKIT İŞİ SENSORU A DEVRESİ ARALIKLARI
+P0185	YAKIT İŞİ SENSORU B DEVRESİ ARIZASI
+P0186	YAKIT İŞİ SENSORU B DEVRESİ SINIRI/PERFORMANSI ARIZASI
+P0187	YAKIT İŞİ SENSORU B DEVRESİ DÜŞÜK GİRİŞ
+P0188	YAKIT İŞİ SENSORU B DEVRESİ YÜKSEK GİRİŞ
+P0189	YAKIT İŞİ SENSORU B DEVRESİ ARALIKLARI
+P018A	Yakıt Basınç Sensörü Devresi B
+P018B	Yakıt Basınç Sensörü B Devre Menzili / Performansı
+P018C	Yakıt Basınç Sensörü B Devresi Düşük
+P018D	Yakıt Basınç Sensörü B Devresi Yüksek
+P018E	Yakıt Basınç Sensörü B Devresi Aralıklı / Düzensiz
+P0190	YAKIT HATTI BASINÇ SENSOR DEVRE ARIZASI
+P0191	YAKIT HATTI BASINÇ SENSOR DEVRE SINIRI/PERFORMANSI
+P0192	YAKIT HATTI BASINÇ SENSOR DEVRE DÜŞÜK GİRİŞİ
+P0193	YAKIT HATTI BASINÇ SENSOR DEVRE YÜKSEK GİRİŞİ
+P0194	Yakıt Rail Basınç Sensör Devrede Kesiklik
+P0195	MOTOR YAĞI İŞİ SENSORU DEVRE ARIZASI
+P0196	MOTOR YAĞI İŞİ SENSORU SINIRI/PERFORMANSI
+P0197	MOTOR YAĞI İŞİ SENSORU DÜŞÜK
+P0198	MOTOR YAĞI İŞİ SENSORU YÜKSEK
+P0199	MOTOR YAĞI İŞİ SENSORU ARALIKLARI
+P0200	ENJEKTÖR DEVRE ARIZASI
+P0201	ENJEKTÖR DEVRE ARIZASI-SİLİNDİR #1
+P0202	ENJEKTÖR DEVRE ARIZASI-SİLİNDİR #2
+P0203	ENJEKTÖR DEVRE ARIZASI-SİLİNDİR #3
+P0204	ENJEKTÖR DEVRE ARIZASI-SİLİNDİR #4
+P0205	ENJEKTÖR DEVRE ARIZASI-SİLİNDİR #5
+P0206	ENJEKTÖR DEVRE ARIZASI-SİLİNDİR #6
+P0207	ENJEKTÖR DEVRE ARIZASI-SİLİNDİR #7
+P0208	ENJEKTÖR DEVRE ARIZASI-SİLİNDİR #8
+P0209	ENJEKTÖR DEVRE ARIZASI-SİLİNDİR #9
+P020A	Silindir 1 Enjeksiyon Zamanlama
+P020B	Silindir 2 Enjeksiyon Zamanlama
+P020C	Silindir 3 Enjeksiyon Zamanlama
+P020D	Silindir 4 Enjeksiyon Zamanlama
+P020E	Silindir 5 Enjeksiyon Zamanlama
+P020F	Silindir 6 Enjeksiyon Zamanlama
+P0210	ENJEKTÖR DEVRE ARIZASI-SİLİNDİR #10
+P0211	ENJEKTÖR DEVRE ARIZASI-SİLİNDİR #11
+P0212	ENJEKTÖR DEVRE ARIZASI-SİLİNDİR #12
+P0213	SOĞUK ÇALIŞTIRMA ENJEKTÖRÜ #1 ARIZA
+P0214	SOĞUK ÇALIŞTIRMA ENJEKTÖRÜ #2 ARIZA
+P0215	MOTOR DURDURMA SELENOİD ARIZASI
+P0216	ENJEKSİYON ZAMANLAMA KONTROL DEVRESİ ARIZASI
+P0217	MOTOR AŞIRI HARARET DURUMU
+P0218	ŞANZIMAN AŞIRI HARARET DURUMU
+P0219	MOTOR AŞIRI HIZ DURUMU
+P021A	Silindir 7 Enjeksiyon Zamanlama
+P021B	Silindir 8 Enjeksiyon Zamanlama
+P021C	Silindir 9 Enjeksiyon Zamanlama
+P021D	Silindir 10 Enjeksiyon Zamanlama
+P021E	Silindir 11 Enjeksiyon Zamanlama
+P021F	Silindir 12 Enjeksiyon Zamanlama
+P0220	GAZ / PEDAL YERİ SENSOR / DÜĞME B DEVRESİ ARIZASI
+P0221	GAZ / PEDAL YERİ SENSOR / DÜĞME B PERFORMANS SORUNU
+P0222	GAZ YERİNİN SENSORU B DEVRESİ DÜŞÜK GİRİŞİ
+P0223	GAZ YERİNİN SENSORU B DEVRESİ YÜKSEK GİRİŞİ
+P0224	GAZ YERİNİN SENSORU B ARALIKLARI
+P0225	GAZ YERİNİN SENSORU C DEVRESİ ARIZASI
+P0226	Kelebek/Pedal Pozisyon Sensörü/Swiçi C Devresi Oranı/ Performansı
+P0227	GAZ YERİNİN SENSORU C DEVRESİ DÜŞÜK GİRİŞİ
+P0228	GAZ YERİNİN SENSORU C DEVRESİ YÜKSE GİRİŞİ
+P0229	GAZ YERİNİN SENSORU C ARALIKLARI
+P022A	Şarj Hava Soğutucu Baypas Kontrolü A Devresi / Açık
+P022B	Şarj Hava Soğutucu Baypas Kontrolü Devresi Düşük
+P022C	Şarj Hava Soğutucu Baypas Kontrolü Devresi Yüksek
+P022D	Şarj Hava Soğutucu Baypas Kontrolü B Devresi / Açık
+P022E	Şarj Hava Soğutucu Baypas Kontrolü B Devresi Düşük
+P022F	Şarj Hava Soğutucu Baypas Kontrolü B Devresi Yüksek
+P0230	YAKIT POMPASI BİRİNCİL DEVRE ARIZASI
+P0231	YAKIT POMPASI İKİNCİL DEVRESİ DÜŞÜK
+P0232	YAKIT POMPASI İKİNCİL DEVRESİ YÜKSEK
+P0233	YAKIT POMPASI İKİNCİL DEVRESİ ARALIKLARI
+P0234	MOTORUN ÇOK FAZLA ÇALIŞMIŞ DURUMU
+P0235	TURBO ŞARJ DESTEK SENSORU A DEVRE ARIZASI
+P0236	TURBO ŞARJ DESTEK SENSORU A PERFORMANSI
+P0237	TURBO ŞARJ DESTEK SENSORU A DEVRESİ DÜŞÜK
+P0238	TURBO ŞARJ DESTEK SENSORU A DEVRESİ YÜKSEK
+P0239	TURBO ŞARJ DESTEK SENSORU B DEVRE ARIZASI
+P023A	Şarj Hava Soğutucu Soğutucu Pompa Kontrol Devresi / Açık
+P023B	Şarj Hava Soğutucu Soğutucu Pompası Kontrol Devresi Düşük
+P023C	Şarj Hava Soğutucu Soğutucu Pompası Kontrol Devresi Yüksek
+P023D	Manifold Mutlak Basıncı - Turbo / Supercharger Sensörü A Korelasyon Boost
+P023E	Manifold Mutlak Basıncı - Turbo / Supercharger Boost Sensör B İlişkisi
+P0240	TURBO ŞARJ DESTEK SENSORU B DEVRE SINIRI /PERFORMANS
+P0241	TURBO ŞARJ DESTEK SENSORU B DEVRESİ DÜŞÜK
+P0242	TURBO ŞARJ DESTEK SENSORU B DEVRESİ YÜKSEK
+P0243	ATIK KAPISI SELENOİDİ A ARIZALI
+P0244	ATIK KAPISI SELENOİDİ A SINIRI / PERFORMANSI
+P0245	ATIK KAPISI SELENOİDİ A DÜŞÜK
+P0246	ATIK KAPISI SELENOİDİ A YÜKSEK
+P0247	ATIK KAPISI SELENOİDİ B ARIZALI
+P0248	ATIK KAPISI SELENOİDİ B SINIRI / PERFORMANSI
+P0249	ATIK KAPISI SELENOİDİ B DÜŞÜK
+P024A	Şarj Hava Soğutucu Baypas Kontrolü A Aralığı / Performans
+P024B	Şarj Hava Soğutucu Baypas Kontrol A Stuck
+P024C	Şarj Hava Soğutucu Baypas Konum Sensörü A Devresi
+P024D	Şarj Hava Soğutucu Baypas Konum Sensörü A Devre Menzili / Performansı
+P024E	Şarj Hava Soğutucu Baypas Pozisyonu Sensörü Devresi Düşük A
+P024F	Şarj Hava Soğutucu Baypas Konumu Sensörü A Devresi Yüksek
+P0250	ATIK KAPISI SELENOİDİ B YÜKSEK
+P0251	ENJEKSİYON POMPASI YAKIT ÖLÇÜM KONTROL A ARIZASI
+P0252	ENJEKSİYON POMPASI YAKIT ÖLÇÜM KONTROL A SINIRI/PERFORMANSI
+P0253	ENJEKSİYON POMPASI YAKIT ÖLÇÜM KONTROL A DÜŞÜK
+P0254	ENJEKSİYON POMPASI YAKIT ÖLÇÜM KONTROL A YÜKSEK
+P0255	ENJEKSİYON POMPASI YAKIT ÖLÇÜM KONTROL A ARALIKLARI
+P0256	ENJEKSİYON POMPASI YAKIT ÖLÇÜM KONTROL B ARIZASI
+P0257	ENJEKSİYON POMPASI YAKIT ÖLÇÜM KONTROL B SINIRI / PERFORMANSI
+P0258	ENJEKSİYON POMPASI YAKIT ÖLÇÜM KONTROL B DÜŞÜK
+P0259	ENJEKSİYON POMPASI YAKIT ÖLÇÜM KONTROL B YÜKSEK
+P025A	Yakıt Pompası Modülü Kontrol Devresi / Açık
+P025B	Yakıt Pompası Modülü Kontrol Devresi Aralığı / Performans
+P025C	Yakıt Pompası Modülü Kontrol Devresi Düşük
+P025D	Yakıt Pompası Modülü Kontrol Devresi Yüksek
+P0260	ENJEKSİYON POMPASI YAKIT ÖLÇÜM KONTROL B ARALIKLARI
+P0261	ENJEKTÖR DEVRESİ DÜŞÜK-SİLİNDİR #1
+P0262	ENJEKTÖR DEVRESİ YÜKSEK-SİLİNDİR #1
+P0263	SİLİNDİR #1 BALANS HATASI
+P0264	ENJEKTÖR DEVRESİ DÜŞÜK-SİLİNDİR #2
+P0265	ENJEKTÖR DEVRESİ YÜKSEK-SİLİNDİR #2
+P0266	SİLİNDİR #2 BALANS HATASI
+P0267	ENJEKTÖR DEVRESİ DÜŞÜK-SİLİNDİR #3
+P0268	ENJEKTÖR DEVRESİ YÜKSEK-SİLİNDİR #3
+P0269	SİLİNDİR #3 BALANS HATASI
+P0270	ENJEKTÖR DEVRESİ DÜŞÜK-SİLİNDİR #4
+P0271	ENJEKTÖR DEVRESİ YÜKSEK-SİLİNDİR #4
+P0272	SİLİNDİR #4 BALANS HATASI
+P0273	ENJEKTÖR DEVRESİ DÜŞÜK-SİLİNDİR #5
+P0274	ENJEKTÖR DEVRESİ YÜKSEK-SİLİNDİR #5
+P0275	SİLİNDİR #5 BALANS HATASI
+P0276	ENJEKTÖR DEVRESİ DÜŞÜK-SİLİNDİR #6
+P0277	ENJEKTÖR DEVRESİ YÜKSEK-SİLİNDİR #6
+P0278	SİLİNDİR #6 BALANS HATASI
+P0279	ENJEKTÖR DEVRESİ DÜŞÜK-SİLİNDİR #7
+P0280	ENJEKTÖR DEVRESİ YÜKSEK-SİLİNDİR #7
+P0281	SİLİNDİR #7 BALANS HATASI
+P0282	ENJEKTÖR DEVRESİ DÜŞÜK-SİLİNDİR #8
+P0283	ENJEKTÖR DEVRESİ YÜKSEK-SİLİNDİR #8
+P0284	SİLİNDİR #8 BALANS HATASI
+P0285	ENJEKTÖR DEVRESİ DÜŞÜK-SİLİNDİR #9
+P0286	ENJEKTÖR DEVRESİ YÜKSEK-SİLİNDİR #9
+P0287	SİLİNDİR #9 BALANS HATASI
+P0288	ENJEKTÖR DEVRESİ DÜŞÜK-SİLİNDİR #10
+P0289	ENJEKTÖR DEVRESİ YÜKSEK-SİLİNDİR #10
+P0290	SİLİNDİR #10 BALANS HATASI
+P0291	ENJEKTÖR DEVRESİ DÜŞÜK-SİLİNDİR #11
+P0292	ENJEKTÖR DEVRESİ YÜKSEK-SİLİNDİR #11
+P0293	İLİNDİR #11 BALANS HATASI
+P0294	ENJEKTÖR DEVRESİ DÜŞÜK-SİLİNDİR #12
+P0295	ENJEKTÖR DEVRESİ YÜKSEK-SİLİNDİR #12
+P0296	SİLİNDİR #12 BALANS HATASI
+P0297	Araç Aşırı Hız Durumu
+P0298	Motor Yağı Aşırı Sıcak
+P0299	Turbo/Süperşarj Güçaltında
+P029A	Silindir 1 - Yakit Ayarı Maksimum Limitte
+P029B	Silindir 1 - Yakit Ayarı Minimum Limitte
+P029C	Silindir 1 - Enjektör Sorunu
+P029D	Silindir 1 - Enjektör Akıtıyor (Sızıntı)
+P029E	Silindir 2 - Yakit Ayarı Maksimum Limitte
+P029F	Silindir 2 - Yakit Ayarı Minimum Limitte
+P02A0	Silindir 2 - Enjektör Sorunu
+P02A1	Silindir 2 - Enjektör Akıtıyor (Sızıntı)
+P02A2	Silindir 3 - Yakit Ayarı Maksimum Limitte
+P02A3	Silindir 3 - Yakit Ayarı Minimum Limitte
+P02A4	Silindir 3 - Enjektör Sorunu
+P02A5	Silindir 3 - Enjektör Akıtıyor (Sızıntı)
+P02A6	Silindir 4 - Yakit Ayarı Maksimum Limitte
+P02A7	Silindir 4 - Yakit Ayarı Minimum Limitte
+P02A8	Silindir 4 - Enjektör Sorunu
+P02A9	Silindir 4 - Enjektör Akıtıyor (Sızıntı)
+P02AA	Silindir 5 - Yakit Ayarı Maksimum Limitte
+P02AB	Silindir 5 - Yakit Ayarı Minimum Limitte
+P02AC	Silindir 5 - Enjektör Sorunu
+P02AD	Silindir 5 - Enjektör Akıtıyor (Sızıntı)
+P02AE	Silindir 6 - Yakit Ayarı Maksimum Limitte
+P02AF	Silindir 6 - Yakit Ayarı Minimum Limitte
+P02B0	Silindir 6 - Enjektör Sorunu
+P02B1	Silindir 6 - Enjektör Akıtıyor (Sızıntı)
+P02B2	Silindir 7 - Yakit Ayarı Maksimum Limitte
+P02B3	Silindir 7 - Yakit Ayarı Minimum Limitte
+P02B4	Silindir 7 - Enjektör Sorunu
+P02B5	Silindir 7 - Enjektör Akıtıyor (Sızıntı)
+P02B6	Silindir 8 - Yakit Ayarı Maksimum Limitte
+P02B7	Silindir 8 - Yakit Ayarı Minimum Limitte
+P02B8	Silindir 8 - Enjektör Sorunu
+P02B9	Silindir 8 - Enjektör Akıtıyor (Sızıntı)
+P02BA	Silindir 9 - Yakit Ayarı Maksimum Limitte
+P02BB	Silindir 9 - Yakit Ayarı Minimum Limitte
+P02BC	Silindir 9 - Enjektör Sorunu
+P02BD	Silindir 9 - Enjektör Akıtıyor (Sızıntı)
+P02BE	Silindir 10 - Yakit Ayarı Maksimum Limitte
+P02BF	Silindir 10 - Yakit Ayarı Minimum Limitte
+P02C0	Silindir 10 - Enjektör Sorunu
+P02C1	Silindir 10 - Enjektör Akıtıyor (Sızıntı)
+P02C2	Silindir 11 - Yakit Ayarı Maksimum Limitte
+P02C3	Silindir 11 - Yakit Ayarı Minimum Limitte
+P02C4	Silindir 11 - Enjektör Sorunu
+P02C5	Silindir 11 - Enjektör Akıtıyor (Sızıntı)
+P02C6	Silindir 12 - Yakit Ayarı Maksimum Limitte
+P02C7	Silindir 12 - Yakit Ayarı Minimum Limitte
+P02C8	Silindir 12 - Enjektör Sorunu
+P02C9	Silindir 12 - Enjektör Akıtıyor (Sızıntı)
+P02CC	Silindir 1 Yakıt Enjektörü Dengeleyici Öğrenme Minimum Limitte
+P02CD	Silindir 1 Yakıt Enjektörü Dengeleyici Öğrenme Maksimum Limitte
+P02CE	Silindir 2 Yakıt Enjektörü Dengeleyici Öğrenme Minimum Limitte
+P02CF	Silindir 2 Yakıt Enjektörü Dengeleyici Öğrenme Maksimum Limitte
+P02D0	Silindir 3 Yakıt Enjektörü Dengeleyici Öğrenme Minimum Limitte
+P02D1	Silindir 3 Yakıt Enjektörü Dengeleyici Öğrenme Maksimum Limitte
+P02D2	Silindir 4 Yakıt Enjektörü Dengeleyici Öğrenme Minimum Limitte
+P02D3	Silindir 4 Yakıt Enjektörü Dengeleyici Öğrenme Maksimum Limitte
+P02D4	Silindir 5 Yakıt Enjektörü Dengeleyici Öğrenme Minimum Limitte
+P02D5	Silindir 5 Yakıt Enjektörü Dengeleyici Öğrenme Maksimum Limitte
+P02D6	Silindir 6 Yakıt Enjektörü Dengeleyici Öğrenme Minimum Limitte
+P02D7	Silindir 6 Yakıt Enjektörü Dengeleyici Öğrenme Maksimum Limitte
+P02D8	Silindir 7 Yakıt Enjektörü Dengeleyici Öğrenme Minimum Limitte
+P02D9	Silindir 7 Yakıt Enjektörü Dengeleyici Öğrenme Maksimum Limitte
+P02DA	Silindir 8 Yakıt Enjektörü Dengeleyici Öğrenme Minimum Limitte
+P02DB	Silindir 8 Yakıt Enjektörü Dengeleyici Öğrenme Maksimum Limitte
+P02DC	Silindir 9 Yakıt Enjektörü Dengeleyici Öğrenme Minimum Limitte
+P02DD	Silindir 9 Yakıt Enjektörü Dengeleyici Öğrenme Maksimum Limitte
+P02DE	Silindir 10 Yakıt Enjektörü Dengeleyici Öğrenme Minimum Limitte
+P02DF	Silindir 10 Yakıt Enjektörü Dengeleyici Öğrenme Maksimum Limitte
+P02E0	Dizel Emme Hava Akış Kontrol Devresi / Açık
+P02E1	Dizel Emme Hava Akış Kontrol Performansı
+P02E2	Dizel Emme Hava Akış Kontrol Devresi Düşük
+P02E3	Dizel Emme Hava Akış Kontrol Devresi Yüksek
+P02E4	Dizel Emme Hava Akış Kontrol Açık Tıkanmış
+P02E5	Dizel Emme Hava Akış Kontrolü Sıkışmış / Tıkanmış
+P02E6	Dizel Emme Hava Akışı Pozisyon Sensörü Devresi Arızası
+P02E7	Dizel Emme Hava Akışı Pozisyon Sensörü Devresi Aralıklı / Düzensiz / Performansı
+P02E8	Dizel Emme Hava Akışı Pozisyon Sensörü Devresi Düşük
+P02E9	Dizel Emme Hava Akışı Pozisyon Sensörü Devresi Yüksek
+P02EA	Dizel Emme Hava Akışı Pozisyon Sensörü Devresi Aralıklı / Düzensiz
+P02EB	Dizel Emme Hava Akışı Kontrol Motor Akımı Aralığı / Performansı
+P02EC	Dizel Emme Hava Akışı Kontrol Sistem - Yüksek Hava Akışı Düşük Tespit Edildi
+P02ED	Dizel Emme Hava Akışı Kontrol Sistem - Düşük Hava Akışı Düşük Tespit Edildi
+P02EE	Silindir #1 Enjektör Devresi Aralıklı / Düzensiz / Performansı
+P02EF	Silindir #2 Enjektör Devresi Aralıklı / Düzensiz / Performansı
+P02F0	Silindir #3 Enjektör Devresi Aralıklı / Düzensiz / Performansı
+P02F1	Silindir #4 Enjektör Devresi Aralıklı / Düzensiz / Performansı
+P02F2	Silindir #5 Enjektör Devresi Aralıklı / Düzensiz / Performansı
+P02F3	Silindir #6 Enjektör Devresi Aralıklı / Düzensiz / Performansı
+P02F4	Silindir #7 Enjektör Devresi Aralıklı / Düzensiz / Performansı
+P02F5	Silindir #8 Enjektör Devresi Aralıklı / Düzensiz / Performansı
+P02F6	Silindir #9 Enjektör Devresi Aralıklı / Düzensiz / Performansı
+P02F7	Silindir #10 Enjektör Devresi Aralıklı / Düzensiz / Performansı
+P02F8	Silindir #11 Enjektör Devresi Aralıklı / Düzensiz / Performansı
+P02F9	Silindir #12 Enjektör Devresi Aralıklı / Düzensiz / Performansı
+P02FA	Dizel Emme Hava Akışı Düşük Pozisyon Sensör Minimum / Maksimum
+P0300	ATEŞLEME HATASI TESPİT EDİLDİ
+P0301	SİLİNDİR # 1 ATEŞLEME HATASI TESPİT EDİLDİ
+P0302	SİLİNDİR # 2 ATEŞLEME HATASI TESPİT EDİLDİ
+P0303	SİLİNDİR # 3 ATEŞLEME HATASI TESPİT EDİLDİ
+P0304	SİLİNDİR # 4 ATEŞLEME HATASI TESPİT EDİLDİ
+P0305	SİLİNDİR # 5 ATEŞLEME HATASI TESPİT EDİLDİ
+P0306	SİLİNDİR # 6 ATEŞLEME HATASI TESPİT EDİLDİ
+P0307	SİLİNDİR # 7 ATEŞLEME HATASI TESPİT EDİLDİ
+P0308	SİLİNDİR # 8 ATEŞLEME HATASI TESPİT EDİLDİ
+P0309	SİLİNDİR # 9 ATEŞLEME HATASI TESPİT EDİLDİ
+P0310	SİLİNDİR # 10 ATEŞLEME HATASI TESPİT EDİLDİ
+P0311	SİLİNDİR # 11 ATEŞLEME HATASI TESPİT EDİLDİ
+P0312	SİLİNDİR # 12 ATEŞLEME HATASI TESPİT EDİLDİ
+P0313	Düşük Yakıttan Dolayı Tutukluk Tespit Edildi
+P0314	Tek Silindirde Tutukluk Tespiti (Silindir Tespiti Yok)
+P0315	Grankşaft Pozisyon Sistemi Değişim Öğrenilemedi
+P0316	Motorda Marş Esnasında Tekleme Tespiti (İlk 1000 Turda)
+P0317	Kötü Yol Hardware’i Tanıtılmadı
+P0318	Kötü Yol Sensör A Sinyal Çevrimi
+P0319	Kötü Yol Sensör B
+P0320	ATEŞLEME MOTOR HIZ GİRİŞ DEVRE ARIZASI
+P0321	ATEŞLEME MOTOR HIZ GİRİŞ DEVRE SINIRI/ PERFORMANSI
+P0322	ATEŞLEME MOTOR HIZ GİRİŞ DEVRE SİNYAL YOK
+P0323	ATEŞLEME MOTOR HIZ GİRİŞ DEVRE ARALIKLARI
+P0324	Vuruntu Kontrol Sistemi Hatası
+P0325	VURUNTU SENSORU 1 DEVRE ARIZASI
+P0326	VURUNTU SENSORU 1 DEVRE SINIRI/PERFORMANSI
+P0327	VURUNTU SENSORU 1 DEVRE DÜŞÜK GİRİŞİ
+P0328	VURUNTU SENSORU 1 DEVRE YÜKSEK GİRİŞİ
+P0329	VURUNTU SENSORU 1 DEVRE ARALIKLARI
+P032A	Vuruntu Sensörü 3 Devre Bank 1 Arızası
+P032B	Vuruntu Sensörü 3 Devre Aralığı / Performansı Bank 1
+P032C	Vuruntu Sensörü 3 Devre Düşük Bank 1
+P032D	Vuruntu Sensörü 3 Devre Yüksek Bank 1
+P032E	Vuruntu Sensörü 3 Devre Aralıklı Bank 1
+P0330	VURUNTU SENSORU 2 DEVRE ARIZASI
+P0331	VURUNTU SENSORU 2 DEVRE SINIRI/PERFORMANSI
+P0332	VURUNTU SENSORU 2 DEVRE DÜŞÜK GİRİŞİ
+P0333	VURUNTU SENSORU 2 DEVRE YÜKSEK GİRİŞİ
+P0334	VURUNTU SENSORU 2 DEVRE ARALIKLARI
+P0335	KRANK MİLİ YER SENSOR A DEVRESİ ARIZASI
+P0336	KRANK MİLİ YER SENSOR A DEVRESİ SINIRI/PERFORMANSI
+P0337	KRANK MİLİ YER SENSOR A DEVRESİ DÜŞÜK GİRİŞİ
+P0338	KRANK MİLİ YER SENSOR A DEVRESİ YÜKSEK GİRİŞİ
+P0339	KRANK MİLİ YER SENSOR A DEVRESİ ARALIKLARI
+P033A	Vuruntu Sensörü 4 Devre Bank 2 Arızası
+P033B	Vuruntu Sensörü 4 Devre Aralığı / Performansı Bank 2
+P033C	Vuruntu Sensörü 4 Devre Düşük Bank 2
+P033D	Vuruntu Sensörü 4 Devre Yüksek Bank 2
+P033E	Vuruntu Sensörü 4 Devre Aralıklı Bank 2
+P0340	KAM MİLİ YER SENSOR DEVRESİ ARIZASI
+P0341	KAM MİLİ YER SENSOR DEVRESİ PERFORMANSI
+P0342	KAM MİLİ YER SENSOR DEVRESİ DÜŞÜK GİRİŞİ
+P0343	KAM MİLİ YER SENSOR DEVRESİ YÜKSEK GİRİŞİ
+P0344	KAM MİLİ YER SENSOR DEVRESİ ARALIKLARI
+P0345	Eksantrik Pozisyon Sensörü A Devresi (Sıra 2)
+P0346	Eksantrik Pozisyon Sensörü A Devresi Oranı/Performansı (Sıra 2)
+P0347	Eksantrik Pozisyon Sensörü A Düşük Çevrim (Sıra 2)
+P0348	Eksantrik Pozisyon Sensörü A Yüksek Çevrim (Sıra 2)
+P0349	Eksantrik Pozisyon Sensörü A Devresi Kesintili (Sıra 2)
+P0350	ATEŞLEME BOBİNİ BİRİNCİL/İKİNCİL DEVRE ARIZASI
+P0351	ATEŞLEME BOBİNİ BİRİNCİL A/İKİNCİL DEVRE ARIZASI
+P0352	ATEŞLEME BOBİNİ BİRİNCİL B/İKİNCİL DEVRE ARIZASI
+P0353	ATEŞLEME BOBİNİ BİRİNCİL C/İKİNCİL DEVRE ARIZASI
+P0354	ATEŞLEME BOBİNİ BİRİNCİL D/İKİNCİL DEVRE ARIZASI
+P0355	ATEŞLEME BOBİNİ BİRİNCİL E/İKİNCİL DEVRE ARIZASI
+P0356	ATEŞLEME BOBİNİ BİRİNCİL F/İKİNCİL DEVRE ARIZASI
+P0357	ATEŞLEME BOBİNİ BİRİNCİL G/İKİNCİL DEVRE ARIZASI
+P0358	ATEŞLEME BOBİNİ BİRİNCİL H/İKİNCİL DEVRE ARIZASI
+P0359	ATEŞLEME BOBİNİ BİRİNCİL İ/İKİNCİL DEVRE ARIZASI
+P0360	ATEŞLEME BOBİNİ BİRİNCİL J/İKİNCİL DEVRE ARIZASI
+P0361	ATEŞLEME BOBİNİ BİRİNCİL K/İKİNCİL DEVRE ARIZASI
+P0362	ATEŞLEME BOBİNİ BİRİNCİL L/İKİNCİL DEVRE ARIZASI
+P0363	Tekleme Tespit edildi Yakıt Hatası
+P0365	Eksantrik Pozisyon Sensörü B Devresi (Sıra 1)
+P0366	Eksantrik Pozisyon Sensörü B Devresi Oranı/Performansı (Sıra 1)
+P0367	Eksantrik Pozisyon Sensör B Düşük Çevrim (Sıra 1)
+P0368	Eksantrik Pozisyon Sensörü B Yüksek Çevrim (Sıra 1)
+P0369	Eksantrik Pozisyon Sensörü B Devrede Kesiklik (Sıra 1)
+P0370	ZAMANLAMA REFERANSI YÜKSEK DAĞILMA SİNYALİ A ARIZASI
+P0371	ZAMANLAMA REFERANSI YÜKSEK DAĞILMA SİNYALİ A ÇOK FAZLA VURU
+P0372	ZAMANLAMA REFERANSI YÜKSEK DAĞILMA SİNYALİ A ÇOK AZ VURU
+P0373	ZAMANLAMA REFERANSI YÜKSEK DAĞILMA SİNYALİ A ARALIKLARI
+P0374	ZAMANLAMA REFERANSI YÜKSEK DAĞILMA SİNYALİ A VURU YOK
+P0375	ZAMANLAMA REFERANSI YÜKSEK DAĞILMA SİNYALİ B ARIZASI
+P0376	ZAMANLAMA REFERANSI YÜKSEK DAĞILMA SİNYALİ B ÇOK FAZLA VURU
+P0377	AMANLAMA REFERANSI YÜKSEK DAĞILMA SİNYALİ B ÇOK AZ VURU
+P0378	ZAMANLAMA REFERANSI YÜKSEK DAĞILMA SİNYALİ B ARALIKLARI
+P0379	ZAMANLAMA REFERANSI YÜKSEK DAĞILMA SİNYALİ B VURU YOK
+P0380	ISITMA BUJİ DEVRESİ A ARIZASI
+P0381	ISITMA BUJİ GÖSTERGE DEVRESİ ARIZASI
+P0382	ISITMA BUJİ DEVRESİ B ARIZASI
+P0383	Döküman Yedeklendi
+P0384	Döküman Yedeklendi
+P0385	KRANK MİLİ YER SENSOR B DEVRESİ ARIZASI
+P0386	KRANK MİLİ YER SENSOR B DEVRESİ SINIRI/PERFORMANSI
+P0387	KRANK MİLİ YER SENSOR B DEVRESİ DÜŞÜK GİRİŞİ
+P0388	KRANK MİLİ YER SENSOR B DEVRESİ YÜKSEK GİRİŞİ
+P0389	KRANK MİLİ YER SENSOR B DEVRESİ ARALIKLARI
+P0390	Eksantrik Pozisyon Sensörü B Devresi (Sıra 2)
+P0391	Eksantrik Pozisyon Sensörü B Devresi Oranı/Performansı (Sıra 2)
+P0392	Eksantrik Pozisyon Sensörü B Düşük Çevrim (Sıra 2
+P0393	Eksantrik Pozisyon Sensörü B Yüksek Çevrim (Sıra 2)
+P0394	Eksantrik Pozisyon Sensörü B Devrede Kesiklik (Sıra 2)
+P0400	EGR AKIŞ ARIZASI
+P0401	EGR AKIŞ YETERSİZLİK TESPİT EDİLDİ
+P0402	EGR AKIŞ FAZLALIK TESPİT EDİLDİ
+P0403	EGR DEVRE ARIZASI
+P0404	EGR DEVRE SINIRI/PERFORMANSI
+P0405	EGR SENSOR A DEVRESİ DÜŞÜK GİRİŞİ
+P0406	EGR SENSOR A DEVRESİ YÜKSEK GİRİŞİ
+P0407	EGR SENSOR B DEVRESİ DÜŞÜK GİRİŞİ
+P0408	EGR SENSOR B DEVRESİ YÜKSEK GİRİŞİ
+P0409	Sekonder Hava Enjeksiyon Sistem Valfi Şalterleme A Kısa Devre
+P040A	Egzoz Gazı Devridaim Sıcaklık Sensörü A Devresi.
+P040B	EGR Sıcaklık Sensörü A Devresi Aralıklı / Düzensiz / Performansı
+P040C	EGR Sıcaklık Sensörü A Devresi Düşük
+P040D	EGR Sıcaklık Sensörü A Devresi Yüksek
+P040E	EGR Sıcaklık Sensörü A Devresi Aralıklı / Düzensiz
+P040F	Egzoz Gazı Devridaim Sıcaklık Sensörü A / B korelasyon
+P0410	SAİ SİSTEM ARIZASI
+P0411	SAİ SİSTEM YANLIŞ YUKARI AKİS TESPİT EDİLDİ
+P0412	SAİ SİSTEM AÇMA VALFİ A DEVRE ARIZASI
+P0413	SAİ SİSTEM AÇMA VALFİ A DEVRE AÇIK
+P0414	SAİ SİSTEM AÇMA VALFİ A DEVREDE KISA DEVRE
+P0415	SAİ SİSTEM AÇMA VALFİ B DEVRE ARIZASI
+P0416	SAİ SİSTEM AÇMA VALFİ B DEVRE AÇIK
+P0417	SAİ SİSTEM AÇMA VALFİ B DEVREDE KISA DEVRE
+P0418	SAİ SİSTEM ROLE A DEVRESİ ARIZASI
+P0419	SAİ SİSTEM ROLE B DEVRESİ ARIZASI
+P041A	EGR SICAKLIK SENSÖRÜ B DEVRESI ARIZASI
+P041B	EGR SICAKLIK SENSÖRÜ B DEVRESI ARALIKLI / DÜZENSIZ / PERFORMANS
+P041C	EGR SICAKLIK SENSÖRÜ B DEVRESI DÜŞÜK
+P04A633:C6591D	EGR SICAKLIK SENSÖRÜ B DEVRESI YÜKSEK
+P041E	EGR SICAKLIK SENSÖRÜ B DEVRESI ARALIKLI / DÜZENSIZ
+P0420	KATALITIK SİSTEM RANDIMANI SINIRLAR ALTINDA ( BANK 1)
+P0421	ISITMA KATALITIK RANDIMANI SINIRLAR ALTINDA (BANK 1)
+P0422	ANA KATALITIK RANDIMANI SINIRLAR ALTINDA (BANK1)
+P0423	ISITILMIŞ KATALITIK RANDIMAN SINIRLAR ALTINDA (BANK1)
+P0424	ISITILMIŞ KATALITIK ISISI SINIRLAR ALTINDA (BANK1)
+P0425	Katalizör Sıcaklık Sensörü (Sıra 1)
+P0426	KATALITIK İŞİ SENSORU SINIRI/ PERFORMANSI (BANK1)
+P0427	KATALITIK İŞİ SENSORU DÜŞÜK GİRİŞ(BANK1)
+P0428	KATALITIK İŞİ SENSORU YÜKSEK GİRİŞ (BANK 1)
+P0429	Katalizör Isıtıcı Kontrol Devresi (Sıra 1)
+P042A	KATALITIK (KATALIZÖR) ISI SENSÖRÜ DEVRESI BANK 1 SENSÖR 2
+P042B	KATALITIK (KATALIZÖR) ISI SENSÖRÜ DEVRESI ARALIKLI / DÜZENSIZ / PERFORMANSI BANK 1 SENSÖR 2
+P042C	KATALITIK (KATALIZÖR) ISI SENSÖRÜ DEVRESI DÜŞÜK BANK 1 SENSÖR 2
+P042D	KATALITIK (KATALIZÖR) ISI SENSÖRÜ DEVRESI YÜKSEK BANK 1 SENSÖR 2
+P0430	KATALITIK SİSTEM RANDIMANI SINIRLAR ALTINDA ( BANK 2)
+P0431	ISITMA KATALITIK RANDIMANI SINIRLAR ALTINDA (BANK 2)
+P0432	ANA KATALITIK RANDIMANI SINIRLAR ALTINDA (BANK2)
+P0433	ISITILMIŞ KATALITIK RANDIMAN SINIRLAR ALTINDA (BANK2)
+P0434	ISITILMIŞ KATALITIK ISISI SINIRLAR ALTINDA (BANK2)
+P0435	Katalizör Sıcaklık Sensörü (Sıra 2)
+P0436	KATALITIK İŞİ SENSORU SINIRI/ PERFORMANSI(BANK2)
+P0437	KATALITIK İŞİ SENSORU DÜŞÜK GİRİŞ (BANK2)
+P0438	KATALITIK İŞİ SENSORU YÜKSEK GİRİŞ (BANK2)
+P0439	Katalizör Isıtıcı Kontrol Devresi (Sıra 2)
+P043A	Katalitik (Katalizör) Isı Sensörü Devresi Bank 2 Sensör 2
+P043B	Katalitik (Katalizör) Isı Sensörü Devresi Aralıklı / Düzensiz / Performansı Bank 2 Sensör 2
+P043C	Katalitik (Katalizör) Isı Sensörü Devresi Düşük Bank 2 Sensör 2
+P043D	Katalitik (Katalizör) Isı Sensörü Devresi Yüksek Bank 2 Sensör 2
+P043E	Evaporative Emission System Leak Detection Reference Orifice Low Flow
+P043F	Evaporative Emission System Leak Detection Reference Orifice High Flow
+P0440	BUHARLAŞMA EMİSYON KONTROL SİSTEMİ ARIZA
+P0441	BUHARLAŞMA EMİSYON KONTROL SİSTEMİ YANLIŞ BOŞALMA AKIŞI
+P0442	BUHARLAŞMA EMİSYON KONTROL SİSTEMİ SIZINTI TESPİT EDİLDİ
+P0443	BUHARLAŞMA EMİSYON KONTROL SİSTEMİ BOŞALMA KONTROL DEVRESİ ARIZALI
+P0444	BUHARLAŞMA EMİSYON KONTROL SİSTEMİ BOŞALMA KONTROL VALF DEVRESİ AÇIK
+P0445	BUHARLAŞMA EMİSYON KONTROL SİSTEMİ BOŞALMA KONTROL VALF DEVRESİ KISA DEVRE
+P0446	BUHARLAŞMA EMİSYON KONTROL SİSTEMİ HAVALANDIRMA ARIZASI
+P0447	BUHARLAŞMA EMİSYON KONTROL SİSTEMİ HAVALANDIRMA DEVRESİ AÇIK
+P0448	BUHARLAŞMA EMİSYON KONTROL SİSTEMİ HAVALANDIRMA DEVRESİ KISA DEVRE
+P0449	BUHARLAŞMA EMİSYON KONTROL SİSTEMİ HAVALANDIRMA DEVRESİ ARALIKLARI
+P044C	Egzoz Gazı Devridaim Sensörü "C" Devresi Düşük
+P0450	BUHARLAŞMA EMİSYON KONTROL SİSTEMİ BASINÇ SENSOR ARIZASI
+P0451	BUHARLAŞMA EMİSYON KONTROL SİSTEMİ BASINÇ SENSOR PERFORMANSI
+P0452	BUHARLAŞMA EMİSYON KONTROL SİSTEMİ BASINÇ SENSOR DÜŞÜK GİRİŞİ
+P0453	BUHARLAŞMA EMİSYON KONTROL SİSTEMİ BASINÇ SENSOR YÜKSEK GİRİŞİ
+P0454	BUHARLAŞMA EMİSYON KONTROL SİSTEMİ BASINÇ SENSOR ARALIKLARI
+P0455	BUHARLAŞMA EMİSYON KONTROL SİSTEMİ SIZINTI TESPİT EDİLDİ (TOPLAM SIZINTI/AKİS YOK)
+P0456	Buharlaştırıcı Emisyon Sistemi Kaçak Tespit Edildi (Çok Küçük Kaçak)
+P0457	Buharlaştırıcı Emisyon Sistemi Kaçak Tespit Edildi (Yakıt Kepi Boşluk/Kapalı
+P0458	Buharlaştırıcı Emisyon Sistemi Temizleme Kontrol Valfi Devresi Düşük
+P0459	Buharlaştırıcı Emisyon Sistemi Temizleme Kontrol Valfi Devresi Yüksek
+P0460	YAKIT SEVİYE SENSORU DEVRE ARIZASI
+P0461	YAKIT SEVİYE SENSORU DEVRE SINIRI/PERFORMANSI
+P0462	YAKIT SEVİYE SENSORU DEVRE DÜŞÜK GİRİŞİ
+P0463	YAKIT SEVİYE SENSORU DEVRE YÜKSEK GİRİŞİ
+P0464	YAKIT SEVİYE SENSORU DEVRE ARALIKLARI
+P0465	BOŞALMA AKIŞ SENSOR DEVRE ARIZASI
+P0466	BOŞALMA AKIŞ SENSOR DEVRE SINIRI/ PERFORMANSI
+P0467	BOŞALMA AKIŞ SENSOR DEVRE DÜŞÜK GİRİŞİ
+P0468	BOŞALMA AKIŞ SENSOR DEVRE YÜKSEK GİRİŞİ
+P0469	BOŞALMA AKIŞ SENSOR DEVRE ARALIKLARI
+P0470	EGZOZ BASINÇ SENSOR DEVRE ARIZASI
+P0471	EGZOZ BASINÇ SENSOR DEVRE SINIRI/PERFORMANSI
+P0472	EGZOZ BASINÇ SENSOR DÜŞÜK
+P0473	EGZOZ BASINÇ SENSOR YÜKSEK
+P0474	EGZOZ BASINÇ SENSOR ARALIKLARI
+P0475	EGZOZ BASINÇ KONTROL VALF ARIZASI
+P0476	EGZOZ BASINÇ KONTROL VALF PERFORMANSI
+P0477	EGZOZ BASINÇ KONTROL VALF DÜŞÜK
+P0478	EGZOZ BASINÇ KONTROL VALF YÜKSEK
+P0479	EGZOZ BASINÇ KONTROL VALF ARALIKLARI
+P047A	Egzoz Basıncı Sensörü B Devres Arızası
+P047B	Egzoz Basıncı Sensörü B Devresi Aralıklı / Düzensiz / Performansı
+P047C	Exhaust Pressure Sensor B Circuit Low
+P047D	Exhaust Pressure Sensor B Circuit High
+P047E	Egzoz Basıncı Sensörü B Devresi Aralıklı / Düzensiz
+P0480	SOĞUTMA FANİ 1 KONTROL DEVRE ARIZASI
+P0481	SOĞUTMA FANİ 2 KONTROL DEVRE ARIZASI
+P0482	SOĞUTMA FANİ 3 KONTROL DEVRE ARIZASI
+P0483	SOĞUTMA FANİ ORANLILIK KONTROL ARIZASI
+P0484	SOĞUTMA FANİ DEVRE AŞIRI AKIM
+P0485	SOĞUTMA FANİ GÜÇ/ TOPRAKLAMA DEVRE ARIZASI
+P0486	Eksoz Gaz Geriçevrim Sensörü B Devresi
+P0487	Eksoz Gaz Geriçevrim Kelebek Pozisyon Kontrol Devresi
+P0488	Eksoz Gaz Geriçevrim Kelebek Pozisyon Kontrol Oranı/Performansı
+P0489	Eksoz Gaz Geriçevrim Kontrol Devresi Düşük
+P048B	Egzoz Basıncı Kontrol Vanası Konum Sensörü / Anahtarı Devresi
+P048C	Egzoz Basıncı Kontrol Vanası Konum Sensörü / Anahtarı Devre Aralığı / Performansı
+P048D	Egzoz Basıncı Kontrol Vanası Konum Sensörü / Anahtarı Devresi Düşük
+P048E	Egzoz Basıncı Kontrol Vanası Konum Sensörü / Anahtarı Devresi Yüksek
+P048F	Egzoz Basıncı Kontrol Vanası Konum Sensörü / Anahtarı Devresi Aralıklı / Düzensiz
+P0490	Eksoz Gaz Geriçevrim Kontrol Devresi Yüksek
+P0491	Sekonder Hava Enjeksiyon Sistemi Yetersiz Hava Akışı (Sıra 1)
+P0492	Sekonder Hava Enjeksiyon Sistemi Yetersiz Hava Akışı (Sıra 2)
+P0493	Fan Aşırı Hızlı
+P0494	Fan Hızı Düşük
+P0495	Fan Hızı Yüksek
+P0496	Buharlaştırıcı Emisyon Sistemi Yüksek Temizleme Akışı
+P0497	Buharlaştırıcı Emisyon Sistemi Düşük Temizleme Akışı
+P0498	Buharlaştırıcı Emisyon Sistem Yuvası Valf Kontrol Devresi Düşük
+P0499	Buharlaştırıcı Emisyon Sistem Yuvası Valf Kontrol Devresi Yüksek
+P04A0	Egzoz Basıncı Kontrol Valfi B Aralığı / Performansı
+P04A1	Egzoz Basıncı Kontrol Valfi B Düşük
+P04A2	Egzoz Basıncı Kontrol Valfi B Yüksek
+P04A3	Egzoz Basıncı Kontrol Valfi B Aralıklı
+P04A6	Egzoz Basıncı Kontrol Valfi B Konum Sensoru/Anahtar Devresi
+P04A7	Egzoz Basıncı Kontrol Valfi B Konum Sensoru/Anahtar Devresi Aralıklı / Düzensiz / Performansı
+P04A8	Egzoz Basıncı Kontrol Valfi B Konum Sensoru/Anahtar Devresi Düşük
+P04A9	Egzoz Basıncı Kontrol Valfi B Konum Sensoru/Anahtar Devresi Yüksek
+P04AA	Egzoz Basıncı Kontrol Valfi B Konum Sensoru/Anahtar Devresi Aralıklı / Düzensiz
+P0500	ARAÇ HIZ SENSORU ARIZASI
+P0501	ARAÇ HIZ SENSORU SINIRI /PERFORMANSI
+P0502	ARAÇ HIZ SENSORU DÜŞÜK GİRİŞİ
+P0503	ARAÇ HIZ SENSORU ARALIKLARI
+P0504	Fren Swiçi A/B Korelasyonu
+P0505	RÖLANTI HAVA KONTROL SİSTEM ARIZASI
+P0506	RÖLANTI HAVA KONTROL SİSTEMİ RPM BEKLENENDEN DÜŞÜK
+P0507	RÖLANTI HAVA KONTROL SİSTEMİ RPM BEKLENENDEN YÜKSEK
+P0508	Rölanti Hava Kontrol Sistemi Devresi Düşük
+P0509	Rölanti Hava Kontrol Sistemi Devresi Yüksek
+P050A	Cold Start Idle Air Control System Performance
+P050B	Cold Start Ignition Timing Performance
+P050C	Cold Start Engine Coolant Temperature Performance
+P050D	Cold Start Rough Idle
+P0510	KAPALI GAZ DURUM DÜĞMESİ ARIZASI
+P0511	Rölanti Hava Kontrol Devresi
+P0512	Marş Başlatma Devresi
+P0513	Yanlış Immobilizer Anahtarı
+P0514	Batarya Sıcaklık Sensörü Devresi Oranı/Performansı
+P0515	Batarya Sıcaklık Sensörü Devresi
+P0516	Batarya Sıcaklık Sensörü Devresi Düşük
+P0517	Batarya Sıcaklık Sensörü Devresi Yüksek
+P0518	Rölanti Hava Kontrol Devresi Kesintili
+P0519	Rölanti Hava Kontrol Devresi Performansı
+P0520	MOTOR YAĞ BASINÇ SENSOR/DÜĞME DEVRE ARIZASI
+P0521	MOTOR YAĞ BASINÇ SENSOR/DÜĞME DEVRE SINIRI/PERFORMANS
+P0522	MOTOR YAĞ BASINÇ SENSOR/DÜĞME DEVRE DÜŞÜK GİRİŞİ
+P0523	MOTOR YAĞ BASINÇ SENSOR/DÜĞME DEVRE YÜKSEK GİRİŞİ
+P0524	Motor Yağ Basıncı Çok Düşük
+P0525	Cruise Kontrol Servo Kontrol Devresi Oranı/ Performansı
+P0526	Fan Hız Sensörü Devresi
+P0527	Fan Hız Sensörü Devresi | Oranı/Performansı
+P0528	Fan Hız Sensörü Devresi Sinyal Yok
+P0529	Fan Hız Sensörü Devresi Kesintili
+P052A	Soğuk Başlangıç "A" Eksantrik Mili Konumu Zamanlama Aşırı Gelişmiş Bank 1
+P052B	Soğuk Başlangıç "A" Eksantrik Mili Konumu Zamanlama Aşırı Gelişmiş Bank 1
+P052C	Soğuk Çalıştırma "A" Eksantrik Mili Konumu Zamanlaması Aşırı Gelişmiş Bank 2
+P052D	Soğuk Çalıştırma "A" Eksantrik Mili Konumu Zamanlaması Aşırı Gelişmiş Bank 2
+P0530	A/C SOĞUTUCU SIVI BASINÇ SENSOR DEVRE ARIZASI
+P0531	A/C SOĞUTUCU SIVI BASINÇ SENSOR DEVRE SINIRI/PERFORMANSI
+P0532	A/C SOĞUTUCU SIVI BASINÇ SENSOR DEVRE DÜŞÜK GİRİŞİ
+P0533	A/C SOĞUTUCU SIVI BASINÇ SENSOR DEVRE YÜKSEK GİRİŞİ
+P0534	A/C SOĞUTUCU SIVI ŞARJ KAYBI
+P0535	A/C Evaparatör Sıcaklık Sensör Devresi
+P0536	A/C Evaparatör Sıcaklık Sensör Devresi Oranı/Performansı
+P0537	A/C Evaparatör Sıcaklık Sensör Çevrimi Düşük
+P0538	A/C Evaparatör Sıcaklık Sensör Çevrimi Yüksek
+P0539	A/C Evaparatör Sıcaklık Sensör Çevrimi Kesintili
+P053A	Positive Crankcase Ventilation Heater Control Circuit /Ope n
+P053B	Positive Crankcase Ventilation Heater Control Circuit Low
+P053C	Positive Crankcase Ventilation Heater Control Circuit High
+P0540	Emme Manifoldu hava Isıtıcısı A Devresi
+P0541	Emme Manifoldu hava Isıtıcısı A Düşük Çevrim
+P0542	Emme Manifoldu hava Isıtıcısı A Yüksek Çevrim
+P0543	Emme Manifoldu hava Isıtıcısı A Açık Devre
+P0544	Eksoz Gazı Sıcaklık Sensör Devresi (Sıra 1 Sensör 1)
+P0545	Eksoz Gazı Sıcaklık Sensör Devresi Düşük (Sıra 1Sensör 1)
+P0546	Eksoz Gazı Sıcaklık Sensör Devresi Yüksek (Sıra 1Sensör 1)
+P0547	Eksoz Gazı Sıcaklık Sensör Devresi (Sıra 2 Sensör 1)
+P0548	Eksoz Gazı Sıcaklık Sensör Devresi Düşük (Sıra 2 Sensör 1)
+P0549	Eksoz Gazı Sıcaklık Sensör Devresi Yüksek (Sıra 2 Sensör 1)
+P054A	Soğuk Başlangıç "B" Eksantrik Mili Konumu Zamanlaması Aşırı Gelişmiş Banka 1
+P054B	Soğuk Başlatma "B" Eksantrik Mili Konumu Zamanlaması Aşırı Gerilimli Banka 1
+P054C	Soğuk Çalıştırma "B" Eksantrik Mili Konumu Zamanlaması Aşırı Gelişmiş Sıra 2
+P054D	P054D Soğuk Çalıştırma "B" Eksantrik Mili Konumu Zamanlaması Aşırı Gerilimli Sıra 2
+P0550	HİDROLİK DİREKSİYON BASINÇ SENSORU DEVRESİ ARIZASI
+P0551	HİDROLİK DİREKSİYON BASINÇ SENSORU DEVRESİ SINIRI/PERFORMANSI
+P0552	HİDROLİK DİREKSİYON BASINÇ SENSORU DEVRESİ DÜŞÜK GİRİŞİ
+P0553	HİDROLİK DİREKSİYON BASINÇ SENSORU DEVRESİ YÜKSEK GİRİŞİ
+P0554	HİDROLİK DİREKSİYON BASINÇ SENSORU DEVRESİ ARALIKLARI
+P0555	Fren Booster Basınç Sensör Devresi
+P0556	Fren Booster Basınç Sensör Devresi Oranı/Performansı
+P0557	Fren Booster Basınç Sensör Devresi Düşük Giriş
+P0558	Fren Booster Basınç Sensör Devresi Yüksek Giriş
+P0559	Fren Booster Basınç Sensör Devresi Kesintili
+P0560	SİSTEM VOLTAJ ARIZASI
+P0561	SİSTEM VOLTAJI DÜZENSİZ
+P0562	SİSTEM VOLTAJI DÜŞÜK
+P0563	SİSTEM VOLTAJI YÜKSEK
+P0564	Cruise Kontrol Multi Fonksiyon Giriş A Devresi
+P0565	SEYİR ON SİNYAL ARIZASI
+P0566	SEYİR OFF SİNYAL ARIZASI
+P0567	SEYİR REŞUME (TEKRAR DEVAM) SİNYAL ARIZASI
+P0568	SEYİR SET(AYAR) SİNYAL ARIZASI
+P0569	SEYİR COAST(BOŞTA GİTMEK) SİNYAL ARIZASI
+P056A	Seyir kontrolü "Mesafeyi Yükselt" Sinyal Arızası
+P056B	Seyir kontrolü "Mesafeyi Azalt" Sinyal Arızası
+P0570	SEYİR ACCEL(HIZLANMA) SİNYAL ARIZASI
+P0571	SEYİR FREN DÜĞMESİ DEVRE ARIZASI
+P0572	SEYİR FREN DÜĞME DEVRESİ DÜŞÜK
+P0573	SEYİR FREN DÜĞME DEVRESİ YÜKSEK
+P0574	Cruise Kontrol Sistem Araç Hızı Çok Yüksek
+P0575	Cruise Kontrol Giriş Devresi
+P0576	Cruise Kontrol Giriş Çevrimi Düşük
+P0577	Cruise Kontrol Giriş Çevrimi Yüksek
+P0578	Cruise Kontrol Multi Fonksiyon Giriş A Devresi Takılmış
+P0579	Cruise Kontrol Multi Fonksiyon Giriş A Devresi Oranı/Performansı
+P0580	Cruise Kontrol Multi Fonksiyon Giriş A Devresi Düşük
+P0581	Cruise Kontrol Multi Fonksiyon Giriş A Devresi Yüksek
+P0582	Cruise Kontrol Vakum Kontrol Devresi/Açık
+P0583	Cruise Kontrol Vakum Kontrol Devresi/Düşük
+P0584	Cruise Kontrol Vakum Kontrol Devresi/Yüksek
+P0585	Cruise Kontrol Multi Fonksiyon Giriş A/B Korelasyonu
+P0586	Cruise Kontrol Yuva Kontrol Devresi/Açık
+P0587	Cruise Kontrol Yuva Kontrol Devresi Düşük
+P0588	Cruise Kontrol Yuva Kontrol Devresi Yüksek
+P0589	Cruise Kontrol Multi Fonksiyon Giriş B Devresi
+P0590	Cruise Kontrol Multi Fonksiyon Giriş B Devresi Takılmış
+P0591	Cruise Kontrol Multi Fonksiyon Giriş B Devresi Oranı/Performansı
+P0592	Cruise Kontrol Multi Fonksiyon Giriş B Devresi Düşük
+P0593	Cruise Kontrol Multi Fonksiyon Giriş B Devresi Yüksek
+P0594	Cruise Kontrol Servo Kontrol Devresi/Açık
+P0595	Cruise Kontrol Servo Kontrol Devresi Düşük
+P0596	Cruise Kontrol Servo Kontrol Devresi Yüksek
+P0597	Termostat Isıtıcı Kontrol Devresi/Açık
+P0598	Termostat Isıtıcı Kontrol Devresi Düşük
+P0599	Termostat Isıtıcı Kontrol Devresi Yüksek
+P0600	SERİ İLETİŞİM BAĞLANTI ARIZASI
+P0601	İÇ KONTROL MODÜLÜ HAFIZA KONTROL TOPLAM HATASI
+P0602	KONTROL MODÜLÜ PROGRAMLAMA HATASI
+P0603	GÜÇ AKTARMA KONTROL MODÜLÜ KAM TEST HATASI
+P0604	GÜÇ AKTARMA KONTROL MODÜLÜ RAM TEST HATASI
+P0605	GÜÇ AKTARMA KONTROL MODÜLÜ ROM TEST HATASI
+P0606	PCM İŞLEMCİ HATASI
+P0607	Kontrol Modül Performansı
+P0608	PCM VSS ÇIKIŞ A ARIZASI
+P0609	PCM VSS ÇIKIŞ B ARIZASI
+P060A	Internal Control Module Monitoring Processor Performance
+P060B	Internal Control Module A/D Processing Performance
+P060C	Internal Control Module Main Processor Performance
+P060D	Internal Control Module Accelerator Pedal Position Perform ance
+P060E	Internal Control Module Throttle Position Performance
+P060F	Internal Control Module Coolant Temperature Performance
+P0610	Araç Opsiyon Kontrol Modülü Hatası
+P0611	Yakıt Enjektör Kontrol Modül Performansı
+P0612	Yakıt Enjektör Kontrol Modülü Röle Kontrolü
+P0613	TCM İşlemci
+P0614	ECM / TCM Uyuşmuyor
+P0615	Marş Röle Devresi
+P0616	Marş Röle Devresi Düşük
+P0617	Marş Röle Devresi Yüksek
+P0618	Alternatif Yakıt Kontrol Modülü KAM Hatası
+P0619	Alternatif Yakıt Kontrol Modülü RAM/ROM Hatası
+P061A	Internal Control Module Torque Performance
+P061B	Internal Control Module Torque Calculation Performance
+P061C	Internal Control Module Engine RPM Performance
+P061D	Internal Control Module Engine Air Mass Performance
+P061E	Internal Control Module Brake Signal Performance
+P061F	Internal Control Module Throttle Actuator Controller Perfo rmance
+P0620	JENERATÖR KONTROL DEVRE ARIZASI
+P0621	JENERATÖR LAMBA”L” KONTROL DEVRE ARIZASI
+P0622	JENERATÖR ALAN”F” KONTROL DEVRE ARIZASI
+P0623	Alternatör Lamba Kontrol Devresi
+P0624	Yakıt Kep Lamba Kontrol Devresi
+P0625	Alternatör Alan/F Terminal Düşük Çevrim
+P0626	Alternatör Alan/F Terminal Yüksek Çevrim
+P0627	Yakıt Pompası A Kontrol Devresi/Açık
+P0628	Yakıt Pompası A Kontrol Devresi Düşük
+P0629	Yakıt Pompası A Kontrol Devresi Yüksek
+P062A	Yakıt Pompası A Kontrol Devresi Aralıklı / Düzensiz / Performansı
+P062B	Internal Control Module Fuel Injector Control Performance
+P062C	Internal Control Module Vehicle Speed Performance
+P062D	Fuel Injector Driver Circuit Performance Bank 1
+P062E	Fuel Injector Driver Circuit Performance Bank 2
+P062F	Internal Control Module EEPROM Error
+P0630	VIN Programlanamadı veya Uyuşmuyor –ECM/PCM
+P0631	VIN Programlanamadı veya Uyuşmuyor - TCM
+P0632	Odometre Programlanamadı veya ECM/PCM
+P0633	Immobilizer Anahtarı Programlanamadı – ECM/PCM
+P0634	PCM/ECM/TCM İç Sicaklık Çok Yüksek
+P0635	H/Direksiyon Kontrol Devresi
+P0636	H/Direksiyon Kontrol Devresi Düşük
+P0637	H/Direksiyon Kontrol Devresi Yüksek
+P0638	Kelebek Aktüatör Kontrol Oranı/Performansı (Sıra 1)
+P0639	Kelebek Aktüatör Kontrol Oranı/Performansı (Sıra 2)
+P063A	Jeneratör Voltajı Algılama Devresi
+P063B	Jeneratör Voltajı Algılama Devresi Aralıklı / Düzensiz / Performansı
+P063C	Jeneratör Voltajı Algılama Devresi Düşük
+P063D	Jeneratör Voltajı Algılama Devresi Yüksek
+P063E	Auto Configuration Throttle Input Not Present
+P063F	Auto Configuration Engine Coolant Temperature Input Not Pr esent
+P0640	Emme Manifoldu Hava Isıtıcı Kontrol Devresi
+P0641	Sensör Referans Voltajı A Devresi/Açık
+P0642	Sensör Referans Voltajı A Devresi Düşük
+P0643	Sensör Referans Voltajı A Devresi Yüksek
+P0644	Display Sürücü Seri Komünikasyon Devresi
+P0645	A/C Kompresör Kaplin Kavrama Devresi
+P0646	A/C Kompresör Kaplin Kavrama Devresi Düşük
+P0647	A/C Kompresör Kaplin Kavrama Devresi Yüksek
+P0648	Immobilizer Lamba Kontrol Devresi
+P0649	Hız Kontrol Lambası Kontrol Devresi
+P064A	Yakıt Pompası Kontrol Modülü Arızası
+P064B	PTO Kontrol Modülü
+P0650	MİL KONTROL DEVRE ARIZASI
+P0651	Sensör Referans Voltajı B Devresi/Açık
+P0652	Sensör Referans Voltajı B Devresi Düşük
+P0653	Sensör Referans Voltajı B Devresi Yüksek
+P0654	Motor RPM Çıkış Devresi
+P0655	Motor Sıcak Uyarı Lambası Çıkış Kontrol Devresi
+P0656	Yakıt Seviye Çıkış Devresi
+P0657	Aktüatör Voltaj Kaynağı A Devresi/Açık
+P0658	Aktüatör Voltaj Kaynağı A Devresi Düşük
+P0659	Aktüatör Voltaj Kaynağı A Devresi Yüksek
+P065A	Generator System Performance
+P065B	Generator Control Circuit Range/Performance
+P0660	Emme Manifoldu Ayarlama Valfi Kontrol Devresi/Açık (Sıra 1)
+P0661	Emme Manifoldu Ayarlama Valfi Kontrol Devresi Düşük (Sıra 1
+P0662	Emme Manifoldu Ayarlama Valfi Kontrol Devresi Yüksek (Sıra 1
+P0663	Emme Manifoldu Ayarlama Valfi Kontrol Devresi/Açık (Sıra 2)
+P0664	Emme Manifoldu Ayarlama Valfi Kontrol Devresi Düşük (Sıra 2
+P0665	Emme Manifoldu Ayarlama Valfi Kontrol Devresi Yüksek (Sıra 2
+P0666	PCM/ECM/TCM İç Sıcaklık Sensör Devresi
+P0667	PCM/ECM/TCM İç Sıcaklık Sensör Oranı/Performansı
+P0668	PCM/ECM/TCM İç Sıcaklık Sensör Devresi Düşük
+P0669	PCM/ECM/TCM İç Sıcaklık Sensör Devresi Yüksek
+P066A	Silindir #1 Kızdırma Bujisi Kontrol Devresi Düşük
+P066B	Silindir #1 Kızdırma Bujisi Kontrol Devresi Yüksek
+P066C	Silindir #2 Kızdırma Bujisi Kontrol Devresi Düşük
+P066D	Silindir #2 Kızdırma Bujisi Kontrol Devresi Yüksek
+P066E	Silindir #3 Kızdırma Bujisi Kontrol Devresi Düşük
+P066F	Silindir #3 Kızdırma Bujisi Kontrol Devresi Yüksek
+P0670	Kızdırma Bujisi Modül Kontrol Devresi
+P0671	Silindir 1 Kızdırma Bujisi Devresi
+P0672	Silindir 2 Kızdırma Bujisi Devresi
+P0673	Silindir 3 Kızdırma Bujisi Devresi
+P0674	Silindir 4 Kızdırma Bujisi Devresi
+P0675	Silindir 5 Kızdırma Bujisi Devresi
+P0676	Silindir 6 Kızdırma Bujisi Devresi
+P0677	Silindir 7 Kızdırma Bujisi Devresi
+P0678	Silindir 8 Kızdırma Bujisi Devresi
+P0679	Silindir 9 Kızdırma Bujisi Devresi
+P067A	Silindir #4 Kızdırma Bujisi Kontrol Devresi Düşük
+P067B	Silindir #4 Kızdırma Bujisi Kontrol Devresi Yüksek
+P067C	Silindir #5 Kızdırma Bujisi Kontrol Devresi Düşük
+P067D	Silindir #5 Kızdırma Bujisi Kontrol Devresi Yüksek
+P067E	Silindir #6 Kızdırma Bujisi Kontrol Devresi Düşük
+P067F	Silindir #6 Kızdırma Bujisi Kontrol Devresi Yüksek
+P0680	Silindir 10 Kızdırma Bujisi Devresi
+P0681	Silindir 11 Kızdırma Bujisi Devresi
+P0682	Silindir 12 Kızdırma Bujisi Devresi
+P0683	Kızdırma Buji Kontrol Modülünden PCM Komünikasyon Devresi
+P0684	Kızdırma Buji Kontrol Modülünden PCM Komünikasyon Devresi Oranı/Performansı
+P0685	ECM/PCM Güç Rölesi Kontrol Devresi /Açık
+P0686	ECM/PCM Güç Rölesi Kontrol Devresi Düşük
+P0687	ECM/PCM Güç Rölesi Kontrol Devresi Yüksek
+P0688	ECM/PCM Güç Rölesi Sezgi Devresi /Açık
+P0689	ECM/PCM Güç Rölesi Sezgi Devresi Düşük
+P068A	ECM/PCM Power Relay De-Energized Performance Too Early
+P068B	ECM/PCM Power Relay De-Energized Performance Too Late
+P068C	Silindir #7 Kızdırma Bujisi Kontrol Devresi Düşük
+P068D	Silindir #7 Kızdırma Bujisi Kontrol Devresi Yüksek
+P068E	Silindir #8 Kızdırma Bujisi Kontrol Devresi Düşük
+P068F	Silindir #8 Kızdırma Bujisi Kontrol Devresi Yüksek
+P0690	ECM/PCM Güç Rölesi Sezgi Devresi Yüksek
+P0691	Fan 1 Kontrol Devresi Düşük
+P0692	Fan 1 Kontrol Devresi Yüksek
+P0693	Fan 2 Kontrol Devresi Düşük
+P0694	Fan 2 Kontrol Devresi Yüksek
+P0695	Fan 3 Kontrol Devresi Düşük
+P0696	Fan 3 Kontrol Devresi Yüksek
+P0697	Sensör Referans Voltajı C Devresi/Açık
+P0698	Sensör Referans Voltajı C Devresi Düşük
+P0699	Sensör Referans Voltajı C Devresi Yüksek
+P069A	Silindir #9 Kızdırma Bujisi Kontrol Devresi Düşük
+P069B	Silindir #9 Kızdırma Bujisi Kontrol Devresi Yüksek
+P069C	Silindir #10 Kızdırma Bujisi Kontrol Devresi Düşük
+P069D	Silindir #10 Kızdırma Bujisi Kontrol Devresi Yüksek
+P06A6	Sensör Referans Voltajı A Devresi Aralıklı / Düzensiz / Performansı
+P06A7	Sensör Referans Voltajı B Devresi Aralıklı / Düzensiz / Performansı
+P06A8	Sensör Referans Voltajı "C" Devresi Aralıklı / Düzensiz / Performansı
+P06A9	Sensör Referans Voltajı "D" Devresi Aralıklı / Düzensiz / Performansı
+P06B8	Dahili Kontrol Modülü Non-Volatile Random Access Memory (NVRAM) Hatası
+P06B9	Silindir #1 Kızdırma Bujisi Devresi Aralıklı / Düzensiz / Performansı
+P06BA	Silindir #2 Kızdırma Bujisi Devresi Aralıklı / Düzensiz / Performansı
+P06BB	Silindir #3 Kızdırma Bujisi Devresi Aralıklı / Düzensiz / Performansı
+P06BC	Silindir #4 Kızdırma Bujisi Devresi Aralıklı / Düzensiz / Performansı
+P06BD	Silindir #5 Kızdırma Bujisi Devresi Aralıklı / Düzensiz / Performansı
+P06BE	Silindir #6 Kızdırma Bujisi Devresi Aralıklı / Düzensiz / Performansı
+P06BF	Silindir #7 Kızdırma Bujisi Devresi Aralıklı / Düzensiz / Performansı
+P06C0	Silindir #8 Kızdırma Bujisi Devresi Aralıklı / Düzensiz / Performansı
+P06C1	Silindir #9 Kızdırma Bujisi Devresi Aralıklı / Düzensiz / Performansı
+P06C2	Silindir #10 Kızdırma Bujisi Devresi Aralıklı / Düzensiz / Performansı
+P06C3	Silindir #11 Kızdırma Bujisi Devresi Aralıklı / Düzensiz / Performansı
+P06C4	Silindir #12 Kızdırma Bujisi Devresi Aralıklı / Düzensiz / Performansı
+P06C5	Silindir #1 Kızdırma Bujisi Yanlış
+P06C6	Silindir #2 Kızdırma Bujisi Yanlış
+P06C7	Silindir #3 Kızdırma Bujisi Yanlış
+P06C8	Silindir #4 Kızdırma Bujisi Yanlış
+P06C9	Silindir #5 Kızdırma Bujisi Yanlış
+P06CA	Silindir #6 Kızdırma Bujisi Yanlış
+P06CB	Silindir #7 Kızdırma Bujisi Yanlış
+P06CC	Silindir #8 Kızdırma Bujisi Yanlış
+P06CD	Silindir #9 Kızdırma Bujisi Yanlış
+P06CE	Silindir #10 Kızdırma Bujisi Yanlış
+P06CF	Silindir #11 Kızdırma Bujisi Yanlış
+P06D0	Silindir #12 Kızdırma Bujisi Yanlış
+P0700	ŞANZIMAN KONTROL SİSTEM ARIZASI
+P0701	ŞANZIMAN KONTROL SİSTEM SINIRI/PERFORMANS
+P0702	ŞANZIMAN KONTROL SİSTEMİ ELEKTRİKLİ
+P0703	FREN DÜĞMESİ GİRİŞ ARIZASI
+P0704	KAVRAMA DÜĞMESİ GİRİŞ DEVRE ARIZASI
+P0705	ŞANZIMAN SINIR SENSORU DEVRE ARIZASI
+P0706	ŞANZIMAN SINIR SENSORU DEVRE SINIRI/PERFORMANSI
+P0707	ŞANZIMAN SINIR SENSORU DEVRE DÜŞÜK GİRİŞ
+P0708	ŞANZIMAN SINIR SENSORU DEVRE YÜKSEK GİRİŞ
+P0709	ŞANZIMAN SINIR SENSORU DEVRE ARALIKLARI
+P070A	Şanzıman Yağı Seviyesi Sensör Devresi Arızası
+P070B	Şanzıman Yağı Seviyesi Sensör Devresi Aralıklı / Düzensiz / Performansı
+P070C	Şanzıman Yağı Seviyesi Sensör Devresi Düşük
+P070D	Şanzıman Yağı Seviyesi Sensör Devresi Yüksek
+P070E	Şanzıman Yağı Seviyesi Sensör Devresi Aralıklı / Düzensiz
+P070F	Şanzıman Yağı Seviyesi Çok Düşük
+P0710	ŞANZIMAN SIVISI İŞİ SENSORU DEVRE ARIZASI
+P0711	ŞANZIMAN SIVISI İŞİ SENSORU DEVRE SINIRI/PERFORMANSI
+P0712	ŞANZIMAN SIVISI İŞİ SENSORU DEVRE DÜŞÜK GİRİŞİ
+P0713	ŞANZIMAN SIVISI İŞİ SENSORU DEVRE YÜKSEK GİRİŞİ
+P0714	ŞANZIMAN SIVISI İŞİ SENSORU DEVRE ARALIKLARI
+P0715	TÜRBİN HIZ SENSOR DEVRE ARIZASI
+P0716	TÜRBİN HIZ SENSOR DEVRE SINIRI/PERFORMANSI
+P0717	TÜRBİN HIZ SENSOR DEVRESİ SİNYAL YOK
+P0718	TÜRBİN HIZ SENSOR DEVRE ARALIKLARI
+P0719	TORK KONVERTÖR/FREN DÜĞMESİ B DEVRESİ DÜŞÜK
+P071A	Şanzıman Modu Şalteri A DevresiArızası
+P071B	Şanzıman Modu Şalteri A Devresi Düşük
+P071C	Şanzıman Modu Şalteri A Devresi Yüksek
+P071D	Şanzıman Modu Şalteri B Devresi
+P071E	Şanzıman Modu Şalteri B Devresi Düşük
+P071F	Şanzıman Modu Şalteri B Devresi Yüksek
+P0720	ÇIKIŞ SAFTI HIZ SENSORU DEVRE ARIZASI
+P0721	ÇIKIŞ SAFTI HIZ SENSORU PERFORMANS YOK
+P0722	ÇIKIŞ SAFTI HIZ SENSORU SİNYAL YOK
+P0723	ÇIKIŞ SAFTI HIZ SENSORU ARALIKLARI
+P0724	TORK KONVERTÖR/FREN DÜĞMESİ B DEVRESİ YÜKSEK
+P0725	MOTOR HIZ GİRİŞ DEVRE ARIZASI
+P0726	MOTOR HIZ GİRİŞ DEVRE SINIRI/PERFORMANSI
+P0727	MOTOR HIZ GİRİŞ DEVRESİ SİNYAL YOK
+P0728	MOTOR HIZ GİRİŞ DEVRE ARALIKLARI
+P0729	Vites 6 Yanlış Oran
+P072A	Neutral Vites'de sıkışmış
+P072B	Geri Vites'de sıkışmış
+P072C	Vites 1'de sıkışmış
+P072D	Vites 2'de sıkışmış
+P072E	Vites 3'de sıkışmış
+P072F	Vites 4'de sıkışmış
+P0730	YANLIŞ VİTES ORANI
+P0731	VİTES 1 YANLIŞ ORAN
+P0732	VİTES 2 YANLIŞ ORAN
+P0733	VİTES 3 YANLIŞ ORAN
+P0734	VİTES 4 YANLIŞ ORAN
+P0735	VİTES 5 YANLIŞ ORAN
+P0736	GERİ VİTES YANLIŞ ORAN
+P0737	Motor Hız Çıkış Devresi
+P0738	Motor Hız Çıkış Devresi Düşük
+P0739	Motor Hız Çıkış Devresi Yüksek
+P073A	Vites 5'de sıkışmış
+P073B	Vites 6'de sıkışmış
+P073C	Vites 7'de sıkışmış
+P073D	Boş Vitese Girmiyor
+P073E	Geri Vitese Girmiyor
+P073F	Birinci Vitese Girmiyor
+P0740	TORK KONVERTÖR KAVRAMASI DEVRE ARIZASI
+P0741	TORK KONVERTÖR KAVRAMASI SİSTEM PERFORMANSI VEYA YAPIŞIP ÇIKMASI
+P0742	TORK KONVERTÖR KAVRAMASI DEVRESİ YAPIŞIP KALMASI
+P0743	TORK KONVERTÖR KAVRAMA SİSTEMİ ELEKTRİKLİ
+P0744	TORK KONVERTÖR KAVRAMA DEVRE ARALIKLARI
+P0745	BASINÇ KONTROL SELENOİD A ARIZASI
+P0746	BASINÇ KONTROL SELENOİD A PERFORMANS VEYA YAPIŞIP ÇIKMASI
+P0747	BASINÇ KONTROL SELENOİD A YAPIŞIP KALMASI
+P0748	BASINÇ KONTROL SELENOİD A ELEKTRİKLİ
+P0749	BASINÇ KONTROL SELENOİD A ARALIKLARI
+P074A	İkinci Vitese Girmiyor
+P074B	Üçüncü Vitese Girmiyor
+P074C	Dördüncü Vitese Girmiyor
+P074D	Beşinci Vitese Girmiyor
+P074E	Altıncı Vitese Girmiyor
+P074F	Yedinci Vitese Girmiyor
+P0750	VİTES DEĞİŞTİRME SELENOİD A ARIZASI
+P0751	VİTES DEĞİŞTİRME SELENOİD A PERFORMANSI
+P0752	VİTES DEĞİŞTİRME SELENOİD A YAPIŞIP KALMASI
+P0753	VİTES DEĞİŞTİRME SELENOİD A ELEKTRİKLİ
+P0754	VİTES DEĞİŞTİRME SELENOİD A ARALIKLARI
+P0755	VİTES DEĞİŞTİRME SELENOİD B ARIZASI
+P0756	VİTES DEĞİŞTİRME SELENOİD B PERFORMANS
+P0757	VİTES DEĞİŞTİRME SELENOİD B YAPIŞIP KALMAK
+P0758	VİTES DEĞİŞTİRME SELENOİD B ELEKTRİKLİ
+P0759	VİTES DEĞİŞTİRME SELENOİD B ARALIKLARI
+P075A	Vites Değiştirme Solenoidi "G" Arızası
+P075B	Vites Değiştirme Solenoidi "G" Performans/Kapalı, Sıkışmış
+P075C	Vites Değiştirme Solenoidi "G" Sıkışmış
+P075D	Vites Değiştirme Solenoidi "G" Elektirik Sorunu
+P075E	Vites Değiştirme Solenoidi "G" Aralıklı
+P0760	VİTES DEĞİŞTİRME SELENOİD C ARIZASI
+P0761	VİTES DEĞİŞTİRME SELENOİD C PERFORMANS
+P0762	VİTES DEĞİŞTİRME SELENOİD C YAPIŞIP KALMAK
+P0763	VİTES DEĞİŞTİRME SELENOİD C ELEKTRİKLİ
+P0764	VİTES DEĞİŞTİRME SELENOİD C ARALIKLARI
+P0765	VİTES DEĞİŞTİRME SELENOİD D ARIZASI
+P0766	VİTES DEĞİŞTİRME SELENOİD D PERFORMANS
+P0767	VİTES DEĞİŞTİRME SELENOİD D YAPIŞIP KALMAK
+P0768	VİTES DEĞİŞTİRME SELENOİD D ELEKTRİKLİ
+P0769	VİTES DEĞİŞTİRME SELENOİD D ARALIKLARI
+P076A	VİTES Değiştirme SELENOİD H Arızası
+P076B	VİTES Değiştirme SELENOİD H Performans
+P076C	VİTES Değiştirme SELENOİD H YAPIŞIP KALMAK
+P076D	VİTES Değiştirme SELENOİD H Elektirik Sorunu
+P076E	VİTES Değiştirme SELENOİD H Aralıkları
+P076F	Vites 7 Yanlış Oran
+P0770	VİTES DEĞİŞTİRME SELENOİD E ARIZASI
+P0771	VİTES DEĞİŞTİRME SELENOİD E PERFORMANS
+P0772	VİTES DEĞİŞTİRME SELENOİD E YAPIŞIP KALMAK
+P0773	VİTES DEĞİŞTİRME SELENOİD E ELEKTRİKLİ
+P0774	VİTES DEĞİŞTİRME SELENOİD E ARALIKLARI
+P0775	BASINÇ KONTROL SELENOİD B ARIZASI
+P0776	BASINÇ KONTROL SELENOİD B PERFORMANS
+P0777	BASINÇ KONTROL SELENOİD B YAPIŞIP KALMAK
+P0778	BASINÇ KONTROL SELENOİD B ELEKTRİKLİ
+P0779	BASINÇ KONTROL SELENOİD B ARALIKLARI
+P0780	VİTES DEĞİŞTİRME ARIZASI
+P0781	1-2 VİTES DEĞİŞTİRME HATASI
+P0782	2-3 VİTES DEĞİŞTİRME HATASI
+P0783	3-4 VİTES DEĞİŞTİRME HATASI
+P0784	4-5 VİTES DEĞİŞTİRME HATASI
+P0785	VİTES DEĞİŞTİRME/ZAMANLAMA SELENOİD ARIZASI
+P0786	VİTES DEĞİŞTİRME/ZAMANLAMA SELENOİD SINIRI/PERFORMANSI
+P0787	VİTES DEĞİŞTİRME/ZAMANLAMA SELENOİD DÜŞÜK
+P0788	VİTES DEĞİŞTİRME/ZAMANLAMA SELENOİD YÜKSEK
+P0789	VİTES DEĞİŞTİRME/ZAMANLAMA SELENOİD ARALIKLARI
+P078A	VİTES Değiştirme/Zamanlama SELENOİD B Arızası
+P078B	VİTES Değiştirme/Zamanlama SELENOİD B Aralığı / Performansı
+P078C	VİTES Değiştirme/Zamanlama SELENOİD B Düşük
+P078D	VİTES Değiştirme/Zamanlama SELENOİD B Yüksek
+P078E	VİTES Değiştirme/Zamanlama SELENOİD B Aralıkları
+P0790	MOD DÜĞMESİ DEVRE ARIZASI
+P0791	Ara Şaft Hız Sensörü A Devresi
+P0792	Ara Şaft Hız Sensörü A Devresi Oranı/Performansı
+P0793	Ara Şaft Hız Sensörü A Devresi Sinyal Yok
+P0794	Ara Şaft Hız Sensörü A Devresi Kesintili
+P0795	Basınç Kontrol Selenoidi C
+P0796	Basınç Kontrol Selenoidi C Performansı veya Takılı Değil
+P0797	Basınç Kontrol Selenoidi C Takılı
+P0798	Basınç Kontrol Selenoidi C Elektriksel
+P0799	Basınç Kontrol Selenoidi C Kesintili
+P079A	Şanzıman Sürtünme Elemanı "A" Kayma Algılandı
+P079B	Şanzıman Sürtünme Elemanı "B" Kayma Algılandı
+P079C	Şanzıman Sürtünme Elemanı "C" Kayma Algılandı
+P079D	Şanzıman Sürtünme Elemanı "D" Kayma Algılandı
+P079E	Şanzıman Sürtünme Elemanı "E" Kayma Algılandı
+P079F	Şanzıman Sürtünme Elemanı "F" Kayma Algılandı
+P07A0	Şanzıman Sürtünme Elemanı "G" Kayma Algılandı
+P07A1	Şanzıman Sürtünme Elemanı "H" Kayma Algılandı
+P07A2	Şanzıman Sürtünme Elemanı A Performans/Kapalı, Sıkışmış
+P07A3	Şanzıman Sürtünme Elemanı A Sıkışmış
+P07A4	Şanzıman Sürtünme Elemanı B Performans/Kapalı, Sıkışmış
+P07A5	Şanzıman Sürtünme Elemanı B Sıkışmış
+P07A6	Şanzıman Sürtünme Elemanı "C" Performans/Kapalı, Sıkışmış
+P07A7	Şanzıman Sürtünme Elemanı "C" Sıkışmış
+P07A8	Şanzıman Sürtünme Elemanı "D" Performans/Kapalı, Sıkışmış
+P07A9	Şanzıman Sürtünme Elemanı "D" Sıkışmış
+P07AA	Şanzıman Sürtünme Elemanı "E" Performans/Kapalı, Sıkışmış
+P07AB	Şanzıman Sürtünme Elemanı "E" Sıkışmış
+P07AC	Şanzıman Sürtünme Elemanı "F" Performans/Kapalı, Sıkışmış
+P07AD	Şanzıman Sürtünme Elemanı "F" Sıkışmış
+P07AE	Şanzıman Sürtünme Elemanı "G" Performans/Kapalı, Sıkışmış
+P07AF	Şanzıman Sürtünme Elemanı "G" Sıkışmış
+P07B0	Şanzıman Sürtünme Elemanı "H" Performans/Kapalı, Sıkışmış
+P07B1	Şanzıman Sürtünme Elemanı "H" Sıkışmış
+P07B2	Şanzıman Park Konumu Sensörü/Anahtar A Devresi/Açık
+P07B3	Şanzıman Park Konumu Sensörü/Anahtar A Devresi Düşük
+P07B4	Şanzıman Park Konumu Sensörü/Anahtar A Devresi Yüksek
+P07B5	Şanzıman Park Konumu Sensörü/Anahtar A Devresi Performans/Düşük
+P07B6	Şanzıman Park Konumu Sensörü/Anahtar A Devresi Performans Yüksek
+P07B7	Şanzıman Park Konumu Sensörü/Anahtar A Devresi Aralıklı / Düzensiz
+P07B8	Şanzıman Park Konumu Sensörü/Anahtar B Devresi/Açık
+P07B9	Şanzıman Park Konumu Sensörü/Anahtar B Devresi Düşük
+P07BA	Şanzıman Park Konumu Sensörü/Anahtar B Devresi Yüksek
+P07BB	Şanzıman Park Konumu Sensörü/Anahtar B Devresi Performans/Düşük
+P07BC	Şanzıman Park Konumu Sensörü/Anahtar B Devresi Performans Yüksek
+P07BD	Şanzıman Park Konumu Sensörü/Anahtar B Devresi Aralıklı / Düzensiz
+P07BE	Şanzıman Park Konumu Sensörü/Anahtar A/B Korelasyonu
+P0800	Transfer Durum Kontrol Sistemi (MIL Talebi)
+P0801	GERİ HIZ ENGEL KONTROL DEVRE ARIZASI
+P0802	Şanzıman Kontrol Sistem MIL Talep Devresi/Açık
+P0803	1-4 ÜST VİTES (ATLANABİLİR VİTES) SELENOİD DEVRE ARIZASI
+P0804	1-4 ÜST VİTES (ATLANABİLİR VİTES) LAMBA KONTROL DEVRE ARIZASI
+P0805	Kavrama Pozisyon Sensör Devresi
+P0806	Kavrama Pozisyon Sensör Devresi Oranı/Performansı
+P0807	Kavrama Pozisyon Sensör Devresi Düşük
+P0808	Kavrama Pozisyon Sensör Devresi Yüksek
+P0809	Kavrama Pozisyon Sensör Devresi Kesintili
+P080A	Debriyaj Pozisyonu Tespit Edilemedi
+P080B	Upshift/Skip Shift Solenoid Control Circuit Range/Performa nce
+P080C	Upshift/Skip Shift Solenoid Control Circuit Low
+P080D	Upshift/Skip Shift Solenoid Control Circuit High
+P0810	Kavrama Pozisyon Kontrol Hatası
+P0811	Kavrama Aşırı İncelmiş
+P0812	Gerivites Giriş Devresi
+P0813	Gerivites Çıkış Devresi
+P0814	Şanzıman Oran Display Devresi
+P0815	Vites Yükseltme Swiç Devresi
+P0816	Vites Düşürme Swiç Devresi
+P0817	Marş Bloke Etme Devresi
+P0818	Sürücü İptal Swiç Giriş Devresi
+P0819	arı ve Aşağı Değişim Swiçinin Şanzıman Oranına Uyumu
+P081A	Starter Disable Circuit Low
+P081B	Starter Disable Circuit High
+P081C	Park Input Circuit
+P081D	Neutral Input Circuit
+P081E	Excessive Clutch B Slippage
+P0820	Vites Kolu X-Y Pozisyon Sensör Devresi
+P0821	Vites Kolu X Pozisyon Devresi
+P0822	Vites Kolu Y Pozisyon Devresi
+P0823	Vites Kolu X Pozisyon Devresi Kesintili
+P0824	Vites Kolu Y Pozisyon Devresi Kesintili
+P0825	Vites Kolu Vites Değişim Swiçi
+P0826	Yukarı ve Aşağı Değişim Swiç Devresi
+P0827	Yukarı ve Aşağı Değişim Swiç Devresi Düşük
+P0828	Yukarı ve Aşağı Değişim Swiç Devresi Yüksek
+P0829	5-6 Değişim
+P0830	Debriyaj Pedal Swiçi A Devresi
+P0831	Debriyaj Pedal Swiçi A Devresi Düşük
+P0832	Debriyaj Pedal Swiçi A Devresi Yüksek
+P0833	Debriyaj Pedal Swiçi B Devresi
+P0834	Debriyaj Pedal Swiçi B Devresi Düşük
+P0835	Debriyaj Pedal Swiçi B Devresi Yüksek
+P0836	Dört Tekerden Çeker (4WD) Swiç Devresi
+P0837	Dört Tekerden Çeker (4WD) Swiç Devresi Oranı/Performansı
+P0838	Dört Tekerden Çeker (4WD) Swiç Devresi Düşük
+P0839	Dört Tekerden Çeker (4WD) Swiç Devresi Yüksek
+P083A	Şanzıman Yağı Basınç Sensör/Anahtar "G" Devresi
+P083B	Şanzıman Yağı Basınç Sensör/Anahtar "G" Devresi Aralıklı / Düzensiz / Performansı
+P083C	Şanzıman Yağı Basınç Sensör/Anahtar "G" Devresi Düşük
+P083D	Şanzıman Yağı Basınç Sensör/Anahtar "G" Devresi Yüksek
+P083E	Şanzıman Yağı Basınç Sensör/Anahtar "G" Devresi Aralıklı
+P083F	Debriyaj Pedal Anahtar A/B Korelasyonu
+P0840	Şanzıman Yağı Basınç Sensörü/Swiçi A Devresi
+P0841	Şanzıman Yağı Basınç Sensörü/Swiçi A Devresi Oranı/Performansı
+P0842	Şanzıman Yağı Basınç Sensörü/Swiçi A Devresi Düşük
+P0843	Şanzıman Yağı Basınç Sensörü/Swiçi A Devresi Yüksek
+P0844	Şanzıman Yağı Basınç Sensörü/Swiçi A Devresi Kesintili
+P0845	Şanzıman Yağı Basınç Sensörü/Swiçi B Devresi
+P0846	Şanzıman Yağı Basınç Sensörü/Swiçi B Devresi Oranı/Performansı
+P0847	Şanzıman Yağı Basınç Sensörü/Swiçi B Devresi Düşük
+P0848	Şanzıman Yağı Basınç Sensörü/Swiçi B Devresi Yüksek
+P0849	Şanzıman Yağı Basınç Sensörü/Swiçi B Devresi Kesintili
+P084A	Şanzıman Yağı Basınç Sensör/Anahtar "H" Devresi
+P084B	Şanzıman Yağı Basınç Sensör/Anahtar "H" Devresi Aralıklı / Düzensiz / Performansı
+P084C	Şanzıman Yağı Basınç Sensör/Anahtar "H" Devresi Düşük
+P084D	Şanzıman Yağı Basınç Sensör/Anahtar "H" Devresi Yüksek
+P084E	Şanzıman Yağı Basınç Sensör/Anahtar "H" Devresi Aralıklı
+P0850	Park/Boş Swiç Giriş Devresi
+P0851	Park/Boş Swiç Giriş Devresi Düşük
+P0852	Park/Boş Swiç Giriş Devresi Yüksek
+P0853	Sürüş Swiçi Giriş Devresi
+P0854	Sürüş Swiçi Giriş Devresi Düşük
+P0855	Sürüş Swiçi Giriş Devresi Yüksek
+P0856	Çekiş Kontrol Giriş Sinyali
+P0857	Çekiş Kontrol Giriş Sinyali Oranı/Performansı
+P0858	Çekiş Kontrol Giriş Sinyali Düşük
+P0859	Çekiş Kontrol Giriş Sinyali Yüksek
+P085A	Gear Shift Module B Communication Circuit
+P085B	Gear Shift Module B Communication Circuit Low
+P085C	Gear Shift Module B Communication Circuit High
+P0860	Vites Değişim Modülü Haberleşme Devresi
+P0861	Vites Değişim Modülü Haberleşme Devresi Düşük
+P0862	Vites Değişim Modülü Haberleşme Devresi Yüksek
+P0863	TCM Haberleşme Devresi
+P0864	TCM Haberleşme Devresi Oranı/Performansı
+P0865	TCM Haberleşme Devresi Düşük
+P0866	TCM Haberleşme Devresi Yüksek
+P0867	Şanzıman Yağı Basıncı
+P0868	Şanzıman Yağı Basıncı Düşük
+P0869	Şanzıman Yağı Basıncı Yüksek
+P0870	Şanzıman Yağı Basınç Sensörü/Swiçi C Devresi
+P0871	Şanzıman Yağı Basınç Sensörü/Swiçi C Devresi Oranı/Performansı
+P0872	Şanzıman Yağı Basınç Sensörü/Swiçi C Devresi Düşük
+P0873	Şanzıman Yağı Basınç Sensörü/Swiçi C Devresi Yüksek
+P0874	Şanzıman Yağı Basınç Sensörü/Swiçi C Devresi Kesintili
+P0875	Şanzıman Yağı Basınç Sensörü/Swiçi D Devresi
+P0876	Şanzıman Yağı Basınç Sensörü/Swiçi D Devresi Oranı/Performansı
+P0877	Şanzıman Yağı Basınç Sensörü/Swiçi D Devresi Düşük
+P0878	Şanzıman Yağı Basınç Sensörü/Swiçi D Devresi Yüksek
+P0879	Şanzıman Yağı Basınç Sensörü/Swiçi D Devresi Kesintili
+P0880	TCM Güç Giriş Sinyali
+P0881	TCM Güç Giriş Sinyali Oranı/Performansı
+P0882	TCM Güç Giriş Sinyali Düşük
+P0883	TCM Güç Giriş Sinyali Yüksek
+P0884	TCM Güç Giriş Sinyali Kesintili
+P0885	TCM Güç Rölesi Kontrol Devresi/Açık
+P0886	TCM Güç Rölesi Kontrol Devresi Düşük
+P0887	TCM Güç Rölesi Kontrol Devresi Yüksek
+P0888	TCM Güç Rölesi Hassasiyet Devresi
+P0889	TCM Güç Rölesi Devresi Oranı/Performansı
+P0890	TCM Güç Rölesi Devresi Düşük
+P0891	TCM Güç Rölesi Devresi Yüksek
+P0892	TCM Güç Rölesi Devresi Kesintili
+P0893	Dişlilerin Birçoğu Meşgul
+P0894	Şanzıman Kayma Komponenti
+P0895	Değişim Zamanı Çok Kısa
+P0896	Değişim Zamanı Çok Uzun
+P0897	Şanzıman Yağı Kötüleşmiş
+P0898	Şanzıman Kontrol Sistemi MIL Talebi Devresi Düşük
+P0899	Şanzıman Kontrol Sistemi MIL Talebi Devresi Yüksek
+P0900	Kavrama Aktüatör Devresi/ Açık
+P0901	Kavrama Aktüatör Devresi/ Oranı/Performansı
+P0902	Kavrama Aktüatör Devresi/ Düşük
+P0903	Kavrama Aktüatör Devresi/ Yüksek
+P0904	Geçiş Seçim Pozisyon Devresi
+P0905	Geçiş Seçim Pozisyon Devresi Oranı/Performansı
+P0906	Geçiş Seçim Pozisyon Devresi Düşük
+P0907	Geçiş Seçim Pozisyon Devresi Yüksek
+P0908	Geçiş Seçim Pozisyon Devresi Kesintili
+P0909	Geçiş Seçim Kontrol Hatası
+P0910	Geçiş Seçim Aktüatör Devresi/Açık
+P0911	Geçiş Seçim Aktüatör Devresi Oranı/performansı
+P0912	Geçiş Seçim Aktüatör Devresi Düşük
+P0913	Geçiş Seçim Aktüatör Devresi Yüksek
+P0914	Vites Değişim Pozisyon Devresi
+P0915	Vites Değişim Pozisyon Devresi Oranı/Performansı
+P0916	Vites Değişim Pozisyon Devresi Düşük
+P0917	Vites Değişim Pozisyon Devresi Yüksek
+P0918	Vites Değişim Pozisyon Devresi Kesintili
+P0919	Vites Değişim Pozisyon Kontrol Hatası
+P0920	İleri Vites Değişim Aktüatör Devresi/Açık
+P0921	İleri Vites Değişim Aktüatör Devresi Oranı/ Performansı
+P0922	İleri Vites Değişim Aktüatör Devresi Düşük
+P0923	İleri Vites Değişim Aktüatör Devresi Yüksek
+P0924	Geri Vites Değişim Aktüatör Devresi/Açık
+P0925	Geri Vites Değişim Aktüatör Devresi Oranı/ Performansı
+P0926	Geri Vites Değişim Aktüatör Devresi Düşük
+P0927	Geri Vites Değişim Aktüatör Devresi Yüksek
+P0928	Vites Değişim Kilitleme Selenoid Kontrol Devresi/Açık
+P0929	Vites Değişim Kilitleme Selenoid Kontrol Devresi Oran/ Performansı
+P0930	Vites Değişim Kilitleme Selenoid Kontrol Devresi Düşük
+P0931	Vites Değişim Kilitleme Selenoid Kontrol Devresi Yüksek
+P0932	Hidrolik Basınç Sensör Devresi
+P0933	Hidrolik Basınç Sensör Oranı/Performansı
+P0934	Hidrolik Basınç Sensör Devresi Düşük
+P0935	Hidrolik Basınç Sensör Devresi Yüksek
+P0936	Hidrolik Basınç Sensör Devresi Kesintili
+P0937	Hidrolik Yağ Sıcaklık Sensör Devresi
+P0938	Hidrolik Yağ Sıcaklık Sensör Oranı/Performansı
+P0939	Hidrolik Yağ Sıcaklık Sensör Devresi Düşük
+P0940	Hidrolik Yağ Sıcaklık Sensör Devresi Yüksek
+P0941	Hidrolik Yağ Sıcaklık Sensör Devresi Kesintili
+P0942	Hidrolik Basınç Ünitesi
+P0943	Hidrolik Basınç Ünitesi Devir Periyodu Çok Kısa
+P0944	Hidrolik Basınç Ünitesi Basınç Kaybı
+P0945	Hidrolik Pompa Rölesi Devresi/Açık
+P0946	Hidrolik Pompa Rölesi Devresi Oranı/Performansı
+P0947	Hidrolik Pompa Rölesi Devresi Düşük
+P0948	Hidrolik Pompa Rölesi Devresi Yüksek
+P0949	Elle Otomatik Değişim Adaptasyonu Uyarlanılamadı
+P0950	Elle Otomatik Değişim Kontrol Devresi
+P0951	Elle Otomatik Değişim Kontrol Devresi Oranı/Performansı
+P0952	Elle Otomatik Değişim Kontrol Devresi Düşük
+P0953	Elle Otomatik Değişim Kontrol Devresi Yüksek
+P0954	Elle Otomatik Değişim Kontrol Devresi Kesintili
+P0955	Elle Otomatik Değişim Modu Devresi
+P0956	Elle Otomatik Değişim Modu Devresi Oranı/Performansı
+P0957	Elle Otomatik Değişim Modu Devresi Düşük
+P0958	Elle Otomatik Değişim Modu Devresi Yüksek
+P0959	Elle Otomatik Değişim Modu Devresi Kesintili
+P0960	Basınç Kontrol Selenoid A Kontrol Devresi/Açık
+P0961	Basınç Kontrol Selenoid A Kontrol Devresi Oranı/Performansı
+P0962	Basınç Kontrol Selenoid A Kontrol Devresi Düşük
+P0963	Basınç Kontrol Selenoid A Kontrol Devresi Yüksek
+P0964	Basınç Kontrol Selenoid B Kontrol Devresi/açık
+P0965	Basınç Kontrol Selenoid B Kontrol Devresi Oranı/Performansı
+P0966	Basınç Kontrol Selenoid B Kontrol Devresi Düşük
+P0967	Basınç Kontrol Selenoid B Kontrol Devresi Yüksek
+P0968	Basınç Kontrol Selenoid C Kontrol Devresi/Açık
+P0969	Basınç Kontrol Selenoid C Kontrol Devresi Oranı/Performansı
+P0970	Basınç Kontrol Selenoid C Kontrol Devresi Düşük
+P0971	Basınç Kontrol Selenoid C Kontrol Devresi Yüksek
+P0972	Değiştirme Selenoidi A Kontrol Devresi Oranı/Performansı
+P0973	Değiştirme Selenoidi A Kontrol Devresi Düşük
+P0974	Değiştirme Selenoidi A Kontrol Devresi Yüksek
+P0975	Değiştirme Selenoidi B Kontrol Devresi Oranı/Performansı
+P0976	Değiştirme Selenoidi B Kontrol Devresi Düşük
+P0977	Değiştirme Selenoidi B Kontrol Devresi Yüksek
+P0978	Değiştirme Selenoidi C Kontrol Devresi Oranı/Performansı
+P0979	Değiştirme Selenoidi C Kontrol Devresi Düşük
+P0980	Değiştirme Selenoidi C Kontrol Devresi Yüksek
+P0981	Değiştirme Selenoidi D Kontrol Devresi Oranı/Performansı
+P0982	Değiştirme Selenoidi D Kontrol Devresi Düşük
+P0983	Değiştirme Selenoidi D Kontrol Devresi Yüksek
+P0984	Değiştirme Selenoidi E Kontrol Devresi Oranı/Performansı
+P0985	Değiştirme Selenoidi E Kontrol Devresi Düşük
+P0986	Değiştirme Selenoidi E Kontrol Devresi Yüksek
+P0987	Şanzıman Yağı Basınç Sensörü/Swiç E Devresi
+P0988	Şanzıman Yağı Basınç Sensörü/Swiç E Devresi Oranı/Performansı
+P0989	Şanzıman Yağı Basınç Sensörü/Swiç E Devresi Düşük
+P0990	Şanzıman Yağı Basınç Sensörü/Swiç E Devresi Yüksek
+P0991	Şanzıman Yağı Basınç Sensörü/Swiç E Devresi Kesintili
+P0992	Şanzıman Yağı Basınç Sensörü/Swiç F Devresi
+P0993	Şanzıman Yağı Basınç Sensörü/Swiç F Devresi Oranı/Performansı
+P0994	Şanzıman Yağı Basınç Sensörü/Swiç F Devresi Düşük
+P0995	Şanzıman Yağı Basınç Sensörü/Swiç F Devresi Yüksek
+P0996	Şanzıman Yağı Basınç Sensörü/Swiç F Devresi Kesintili
+P0997	Değiştirme Selenoidi F Kontrol Devresi Oranı/Performansı
+P0998	Değiştirme Selenoidi F Kontrol Devresi Düşük
+P0999	Değiştirme Selenoidi F Kontrol Devresi Yüksek
+P099A	Shift Solenoid G Control Circuit Range/Performance
+P099B	Shift Solenoid G Control Circuit Low
+P099C	Shift Solenoid G Control Circuit High
+P099D	Shift Solenoid H Control Circuit Range/Performance
+P099E	Shift Solenoid H Control Circuit Low
+P099F	Shift Solenoid H Control Circuit High
+P0A00	Motor Electronics Coolant Temperature Sensor Circuit
+P0A01	Motor Electronics Coolant Temperature Sensor Circuit Range /Performance
+P0A02	Motor Electronics Coolant Temperature Sensor Circuit Low
+P0A03	Motor Electronics Coolant Temperature Sensor Circuit High
+P0A04	Motor Electronics Coolant Temperature Sensor Circuit Inter mittent
+P0A05	Motor Electronics Coolant Pump Control Circuit/Open
+P0A06	Motor Electronics Coolant Pump Control Circuit Low
+P0A07	Motor Electronics Coolant Pump Control Circuit High
+P0A08	DC/DC Converter Status Circuit
+P0A09	DC/DC Converter Status Circuit Low
+P0A0A	High Voltage System Inter-Lock Circuit
+P0A0B	High Voltage System Inter-Lock Circuit Performance
+P0A0C	High Voltage System Inter-Lock Circuit Low
+P0A0D	High Voltage System Inter-Lock Circuit High
+P0A0E	High Voltage System Inter-Lock Circuit Intermittent
+P0A0F	Engine Failed to Start
+P0A10	DC/DC Converter Status Circuit High
+P0A11	DC/DC Converter Enable Circuit/Open
+P0A12	DC/DC Converter Enable Circuit Low
+P0A13	DC/DC Converter Enable Circuit High
+P0A14	Engine Mount A Control Circuit/Open
+P0A15	Engine Mount A Control Circuit Low
+P0A16	Engine Mount A Control Circuit High
+P0A17	Motor Torque Sensor Circuit
+P0A18	Motor Torque Sensor Circuit Range/Performance
+P0A19	Motor Torque Sensor Circuit Low
+P0A1A	Generator Control Module
+P0A1B	Drive Motor A Control Module
+P0A1C	Drive Motor B Control Module
+P0A1D	Hybrid Powertrain Control Module
+P0A1E	Starter/Generator Control Module
+P0A1F	Battery Energy Control Module
+P0A20	Motor Torque Sensor Circuit High
+P0A21	Motor Torque Sensor Circuit Intermittent
+P0A22	Generator Torque Sensor Circuit
+P0A23	Generator Torque Sensor Circuit Range/Performance
+P0A24	Generator Torque Sensor Circuit Low
+P0A25	Generator Torque Sensor Circuit High
+P0A26	Generator Torque Sensor Circuit Intermittent
+P0A27	Hybrid Battery Power Off Circuit
+P0A28	Hybrid Battery Power Off Circuit Low
+P0A29	Hybrid Battery Power Off Circuit High
+P0A2A	Drive Motor A Temperature Sensor Circuit
+P0A2B	Drive Motor A Temperature Sensor Circuit Range/Performance
+P0A2C	Drive Motor A Temperature Sensor Circuit Low
+P0A2D	Drive Motor A Temperature Sensor Circuit High
+P0A2E	Drive Motor A Temperature Sensor Circuit Intermittent
+P0A2F	Drive Motor A Over Temperature
+P0A30	Drive Motor B Temperature Sensor Circuit
+P0A31	Drive Motor B Temperature Sensor Circuit Range/Performance
+P0A32	Drive Motor B Temperature Sensor Circuit Low
+P0A33	Drive Motor B Temperature Sensor Circuit High
+P0A34	Drive Motor B Temperature Sensor Circuit Intermittent
+P0A35	Drive Motor B Over Temperature
+P0A36	Generator Temperature Sensor Circuit
+P0A37	Generator Temperature Sensor Circuit Range/Performance
+P0A38	Generator Temperature Sensor Circuit Low
+P0A39	Generator Temperature Sensor Circuit High
+P0A3A	Generator Temperature Sensor Circuit Intermittent
+P0A3B	Generator Over Temperature
+P0A3C	Drive Motor A Inverter Over Temperature
+P0A3D	Drive Motor B Inverter Over Temperature
+P0A3E	Generator Inverter Over Temperature
+P0A3F	Drive Motor A Position Sensor Circuit
+P0A40	Drive Motor A Position Sensor Circuit Range/Performance
+P0A41	Drive Motor A Position Sensor Circuit Low
+P0A42	Drive Motor A Position Sensor Circuit High
+P0A43	Drive Motor A Position Sensor Circuit Intermittent
+P0A44	Drive Motor A Position Sensor Circuit Overspeed
+P0A45	Drive Motor B Position Sensor Circuit
+P0A46	Drive Motor B Position Sensor Circuit Range/Performance
+P0A47	Drive Motor B Position Sensor Circuit Low
+P0A48	Drive Motor B Position Sensor Circuit High
+P0A49	Drive Motor B Position Sensor Circuit Intermittent
+P0A4A	Drive Motor B Position Sensor Circuit Overspeed
+P0A4B	Generator Position Sensor Circuit
+P0A4C	Generator Position Sensor Circuit Range/Performance
+P0A4D	Generator Position Sensor Circuit Low
+P0A4E	Generator Position Sensor Circuit High
+P0A4F	Generator Position Sensor Circuit Intermittent
+P0A50	Generator Position Sensor Circuit Overspeed
+P0A51	Drive Motor A Current Sensor Circuit
+P0A52	Drive Motor A Current Sensor Circuit Range/Performance
+P0A53	Drive Motor A Current Sensor Circuit Low
+P0A54	Drive Motor A Current Sensor Circuit High
+P0A55	Drive Motor B Current Sensor Circuit
+P0A56	Drive Motor B Current Sensor Circuit Range/Performance
+P0A57	Drive Motor B Current Sensor Circuit Low
+P0A58	Drive Motor B Current Sensor Circuit High
+P0A59	Generator Current Sensor Circuit
+P0A5A	Generator Current Sensor Circuit Range/Performance
+P0A5B	Generator Current Sensor Circuit Low
+P0A5C	Generator Current Sensor Circuit High
+P0A5D	Drive Motor A Phase U Current
+P0A5E	Drive Motor A Phase U Current Low
+P0A5F	Drive Motor A Phase U Current High
+P0A60	Drive Motor A Phase V Current
+P0A61	Drive Motor A Phase V Current Low
+P0A62	Drive Motor A Phase V Current High
+P0A63	Drive Motor A Phase W Current
+P0A64	Drive Motor A Phase W Current Low
+P0A65	Drive Motor A Phase W Current High
+P0A66	Drive Motor B Phase U Current
+P0A67	Drive Motor B Phase U Current Low
+P0A68	Drive Motor B Phase U Current High
+P0A69	Drive Motor B Phase V Current
+P0A6A	Drive Motor B Phase V Current Low
+P0A6B	Drive Motor B Phase V Current High
+P0A6C	Drive Motor B Phase W Current
+P0A6D	Drive Motor B Phase W Current Low
+P0A6E	Drive Motor B Phase W Current High
+P0A6F	Generator Phase U Current
+P0A70	Generator Phase U Current Low
+P0A71	Generator Phase U Current High
+P0A72	Generator Phase V Current
+P0A73	Generator Phase V Current Low
+P0A74	Generator Phase V Current High
+P0A75	Generator Phase W Current
+P0A76	Generator Phase W Current Low
+P0A77	Generator Phase W Current High
+P0A78	Drive Motor A Inverter Performance
+P0A79	Drive Motor B Inverter Performance
+P0A7A	Generator Inverter Performance
+P0A7B	Battery Energy Control Module Requested MIL Illumination
+P0A7C	Motor Electronics Over Temperature
+P0A7D	Hybrid Battery Pack State of Charge Low
+P0A7E	Hybrid Battery Pack Over Temperature
+P0A7F	Hybrid Battery Pack Deterioration
+P0A80	Replace Hybrid Battery Pack
+P0A81	Hybrid Battery Pack Cooling Fan 1 Control Circuit/Open
+P0A82	Hybrid Battery Pack Cooling Fan 1 Performance/Stuck Off
+P0A83	Hybrid Battery Pack Cooling Fan 1 Stuck On
+P0A84	Hybrid Battery Pack Cooling Fan 1 Control Circuit Low
+P0A85	Hybrid Battery Pack Cooling Fan 1 Control Circuit High
+P0A86	14 Volt Power Module Current Sensor Circuit
+P0A87	14 Volt Power Module Current Sensor Circuit Range/Performa nce
+P0A88	14 Volt Power Module Current Sensor Circuit Low
+P0A89	14 Volt Power Module Current Sensor Circuit High
+P0A8A	14 Volt Power Module Current Sensor Circuit Intermittent
+P0A8B	14 Volt Power Module System Voltage
+P0A8C	14 Volt Power Module System Voltage Unstable
+P0A8D	14 Volt Power Module System Voltage Low
+P0A8E	14 Volt Power Module System Voltage High
+P0A8F	14 Volt Power Module System Performance
+P0A90	Drive Motor A Performance
+P0A91	Drive Motor B Performance
+P0A92	Hybrid Generator Performance
+P0A93	Inverter Cooling System Performance
+P0A94	DC/DC Converter Performance
+P0A95	High Voltage Fuse
+P0A96	Hybrid Battery Pack Cooling Fan 2 Control Circuit
+P0A97	Hybrid Battery Pack Cooling Fan 2 Performance/Stuck Off
+P0A98	Hybrid Battery Pack Cooling Fan 2 Stuck On
+P0A99	Hybrid Battery Pack Cooling Fan 2 Control Circuit Low
+P0A9A	Hybrid Battery Pack Cooling Fan 2 Control Circuit High
+P0A9B	Hybrid Battery Temperature Sensor A Circuit
+P0A9C	Hybrid Battery Temperature Sensor A Range/Performance
+P0A9D	Hybrid Battery Temperature Sensor A Circuit Low
+P0A9E	Hybrid Battery Temperature Sensor A Circuit High
+P0A9F	Hybrid Battery Temperature Sensor A Circuit Intermittent/E rratic
+P0AA0	Hybrid Battery Positive Contactor Circuit
+P0AA1	Hybrid Battery Positive Contactor Circuit Stuck Closed
+P0AA2	Hybrid Battery Positive Contactor Circuit Stuck Open
+P0AA3	Hybrid Battery Negative Contactor Circuit
+P0AA4	Hybrid Battery Negative Contactor Circuit Stuck Closed
+P0AA5	Hybrid Battery Negative Contactor Circuit Stuck Open
+P0AA6	Hybrid Battery Voltage System Isolation Fault
+P0AA7	Hybrid Battery Voltage Isolation Sensor Circuit
+P0AA8	Hybrid Battery Voltage Isolation Sensor Circuit Range/Perf ormance
+P0AA9	Hybrid Battery Voltage Isolation Sensor Circuit Low
+P0AAA	Hybrid Battery Voltage Isolation Sensor Circuit High
+P0AAB	Hybrid Battery Voltage Isolation Sensor Circuit Intermitte nt/Erratic
+P0AAC	Hybrid Battery Pack Air Temperature Sensor A Circuit
+P0AAD	Hybrid Battery Pack Air Temperature Sensor A Circuit Range /Performance
+P0AAE	Hybrid Battery Pack Air Temperature Sensor A Circuit Low
+P0AAF	Hybrid Battery Pack Air Temperature Sensor A Circuit High
+P0AB0	Hybrid Battery Pack Air Temperature Sensor A Circuit Inter mittent/Erratic
+P0AB1	Hybrid Battery Pack Air Temperature Sensor B Circuit
+P0AB2	Hybrid Battery Pack Air Temperature Sensor B Circuit Range /Performance
+P0AB3	Hybrid Battery Pack Air Temperature Sensor B Circuit Low
+P0AB4	Hybrid Battery Pack Air Temperature Sensor B Circuit High
+P0AB5	Hybrid Battery Pack Air Temperature Sensor B Circuit Inter mittent/Erratic
+P0AB6	Engine Mount B Control Circuit/Open
+P0AB7	Engine Mount B Control Circuit Low
+P0AB8	Engine Mount B Control Circuit High
+P0AB9	Hybrid System Performance
+P0ABA	Hybrid Battery Pack Voltage Sense Circuit
+P0ABB	Hybrid Battery Pack Voltage Sense Circuit Range/Performanc e
+P0ABC	Hybrid Battery Pack Voltage Sense Circuit Low
+P0ABD	Hybrid Battery Pack Voltage Sense Circuit High
+P0ABE	Hybrid Battery Pack Voltage Sense Circuit Intermittent/Err atic
+P0ABF	Hybrid Battery Pack Current Sensor Circuit
+P0AC0	Hybrid Battery Pack Current Sensor Circuit Range/Performan ce
+P0AC1	Hybrid Battery Pack Current Sensor Circuit Low
+P0AC2	Hybrid Battery Pack Current Sensor Circuit High
+P0AC3	Hybrid Battery Pack Current Sensor Circuit Intermittent/Er ratic
+P0AC4	Hybrid Powertrain Control Module Requested MIL Illuminatio n
+P0AC5	Hybrid Battery Temperature Sensor B Circuit
+P0AC6	Hybrid Battery Temperature Sensor B Range/Performance
+P0AC7	Hybrid Battery Temperature Sensor B Circuit Low
+P0AC8	Hybrid Battery Temperature Sensor B Circuit High
+P0AC9	Hybrid Battery Temperature Sensor B Circuit Intermittent/E rratic
+P0ACA	Hybrid Battery Temperature Sensor C Circuit
+P0ACB	Hybrid Battery Temperature Sensor C Range/Performance
+P0ACC	Hybrid Battery Temperature Sensor C Circuit Low
+P0ACD	Hybrid Battery Temperature Sensor C Circuit High
+P0ACE	Hybrid Battery Temperature Sensor C Circuit Intermittent/E rratic
+P0ACF	Hybrid Battery Pack Cooling Fan 3 Control Circuit
+P0AD0	Hybrid Battery Pack Cooling Fan 3 Performance/Stuck Off
+P0AD1	Hybrid Battery Pack Cooling Fan 3 Stuck On
+P0AD2	Hybrid Battery Pack Cooling Fan 3 Control Circuit Low
+P0AD3	Hybrid Battery Pack Cooling Fan 3 Control Circuit High
+P0AD4	Hybrid Battery Pack Air Flow System Insufficient Air Flow
+P0AD5	Hybrid Battery Pack Air Flow Valve A Control Circuit/Open
+P0AD6	Hybrid Battery Pack Air Flow Valve A Control Circuit Range /Performance
+P0AD7	Hybrid Battery Pack Air Flow Valve A Control Circuit Low
+P0AD8	Hybrid Battery Pack Air Flow Valve A Control Circuit High
+P0AD9	Hybrid Battery Positive Contactor Control Circuit/Open
+P0ADA	Hybrid Battery Positive Contactor Control Circuit Range/Pe rformance
+P0ADB	Hybrid Battery Positive Contactor Control Circuit Low
+P0ADC	Hybrid Battery Positive Contactor Control Circuit High
+P0ADD	Hybrid Battery Negative Contactor Control Circuit/Open
+P0ADE	Hybrid Battery Negative Contactor Control Circuit Range/Pe rformance
+P0ADF	Hybrid Battery Negative Contactor Control Circuit Low
+P0AE0	Hybrid Battery Negative Contactor Control Circuit High
+P0AE1	Hybrid Battery Precharge Contactor Circuit
+P0AE2	Hybrid Battery Precharge Contactor Circuit Stuck Closed
+P0AE3	Hybrid Battery Precharge Contactor Circuit Stuck Open
+P0AE4	Hybrid Battery Precharge Contactor Control Circuit
+P0AE5	Hybrid Battery Precharge Contactor Control Circuit Range/P erformance
+P0AE6	Hybrid Battery Precharge Contactor Control Circuit Low
+P0AE7	Hybrid Battery Precharge Contactor Control Circuit High
+P0AE8	Hybrid Battery Temperature Sensor D Circuit
+P0AE9	Hybrid Battery Temperature Sensor D Range/Performance
+P0AEA	Hybrid Battery Temperature Sensor D Circuit Low
+P0AEB	Hybrid Battery Temperature Sensor D Circuit High
+P0AEC	Hybrid Battery Temperature Sensor D Circuit Intermittent/E rratic
+P0AED	Drive Motor Inverter Temperature Sensor A Circuit
+P0AEE	Drive Motor Inverter Temperature Sensor A Circuit Range/Pe rformance
+P0AEF	Drive Motor Inverter Temperature Sensor A Circuit Low
+P0AF0	Drive Motor Inverter Temperature Sensor A Circuit High
+P0AF1	Drive Motor Inverter Temperature Sensor A Circuit Intermit tent/Erratic
+P0AF2	Drive Motor Inverter Temperature Sensor B Circuit
+P0AF3	Drive Motor Inverter Temperature Sensor B Circuit Range/Pe rformance
+P0AF4	Drive Motor Inverter Temperature Sensor B Circuit Low
+P0AF5	Drive Motor Inverter Temperature Sensor B Circuit High
+P0AF6	Drive Motor Inverter Temperature Sensor B Circuit Intermit tent/Erratic
+P0AF7	14 Volt Power Module Internal Temperature Too High
+P0AF8	Hybrid Battery System Voltage
+P0AF9	Hybrid Battery System Voltage Unstable
+P0AFA	Hybrid Battery System Voltage Low
+P0AFB	Hybrid Battery System Voltage High
+P0B00	Auxiliary Transmission Fluid Pump Motor Phase U Current
+P0B01	Auxiliary Transmission Fluid Pump Motor Phase U Current Lo w
+P0B02	Auxiliary Transmission Fluid Pump Motor Phase U Current Hi gh
+P0B03	Auxiliary Transmission Fluid Pump Motor Phase V Current
+P0B04	Auxiliary Transmission Fluid Pump Motor Phase V Current Lo w
+P0B05	Auxiliary Transmission Fluid Pump Motor Phase V Current Hi gh
+P0B06	Auxiliary Transmission Fluid Pump Motor Phase W Current
+P0B07	Auxiliary Transmission Fluid Pump Motor Phase W Current Lo w
+P0B08	Auxiliary Transmission Fluid Pump Motor Phase W Current Hi gh
+P0B09	Auxiliary Transmission Fluid Pump Motor Supply Voltage Cir cuit/Open
+P0B0A	Auxiliary Transmission Fluid Pump Motor Supply Voltage Cir cuit Low
+P0B0B	Auxiliary Transmission Fluid Pump Motor Supply Voltage Cir cuit High
+P0B0C	Auxiliary Transmission Fluid Pump Hydraulic Leakage
+P0B0D	Auxiliary Transmission Fluid Pump Motor Control Module
+P0B12	Ignition Coil A Primarg Control Circuit High
+P0B56	Camshaft Position A Actuator Bank 1 Circuit Low
+P0B89	Invalid Data Rcvd From Ctrl Module Instrument Cluster
+P0D11	EVAP Emission Purge Flow Sensor CKT Intermittent
+P0FFF	Time Reference High Res Signal A Erratic Pulses
+P1001	KOER TAMAMLAYAMIYOR. KOER GELİŞMEMİŞ.
+P1100	MAF SENSOR ARALIKLARI
+P1101	MAF SENSOR KENDİNCE TEST SINIRLARI DIŞINDA
+P1102	MAF SENSOR SINIRLAR İÇİNDE FAKAT BEKLENENDEN DÜŞÜK
+P1103	MAF SENSOR SINIRLAR İÇİNDE FAKAT BEKLENENDEN YÜKSEK
+P1104	MAF TOPRAKLAMA ARIZASI
+P1105	İKİ YÖNLÜ ALTERNATÖR ÜST HATASI
+P1106	İKİ YÖNLÜ ALTERNATÖR ALT HATASI
+P1107	İKİ YÖNLÜ ALTERNATÖR ALT DEVRE HATASI
+P1108	İKİ YÖNLÜ ALTERNATÖR AKÜ LAMBASI DEVRE HATASI
+P1109	İAT-B SENSOR ARALIKLARI
+P1110	İAT SENSOR (D/C) AÇIK/KAPALI
+P1111	SİSTEM GEÇİŞİ
+P1112	İAT SENSORU ARALIKLARI
+P1113	İAT SENSORU (L/C) AÇIK/KAPALI
+P1114	İAT-B DEVRE DÜŞÜK GİRİŞİ
+P1115	İAT-B DEVRE YÜKSEK GİRİŞİ
+P1117	ECT SENSOR ARALIKLARI
+P1118	MANİFOLD KESİN İŞİ DEVRESİ DÜŞÜK GİRİŞİ
+P1119	MANİFOLD KESİN İŞİ DEVRESİ YÜKSEK GİRİŞİ
+P1120	TP SENSORU SINIR DIŞI DÜŞÜK (KİLİT ÇOK DÜŞÜK)
+P1121	TP SENSORU MAF SENSORU İLE UYUŞMUYOR
+P1122	TP SENSORU SINIR İÇİ FAKAT BEKLENENDEN DÜŞÜK
+P1123	TP SENSORU SINIR İÇİ FAKAT BEKLENENDEN YÜKSEK
+P1124	TP SENSORU KENDİNCE TEST SINIRI DIŞINDA
+P1125	TP SENSORU ARALIKLARI
+P1126	TP (DAR SINIR) SENSORU DEVRE ARIZASI
+P1127	EGZOZ SICAK DEĞİL, AŞAĞI AKİS 02 SENSORU TEST EDİLEMİYOR
+P1128	YUKARI AKİS ISITILMIŞ 02 SENSÖRLERİ YER DEĞİŞTİRMİŞ
+P1129	AŞAĞI AKİS ISITILMIŞ 02 SENSÖRLERİ YER DEĞİŞTİRMİŞ
+P1130	HO2S11 DÜĞMESİ EKSİK- UYGUN YAKIT SINIRDA
+P1133	BANK 1 YAKIT KONTROLÜ DEĞİŞİMİ ZAYIF (FAOSC)
+P1134	BANK 1 YAKIT KONTROLÜ DEĞİŞİMİ ZENGİN (FAOSC)
+P1135	PEDAL YERİ SENSOR A DEVRESİ ARALIKLARI
+P1136	KONTROL KUTUSU FAN DEVRE ARIZASI
+P1137	HO2S12 DÜĞMESİ EKSİK- SENSOR ZENGİN GÖSTERİYOR
+P1138	HO2S12 DÜĞMESİ EKSİK- SENSOR ZAYIF GÖSTERİYOR
+P1139	YAKIT GÖSTERGESİNDE ŞU VAR DEVRESİ ARIZASI
+P1140	YAKIT DURUMUNDA ŞU VAR
+P1141	YAKIT YASAKLAYICI GÖSTERGESİNDE DEVRE ARIZASI
+P1142	YAKIT YASAKLAYICI DURUMU
+P1143	HAVA YARDIMCI KONTROL VALFİ SINIRI/PERFORMANSI
+P1144	HAVA YARDIMCI KONTROL VALFİ DEVRE ARIZASI
+P1150	HO2S21 DÜĞMESİ EKSİK- UYGUN YAKIT SINIRDA
+P1151	HO2S21 DÜĞMESİ EKSİK- SENSOR ZAYIF GÖSTERİYOR
+P1152	HO2S21 DÜĞMESİ EKSİK- SENSOR ZENGİN GÖSTERİYOR
+P1153	BANK 2 YAKIT KONTROLÜ DEĞİŞİMİ ZAYIF (FAOSC)
+P1154	BANK 2 YAKIT KONTROLÜ DEĞİŞİMİ ZENGİN (FAOSC)
+P1155	ALTERNATİF YAKIT KONTROLÖRÜ MİL’İ ÇALIŞTIRIR
+P1156	YAKIT SEÇME DÜĞMESİ ARIZASI
+P1157	HO2S22 DÜĞMESİ EKSİK- SENSOR ZAYIF GÖSTERİYOR
+P1158	HO2S22 DÜĞMESİ EKSİK- SENSOR ZENGİN GÖSTERİYOR
+P1159	YAKIT KADEMELENDİRME MOTORU ARIZALI
+P1167	GEÇERSİZ TEST, SÜRÜCÜ GAZ PEDALINI ÇALIŞTIRMAMIŞ
+P1168	YAKIT HATTI SENSORU SINIRLARI İÇİNDE DÜŞÜK HATA
+P1169	YAKIT HATTI SENSORU SINIRLARI İÇİNDE YÜKSEK HATA
+P1170	ESO- MOTOR DURDURMA SELENOİD HATASI
+P1173	ROTOR KALIBRASYON HATASI
+P1174	KAM SENSOR HATASI
+P1175	KAM KONTROL HATASI
+P1176	KAM KALIBRASYON HATASI
+P1177	SENKRONİZASYON HATASI
+P1178	KAÇIŞ SINIRLARI HATASI
+P1181	YAKIT İKMAL SİSTEMİ ARIZASI- YÜKSEK
+P1182	YAKIT KAPATMA SELENOİDİ ARIZASI
+P1183	MOTOR YAĞI ISISI DEVRE ARIZASI
+P1184	MOTOR YAĞI ISISI KENDİNCE TEST SINIRLARI DIŞINDA
+P1185	FTS YÜKSEK- YAKIT POMPASI İŞİ SENSORU YÜKSEK
+P1186	FTS DÜŞÜK- YAKIT POMPASI İŞİ SENSORU DÜŞÜK
+P1187	DEĞİŞKEN SEÇİM
+P1189	POMPA HIZ SİNYAL HATASI
+P1190	KALIBRASYON DİRENÇ SINIR DIŞI
+P1191	ANAHTAR HATTI VOLTAJI
+P1192	V DIŞ
+P1193	EGR TAHRİK AŞIRI AKIM
+P1194	ECU A/D KONVERTÖR
+P1195	SCP HBCC BİRİNCİL OLAMAMA HATASI
+P1196	ANAHTARSIZ VOLTAJ YÜKSEK
+P1197	ANAHTARSIZ VOLTAJ DÜŞÜK
+P1198	POMPA ROTOR KONTROLÜ DÜŞÜK YAKIT VERİYOR
+P1199	YAKIT SEVİYE GİRİŞ DEVRESİ DÜŞÜK
+P1201	ENJEKTÖR DEVRESİ AÇIK/KISA DEVRE-SİLİNDİR # 1
+P1202	ENJEKTÖR DEVRESİ AÇIK/KISA DEVRE-SİLİNDİR # 2
+P1203	ENJEKTÖR DEVRESİ AÇIK/KISA DEVRE-SİLİNDİR # 3
+P1204	ENJEKTÖR DEVRESİ AÇIK/KISA DEVRE-SİLİNDİR # 4
+P1205	ENJEKTÖR DEVRESİ AÇIK/KISA DEVRE-SİLİNDİR # 5
+P1209	ENJEKTÖR KONTROL BASINÇ SİSTEMİ HATASI
+P1210	ENJEKTÖR KONTROL BASINÇ BEKLENEN SEVİYENİN ÜSTÜNDE
+P1211	ENJEKTÖR KONTROL BASINÇ SENSORU İSTENENİN ÜSTÜNDE/ALTINDA
+P1212	ENJEKTÖR KONTROL BASINCI MOTORU DÖNDÜRME ESNASINDA TESPİT EDİLEMEDİ
+P1213	MARS ENJEKTÖR DEVRE ARIZASI
+P1214	PEDAL YERİ SENSORU B DEVRE ARALIKLARI
+P1215	PEDAL YERİ SENSORU C DEVRE DÜŞÜK GİRİŞ
+P1216	PEDAL YERİ SENSORU C DEVRE YÜKSEK GİRİŞ
+P1217	PEDAL YERİ SENSORU C DEVRE ARALIKLARI
+P1218	CİD YÜKSEK
+P1219	CİD DÜŞÜK
+P1220	GAZ KELEBEK KONTROL SİSTEM SERİSİ ARIZASI
+P1221	ÇEKİŞ KONTROL SİSTEM ARIZASI
+P1222	ÇEKİŞ KONTROL ÇIKIŞ DEVRE ARIZASI
+P1223	PEDAL İSTEK SENSOR B DEVRESİ YÜKSEK GİRİŞ
+P1224	GAZ KELEBEK YERİ SENSORU B KENDİNCE TEST SINIRI DIŞINDA
+P1225	İĞNE KALDIRMA SENSORU ARIZASI
+P1226	KONTROL MANSONU SENSOR ARIZASI
+P1227	ATIK ÇIKIŞI KAPANAMADI (AŞIRI BASINÇ)
+P1228	ATIK ÇIKIŞI AÇILAMADI (DÜŞÜK BASINÇ)
+P1229	İNTERCOOLER POMPASI SÜRÜCÜ HATASI
+P1230	YAKIT POMPASI DÜŞÜK HIZ ARIZASI
+P1231	YAKIT POMPASI İKİNCİL DEVRE DÜŞÜK, YÜKSEK HIZ
+P1232	YAKIT POMPASI HIZI BİRİNCİL DEVRE ARIZASI
+P1233	YAKIT POMPASI SÜRÜCÜ MODÜLÜ HAT DIŞI
+P1234	YAKIT POMPASI SÜRÜCÜ MODÜLÜ HAT DIŞI
+P1235	YAKIT POMPASI KONTROL SINIR DIŞI
+P1236	YAKIT POMPASI KONTROL SINIR DIŞI
+P1237	YAKIT POMPASI İKİNCİL DEVRE ARIZASI
+P1238	YAKIT POMPASI İKİNCİL DEVRE ARIZASI
+P1239	HIZ YAKIT POMPASI POZİTİF BESLEME HATASI
+P1240	SENSOR GÜÇ DESTEK ARIZASI
+P1241	SENSOR GÜÇ DESTEK DÜŞÜK GİRİŞ
+P1242	SENSOR GÜÇ DESTEK YÜKSEK GİRİŞ
+P1243	İKİNCİ YAKIT POMPASI HATALI VEYA TOPRAKLAMA HATASI
+P1244	ALTERNATÖR YÜK GİRİŞİ HATALI YÜKSEK
+P1245	ALTERNATÖR YÜK GİRİŞİ HATALI DÜŞÜK
+P1246	ALTERNATÖR YÜK GİRİŞİ HATALI
+P1247	TURBO TAKVİYE BASINCI DÜŞÜK
+P1248	TURBO TAKVİYE BASINCI TESPİT EDİLEMEDİ
+P1249	ATIK ÇIKIŞ KONTROL VALF PERFORMANSI
+P1251	HAVA KARIŞIM SELENOİD DEVRE ARIZASI
+P1252	PEDAL İLİŞKİSİ PDS1 VE LPDS YÜKSEK
+P1253	PEDAL İLİŞKİSİ PDS1 VE LPDS DÜŞÜK
+P1254	PEDAL İLİŞKİSİ PDS2 VE LPDS YÜKSEK
+P1255	PEDAL İLİŞKİSİ PDS2 VE LPDS DÜŞÜK
+P1256	PEDAL İLİŞKİSİ PDS1 VE HPDS
+P1257	PEDAL İLİŞKİSİ PDS2 VE HPDS
+P1258	PEDAL İLİŞKİSİ PDS1 VE PDS2
+P1259	MOTOR DURDURUCU DAN PCM ‘YE SİNYAL HATASI
+P1260	HIRSIZLIK TESPİT EDİLDİ, ARAÇ DURDURULDU
+P1261	SİLİNDİR # 1 ALÇAK YAN KISA’ YA GÖRE YÜKSEK
+P1262	SİLİNDİR # 2 ALÇAK YAN KISA’ YA GÖRE YÜKSEK
+P1263	SİLİNDİR # 3 ALÇAK YAN KISA’ YA GÖRE YÜKSEK
+P1264	SİLİNDİR # 4 ALÇAK YAN KISA’ YA GÖRE YÜKSEK
+P1265	SİLİNDİR # 5 ALÇAK YAN KISA’ YA GÖRE YÜKSEK
+P1266	SİLİNDİR # 6 ALÇAK YAN KISA’ YA GÖRE YÜKSEK
+P1267	SİLİNDİR # 7 ALÇAK YAN KISA’ YA GÖRE YÜKSEK
+P1268	SİLİNDİR # 8 ALÇAK YAN KISA’ YA GÖRE YÜKSEK
+P1269	MOTOR DURDURMA KODU PROGRAMLANMAMIŞ
+P1270	MOTOR RPM VEYA HIZ SINIRINA ULAŞILMIŞ
+P1271	SİLİNDİR # 1 ALÇAK YAN AÇIĞA GÖRE YÜKSEK
+P1272	SİLİNDİR # 2 ALÇAK YAN AÇIĞA GÖRE YÜKSEK
+P1273	SİLİNDİR # 3 ALÇAK YAN AÇIĞA GÖRE YÜKSEK
+P1274	SİLİNDİR # 4 ALÇAK YAN AÇIĞA GÖRE YÜKSEK
+P1275	SİLİNDİR # 5 ALÇAK YAN AÇIĞA GÖRE YÜKSEK
+P1276	SİLİNDİR # 6 ALÇAK YAN AÇIĞA GÖRE YÜKSEK
+P1277	SİLİNDİR # 7 ALÇAK YAN AÇIĞA GÖRE YÜKSEK
+P1278	SİLİNDİR # 8 ALÇAK YAN AÇIĞA GÖRE YÜKSEK
+P1280	ENJEKSİYON KONTROL BASINCI SINIR DIŞI DÜŞÜK
+P1281	ENJEKSİYON KONTROL BASINCI SINIR DIŞI YÜKSEK
+P1282	AŞIRI ENJEKSİYON KONTROL BASINCI
+P1283	İPR DEVRE HATASI
+P1284	GELİŞEMEYEN KOER-İCP HATASI
+P1285	SİLİNDİR KAFASI AŞIRI İŞİ HİSSEDİLDİ
+P1286	YAKIT ATMASI SINIRDA FAKAT BEKLENENDEN DÜŞÜK
+P1287	YAKIT ATMASI SINIRDA FAKAT BEKLENENDEN YÜKSEK
+P1288	SİLİNDİR KAFASI İŞİ SENSORU KENDİNCE TEST SINIRI DIŞINDA
+P1289	SİLİNDİR KAFASI İŞİ SENSORU DÜŞÜK GİRİŞ
+P1290	SİLİNDİR KAFASI İŞİ SENSORU YÜKSEK GİRİŞ
+P1291	ENJEKTÖR YÜKSEK YAN KISA GND’YE VEYA VBATT- BANK 1
+P1292	ENJEKTÖR YÜKSEK YAN KISA GND’YE VEYA VBATT- BANK 2
+P1293	ENJEKTÖR YÜKSEK YAN AÇIK – BANK 1
+P1294	ENJEKTÖR YÜKSEK YAN AÇIK – BANK 2
+P1295	ÇOKLU HATA- BANK 1-DÜŞÜK YAN KISALAR İLE
+P1296	ÇOKLU HATA- BANK 2-DÜŞÜK YAN KISALAR İLE
+P1297	ENJEKTÖR YÜKSEK YAN BERABER KISALTILMIŞ
+P1298	İDM HATASI
+P1299	SİLİNDİR KAFASI AŞIRI İŞİ KORUMA ÇALIŞMASI
+P1300	TAKVİYE KALIBRASYON HATASI
+P1301	TAKVİYE KALIBRASYON YÜKSEK
+P1303	EGR KALIBRASYON HATASI
+P1304	EGR KALIBRASYON YÜKSEK
+P1305	EGR KALIBRASYON DÜŞÜK
+P1306	VİTES KÜÇÜLTME ROLE İÇERİ ÇEKİŞ DEVRE HATASI
+P1307	VİTES KÜÇÜLTME ROLE TUTMA DEVRE HATASI
+P1308	A/C KAVRAMA DEVRE HATASI
+P1309	YANLIŞ ATEŞLEME AİÇE ÇİP HATASI
+P1313	YANLIŞ ATEŞLEME ORANI KATALITIK HASAR HATASI- BANK 1
+P1314	YANLIŞ ATEŞLEME ORANI KATALITIK HASAR HATASI- BANK 2
+P1315	DEVAMLI YANLIŞ ATEŞLEME
+P1316	ENJEKTÖR DEVRE/İDM KODLARI TESPİT EDİLDİ
+P1317	ENJEKTÖR DEVRE/İDM KODLARI GÜNCELLEŞMEMİŞ
+P1336	KRANK/KAM SENSOR SINIRI/PERFORMANS
+P1340	KAM MİLİ YER SENSORU B DEVRE ARIZASI
+P1341	KAM MİLİ YER SENSORU B SINIRI/PERFORMANSI
+P1345	SGC (KAM YERİ) SENSORU DEVRE ARIZASI
+P1346	YAKIT SEVİYE SENSORU B DEVRE ARIZASI
+P1347	YAKIT SEVİYE SENSORU B SINIRI PERFORMANSI
+P1348	YAKIT SEVİYE SENSORU B DEVRE DÜŞÜK
+P1349	YAKIT SEVİYE SENSORU B DEVRE YÜKSEK
+P1350	YAKIT SEVİYE SENSORU B ARALIKLARI
+P1351	İDM GİRİŞ DEVRE ARIZASI
+P1352	ATEŞLEME SARGİSİ A BİRİNCİL DEVRE ARIZASI
+P1353	ATEŞLEME SARGİSİ B BİRİNCİL DEVRE ARIZASI
+P1354	ATEŞLEME SARGİSİ Ç BİRİNCİL DEVRE ARIZASI
+P1355	ATEŞLEME SARGİSİ D BİRİNCİL DEVRE ARIZASI
+P1356	İDM ATIŞ GENİŞLİĞİ MOTORUN DÖNMEDİĞİNİ GÖSTERİYOR
+P1357	İDM ATIŞ GENİŞLİĞİ TANIMLANAMIYOR
+P1358	İDM KENDİNCE TEST SINIRI DIŞINDA SİNYALİ (CPUOK YOK)
+P1359	BUJİ ÇIKIŞ DEVRE ARIZASI
+P1360	ATEŞLEME SARGİSİ A İKİNCİL DEVRE ARIZASI
+P1361	ATEŞLEME SARGİSİ B İKİNCİL DEVRE ARIZASI
+P1362	ATEŞLEME SARGİSİ Ç İKİNCİL DEVRE ARIZASI
+P1363	ATEŞLEME SARGİSİ D İKİNCİL DEVRE ARIZASI
+P1364	ATEŞLEME SARGİSİ BİRİNCİL DEVRE HATASI
+P1365	ATEŞLEME SARGİSİ İKİNCİL DEVRE HATASI
+P1366	ATEŞLEME YEDEĞİ
+P1367	ATEŞLEME YEDEĞİ
+P1368	ATEŞLEME YEDEĞİ
+P1369	MOTOR ISISI LAMBA MONİTÖRÜ HATASI
+P1370	BUJİ TESTİ ESNASINDA YETERSİZ RPM YÜKSELMESİ
+P1371	ATEŞLEME BOBİNİ- SİLİNDİR 1- ERKEN ÇALIŞMA HATASI
+P1372	ATEŞLEME BOBİNİ- SİLİNDİR 2- ERKEN ÇALIŞMA HATASI
+P1373	ATEŞLEME BOBİNİ- SİLİNDİR 3- ERKEN ÇALIŞMA HATASI
+P1374	ATEŞLEME BOBİNİ- SİLİNDİR 4- ERKEN ÇALIŞMA HATASI
+P1375	ATEŞLEME BOBİNİ- SİLİNDİR 5- ERKEN ÇALIŞMA HATASI
+P1376	ATEŞLEME BOBİNİ- SİLİNDİR 6- ERKEN ÇALIŞMA HATASI
+P1380	DEĞİŞKEN KAM ZAMANLAMA SELENOİD A ARIZASI
+P1381	DEĞİŞKEN KAM ZAMANLAMA AŞIRI AVANS (BANK #1)
+P1382	DEĞİŞKEN KAM ZAMANLAMA SELENOİD #1 DEVRE ARIZASI
+P1383	DEĞİŞKEN KAM ZAMANLAMA AŞIRI GECİKTİRME (BANK #1)
+P1384	VVT SELENOİD A ARIZASI
+P1385	DEĞİŞKEN KAM ZAMANLAMA SELENOİD B ARIZASI
+P1386	DEĞİŞKEN KAM ZAMANLAMA AŞIRI AVANS (BANK #2)
+P1387	DEĞİŞKEN KAM ZAMANLAMA SELENOİD #2 DEVRE ARIZASI
+P1388	DEĞİŞKEN KAM ZAMANLAMA AŞIRI GECİKTİRME (BANK #2)
+P1389	ISITMA BUJİSİ DEVRESİ YÜKSEK YAN DÜŞÜK GİRİŞ
+P1390	OKTAN AYAR PİMİ KENDİNCE TEST SINIRI DIŞINDA
+P1391	ISITMA BUJİSİ DEVRESİ DÜŞÜK GİRİŞ (BANK #1)
+P1392	ISITMA BUJİSİ DEVRESİ YÜKSEK GİRİŞ (BANK #1)
+P1393	ISITMA BUJİSİ DEVRESİ DÜŞÜK GİRİŞ (BANK #2)
+P1394	ISITMA BUJİSİ DEVRESİ YÜKSEK GİRİŞ (BANK#2)
+P1395	ISITMA BUJİSİ MONİTÖR HATASI (BANK #1)
+P1396	ISITMA BUJİSİ MONİTÖR HATASI (BANK #2)
+P1397	SİSTEM VOLTAJI KENDİNCE TEST SINIRI DIŞINDA
+P1398	VVT SELENOİD B DEVRE YÜKSEK GİRİŞ
+P1399	ISITMA BUJİSİ DEVRESİ YÜKSEK YAN, YÜKSEK GİRİŞ
+P1400	DPFE DEVRESİ DÜŞÜK GİRİŞ
+P1401	DPFE DEVRESİ YÜKSEK GİRİŞ
+P1402	EGR ÖLÇÜM DELİĞİ YASAKLANMIŞ
+P1403	DPFE SENSORU HORTUMU GERİ ÇEVRİLMİŞ
+P1404	İAT-B DEVRE ARIZASI
+P1405	DPFE SENSOR YUKARI AKİS HORTUMU ÇIKMIŞ VEYA ÇIKARILMIŞ
+P1406	DPFE SENSOR AŞAĞI AKİS HORTUMU ÇIKMIŞ VEYA ÇIKARILMIŞ
+P1407	EGR AKIŞ TESPİT EDİLMEDİ
+P1408	EGR AKIŞ KENDİNCE TEST SINIR DIŞI
+P1409	EVR KONTROL DEVRESİ ARIZASI
+P1411	SAİ SİSTEM YANLIŞ AŞAĞIYA AKIŞ TESPİT EDİLDİ
+P1413	SAİ SİSTEM MONİTÖR DEVRESİ DÜŞÜK GİRİŞ
+P1414	SAİ SİSTEM MONİTÖR DEVRESİ YÜKSEK GİRİŞ
+P1415	HAVA POMPASI DEVRE ARIZASI
+P1416	HAVA YOLU DEVRE ARIZASI
+P1417	HAVA YOLU BOŞALIM DEVRE ARIZASI
+P1418	HAVA AYIRIMI #1DEVRE ARIZASI
+P1419	HAVA AYIRIMI #2DEVRE ARIZASI
+P1420	KATALITIK İŞİ SENSOR HATASI
+P1421	KATALITIK HASARI
+P1422	EĞİ İŞİ SENSOR HATASI
+P1423	EĞİ FONKSİYON TESTİ BAŞARISIZ
+P1424	EĞİ ISITMA BUJİSİ BİRİNCİL HATA
+P1425	EĞİ ISITMA BUJİSİ İKİNCİL HATA
+P1426	EĞİ MİNİ-MAF SINIR DIŞI BAŞARISIZ
+P1427	EĞİ MİNİ-MAF BAŞARISIZ KISA DEVRE
+P1428	EĞİ MİNİ-MAF BAŞARISIZ AÇIK DEVRE
+P1429	ELEKTRİKLİ HAVA POMPASI BİRİNCİL HATA
+P1430	ELEKTRİKLİ HAVA POMPASI İKİNCİL HATA
+P1433	A/C SOĞUTUCU ISISI DEVRESİ DÜŞÜK
+P1434	A/C SOĞUTUCU ISISI DEVRESİ YÜKSEK
+P1435	A/C SOĞUTUCU ISISI DEVRESİ SINIRI/PERFORMANSI
+P1436	A/C BUHARLAŞTIRICI HAVA İŞİ DEVRESİ DÜŞÜK
+P1437	A/C BUHARLAŞTIRICI HAVA İŞİ DEVRESİ YÜKSEK
+P1438	A/C BUHARLAŞTIRICI HAVA İŞİ DEVRESİ SINIRI/PERFORMANSI
+P1439	YER İŞİ DÜĞME DEVRE ARIZASI
+P1440	BOŞALTMA VALFİ SIKIŞMIŞ AÇIK
+P1441	ELÇ SİSTEM HATASI
+P1442	BUHARLAŞMA EMİSYON KONTROL SİSTEMİNDE SIZINTI TESPİT EDİLDİ
+P1443	BUHARLAŞMA EMİSYON KONTROL SİSTEMİ KONTROL VALF ARIZASI
+P1444	BOŞALTMA AKIŞ SENSOR DEVRESİ DÜŞÜK GİRİŞ
+P1445	BOŞALTMA AKIŞ SENSOR DEVRESİ YÜKSEK GİRİŞ
+P1446	BUHARLAŞMA VAKUM SELENOİDİ DEVRE ARIZASI
+P1447	ELÇ SİSTEM KAPANIŞ VALFİ AKIŞ HATASI
+P1448	ELÇ SİSTEM 2 HATA
+P1449	BUHARLAŞMA ÇEK SELENOİD DEVRE ARIZASI
+P1450	YAKIT TANKI VAKUMUNUN HAVASI ALINAMIYOR
+P1451	BUHARLAŞMA EMİSYON KONTROL SİSTEMİ HAVALANDIRMA KONTROL VALF DEVRE ARIZASI
+P1452	YAKIT TANKI VAKUMUNUN HAVASI ALINAMIYOR
+P1453	YAKIT TANKI BASINÇ BOŞALTMA VALFİ ARIZALI
+P1454	BUHARLAŞMA SİSTEM VAKUM TEST ARIZASI
+P1455	BUHARLAŞMA EMİSYON KONTROL SİSTEMİ SIZINTI TESPİT EDİLDİ (TOPLAM SIZINTI/AKİS YOK)
+P1456	YAKIT TANKI İŞİ SENSORU DEVRE ARIZASI
+P1457	TANKTAN VAKUM ÇEKİLEMİYOR
+P1460	WOT A/C KESİCİ DEVRE ARIZASI
+P1461	A/C BASINÇ SENSOR DEVRESİ YÜKSEK GİRİŞ
+P1462	A/C BASINÇ SENSOR DEVRESİ DÜŞÜK GİRİŞ
+P1463	A/C BASINÇ SENSOR DEVRESİ YETERSİZ BASINÇ DEĞİŞİMİ
+P1464	A/C KENDİNCE TEST SINIRI DIŞINDA İHTİYAÇ BİLDİRİMİ
+P1465	A/C ROLE DEVRESİ ARIZASI
+P1466	A/C SOĞUTUCU İŞİ SENSOR/DEVRE ARIZASI
+P1467	A/C KOMPRESÖR ISISI SENSOR ARIZASI
+P1468	SSPOD AÇIK DEVRE VEYA KAPALİDEVRE HATASI
+P1469	DÜŞÜK A/C DÖNME ZAMANI
+P1470	A/C DÖNME ZAMANI ÇOK KISA
+P1471	ELEKTRO TAHRİKLİ FAN 1 ÇALIŞMA HATASI (SÜRÜCÜ TARAFI)
+P1472	ELEKTRO TAHRİKLİ FAN 2 ÇALIŞMA HATASI (YOLCU TARAFI)
+P1473	İKİNCİL FAN FANLAR KAPALIIKEN YÜKSEK
+P1474	DÜŞÜK FAN KONTROL BİRİNCİL DEVRE ARIZASI
+P1475	FAN ROLE (DÜŞÜK) DEVRE ARIZASI
+P1476	FAN ROLE (YÜKSEK) DEVRE ARIZASI
+P1477	İLAVE FAN ROLE DEVRE ARIZASI
+P1478	SOĞUTUCU FAN SÜRÜCÜ HATASI
+P1479	YÜKSEK FAN KONTROLÜ BİRİNCİL DEVRE ARIZASI
+P1480	DÜŞÜK FAN AÇIK İLE İKİNCİL FAN DÜŞÜK
+P1481	YÜKSEK FAN AÇIK İLE İKİNCİL FAN DÜŞÜK
+P1482	SCP
+P1483	FAN DEVRESİ AŞIRI AKIMINA GÜÇ
+P1484	VCRM TOPRAKLANMASINA AÇIK GÜÇ
+P1485	EGR VALFİ DEVRE ARIZASI
+P1486	YAKIT SICAKLIK SENSÖRÜ B DEVRESİ MENZİL/PERFORMANS
+P1487	EGR BOOST SENSÖRÜ SOLENOİD VALFİ AÇIK VEYA KISA DEVRE
+P1490	İKİNCİL HAVA BOŞALTMA SELENOİD DEVRE ARIZASI
+P1491	İKİNCİL DÜĞME SELENOİD DEVRE ARIZASI
+P1492	AKÜ SICAKLIK SENSÖRÜ VOLTAJI ÇOK YÜKSEK
+P1493	AKÜ SICAKLIK SENSÖRÜ VOLTAJI ÇOK DÜŞÜK
+P1494	EVAP SIZINTI TESPİTİ POMPA ANAHTARI VEYA MEKANİK ARIZA
+P1495	EVAP SIZINTI TESPİTİ POMPA SOLENOİD DEVRE DURUMU
+P1500	ARAÇ HIZ SENSOR ARALIKLARI
+P1501	ARAÇ HIZ SENSOR KENDİNCE TEST SINIRLARI DIŞINDA
+P1502	ARAÇ HIZ SENSOR ARALIKLARI ARIZASI
+P1503	YARDIMCI HIZ SENSOR HATASI
+P1504	RÖLANTI HAVA KONTROL DEVRE ARIZASI
+P1505	RÖLANTI HAVA KONTROL SİSTEMİ UYGULANABİLİR KLİPSTE
+P1506	RÖLANTI HAVA KONTROL AŞIRI HIZ HATASI
+P1507	RÖLANTI HAVA KONTROL DÜŞÜK HIZ HATASI
+P1508	RÖLANTI KONTROL SİSTEMİ DEVRE AÇIK
+P1509	RÖLANTI KONTROL SİSTEMİ DEVRE KISA DEVRELİ
+P1510	RÖLANTI SİNYAL DEVRE ARIZASI
+P1511	RÖLANTI DÜĞMESİ (ELEKTRİK KONTROLLÜ GAZ KELEBEĞİ)DEVRE ARIZASI
+P1512	EMME MANİFOLD ÇALIŞTIRICI KONTROLÜ (BANK 1) SIKIŞIK KAPALI
+P1513	EMME MANİFOLD ÇALIŞTIRICI KONTROLÜ (BANK 2) SIKIŞIK KAPALI
+P1514	YÜKSEK YÜK NÖTR/TAHRİK HATASI
+P1515	ELEKTRİK AKIM DEVRE ARIZASI
+P1516	EMME MANİFOLDU ÇALIŞTIRICI KONTROLÜ GİRİŞ HATASI (BANK 1)
+P1517	EMME MANİFOLDU ÇALIŞTIRICI KONTROLÜ GİRİŞ HATASI (BANK 2)
+P1518	EMME MANİFOLD ÇALIŞTIRICI KONTROLÜ (SIKIŞIK AÇIK)
+P1519	EMME MANİFOLD ÇALIŞTIRICI KONTROLÜ (SIKIŞIK KAPALI)
+P1521	DEĞİŞKEN EMME SELENOİDİ #1 DEVRE ARIZASI
+P1522	DEĞİŞKEN EMME SELENOİDİ #2 DEVRE ARIZASI
+P1523	İVC SELENOİDİ DEVRE ARIZASI
+P1524	DEĞİŞKEN EMME SELENOİD SİSTEMİ
+P1526	HAVA BAYPAŞ SİSTEMİ
+P1527	HIZ ISINMA SELENOİD DEVRE ARIZASI
+P1528	YEDEK GAZ KELEBEK VALF SELENOİD DEVRE ARIZASI
+P1529	SCAİR SELENOİD DEVRE ARIZASI
+P1530	A/C KAVRAMA DEVRE ARIZASI
+P1531	GEÇERSİZ TEST- HIZ PEDAL HAREKETİ
+P1532	IMCC DEVRE ARIZASI, BANK B
+P1533	AAİ DEVRE ARIZASI
+P1534	DURGUNLUK DÜĞMESİ ÇALIŞTIRILDI
+P1535	ÜFLEME FAN HIZ DEVRESİ SINIRI/PERFORMANSI
+P1536	PARK FREN DÜĞME DEVRE HATASI
+P1537	EMME MANİFOLD ÇALIŞTIRICI KONTROLÜ (BANK 1) SIKIŞIK AÇIK
+P1538	EMME MANİFOLD ÇALIŞTIRICI KONTROLÜ (BANK 2) SIKIŞIK AÇIK
+P1539	A/C KAVRAMA DEVRE AŞIRI AKIMINA GÜÇ
+P1540	HAVA BAYPAŞ VALF DEVRE ARIZASI
+P1549	IMCC DEVRE ARIZASI,BANK B
+P1550	PSPS KENDİNCE TEST SINIRI DIŞINDA
+P1564	ASCD Anahtarı Arızası
+P1565	HIZ KONTROL KUMANDA DÜĞMESİ SINIR DIŞI YÜKSEK
+P1566	HIZ KONTROL KUMANDA DÜĞMESİ SINIR DIŞI DÜŞÜK
+P1567	HIZ KONTROL ÇIKIŞ DEVRE DEVAMLILIĞI
+P1568	HIZ KONTROL SÜRATİ TUTMAKTA YETERSİZ
+P1571	FREN DÜĞMESİ ARIZASI
+P1572	FREN PEDAL DÜĞMESİ DEVRE ARIZASI
+P1573	GAZ KELEBEK YERİ BULUNMUYOR
+P1574	GAZ KELEBEK YERİ SENSORU DİĞER SENSÖRLERLE ÇALIŞMIYOR
+P1575	PEDAL YERİ KENDİNCE TEST SINIRI DIŞINDA
+P1576	PEDAL YERİ BULUNMUYOR
+P1577	PEDAL YERİ SENSORU DİĞER SENSÖRLERLE ÇALIŞMIYOR
+P1578	ETC GÜCÜ İSTENENDEN AZ
+P1579	ETC GÜÇ SINIR MODU İÇİNDE
+P1580	ELEKTRONİK GAZ KELEBEK MONİTÖRÜ PCM AŞIRI SÜRÜŞ
+P1581	ELEKTRONİK GAZ KELEBEK MONİTÖRÜ ARIZALI
+P1582	ELEKTRONİK GAZ KELEBEK MONİTÖRÜ VERİ MEVCUT
+P1583	ELEKTRONİK GAZ KELEBEK MONİTÖRÜ SEYİR OLANAKSIZ
+P1584	TCU, İPE DEVRE ARIZASI TESPİT ETTİ
+P1585	GAZ KELEBEK KONTROL ÜNİTESİ ARIZASI
+P1586	GAZ KELEBEK KONTROL ÜNİTESİ GAZ KELEBEK ARIZASI
+P1587	GAZ KELEBEK KONTROL ÜNİTESİ MODÜLE EDİLMİŞ KUMANDA ARIZASI
+P1588	GAZ KELEBEK KONTROL ÜNİTESİ DÖNÜŞ YAYI KAYBI TESPİT EDİLDİ
+P1589	TCU İSTENEN GAZ KELEBEK ACİSİNİ KONTROL EDEMİYOR
+P1600	KAM GÜCÜ KAYBI, AÇIK DEVRE
+P1601	ECM/TCM SERİSİ İLETİŞİM HATASI
+P1603	EEPROM ARIZASI
+P1604	KOD KELİMESİ KAYIT EDİLMEMİŞ
+P1605	HAFIZAYI CANLI TUTMA TESTİ BAŞARISIZ
+P1606	ECM KONTROL ROLESİ O/P DEVRE ARIZASI
+P1607	MİL O/P DEVRE ARIZASI
+P1608	İÇ ECM ARIZASI
+P1609	TEŞHİS LAMBASI SÜRÜCÜ HATASI
+P1610	SBDS ETKİLİ KODU
+P1611	SBDS ETKİLİ KODU
+P1613	SBDS ETKİLİ KODU
+P1614	SBDS ETKİLİ KODU
+P1615	SBDS ETKİLİ KODU
+P1616	SBDS ETKİLİ KODU
+P1617	SBDS ETKİLİ KODU
+P1618	SBDS ETKİLİ KODU
+P1619	SBDS ETKİLİ KODU
+P1620	SBDS ETKİLİ KODU
+P1621	DURDURUCU KOD KELİMELERİ UYUŞMUYOR
+P1623	DURDURUCU KOD KELİMELERİ/ İD NUMARA YAZILIMI HATASI
+P1624	HIRSIZLIĞA KARŞI SİSTEM
+P1625	VCRM FAN DEVRE ARIZASINA B+ DESTEĞİ
+P1626	VCRM A/C DEVRE ARIZASINA B+ DESTEĞİ
+P1627	MODÜL DESTEK VOLTAJI GİRİŞ ARIZASI
+P1628	MODÜL ATEŞLEME DESTEK GİRİŞ ARIZASI
+P1629	İÇ VOLTAJ REGÜLATÖR ARIZASI
+P1630	İÇ VOLTAJ REFERANS ARIZASI
+P1631	ANA ROLE ARIZASI(GÜÇ TUTMA)
+P1632	AKILLI ALTERNATÖR HATA SENSORU/DEVRE ARIZASI
+P1633	KAM VOLTAJI ÇOK DÜŞÜK
+P1634	VERİ ÇIKIŞ BAĞLANTI DEVRE HATASI
+P1635	LASTİK/AKS ORANI KABUL EDİLEBİLİR SINIRLAR DIŞINDA
+P1636	İNDUKTİF BELİRTİ CİPİ İLETİŞİM HATASI
+P1637	CAN BAĞLANTI ECM/ABSCM DEVRESİ/AĞ ARIZASI
+P1638	CAN BAĞLANTI ECM/INSTM DEVRESİ/AĞ ARIZASI
+P1639	ARAÇ İD BLOĞU ÇÖKMÜŞ VEYA PROGRAMLANMAMIŞ
+P1640	GÜÇ AKTARMA DTC’LERİ BAŞKA BİR MODÜLDE BULUNUR
+P1641	YAKIT POMPASI BİRİNCİL DEVRE HATASI
+P1642	YAKIT POMPASI MONİTÖR DEVRESİ YÜKSEK GİRİŞ
+P1643	YAKIT POMPASI MONİTÖR DEVRESİ DÜŞÜK GİRİŞ
+P1644	YAKIT POMPASI HIZ KONTROL DEVRE ARIZASI
+P1645	YAKIT POMPASI DİRENÇ DÜĞME DEVRE ARIZASI
+P1650	PSP DÜĞMESİ KENDİNCE TEST SINIRI DIŞINDA
+P1651	PSP DÜĞMESİ GİRİŞ ARIZASI
+P1652	İAC MONİTÖRÜ PSP TARAFINDAN ÇALIŞMAZ DURUMDA DÜĞME AÇIKKEN BAŞARISIZ
+P1653	HİDROLİK DİREKSİYON ÇIKIŞI DEVRE ARIZASI
+P1655	MARS ÇALIŞMIYOR DEVRE ARIZASI
+P1660	ÇIKIŞ DEVRESİ YÜKSEL SİNYAL KONTROLÜ
+P1661	ÇIKIŞ DEVRESİ DÜŞÜK SİNYAL KONTROLÜ
+P1662	İDM-EN DEVRESİ BAŞARISIZ
+P1663	YAKIT İSTEK KUMANDA SİNYAL DEVRESİ ARIZALI
+P1664	Enjeksiyon Pompası Kontrol Modülü Arızalı
+P1667	Çİ DEVRE ARIZASI
+P1668	PCM-İDM İLETİŞİM HATALARI
+P1670	ELEKTRONİK GERİ BESLEME SİNYALİ TESPİT EDİLEMEDİ
+P1680	YAĞ POMPASI ÖLÇÜMÜ ARIZALI
+P1681	YAĞ POMPASI ÖLÇÜMÜ ARIZALI
+P1682	YAĞ POMPASI ÖLÇÜMÜ ARIZALI
+P1683	YAĞ POMPASI ÖLÇÜMÜ İŞİ SENSOR DEVRESİ ARIZALI
+P1684	YAĞ POMPASI ÖLÇÜMÜ YER SENSOR DEVRESİ ARIZALI
+P1685	YAĞ POMPASI ÖLÇÜMÜ KISA MESAFE MOTOR DEVRESİ ARIZALI
+P1686	YAĞ POMPASI ÖLÇÜMÜ KISA MESAFE MOTOR DEVRESİ ARIZALI
+P1687	YAĞ POMPASI ÖLÇÜMÜ KISA MESAFE MOTOR DEVRESİ ARIZALI
+P1688	YAĞ POMPASI ÖLÇÜMÜ KISA MESAFE MOTOR DEVRESİ ARIZALI
+P1689	YAĞ BASINÇ KONTROL SELENOİD DEVRESİ ARIZASI
+P1690	ARTIK KAPISI SELENOİD DEVRE ARIZASI
+P1691	TURBO BASINÇ KONTROL SELENOİD DEVRE ARIZASI
+P1692	TURBO KONTROL SELENOİD DEVRE ARIZASI
+P1693	TURBO ŞARJ KONTROL DEVRE ARIZASI
+P1694	TURBO ŞARJ BOŞALTIM DEVRE ARIZASI
+P1700	ŞANZIMAN KARARSIZLIK HATASI (NÖTR’E GEÇMEDE BAŞARISIZ)
+P1701	GERİ HIZ BAĞLANTI HATASI
+P1702	TRS DEVRE ARALIKLARI ARIZASI
+P1703	FREN DÜĞMESİ KENDİNCE TEST SINIRI DIŞINDA
+P1704	DİJİTAL TRS KOEO/KOER İÇİ GEÇİŞ DURUMLARINDA BAŞARISIZ
+P1705	KOEO/KOER ESNASINDA P VEYA N OLMAZ
+P1706	PARK KONUMUNDA YÜKSEK ARAÇ HIZI GÖRÜLÜYOR
+P1707	TRANSFER KUTUSU NÖTR GÖSTERGESİ SERT HATA MEVCUT
+P1708	KAVRAMA DÜĞMESİ DEVRE ARIZASI
+P1709	PNP DÜĞMESİ KENDİNCE TEST SINIRI DIŞINDA
+P1711	TFT SENSORU KENDİNCE TEST SINIRI DIŞINDA
+P1712	TORK AZALIM İSTEK SİNYAL YER DEĞİŞİM ARIZASI
+P1713	TFT SENSORU SINIRLAR İÇİNDE BAŞARISIZ DÜŞÜK DEĞER
+P1714	SSA İNDUKTİF BELİRTİ ARIZASI
+P1715	SSB İNDUKTİF BELİRTİ ARIZASI
+P1716	SSC İNDUKTİF BELİRTİ ARIZASI
+P1717	SSD İNDUKTİF BELİRTİ ARIZASI
+P1718	TFT SENSORU SINIRLAR İÇİNDE BAŞARISIZ YÜKSEK
+P1720	ARAÇ HIZ (ÖLÇÜ) DEVRE ARIZASI
+P1721	DİŞLİ 1 YANLIŞ ORAN
+P1722	DİŞLİ 2 YANLIŞ ORAN
+P1723	DİŞLİ 3 YANLIŞ ORAN
+P1724	DİŞLİ 4 YANLIŞ ORAN
+P1725	YETERSİZ MOTOR HIZI KENDİNCE TEST ESNASINDA YÜKSELİYOR
+P1726	YETERSİZ MOTOR HIZI KENDİNCE TEST ESNASINDA DÜŞÜYOR
+P1727	YAN KAVRAMA SELENOİD ENDÜKTİF BELİRTİ HATASI
+P1728	ŞANZIMAN KAYMA HATASI
+P1729	4×4 DÜŞÜK DÜĞME HATASI
+P1730	DİŞLİ KONTROL ARIZASI 2,3,5
+P1731	1-2 DİŞLİ ARIZASI
+P1732	2-3 DİŞLİ ARIZASI
+P1733	3-4 DİŞLİ ARIZASI
+P1734	DİŞLİ KONTROL ARIZASI
+P1735	BİRİNCİ DIŞLI DÜĞMESİ DEVRE ARIZASI
+P1736	İKİNCİ DIŞLI DÜĞME DEVRESİ ARIZASI
+P1737	KİLİTLENMİŞ SELENOİD SİSTEM
+P1738	DEĞİŞTİRME ZAMAN HATASI
+P1739	KAYDIRMA SELENOİD SİSTEMİ
+P1740	SIKMA DÖNÜŞTÜRÜCÜ KAVRAMA SELENOİD İNDUKTİF BELİRTİ HATASI
+P1741	SIKMA DÖNÜŞTÜRÜCÜ KAVRAMA KONTROL HATASI
+P1742	SIKMA DÖNÜŞTÜRÜCÜ KAVRAMA SELENOİD HATASI AÇIK
+P1743	SIKMA DÖNÜŞTÜRÜCÜ KAVRAMA SELENOİD HATASI AÇIK
+P1744	SIKMA DÖNÜŞTÜRÜCÜ KAVRAMA SİSTEM PERFORMANSI
+P1745	HAT BASINCI SELENOİD SİSTEMİ
+P1746	BASINÇ KONTROL SELENOİDİ “A” DEVRE AÇIK
+P1747	BASINÇ KONTROL SELENOİDİ “A” KISA DEVRE
+P1748	EPC ARIZASI
+P1749	BASINÇ KONTROL SELENOİD HATASI DÜŞÜK
+P1751	DEĞİŞTİRME SELENOİDİ A PERFORMANSI
+P1754	YAN KAVRAMA SELENOİD DEVRE ARIZASI
+P1755	ORTA HIZ SENSOR (ISS) ARIZASI
+P1756	DEĞİŞTİRME SELENOİDİ B PERFORMANSI
+P1760	BASINÇ KONTROL SELENOİDİ “A” KISA DEVRE
+P1761	DEĞİŞTİRME SELENOİDİ C PERFORMANSI
+P1762	SON VİTES BANDI ARIZALI OFF
+P1765	ZAMANLAMA SELENOİDİ DEVRE ARIZASI
+P1767	SIKMA DÖNÜŞTÜRÜCÜ KAVRAMA DEVRESİ ARIZASI
+P1768	PERFORMANS/NORMAL/KIŞ MODU GİRİŞ ARIZASI
+P1769	AĞ4 ŞANZIMAN SIKMA MODÜLASYON HATASI
+P1770	KAVRAMA SELENOİDİ DEVRE ARIZASI
+P1775	ŞANZIMAN SİSTEMİ MİL HATASI
+P1776	ATEŞLEME GECİKTİRİCİ TALEBİ HATASI
+P1777	ATEŞLEME GECİKTİRİCİ TALEBİ DEVRE HATASI
+P1778	ŞANZIMAN GERİ VİTES İ/P DEVRE ARIZASI
+P1779	TCİL DEVRE ARIZASI
+P1780	ŞANZIMAN KONTROL DÜĞMESİ (O/D HARİÇ) KENDİ KENDİNE TEST ARALIĞI DIŞINDA
+P1781	4×4 DÜĞMESİ KENDİ KENDİNE TEST ARALIĞI DIŞINDA
+P1782	P/EŞ DEVRESİ KENDİ KENDİNE TEST ARALIĞI DIŞINDA
+P1783	ŞANZIMAN AŞIRI ISINMA DURUMU
+P1784	ŞANZIMAN MEKANİK ARIZA- BİRİNCİ VE SON VİTES
+P1785	ŞANZIMAN MEKANİK ARIZA- BİRİNCİ VE İKİNCİ VİTES
+P1786	3-2 VİTES KÜÇÜLTME HATASI
+P1787	2-1 VİTES KÜÇÜLTME HATASI
+P1788	BASINÇ KONTROL SELENOİDİ “B” DEVRE AÇIK
+P1789	BASINÇ KONTROL SELENOİDİ “B” KISA DEVRE
+P1790	TP (MEKANİK) DEVRE ARIZASI
+P1791	TP (ELEKTRİKLİ) DEVRE ARIZASI
+P1792	BAROMETRE BASINÇ DEVRE ARIZASI
+P1793	EMME HAVA HACİM DEVRE ARIZASI
+P1794	AKÜ VOLTAJ DEVRE ARIZASI
+P1795	RÖLANTI DEVRE ARIZASI
+P1796	VURDURMA DÜĞME DEVRE ARIZASI
+P1797	BOŞ DÜĞME DEVRE ARIZASI
+P1798	SOĞUTUCU SICAKLIĞI DEVRE ARIZASI
+P1799	TUTMA DÜĞMESİ DEVRE ARIZASI
+P1800	ŞANZIMAN KAVRAMA İÇ KİLİDİ EMNİYET DÜĞME DEVRE HATASI
+P1801	ŞANZIMAN KAVRAMASI İÇ KİLİT EMNİYET DÜĞMESİ DEVRE AÇIK
+P1802	ŞANZIMAN KAVRAMASI İÇ KİLİT EMNİYET DÜĞMESİ AKÜYE KISA DEVRE
+P1803	ŞANZIMAN KAVRAMASI İÇ KİLİT EMNİYET DÜĞMESİ TOPRAĞA KISA DEVRE
+P1804	ŞANZIMAN 4-TEKER ÇEKİŞ YÜKSEK GÖSTERGESİ DEVRE HATASI
+P1805	ŞANZIMAN 4-TEKER ÇEKİŞ YÜKSEK GÖSTERGE DEVRE AÇIK
+P1806	ŞANZIMAN 4-TEKER ÇEKİŞ YÜKSEK GÖSTERGE AKÜYE KISA DEVRE
+P1807	ŞANZIMAN 4-TEKER ÇEKİŞ YÜKSEK GÖSTERGE TOPRAĞA KISA DEVRE
+P1808	ŞANZIMAN 4-TEKER ÇEKİŞ DÜŞÜK GÖSTERGESİ DEVRE HATASI
+P1809	ŞANZIMAN 4-TEKER ÇEKİŞ DÜŞÜK GÖSTERGESİ DEVRE AÇIK
+P1810	ŞANZIMAN 4-TEKER ÇEKİŞ DÜŞÜK GÖSTERGESİ AKÜYE KISA DEVRE
+P1811	ŞANZIMAN 4-TEKER ÇEKİŞ DÜŞÜK GÖSTERGESİ TOPRAĞA KISA DEVRE
+P1812	ŞANZIMAN 4-TEKER ÇEKİŞ MODU SEÇİM DEVRE HATASI
+P1813	ŞANZIMAN 4-TEKER ÇEKİŞ MODU SEÇİM DEVRE AÇIK
+P1814	ŞANZIMAN 4-TEKER ÇEKİŞ MODU SEÇİM AKÜYE KISA DEVRE
+P1815	ŞANZIMAN 4-TEKER ÇEKİŞ MODU SEÇİM TOPRAĞA KISA DEVRE
+P1816	ŞANZIMAN BOŞ VİTES EMNİYET DÜĞMESİ DEVRE HATASI
+P1817	ŞANZIMAN BOŞ VİTES EMNİYET DÜĞMESİ DEVRE AÇIK
+P1818	ŞANZIMAN BOŞ VİTES EMNİYET DÜĞMESİ AKÜYE KISA DEVRE
+P1819	ŞANZIMAN BOŞ VİTES EMNİYET DÜĞMESİ TOPRAĞA KISA DEVRE
+P1820	ŞANZIMAN TRANSFER KUTUSU SAAT YÖNÜ DEĞİŞTİRME ROLESİ SARIMI DEVRE HATASI
+P1821	ŞANZIMAN TRANSFER KUTUSU SAAT YÖNÜ DEĞİŞTİRME ROLESİ SARIMI DEVRE AÇIK
+P1822	ŞANZIMAN TRANSFER KUTUSU SAAT YÖNÜ DEĞİŞTİRME ROLESİ SARIMI AKÜYE KISA DEVRE
+P1823	ŞANZIMAN TRANSFER KUTUSU SAAT YÖNÜ DEĞİŞTİRME ROLESİ SARIMI TOPRAĞA KISA DEVRE
+P1824	ŞANZIMAN 4-TEKER ÇEKİŞ KAVRAMA ROLESİ DEVRE HATASI
+P1825	ŞANZIMAN 4-TEKER ÇEKİŞ KAVRAMA ROLESİ DEVRE AÇIK
+P1826	ŞANZIMAN 4-TEKER ÇEKİŞ DÜŞÜK KAVRAMA ROLESİ AKÜYE KISA DEVRE
+P1827	ŞANZIMAN 4-TEKER ÇEKİŞ DÜŞÜK KAVRAMA ROLESİ TOPRAĞA KISA DEVRE
+P1828	ŞANZIMAN TRANSFER KUTUSU SAYACI SAAT YÖNÜ DEĞİŞTİRME ROLESİ SARIMI DEVRE HATASI
+P1829	ŞANZIMAN TRANSFER KUTUSU SAYACI SAAT YÖNÜ DEĞİŞTİRME ROLESİ SARIMI AÇIK DEVRE
+P1830	ŞANZIMAN TRANSFER KUTUSU SAYACI SAAT YÖNÜ DEĞİŞTİRME ROLESİ SARIMI AKÜYE KISA DEVRE
+P1831	ŞANZIMAN TRANSFER KUTUSU SAYACI SAAT YÖNÜ DEĞİŞTİRME ROLESİ SARIMI TOPRAĞA KISA DEVRE
+P1832	ŞANZIMAN TRANSFER KUTUSU DİFERANSİYEL KİLİTLEME SELENOİD DEVRE HATASI
+P1833	ŞANZIMAN TRANSFER KUTUSU DİFERANSİYEL KİLİTLEME SELENOİD DEVRE AÇIK
+P1834	ŞANZIMAN TRANSFER KUTUSU DİFERANSİYEL KİLİTLEME SELENOİD AKÜYE KISA DEVRE
+P1835	ŞANZIMAN TRANSFER KUTUSU DİFERANSİYEL KİLİTLEME SELENOİD TOPRAĞA KISA DEVRE
+P1836	ŞANZIMAN TRANSFER KUTUSU ÖN SAFT HIZ SENSOR DEVRE HATASI
+P1837	ŞANZIMAN TRANSFER KUTUSU ARKA SAFT HIZ SENSOR DEVRE HATASI
+P1838	ŞANZIMAN TRANSFER KUTUSU DEĞİŞTİRİCİ MOTOR DEVRE HATASI
+P1839	ŞANZIMAN TRANSFER KUTUSU DEĞİŞTİRİCİ MOTOR DEVRE AÇIK
+P1840	ŞANZIMAN TRANSFER KUTUSU DEĞİŞTİRİCİ MOTOR AKÜYE KISA DEVRE
+P1841	ŞANZIMAN TRANSFER KUTUSU DEĞİŞTİRİCİ MOTOR DEVRESİ TOPRAKLAMA
+P1842	ŞANZIMAN TRANSFER KUTUSU DİFERANSİYEL KİLİTLEME GERİ BESLEME DÜĞMESİ DEVRE HATASI
+P1843	ŞANZIMAN TRANSFER KUTUSU DİFERANSİYEL KİLİTLEME GERİ BESLEME DÜĞMESİ DEVRE AÇIK
+P1844	ŞANZIMAN TRANSFER KUTUSU DİFERANSİYEL KİLİTLEME GERİ BESLEME DÜĞMESİ AKÜYE KISA DEVRE
+P1845	ŞANZIMAN TRANSFER KUTUSU DİFERANSİYEL KİLİTLEME GERİ BESLEME DÜĞMESİ TOPRAĞA KISA DEVRE
+P1846	ŞANZIMAN TRANSFER KUTUSU TEMAS PLAKASI “A” DEVRE HATASI
+P1847	ŞANZIMAN TRANSFER KUTUSU TEMAS PLAKASI “A” DEVRE AÇIK
+P1848	ŞANZIMAN TRANSFER KUTUSU TEMAS PLAKASI “A” AKÜYE KISA DEVRE
+P1849	ŞANZIMAN TRANSFER KUTUSU TEMAS PLAKASI “A” TOPRAĞA KISA DEVRE
+P1850	ŞANZIMAN TRANSFER KUTUSU TEMAS PLAKASI “B” DEVRE HATASI
+P1851	ŞANZIMAN TRANSFER KUTUSU TEMAS PLAKASI “B” DEVRE AÇIK
+P1852	ŞANZIMAN TRANSFER KUTUSU TEMAS PLAKASI “B” AKÜYE KISA DEVRE
+P1853	ŞANZIMAN TRANSFER KUTUSU TEMAS PLAKASI “B” TOPRAĞA KISA DEVRE
+P1854	ŞANZIMAN TRANSFER KUTUSU TEMAS PLAKASI “C” DEVRE HATASI
+P1855	ŞANZIMAN TRANSFER KUTUSU TEMAS PLAKASI “C” DEVRE AÇIK
+P1856	ŞANZIMAN TRANSFER KUTUSU TEMAS PLAKASI “C” AKÜYE KISA DEVRE
+P1857	ŞANZIMAN TRANSFER KUTUSU TEMAS PLAKASI “C” TOPRAĞA KISA DEVRE
+P1858	ŞANZIMAN TRANSFER KUTUSU TEMAS PLAKASI “D” DEVRE HATASI
+P1859	ŞANZIMAN TRANSFER KUTUSU TEMAS PLAKASI “D” DEVRE AÇIK
+P1860	ŞANZIMAN TRANSFER KUTUSU TEMAS PLAKASI “D” AKÜYE KISA DEVRE
+P1861	ŞANZIMAN TRANSFER KUTUSU TEMAS PLAKASI “D” TOPRAĞA KISA DEVRE
+P1862	ŞANZIMAN TRANSFER KUTUSU TEMAS PLAKASI DEVRE HATASI
+P1863	ŞANZIMAN TRANSFER KUTUSU TEMAS PLAKASI DEVRE AÇIK
+P1864	ŞANZIMAN TRANSFER KUTUSU TEMAS PLAKASI AKÜYE KISA DEVRE
+P1865	ŞANZIMAN TRANSFER KUTUSU TEMAS PLAKASI TOPRAĞA KISA DEVRE
+P1866	ŞANZIMAN TRANSFER KUTUSU SİSTEMİ KONTROLÜ – SERVİSİ
+P1867	ŞANZIMAN TRANSFER KUTUSU TEMAS PLAKASI GENEL DEVRE ARIZASI
+P1868	OTOMATİK ŞANZIMAN 4-TEKER ÇEKİŞ GÖSTERGESİ (LAMBA) DEVRE HATASI
+P1869	OTOMATİK ŞANZIMAN 4-TEKER ÇEKİŞ GÖSTERGESİ (LAMBA) AKÜYE KISA DEVRE
+P1870	MEKANİK ŞANZIMAN TRANSFER KUTUSU 4×4 DÜĞME DEVRESİ HATASI
+P1871	MEKANİK ŞANZIMAN TRANSFER KUTUSU 4×4 DÜĞME DEVRESİ AKÜYE KISA DEVRE
+P1872	MEKANİK ŞANZIMAN 4-TEKER ÇEKİŞ AKS KİLİTLEME LAMBASI DEVRE HATASI
+P1873	MEKANİK ŞANZIMAN 4-TEKER ÇEKİŞ AKS KİLİTLEME LAMBASI AKÜYE KISA DEVRE
+P1874	OTOMATİK ŞANZIMAN HAL ETKİ SENSORU GÜÇ DEVRESİ HATASI
+P1875	OTOMATİK ŞANZIMAN HAL ETKİ SENSORU GÜÇ DEVRESİ AKÜYE KISA DEVRE
+P1876	ŞANZIMAN TRANSFER KUTUSU 2-TEKER ÇEKİŞ SELENOİD DEVRE HATASI
+P1877	ŞANZIMAN TRANSFER KUTUSU 2-TEKER ÇEKİŞ SELENOİD DEVRESİ AKÜYE KISA DEVRE
+P1878	ŞANZIMAN TRANSFER KUTUSU DEVRE DIŞI SELENOİD DEVRE HATASI
+P1879	ŞANZIMAN TRANSFER KUTUSU DEVRE DIŞI SELENOİD DEVRE AÇIK
+P1880	ŞANZIMAN TRANSFER KUTUSU DEVRE DIŞI SELENOİD AKÜYE KISA DEVRE
+P1881	MOTOR SOĞUTUCUSU SEVİYE DÜĞMESİ DEVRE HATASI, GEM
+P1882	MOTOR SOĞUTUCUSU SEVİYE DÜĞME DEVRESİ TOPRAĞA KISA DEVRE
+P1883	MOTOR SOĞUTUCUSU SEVİYE DÜĞMESİ DEVRE HATASI, GEM
+P1884	MOTOR SOĞUTUCUSU SEVİYE LAMBA DÜĞMESİ DEVRESİ TOPRAĞA KISA DEVRE
+P1885	ŞANZIMAN TRANSFER KUTUSU DEVRE DIŞI SELENOİD TOPRAĞA KISA DEVRE
+P1886	4×4 BAŞLATMA HATASI
+P1890	ŞANZIMAN 4 TEKER MODU SEÇİM GERİ DÖNÜŞ DEVRE HATASI
+P1891	ŞANZIMAN TRANSFER KUTUSU TEMAS PLAKASI TOPRAĞA GERİ DÖNÜŞ DEVRE AÇIK
+P1900	ÖSS DEVRESİ ARALIKLI ARIZA
+P1901	TSS DEVRESİ ARALIKLI ARIZA
+P1902	BASINÇ KONTROL SELENOİDİ “B” ARALIKLI KISA DEVRE
+P1903	BASINÇ KONTROL SELENOİDİ “C” KISA DEVRE
+P1904	BASINÇ KONTROL SELENOİDİ “C” DEVRE AÇIK
+P1905	BASINÇ KONTROL SELENOİDİ “C” ARALIKLI KISA DEVRE
+P1906	VURDURMA ÇEKİCİ ROLE DEVRE AÇIK VEYA TOPRAĞA KISA DEVRE
+P1907	VURDURMA TUTUCU ROLE DEVRE AÇIK VEYA TOPRAĞA KISA DEVRE
+P1908	ŞANZIMAN BASINÇ DEVRE SELENOİDİ DEVRE AÇIK VEYA TOPRAĞA KISA DEVRE
+P1909	ŞANZIMAN SICAKLIK SENSORU DEVRE AÇIK, GÜCE VEYA TOPRAĞA KISA DEVRE
+P1910	VFS A BASINÇ ÇIKIŞI HATALI DÜŞÜK
+P1911	VFS B BASINÇ ÇIKIŞI HATALI DÜŞÜK
+P1912	VFS C BASINÇ ÇIKIŞI HATALI DÜŞÜK
+P1913	BASINÇ DÜĞMESİ A DEVRE ARIZASI
+P1914	ELLE DEĞİŞTİRİLEN OTOMATİK ŞANZIMAN (MSA) DÜĞME DEVRE ARIZASI
+P1915	GERİ VİTES DÜĞMESİ DEVRE ARIZASI
+P1916	YÜKSEK KAVRAMA KAMPANASI HIZ SENSOR ARIZASI
+P1917	YÜKSEK KAVRAMA KAMPANASI HIZ SENSORU ARALIKLI
+P1918	ŞANZIMAN SINIR EKRANI DEVRE ARIZASI
+P2000	NOx Trap Efficiency Below Threshold Bank 1
+P2001	NOx Trap Efficiency Below Threshold Bank 2
+P2002	Diesel Particulate Filter Efficiency Below Threshold Bank 1
+P2003	Diesel Particulate Filter Efficiency Below Threshold Bank 2
+P2004	Intake Manifold Runner Control Stuck Open Bank 1a
+P2005	Intake Manifold Runner Control Stuck Open Bank 2a
+P2006	Intake Manifold Runner Control Stuck Closed Bank 1a
+P2007	Intake Manifold Runner Control Stuck Closed Bank 2a
+P2008	Intake Manifold Runner Control Circuit/Open Bank 1a
+P2009	Intake Manifold Runner Control Circuit Low Bank 1a
+P2010	Intake Manifold Runner Control Circuit High Bank 1a
+P2011	Intake Manifold Runner Control Circuit/Open Bank 2a
+P2012	Intake Manifold Runner Control Circuit Low Bank 2a
+P2013	Intake Manifold Runner Control Circuit High Bank 2a
+P2014	Intake Manifold Runner Position Sensor/Switch Circuit Bank 1a
+P2015	Intake Manifold Runner Position Sensor/Switch Circuit Rang e/Performance Bank 1a
+P2016	Intake Manifold Runner Position Sensor/Switch Circuit Low Bank 1a
+P2017	Intake Manifold Runner Position Sensor/Switch Circuit High Bank 1a
+P2018	Intake Manifold Runner Position Sensor/Switch Circuit Inte rmittent Bank 1a
+P2019	Intake Manifold Runner Position Sensor/Switch Circuit Bank 2a
+P201A	Reductant Enjeksiyon Valfi Devresi Aralıklı / Düzensiz / Performansı Bank 2 Ünitesi 1
+P2020	Intake Manifold Runner Position Sensor/Switch Circuit Rang e/Performance Bank 2a
+P2021	Intake Manifold Runner Position Sensor/Switch Circuit Low Bank 2a
+P2022	Intake Manifold Runner Position Sensor/Switch Circuit High Bank 2a
+P2023	Intake Manifold Runner Position Sensor/Switch Circuit Inte rmittent Bank 2a
+P2024	Evaporative Emissions (EVAP) Fuel Vapor Temperature Sensor Circuit
+P2025	Evaporative Emissions (EVAP) Fuel Vapor Temperature Sensor Performance
+P2026	Evaporative Emissions (EVAP) Fuel Vapor Temperature Sensor Circuit Low Voltage
+P2027	Evaporative Emissions (EVAP) Fuel Vapor Temperature Sensor Circuit High Voltage
+P2028	Evaporative Emissions (EVAP) Fuel Vapor Temperature Sensor Circuit Intermittent
+P2029	Fuel Fired Heater Disabled
+P202A	Reductant Tank Isıtıcısı Kontrol Devresi/Açık
+P202B	Reductant Tank Isıtıcısı Kontrol Devresi Düşük
+P202C	Reductant Tank Isıtıcısı Kontrol Devresi Yüksek
+P202D	Reductant Kaçağı
+P202E	Reductant Enjeksiyon Valfi Devresi Aralıklı / Düzensiz / Performansı Bank 1 Ünitesi 1
+P202F	Reductant/Rejenerasyon KAynağı Kontrol Devresi Aralıklı / Düzensiz / Performansı
+P2030	Fuel Fired Heater Performance
+P2031	Egzoz Gazı Sıcaklık Sensörü Devresi Bank 1 Sensör 2
+P2032	Egzoz Gazı Sıcaklık Sensörü Devresi Düşük Bank 1 Sensör 2
+P2033	Egzoz Gazı Sıcaklık Sensörü Devresi Yüksek Bank 1 Sensör 2
+P2034	Egzoz Gazı Sıcaklık Sensörü Devresi Bank 2 Sensör 2
+P2035	Egzoz Gazı Sıcaklık Sensörü Devresi Düşük Bank 2 Sensör 2
+P2036	Egzoz Gazı Sıcaklık Sensörü Devresi Yüksek Bank 2 Sensör 2
+P2037	Reductant Enjeksiyon Hava Basınç Sensör A Devresi
+P2038	Reductant Enjeksiyon Hava Basınç Sensör A Devresi Aralıklı / Düzensiz / Performansı
+P2039	Reductant Enjeksiyon Hava Basınç Sensör A Devresi Düşük
+P203A	Reductant Level Sensor Circuit
+P203B	Reductant Level Sensor Circuit Range/Performance
+P203C	Reductant Level Sensor Circuit Low
+P203D	Reductant Level Sensor Circuit High
+P203E	Reductant Level Sensor Circuit Intermittent/Erratic
+P203F	Reductant Level Low
+P2040	Reductant Enjeksiyon Hava Basınç Sensör A Devresi Yüksek
+P2041	Reductant Enjeksiyon Hava Basınç Sensör A Devresi Aralıklı
+P2042	Reductant Sıcaklık Sensörü Devresi
+P2043	Reductant Sıcaklık Sensörü Devresi Aralıklı / Düzensiz / Performansı
+P2044	Reductant Sıcaklık Sensörü Devresi Düşük
+P2045	Reductant Sıcaklık Sensörü Devresi Yüksek
+P2046	Reductant Sıcaklık Sensörü Devresi Aralıklı
+P2047	Reductant Enjeksiyon Valfi Devresi/Açık Bank 1 Ünitesi 1
+P2048	Reductant Enjeksiyon Valfi Devresi Düşük Bank 1 Ünitesi 1
+P2049	Reductant Enjeksiyon Valfi Devresi Yüksek Bank 1 Ünitesi 1
+P204A	Reductant Basınç Sensör Devresi
+P204B	Reductant Basınç Sensör Devresi Aralıklı / Düzensiz / Performansı
+P204C	Reductant Basınç Sensör Devresi Düşük
+P204D	Reductant Basınç Sensör Devresi Yüksek
+P204E	Reductant Basınç Sensör Devresi Aralıklı / Düzensiz
+P204F	Reductant Sistem Performans Bank 1
+P2050	Reductant Enjeksiyon Valfi Devresi/Açık Bank 2 Ünitesi 1
+P2051	Reductant Enjeksiyon Valfi Devresi Düşük Bank 2 Ünitesi 1
+P2052	Reductant Enjeksiyon Valfi Devresi Yüksek Bank 2 Ünitesi 1
+P2053	Reductant Enjeksiyon Valfi Devresi/Açık Bank 1 Ünitesi 2
+P2054	Reductant Enjeksiyon Valfi Devresi Düşük Bank 1 Ünitesi 2
+P2055	Reductant Enjeksiyon Valfi Devresi Yüksek Bank 1 Ünitesi 2
+P2056	Reductant Enjeksiyon Valfi Devresi/Açık Bank 2 Ünitesi 2
+P2057	Reductant Enjeksiyon Valfi Devresi Düşük Bank 2 Ünitesi 2
+P2058	Reductant Enjeksiyon Valfi Devresi Yüksek Bank 2 Ünitesi 2
+P2059	Reductant Injection Air Pump Control Circuit/Open
+P205A	Reductant Tank Sıcaklık Sensörü Devresi
+P205B	Reductant Tank Sıcaklık Sensörü Devresi Aralıklı / Düzensiz / Performansı
+P205C	Reductant Tank Sıcaklık Sensörü Devresi Düşük
+P205D	Reductant Tank Sıcaklık Sensörü Devresi Yüksek
+P205E	Reductant Tank Sıcaklık Sensörü Devresi Aralıklı / Düzensiz
+P205F	Reductant Sistem Performans Bank 2
+P2060	Reductant Injection Air Pump Control Circuit Low
+P2061	Reductant Injection Air Pump Control Circuit High
+P2062	Reductant/Rejenerasyon KAynağı Kontrol Devresi/Açık
+P2063	Reductant/Rejenerasyon KAynağı Kontrol Devresi Düşük
+P2064	Reductant/Rejenerasyon KAynağı Kontrol Devresi Yüksek
+P2065	Fuel Level Sensor B Circuit
+P2066	Fuel Level Sensor B Performance
+P2067	Fuel Level Sensor B Circuit Low
+P2068	Fuel Level Sensor B Circuit High
+P2069	Fuel Level Sensor B Circuit Intermittent
+P206E	Intake Manifold Tuning (IMT) Valve Stuck Open Bank 2a
+P206F	Intake Manifold Tuning (IMT) Valve Stuck Closed Bank 2a
+P2070	Intake Manifold Tuning (IMT) Valve Stuck Open Bank 1a
+P2071	Intake Manifold Tuning (IMT) Valve Stuck Closed Bank 1a
+P2072	Throttle Actuator Control System Ice Blockage
+P2073	Manifold Absolute Pressure/Mass Air Flow Throttle Position Correlation at Idle
+P2074	Manifold Absolute Pressure/Mass Air Flow Throttle Position Correlation at Higher Load
+P2075	Intake Manifold Tuning (IMT) Valve Position Sensor/Switch Circuit Bank 1a
+P2076	Intake Manifold Tuning (IMT) Valve Position Sensor/Switch Circuit Range/Performance Bank 1a
+P2077	Intake Manifold Tuning (IMT) Valve Position Sensor/Switch Circuit Low Bank 1a
+P2078	Intake Manifold Tuning (IMT) Valve Position Sensor/Switch Circuit High Bank 1a
+P2079	Intake Manifold Tuning (IMT) Valve Position Sensor/Switch Circuit Intermittent Bank 1a
+P207A	Intake Manifold Tuning (IMT) Valve Position Sensor/Switch Circuit Bank 2a
+P207B	Intake Manifold Tuning (IMT) Valve Position Sensor/Switch Circuit Range/Performance Bank 2a
+P207C	Intake Manifold Tuning (IMT) Valve Position Sensor/Switch Circuit Low Bank 2a
+P207D	Intake Manifold Tuning (IMT) Valve Position Sensor/Switch Circuit High Bank 2a
+P207E	Intake Manifold Tuning (IMT) Valve Position Sensor/Switch Circuit Intermittent Bank 2a
+P207F	ISO/SAE reserved
+P2080	Egzoz Gazı Sıcaklık Sensörü Devresi Aralıklı / Düzensiz / Performansı Bank 1 Sensör 1
+P2081	Egzoz Gazı Sıcaklık Sensörü Devresi Aralıklı Bank 1 Sensör 1
+P2082	Egzoz Gazı Sıcaklık Sensörü Devresi Aralıklı / Düzensiz / Performansı Bank 2 Sensör 1
+P2083	Egzoz Gazı Sıcaklık Sensörü Devresi Aralıklı Bank 2 Sensör 1
+P2084	Egzoz Gazı Sıcaklık Sensörü Devresi Aralıklı / Düzensiz / Performansı Bank 1 Sensör 2
+P2085	Egzoz Gazı Sıcaklık Sensörü Devresi Aralıklı Bank 1 Sensör 2
+P2086	Egzoz Gazı Sıcaklık Sensörü Devresi Aralıklı / Düzensiz / Performansı Bank 2 Sensör 2
+P2087	Egzoz Gazı Sıcaklık Sensörü Devresi Aralıklı Bank 2 Sensör 2
+P2088	A Eksantrik Mili Konumu Aktüatör Kontrol Devresi Düşük Bank 1
+P2089	A Eksantrik Mili Konumu Aktüatör Kontrol Devresi Yüksek Bank 1
+P2090	B Eksantrik Mili Konumu Aktüatör Kontrol Devresi Düşük Bank 1
+P2091	B Eksantrik Mili Konumu Aktüatör Kontrol Devresi Yüksek Bank 1
+P2092	A Eksantrik Mili Konumu Aktüatör Kontrol Devresi Düşük Bank 2
+P2093	A Eksantrik Mili Konumu Aktüatör Kontrol Devresi Yüksek Bank 2
+P2094	B Eksantrik Mili Konumu Aktüatör Kontrol Devresi Düşük Bank 2
+P2095	B Eksantrik Mili Konumu Aktüatör Kontrol Devresi Yüksek Bank 2
+P2096	Post Catalyst Fuel Trim System Too Lean Bank 1
+P2097	Post Catalyst Fuel Trim System Too Rich Bank 1
+P2098	Post Catalyst Fuel Trim System Too Lean Bank 2
+P2099	Post Catalyst Fuel Trim System Too Rich Bank 2
+P209A	Reductant Enjeksiyon Hava Basınç Sensör B Devresi
+P209B	Reductant Enjeksiyon Hava Basınç Sensör B Devresi Aralıklı / Düzensiz / Performansı
+P209C	Reductant Enjeksiyon Hava Basınç Sensör B Devresi Düşük
+P209D	Reductant Enjeksiyon Hava Basınç Sensör B Devresi Yüksek
+P209E	Reductant Enjeksiyon Hava Basınç Sensör A/B Korelasyonu
+P20A0	Reductant Tahliye Kontrol Vanası Devresi /Açık
+P20A1	Reductant Tahliye Kontrol Vanası Performans
+P20A2	Reductant Tahliye Kontrol Vanası Devresi Düşük
+P20A3	Reductant Tahliye Kontrol Vanası Devresi Yüksek
+P20A4	Reductant Tahliye Kontrol Vanası Sıkışmış Açık
+P20A5	Reductant Tahliye Kontrol Vanası Sıkışmış Kapalı
+P20B9	Reductant Isıtıcısı A Kontrol Devresi/Açık
+P20BA	Reductant Isıtıcısı A Kontrol Devresi Performans
+P20BB	Reductant Isıtıcısı A Kontrol Devresi Düşük
+P20BC	Reductant Isıtıcısı A Kontrol Devresi Yüksek
+P20BD	Reductant Isıtıcısı B Kontrol Devresi/Açık
+P20BE	Reductant Isıtıcısı B Kontrol Devresi Performans
+P20BF	Reductant Isıtıcısı B Kontrol Devresi Düşük
+P20C0	Reductant Isıtıcısı B Kontrol Devresi Yüksek
+P20C1	Reductant Isıtıcısı "C" Kontrol Devresi/Açık
+P20C2	Reductant Isıtıcısı "C" Kontrol Devresi Performans
+P20C3	Reductant Isıtıcısı "C" Kontrol Devresi Düşük
+P20C4	Reductant Isıtıcısı "C" Kontrol Devresi Yüksek
+P20C5	Reductant Isıtıcısı "D" Kontrol Devresi/Açık
+P20C6	Reductant Isıtıcısı "D" Kontrol Devresi Performans
+P20C7	Reductant Isıtıcısı "D" Kontrol Devresi Düşük
+P20C8	Reductant Isıtıcısı "D" Kontrol Devresi Yüksek
+P20CB	Egzoz Sonrası Yakıt Enjektörü A Kontrol Devresi/Açık
+P20CC	Egzoz Sonrası Yakıt Enjektörü A Kontrol Performans
+P20CD	Egzoz Sonrası Yakıt Enjektörü A Kontrol Devresi Düşük
+P20CE	Egzoz Sonrası Yakıt Enjektörü A Kontrol Devresi Yüksek
+P20CF	Egzoz Sonrası Yakıt Enjektörü A Sıkışmış Açık
+P20D0	Egzoz Sonrası Yakıt Enjektörü A Sıkışmış Kapalı
+P20D1	Egzoz Sonrası Yakıt Enjektörü B Kontrol Devresi/Açık
+P20D2	Egzoz Sonrası Yakıt Enjektörü B Kontrol Performans
+P20D3	Egzoz Sonrası Yakıt Enjektörü B Kontrol Devresi Düşük
+P20D4	Egzoz Sonrası Yakıt Enjektörü B Kontrol Devresi Yüksek
+P20D5	Egzoz Sonrası Yakıt Enjektörü B Sıkışmış Açık
+P20D6	Egzoz Sonrası Yakıt Enjektörü B Sıkışmış Kapalı
+P20D7	Egzoz Sonrası Yakıt KAynağı Kontrol Devresi/Açık
+P20D8	Egzoz Sonrası Yakıt KAynağı Kontrol Performans
+P20D9	Egzoz Sonrası Yakıt KAynağı Kontrol Devresi Düşük
+P20DA	Egzoz Sonrası Yakıt KAynağı Kontrol Devresi Yüksek
+P20DB	Egzoz Sonrası Yakıt KAynağı Kontrol Sıkışmış Açık
+P20DC	Egzoz Sonrası Yakıt KAynağı Kontrol Sıkışmış Kapalı
+P20DD	Egzoz Sonrası Yakıt Basıncı Sensör Devresi
+P20DE	Egzoz Sonrası Yakıt Basıncı Sensör Devresi Aralıklı / Düzensiz / Performansı
+P20DF	Egzoz Sonrası Yakıt Basıncı Sensör Devresi Düşük
+P20E0	Egzoz Sonrası Yakıt Basıncı Sensör Devresi Yüksek
+P20E1	Egzoz Sonrası Yakıt Basıncı Sensör Devresi Aralıklı / Düzensiz
+P20E6	Reductant Enjeksiyon Hava Basıncı Çok Düşük
+P20E7	Reductant Enjeksiyon Hava Basıncı Çok Yüksek
+P20EC	SCR NOx Katalitik (Katalizör) - Aşırı Sıcak Bank 1
+P20ED	SCR NOx Pre-Katalitik (Katalizör) - Aşırı Sıcak Bank 1
+P20EE	SCR NOx Katalitik (Katalizör) Verimliliği Sınırın Altında Bank 1
+P20EF	SCR NOx Pre- Katalitik (Katalizör) Verimliliği Sınırın Altında Bank 1
+P20F0	SCR NOx Katalitik (Katalizör) - Aşırı Sıcak Bank 2
+P20F1	SCR NOx Pre-Katalitik (Katalizör) - Aşırı Sıcak Bank 2
+P20F2	SCR NOx Katalitik (Katalizör) Verimliliği Sınırın Altında Bank 2
+P20F3	SCR NOx Pre- Katalitik (Katalizör) Verimliliği Sınırın Altında Bank 2
+P20F6	Reductant Enjeksiyon Valfi Sıkışmış Açık Bank 1 Ünitesi 1
+P20F7	Reductant Enjeksiyon Valfi Sıkışmış Açık Bank 2 Ünitesi 1
+P2100	Gaz Kelebeği Aktüatör A Kontrol Motor Devresi/Açık
+P2101	Gaz Kelebeği Aktüatör A Kontrol Motor Devresi Aralıklı / Düzensiz / Performansı
+P2102	Gaz Kelebeği Aktüatör A Kontrol Motor Devresi Düşük
+P2103	Gaz Kelebeği Aktüatör A Kontrol Motor Devresi Yüksek
+P2104	Gaz Kelebeği Aktüatör Kontrol Sistemi - Rölantiye Zorlama
+P2105	Gaz Kelebeği Aktüatör Kontrol Sistem - Koruma Amaçlı Motoru Kapatma
+P2106	Gaz Kelebeği Aktüatör Kontrol Sistem - Arıza Giderilene Kadar Aracın Perofrmansı Sınırlandırılmıştır
+P2107	Gaz Kelebeği Aktüatör Kontrol Modülü İşlemcisi
+P2108	Gaz Kelebeği Aktüatör Kontrol Modülü Performans
+P2109	Gaz Kelebeği/Pedal Pozisyon Sensör A Minimum Durdurma Performansı
+P2110	Gaz Kelebeği Aktüatör Kontrol Sistem - RPM Sınırlandırılmıştır
+P2111	Gaz Kelebeği Aktüatör Kontrol Sistem - Sıkışmış Açık
+P2112	Gaz Kelebeği Aktüatör Kontrol Sistem - Sıkışmış Kapalı
+P2113	Gaz Kelebeği/Pedal Pozisyon Sensör B Minimum Durdurma Performansı
+P2114	Gaz Kelebeği/Pedal Pozisyon Sensör "C" Minimum Durdurma Performansı
+P2115	Gaz Kelebeği/Pedal Pozisyon Sensör "D" Minimum Durdurma Performansı
+P2116	Gaz Kelebeği/Pedal Pozisyon Sensör "E" Minimum Durdurma Performansı
+P2117	Gaz Kelebeği/Pedal Pozisyon Sensör "F" Minimum Durdurma Performansı
+P2118	Gaz Kelebeği Aktüatör Kontrol Motor Akım Aralığı / Performansı
+P2119	Gaz Kelebeği Aktüatör Kontrol Gaz Kelebeği Karoseri Aralığı / Performansı
+P2120	Gaz Kelebeği/Pedal Pozisyon Sensör/Anahtar "D" Devresi
+P2121	Gaz Kelebeği/Pedal Pozisyon Sensör/Anahtar "D" Devresi Aralıklı / Düzensiz / Performansı
+P2122	Gaz Kelebeği/Pedal Pozisyon Sensör/Anahtar "D" Devresi Düşük
+P2123	Gaz Kelebeği/Pedal Pozisyon Sensör/Anahtar "D" Devresi Yüksek
+P2124	Throttle/Pedal Position Sensor/Switch D Circuit Intermittent
+P2125	Gaz Kelebeği/Pedal Pozisyon Sensör/Anahtar "E" Devresi
+P2126	Gaz Kelebeği/Pedal Pozisyon Sensör/Anahtar "E" Devresi Aralıklı / Düzensiz / Performansı
+P2127	Gaz Kelebeği/Pedal Pozisyon Sensör/Anahtar "E" Devresi Düşük
+P2128	Gaz Kelebeği/Pedal Pozisyon Sensör/Anahtar "E" Devresi Yüksek
+P2129	Gaz Kelebeği/Pedal Pozisyon Sensör/Anahtar "E" Devresi Aralıklı
+P212A	Gaz Kelebeği Konumu Sensörü/Anahtar "G" Devresi
+P212B	Gaz Kelebeği Konumu Sensörü/Anahtar "G" Devresi Aralıklı / Düzensiz / Performansı
+P212C	Gaz Kelebeği Konumu Sensörü/Anahtar "G" Devresi Düşük
+P212D	Gaz Kelebeği Konumu Sensörü/Anahtar "G" Devresi Yüksek
+P212E	Gaz Kelebeği Konumu Sensörü/Anahtar "G" Devresi Aralıklı
+P2130	Gaz Kelebeği/Pedal Pozisyon Sensör/Anahtar "F" Devresi
+P2131	Gaz Kelebeği/Pedal Pozisyon Sensör/Anahtar "F" Devresi Aralıklı / Düzensiz / Performansı
+P2132	Gaz Kelebeği/Pedal Pozisyon Sensör/Anahtar "F" Devresi Düşük
+P2133	Gaz Kelebeği/Pedal Pozisyon Sensör/Anahtar "F" Devresi Yüksek
+P2134	Throttle/Pedal Position Sensor/Switch F Circuit Intermittent
+P2135	Throttle/Pedal Position Sensor/Switch A/B Voltage Correlation
+P2136	Throttle/Pedal Position Sensor/Switch A/C Voltage Correlation
+P2137	Throttle/Pedal Position Sensor/Switch B/C Voltage Correlation
+P2138	Throttle/Pedal Position Sensor/Switch D/E Voltage Correlation
+P2139	Throttle/Pedal Position Sensor/Switch D/F Voltage Correlation
+P213A	Egzoz Gazı Devridaimi Gaz Kelebeği Kontrol Devresi B /Açık
+P213B	Egzoz Gazı Devridaimi Gaz Kelebeği Kontrol Devresi B Aralığı / Performansı
+P213C	Egzoz Gazı Devridaimi Gaz Kelebeği Kontrol Devresi B Düşük
+P213D	Egzoz Gazı Devridaimi Gaz Kelebeği Kontrol Devresi B Yüksek
+P2140	Throttle/Pedal Position Sensor/Switch E/F Voltage Correlation
+P2141	Egzoz Gazı Devridaimi Gaz Kelebeği Kontrol Devresi A Düşük
+P2142	Egzoz Gazı Devridaimi Gaz Kelebeği Kontrol Devresi A Yüksek
+P2143	Egzoz Gazı Devridaimi Vent Kontrol Devresi/Açık
+P2144	Egzoz Gazı Devridaimi Vent Kontrol Devresi Düşük
+P2145	Egzoz Gazı Devridaimi Vent Kontrol Devresi Yüksek
+P2146	Yakıt Enjektör Grubu A Besleme Gerilimi (Voltajı) Devresi/Açık
+P2147	Yakıt Enjektör Grubu A Besleme Gerilimi (Voltajı) Devresi Düşük
+P2148	Yakıt Enjektör Grubu A Besleme Gerilimi (Voltajı) Devresi Yüksek
+P2149	Yakıt Enjektör Grubu B Besleme Gerilimi (Voltajı) Devresi/Açık
+P2150	Yakıt Enjektör Grubu B Besleme Gerilimi (Voltajı) Devresi Düşük
+P2151	Yakıt Enjektör Grubu B Besleme Gerilimi (Voltajı) Devresi Yüksek
+P2152	Yakıt Enjektör Grubu "C" Besleme Gerilimi (Voltajı) Devresi/Açık
+P2153	Yakıt Enjektör Grubu "C" Besleme Gerilimi (Voltajı) Devresi Düşük
+P2154	Yakıt Enjektör Grubu "C" Besleme Gerilimi (Voltajı) Devresi Yüksek
+P2155	Yakıt Enjektör Grubu "D" Besleme Gerilimi (Voltajı) Devresi/Açık
+P2156	Yakıt Enjektör Grubu "D" Besleme Gerilimi (Voltajı) Devresi Düşük
+P2157	Yakıt Enjektör Grubu "D" Besleme Gerilimi (Voltajı) Devresi Yüksek
+P2158	Vehicle Speed Sensor B
+P2159	Vehicle Speed Sensor B Range/Performance
+P215A	Vehicle Speed Wheel Speed Correlation
+P215B	Vehicle Speed Output Shaft Speed Correlation
+P2160	Vehicle Speed Sensor B Circuit Low
+P2161	Vehicle Speed Sensor B Intermittent/Erratic
+P2162	Vehicle Speed Sensor A/B Correlation
+P2163	Gaz Kelebeği/Pedal Pozisyonu Sensör "A" Maksimum Durdurma Performansı
+P2164	Gaz Kelebeği/Pedal Pozisyonu Sensör "B" Maksimum Durdurma Performansı
+P2165	Gaz Kelebeği/Pedal Pozisyonu Sensör "C" Maksimum Durdurma Performansı
+P2166	Gaz Kelebeği/Pedal Pozisyonu Sensör "D" Maksimum Durdurma Performansı
+P2167	Gaz Kelebeği/Pedal Pozisyonu Sensör "E" Maksimum Durdurma Performansı
+P2168	Gaz Kelebeği/Pedal Pozisyonu Sensör "F" Maksimum Durdurma Performansı
+P2169	Exhaust Pressure Regulator Vent Solenoid Control Circuit/Open
+P216A	Yakıt Enjektör Grubu "E" Besleme Gerilimi (Voltajı) Devresi/Açık
+P216B	Yakıt Enjektör Grubu "E" Besleme Gerilimi (Voltajı) Devresi Düşük
+P216C	Yakıt Enjektör Grubu "E" Besleme Gerilimi (Voltajı) Devresi Yüksek
+P216D	Yakıt Enjektör Grubu "F" Besleme Gerilimi (Voltajı) Devresi/Açık
+P216E	Yakıt Enjektör Grubu "F" Besleme Gerilimi (Voltajı) Devresi Düşük
+P216F	Yakıt Enjektör Grubu "F" Besleme Gerilimi (Voltajı) Devresi Yüksek
+P2170	Exhaust Pressure Regulator Vent Solenoid Control Circuit Low
+P2171	Exhaust Pressure Regulator Vent Solenoid Control Circuit High
+P2172	Gaz Kelebeği Aktüatör Kontrol Sistem - Ani Yüksek Hava Akışı Düşük Tespit Edildi
+P2173	Gaz Kelebeği Aktüatör Kontrol Sistem - Yüksek Hava Akışı Düşük Tespit Edildi
+P2174	Gaz Kelebeği Aktüatör Kontrol Sistem - Ani Düşük Hava Akışı Düşük Tespit Edildi
+P2175	Gaz Kelebeği Aktüatör Kontrol Sistem - Düşük Hava Akışı Düşük Tespit Edildi
+P2176	Gaz Kelebeği Aktüatör Kontrol Sistem - Idle Pozisyon Tespit Edilemedi
+P2177	Sistem Aşırı Fakir Silindir İptali Bank 1
+P2178	Sistem Aşırı Zengin Silindir İptali Bank 1
+P2179	Sistem Aşırı Fakir Silindir İptali Bank 2
+P217A	Yakıt Enjektör Grubu "G" Besleme Gerilimi (Voltajı) Devresi/Açık
+P217B	Yakıt Enjektör Grubu "G" Besleme Gerilimi (Voltajı) Devresi Düşük
+P217C	Yakıt Enjektör Grubu "G" Besleme Gerilimi (Voltajı) Devresi Yüksek
+P217D	Yakıt Enjektör Grubu "H" Besleme Gerilimi (Voltajı) Devresi/Açık
+P217E	Yakıt Enjektör Grubu "H" Besleme Gerilimi (Voltajı) Devresi Düşük
+P217F	Yakıt Enjektör Grubu "H" Besleme Gerilimi (Voltajı) Devresi Yüksek
+P2180	Sistem Aşırı Zengin Silindir İptali Bank 2
+P2181	Cooling System Performance
+P2182	Engine Coolant Temperature Sensor 2 Circuit
+P2183	Engine Coolant Temperature Sensor 2 Circuit Range/Performance
+P2184	Engine Coolant Temperature Sensor 2 Circuit Low
+P2185	Engine Coolant Temperature Sensor 2 Circuit High
+P2186	Engine Coolant Temperature Sensor 2 Circuit Intermittent/Erratic
+P2187	Sistem Aşırı Fakir Rölantide Bank 1
+P2188	Sistem Aşırı Zengin Rölantide Bank 1
+P2189	Sistem Aşırı Fakir Rölantide Bank 2
+P2190	Sistem Aşırı Zengin Rölantide Bank 2
+P2191	Sistem Aşırı Fakir Yüksek Yük Altında Bank 1
+P2192	Sistem Aşırı Zengin Yüksek Yük Altında Bank 1
+P2193	Sistem Aşırı Fakir Yüksek Yük Altında Bank 2
+P2194	System Too Rich at Higher Load Bank 2
+P2195	O2 Sensor Signal Biased/Stuck Lean Bank 1 Sensor 1
+P2196	O2 Sensor Signal Biased/Stuck Rich Bank 1 Sensor 1
+P2197	O2 Sensor Signal Biased/Stuck Lean Bank 2 Sensor 1
+P2198	O2 Sensor Signal Biased/Stuck Rich Bank 2 Sensor 1
+P2199	Intake Air Temperature Sensor 1/2 Correlation
+P219A	Banka 2 Hava / Yakıt Oranı Dengesizliği
+P219B	Banka 2 Hava / Yakıt Oranı Dengesizliği
+P219C	Silindir #1 Dengesizlik Sorunu
+P219D	Silindir #2 Dengesizlik Sorunu
+P219E	Silindir #3 Dengesizlik Sorunu
+P219F	Silindir #4 Dengesizlik Sorunu
+P2200	NOx Sensör Devresi Bank 1
+P2201	NOx Sensör Devresi Aralıklı / Düzensiz / Performansı Bank 1
+P2202	NOx Sensör Devresi Düşük Bank 1
+P2203	NOx Sensör Devresi Yüksek Bank 1
+P2204	NOx Sensör Devresi Aralıklı Bank 1
+P2205	NOx Sensor Heater Control Circuit/Open Bank 1
+P2206	NOx Sensor Heater Control Circuit Low Bank 1
+P2207	NOx Sensor Heater Control Circuit High Bank 1
+P2208	NOx Sensör Isıtıcısı Algılama Devresi Bank 1
+P2209	NOx Sensör Isıtıcısı Algılama Devresi Aralıklı / Düzensiz / Performansı Bank 1
+P2210	NOx Sensör Isıtıcısı Algılama Devresi Düşük Bank 1
+P2211	NOx Sensör Isıtıcısı Algılama Devresi Yüksek Bank 1
+P2212	NOx Sensör Isıtıcısı Algılama Devresi Aralıklı Bank 1
+P2213	NOx Sensör Devresi Bank 2
+P2214	NOx Sensör Devresi Aralıklı / Düzensiz / Performansı Bank 2
+P2215	NOx Sensör Devresi Düşük Bank 2
+P2216	NOx Sensör Devresi Yüksek Bank 2
+P2217	NOx Sensör Devresi Aralıklı Bank 2
+P2218	NOx Sensor Heater Control Circuit/Open Bank 2
+P2219	NOx Sensor Heater Control Circuit Low Bank 2
+P2220	NOx Sensor Heater Control Circuit High Bank 2
+P2221	NOx Sensör Isıtıcısı Algılama Devresi Bank 2
+P2222	NOx Sensör Isıtıcısı Algılama Devresi Aralıklı / Düzensiz / Performansı Bank 2
+P2223	NOx Sensör Isıtıcısı Algılama Devresi Düşük Bank 2
+P2224	NOx Sensör Isıtıcısı Algılama Devresi Yüksek Bank 2
+P2225	NOx Sensör Isıtıcısı Algılama Devresi Aralıklı Bank 2
+P2226	Barometrik Basınç Sensör A Devresi
+P2227	Barometrik Basınç Sensör A Devresi Aralıklı / Düzensiz / Performansı
+P2228	Barometrik Basınç Sensör A Devresi Düşük
+P2229	Barometrik Basınç Sensör A Devresi Yüksek
+P222A	Barometrik Basınç Sensör B Devresi
+P222B	Barometrik Basınç Sensör B Devresi Aralıklı / Düzensiz / Performansı
+P222C	Barometrik Basınç Sensör B Devresi Düşük
+P222D	Barometrik Basınç Sensör B Devresi Yüksek
+P222E	Barometrik Basınç Sensör B Devresi Aralıklı / Düzensiz
+P222F	Barometrik Basınç Sensör A/B Korelasyonu
+P2230	Barometrik Basınç Sensör A Devresi Aralıklı / Düzensiz
+P2231	O2 Sensör Sinyal Devresi Isıtıcı Devresine Kısa Devre Yapmış Bank 1 Sensör 1
+P2232	O2 Sensör Sinyal Devresi Isıtıcı Devresine Kısa Devre Yapmış Bank 1 Sensör 2
+P2233	O2 Sensör Sinyal Devresi Isıtıcı Devresine Kısa Devre Yapmış Bank 1 Sensör 3
+P2234	O2 Sensör Sinyal Devresi Isıtıcı Devresine Kısa Devre Yapmış Bank 2 Sensör 1
+P2235	O2 Sensör Sinyal Devresi Isıtıcı Devresine Kısa Devre Yapmış Bank 2 Sensör 2
+P2236	O2 Sensör Sinyal Devresi Isıtıcı Devresine Kısa Devre Yapmış Bank 2 Sensör 3
+P2237	O2 Sensör Positif Akım Kontrol Devresi/Açık Bank 1 Sensör 1
+P2238	O2 Sensör Positif Akım Kontrol Devresi Düşük Bank 1 Sensör 1
+P2239	O2 Sensör Positif Akım Kontrol Devresi Yüksek Bank 1 Sensör 1
+P2240	O2 Sensör Positif Akım Kontrol Devresi/Açık Bank 2 Sensör 1
+P2241	O2 Sensör Positif Akım Kontrol Devresi Düşük Bank 2 Sensör 1
+P2242	O2 Sensör Positif Akım Kontrol Devresi Yüksek Bank 2 Sensör 1
+P2243	O2 Sensör Referans Voltajı Devresi/Açık Bank 1 Sensör 1
+P2244	O2 Sensör Referans Voltajı Performans Bank 1 Sensör 1
+P2245	O2 Sensör Referans Voltajı Devresi Düşük Bank 1 Sensör 1
+P2246	O2 Sensör Referans Voltajı Devresi Yüksek Bank 1 Sensör 1
+P2247	O2 Sensör Referans Voltajı Devresi/Açık Bank 2 Sensör 1
+P2248	O2 Sensör Referans Voltajı Performans Bank 2 Sensör 1
+P2249	O2 Sensör Referans Voltajı Devresi Düşük Bank 2 Sensör 1
+P2250	O2 Sensör Referans Voltajı Devresi Yüksek Bank 2 Sensör 1
+P2251	O2 Sensör Negatif Akım Kontrol Devresi/Açık Bank 1 Sensör 1
+P2252	O2 Sensör Negatif Akım Kontrol Devresi Düşük Bank 1 Sensör 1
+P2253	O2 Sensör Negatif Akım Kontrol Devresi Yüksek Bank 1 Sensör 1
+P2254	O2 Sensör Negatif Akım Kontrol Devresi/Açık Bank 2 Sensör 1
+P2255	O2 Sensör Negatif Akım Kontrol Devresi Düşük Bank 2 Sensör 1
+P2256	O2 Sensör Negatif Akım Kontrol Devresi Yüksek Bank 2 Sensör 1
+P2257	Secondary Air Injection System Control A Circuit Low
+P2258	Secondary Air Injection System Control A Circuit High
+P2259	Secondary Air Injection System Control B Circuit Low
+P2260	Secondary Air Injection System Control B Circuit High
+P2261	Turbocharger/Supercharger Bypass Valve Mechanical
+P2262	Turbocharger/Supercharger Boost Pressure Not Detected Mechanical
+P2263	Turbocharger/Supercharger Boost System Performance
+P2264	Yakıt Sensoru Devresinde Su Tespit Edildi
+P2265	Yakıt Sensor Devresinde Su Miktarı Aralığı / Performansı
+P2266	Yakıt Sensor Devresinde Su Miktarı Düşük
+P2267	Yakıt Sensor Devresinde Su Miktarı Yüksek
+P2268	Yakıt Sensor Devresinde Su Miktarı Aralıklı
+P2269	Yakıtta Su Tespit Edildi
+P226A	Yakıtta Su Tespit Edildi Işığı Kontrol Lambası Arızası
+P2270	O2 Sensör Sinyali Sorunu Fakir Bank 1 Sensör 2
+P2271	O2 Sensör Sinyali Sorunu Zengin Bank 1 Sensör 2
+P2272	O2 Sensör Sinyali Sorunu Fakir Bank 2 Sensör 2
+P2273	O2 Sensör Sinyali Sorunu Zengin Bank 2 Sensör 2
+P2274	O2 Sensör Sinyali Sorunu Fakir Bank 1 Sensör 3
+P2275	O2 Sensör Sinyali Sorunu Zengin Bank 1 Sensör 3
+P2276	O2 Sensör Sinyali Sorunu Fakir Bank 2 Sensör 3
+P2277	O2 Sensör Sinyali Sorunu Zengin Bank 2 Sensör 3
+P2278	O2 Sensor Signals Swapped Bank 1 Sensor 3/Bank 2 Sensor 3
+P2279	Intake Air System Leak
+P2280	Air Flow Restriction/Air Leak Between Air Filter and MAF
+P2281	Air Leak Between MAF and Throttle Body
+P2282	Air Leak Between Throttle Body and Intake Valves
+P2283	Injector Control Pressure Sensor Circuit
+P2284	Injector Control Pressure Sensor Circuit Range/Performance
+P2285	Injector Control Pressure Sensor Circuit Low
+P2286	Injector Control Pressure Sensor Circuit High
+P2287	Injector Control Pressure Sensor Circuit Intermittent
+P2288	Injector Control Pressure Too High
+P2289	Injector Control Pressure Too High Engine Off
+P2290	Injector Control Pressure Too Low
+P2291	Injector Control Pressure Too Low Engine Cranking
+P2292	Injector Control Pressure Erratic
+P2293	Fuel Pressure Regulator 2 Performance
+P2294	Fuel Pressure Regulator 2 Control Circuit
+P2295	Fuel Pressure Regulator 2 Control Circuit Low
+P2296	Fuel Pressure Regulator 2 Control Circuit High
+P2297	O2 Sensor Out of Range During Deceleration Bank 1 Sensor 1
+P2298	O2 Sensor Out of Range During Deceleration Bank 2 Sensor 1
+P2299	Brake Pedal Position/Accelerator Pedal Position Incompatible
+P2300	Ignition Coil A Primary Control Circuit Low
+P2301	Ignition Coil A Primary Control Circuit High
+P2302	Ignition Coil A Secondary Circuit
+P2303	Ignition Coil B Primary Control Circuit Low
+P2304	Ignition Coil B Primary Control Circuit High
+P2305	Ignition Coil B Secondary Circuit
+P2306	Ignition Coil C Primary Control Circuit Low
+P2307	Ignition Coil C Primary Control Circuit High
+P2308	Ignition Coil C Secondary Circuit
+P2309	Ignition Coil D Primary Control Circuit Low
+P2310	Ignition Coil D Primary Control Circuit High
+P2311	Ignition Coil D Secondary Circuit
+P2312	Ignition Coil E Primary Control Circuit Low
+P2313	Ignition Coil E Primary Control Circuit High
+P2314	Ignition Coil E Secondary Circuit
+P2315	Ignition Coil F Primary Control Circuit Low
+P2316	Ignition Coil F Primary Control Circuit High
+P2317	Ignition Coil F Secondary Circuit
+P2318	Ignition Coil G Primary Control Circuit Low
+P2319	Ignition Coil G Primary Control Circuit High
+P2320	Ignition Coil G Secondary Circuit
+P2321	Ignition Coil H Primary Control Circuit Low
+P2322	Ignition Coil H Primary Control Circuit High
+P2323	Ignition Coil H Secondary Circuit
+P2324	Ignition Coil I Primary Control Circuit Low
+P2325	Ignition Coil I Primary Control Circuit High
+P2326	Ignition Coil I Secondary Circuit
+P2327	Ignition Coil J Primary Control Circuit Low
+P2328	Ignition Coil J Primary Control Circuit High
+P2329	Ignition Coil J Secondary Circuit
+P2330	Ignition Coil K Primary Control Circuit Low
+P2331	Ignition Coil K Primary Control Circuit High
+P2332	Ignition Coil K Secondary Circuit
+P2333	Ignition Coil L Primary Control Circuit Low
+P2334	Ignition Coil L Primary Control Circuit High
+P2335	Ignition Coil L Secondary Circuit
+P2336	Cylinder 1 Above Knock Threshold
+P2337	Cylinder 2 Above Knock Threshold
+P2338	Cylinder 3 Above Knock Threshold
+P2339	Cylinder 4 Above Knock Threshold
+P2340	Cylinder 5 Above Knock Threshold
+P2341	Cylinder 6 Above Knock Threshold
+P2342	Cylinder 7 Above Knock Threshold
+P2343	Cylinder 8 Above Knock Threshold
+P2344	Cylinder 9 Above Knock Threshold
+P2345	Cylinder 10 Above Knock Threshold
+P2346	Cylinder 11 Above Knock Threshold
+P2347	Cylinder 12 Above Knock Threshold
+P2400	Evaporative Emission System Leak Detection Pump Control Circuit/Open
+P2401	Evaporative Emission System Leak Detection Pump Control Circuit Low
+P2402	Evaporative Emission System Leak Detection Pump Control Circuit High
+P2403	Evaporative Emission System Leak Detection Pump Sense Circuit/Open
+P2404	Evaporative Emission System Leak Detection Pump Sense Circuit Range/Performance
+P2405	Evaporative Emission System Leak Detection Pump Sense Circuit Low
+P2406	Evaporative Emission System Leak Detection Pump Sense Circuit High
+P2407	Evaporative Emission System Leak Detection Pump Sense Circuit Intermittent/Erratic
+P2408	Fuel Cap Sensor/Switch Circuit
+P2409	Fuel Cap Sensor/Switch Circuit Range/Performance
+P240A	Evaporative Emission System Leak Detection Pump Heater Control Circuit/Open
+P240B	Evaporative Emission System Leak Detection Pump Heater Control Circuit Low
+P240C	Evaporative Emission System Leak Detection Pump Heater Control Circuit High
+P240D	ISO/SAE reserved
+P240E	ISO/SAE reserved
+P240F	ISO/SAE reserved
+P2410	Fuel Cap Sensor/Switch Circuit Low
+P2411	Fuel Cap Sensor/Switch Circuit High
+P2412	Fuel Cap Sensor/Switch Circuit Intermittent/Erratic
+P2413	Exhaust Gas Recirculation System Performance
+P2414	O2 Sensor Exhaust Sample Error Bank 1 Sensor 1
+P2415	O2 Sensor Exhaust Sample Error Bank 2 Sensor 1
+P2416	O2 Sensor Signals Swapped Bank 1 Sensor 2/Bank 1 Sensor 3
+P2417	O2 Sensor Signals Swapped Bank 2 Sensor 2/Bank 2 Sensor 3
+P2418	Evaporative Emission System Switching Valve Control Circuit/Open
+P2419	Evaporative Emission System Switching Valve Control Circuit Low
+P2420	Evaporative Emission System Switching Valve Control Circuit High
+P2421	Evaporative Emission System Vent Valve Stuck Open
+P2422	Evaporative Emission System Vent Valve Stuck Closed
+P2423	HC Adsorption Catalyst Efficiency Below Threshold Bank 1
+P2424	HC Adsorption Catalyst Efficiency Below Threshold Bank 2
+P2425	Exhaust Gas Recirculation Cooling Valve Control Circuit/Open
+P2426	Exhaust Gas Recirculation Cooling Valve Control Circuit Low
+P2427	Exhaust Gas Recirculation Cooling Valve Control Circuit High
+P2428	Exhaust Gas Temperature Too High Bank 1
+P2429	Exhaust Gas Temperature Too High Bank 2
+P242A	Exhaust Gas Temperature Sensor Circuit Bank 1 Sensor 3
+P242B	Exhaust Gas Temperature Sensor Circuit Range/Performance Bank 1 Sensor 3
+P242C	Exhaust Gas Temperature Sensor Circuit Low Bank 1 Sensor 3
+P242D	Exhaust Gas Temperature Sensor Circuit High Bank 1 Sensor 3
+P242E	Exhaust Gas Temperature Sensor Circuit Intermittent/Erratic Bank 1 Sensor 3
+P242F	Diesel Particulate Filter Restriction Ash Accumulation
+P2430	(SAİ) İkincil Hava Enjeksiyon Sistemi Hava Akışı Düşük/Basınç Sensör Devresi Bank 1
+P2431	(SAİ) İkincil Hava Enjeksiyon Sistemi Hava Akışı Düşük/Basınç Sensör Devresi Aralıklı / Düzensiz / Performansı Bank 1
+P2432	(SAİ) İkincil Hava Enjeksiyon Sistemi Hava Akışı Düşük/Basınç Sensör Devresi Düşük Bank 1
+P2433	(SAİ) İkincil Hava Enjeksiyon Sistemi Hava Akışı Düşük/Basınç Sensör Devresi Yüksek Bank 1
+P2434	(SAİ) İkincil Hava Enjeksiyon Sistemi Hava Akışı Düşük/Basınç Sensör Devresi Aralıklı / Düzensiz Bank 1
+P2435	(SAİ) İkincil Hava Enjeksiyon Sistemi Hava Akışı Düşük/Basınç Sensör Devresi Bank 2
+P2436	(SAİ) İkincil Hava Enjeksiyon Sistemi Hava Akışı Düşük/Basınç Sensör Devresi Aralıklı / Düzensiz / Performansı Bank 2
+P2437	(SAİ) İkincil Hava Enjeksiyon Sistemi Hava Akışı Düşük/Basınç Sensör Devresi Düşük Bank 2
+P2438	(SAİ) İkincil Hava Enjeksiyon Sistemi Hava Akışı Düşük/Basınç Sensör Devresi Yüksek Bank 2
+P2439	(SAİ) İkincil Hava Enjeksiyon Sistemi Hava Akışı Düşük/Basınç Sensör Devresi Aralıklı / Düzensiz Bank 2
+P2440	Secondary Air Injection System Switching Valve Stuck Open Bank 1
+P2441	Secondary Air Injection System Switching Valve Stuck Closed Bank 1
+P2442	Secondary Air Injection System Switching Valve Stuck Open Bank 2
+P2443	Secondary Air Injection System Switching Valve Stuck Closed Bank 2
+P2444	Secondary Air Injection System Pump Stuck On Bank 1
+P2445	Secondary Air Injection System Pump Stuck Off Bank 1
+P2446	Secondary Air Injection System Pump Stuck On Bank 2
+P2447	Secondary Air Injection System Pump Stuck Off Bank 2
+P2448	Secondary Air Injection System High Air Flow Bank 1
+P2449	Secondary Air Injection System High Air Flow Bank 2
+P2450	Evaporative Emission System Switching Valve Performance/Stuck Open
+P2451	Evaporative Emission System Switching Valve Stuck Closed
+P2452	Diesel Particulate Filter Differential Pressure Sensor Circuit
+P2453	Diesel Particulate Filter Differential Pressure Sensor Circuit Range/Performance
+P2454	Diesel Particulate Filter Differential Pressure Sensor Circuit Low
+P2455	Diesel Particulate Filter Differential Pressure Sensor Circuit High
+P2456	Diesel Particulate Filter Differential Pressure Sensor Circuit Intermittent/Erratic
+P2457	Exhaust Gas Recirculation Cooling System Performance
+P2458	Diesel Particulate Filter Regeneration Duration
+P2459	Diesel Particulate Filter Regeneration Frequency
+P245A	Exhaust Gas Recirculation Cooler Bypass Control Circuit/Open
+P245B	Exhaust Gas Recirculation Cooler Bypass Control Circuit Range/Performance
+P245C	Exhaust Gas Recirculation Cooler Bypass Control Circuit Low
+P245D	Exhaust Gas Recirculation Cooler Bypass Control Circuit High
+P245E	ISO/SAE reserved
+P245F	ISO/SAE reserved
+P2478	Egzoz Gazı Sıcaklık Normalin Dışında Bank 1 Sensör 1
+P2479	Egzoz Gazı Sıcaklık Normalin Dışında Bank 1 Sensör 2
+P247A	Egzoz Gazı Sıcaklık Normalin Dışında Bank 1 Sensör 3
+P247B	Egzoz Gazı Sıcaklık Normalin Dışında Bank 1 Sensör 4
+P247C	Egzoz Gazı Sıcaklık Normalin Dışında Bank 2 Sensör 1
+P247D	Egzoz Gazı Sıcaklık Normalin Dışında Bank 2 Sensör 2
+P247E	Egzoz Gazı Sıcaklık Normalin Dışında Bank 2 Sensör 3
+P247F	Egzoz Gazı Sıcaklık Normalin Dışında Bank 2 Sensör 4
+P2500	Generator Lamp/LTerminal Circuit Low
+P2501	Generator Lamp/LTerminal Circuit High
+P2502	Charging System Voltage
+P2503	Charging System Voltage Low
+P2504	Charging System Voltage High
+P2505	ECM/PCM Power Input Signal
+P2506	ECM/PCM Power Input Signal Range/Performance
+P2507	ECM/PCM Power Input Signal Low
+P2508	ECM/PCM Power Input Signal High
+P2509	ECM/PCM Power Input Signal Intermittent
+P250A	Motor Yağ Seviyesi Sensör Devresi
+P250B	Motor Yağ Seviyesi Sensör Devresi Aralıklı / Düzensiz / Performansı
+P250C	Motor Yağ Seviyesi Sensör Devresi Düşük
+P250D	Motor Yağ Seviyesi Sensör Devresi Yüksek
+P250E	Motor Yağ Seviyesi Sensör Devresi Aralıklı / Düzensiz
+P250F	Motor Yağ Seviyesi Çok Düşük
+P2510	ECM/PCM Power Relay Sense Circuit Range/Performance
+P2511	ECM/PCM Power Relay Sense Circuit Intermittent
+P2512	Event Data Recorder Request Circuit/ Open
+P2513	Event Data Recorder Request Circuit Low
+P2514	Event Data Recorder Request Circuit High
+P2515	A/C Soğutucu Basınç Sensörü B Devresi
+P2516	A/C Soğutucu Basınç Sensörü B Devresi Aralıklı / Düzensiz / Performansı
+P2517	A/C Soğutucu Basınç Sensörü B Devresi Düşük
+P2518	A/C Soğutucu Basınç Sensörü B Devresi Yüksek
+P2519	A/C İsteği A Devresi
+P251A	PTO Enable Switch Circuit/Open
+P251B	PTO Enable Switch Circuit Low
+P251C	PTO Enable Switch Circuit High
+P251D	PTO Engine Shutdown Circuit/Open
+P251E	PTO Engine Shutdown Circuit Low
+P251F	PTO Engine Shutdown Circuit High
+P2520	A/C Request A Circuit Low
+P2521	A/C Request A Circuit High
+P2522	A/C Request B Circuit
+P2523	A/C Request B Circuit Low
+P2524	A/C Request B Circuit High
+P2525	Vacuum Reservoir Pressure Sensor Circuit
+P2526	Vacuum Reservoir Pressure Sensor Circuit Range/Performance
+P2527	Vacuum Reservoir Pressure Sensor Circuit Low
+P2528	Vacuum Reservoir Pressure Sensor Circuit High
+P2529	Vacuum Reservoir Pressure Sensor Circuit Intermittent
+P252A	Motor Yağ Kalitesi Sensör Devresi
+P252B	Motor Yağ Kalitesi Sensör Devresi Aralıklı / Düzensiz / Performansı
+P252C	Motor Yağ Kalitesi Sensör Devresi Düşük
+P252D	Motor Yağ Kalitesi Sensör Devresi Yüksek
+P252E	Motor Yağ Kalitesi Devresi Aralıklı / Düzensiz
+P252F	Motor Yağ Seviyesi Çok Yüksek
+P2530	Ignition Switch Run Position Circuit
+P2531	Ignition Switch Run Position Circuit Low
+P2532	Ignition Switch Run Position Circuit High
+P2533	Ignition Switch Run/Start Position Circuit
+P2534	Ignition Switch Run/Start Position Circuit Low
+P2535	Ignition Switch Run/Start Position Circuit High
+P2536	Ignition Switch Accessory Position Circuit
+P2537	Ignition Switch Accessory Position Circuit Low
+P2538	Ignition Switch Accessory Position Circuit High
+P2539	Low Pressure Fuel System Sensor Circuit
+P253A	PTO Algılama Devresi/Açık
+P253B	PTO Algılama Devresi Aralıklı / Düzensiz / Performansı
+P253C	PTO Algılama Devresi Düşük
+P253D	PTO Algılama Devresi Yüksek
+P253E	PTO Algılama Devresi Aralıklı / Düzensiz
+P253F	Engine Oil Deteriorated
+P2540	Low Pressure Fuel System Sensor Circuit Range/Performance
+P2541	Low Pressure Fuel System Sensor Circuit Low
+P2542	Low Pressure Fuel System Sensor Circuit High
+P2543	Low Pressure Fuel System Sensor Circuit Intermittent
+P2544	Torque Management Request Input Signal A
+P2545	Torque Management Request Input Signal A Range/Performance
+P2546	Torque Management Request Input Signal A Low
+P2547	Torque Management Request Input Signal A High
+P2548	Torque Management Request Input Signal B
+P2549	Torque Management Request Input Signal B Range/Performance
+P254A	PTO Hız Ayarlama Sensör/Anahtar 1 Devresi/Açık
+P254B	PTO Hız Ayarlama Sensör/Anahtar 1 Aralığı / Performansı
+P254C	PTO Hız Ayarlama Sensör/Anahtar 1 Devresi Düşük
+P254D	PTO Hız Ayarlama Sensör/Anahtar 1 Devresi Yüksek
+P254E	PTO Hız Ayarlama Sensör/Anahtar 1 Devresi Aralıklı / Düzensiz
+P254F	Engine Hood Switch Circuit
+P2550	Torque Management Request Input Signal B Low
+P2551	Torque Management Request Input Signal B High
+P2552	Throttle/Fuel Inhibit Circuit
+P2553	Throttle/Fuel Inhibit Circuit Range/Performance
+P2554	Throttle/Fuel Inhibit Circuit Low
+P2555	Throttle/Fuel Inhibit Circuit High
+P2556	Engine Coolant Level Sensor/Switch Circuit
+P2557	Engine Coolant Level Sensor/Switch Circuit Range/Performance
+P2558	Engine Coolant Level Sensor/Switch Circuit Low
+P2559	Engine Coolant Level Sensor/Switch Circuit High
+P255A	PTO Hız Ayarlama Sensör/Anahtar 2 Devresi/Açık
+P255B	PTO Hız Ayarlama Sensör/Anahtar 2 Aralığı / Performansı
+P255C	PTO Hız Ayarlama Sensör/Anahtar 2 Devresi Düşük
+P255D	PTO Hız Ayarlama Sensör/Anahtar 2 Devresi Yüksek
+P255E	PTO Hız Ayarlama Sensör/Anahtar 2 Devresi Aralıklı / Düzensiz
+P255F	ISO/SAE reserved
+P2560	Engine Coolant Level Low
+P2561	A/C Control Module Requested MIL Illumination
+P2562	Turbo şarj Takviye Kontrolü Pozisyon Sensör A Devresi
+P2563	Turbo şarj Takviye Kontrolü Pozisyon Sensör A Devresi Aralıklı / Düzensiz / Performansı
+P2564	Turbo şarj Takviye Kontrolü Pozisyon Sensör A Devresi Düşük
+P2565	Turbo şarj Takviye Kontrolü Pozisyon Sensör A Devresi Yüksek
+P2566	Turbo şarj Takviye Kontrolü Pozisyon Sensör A Devresi Aralıklı
+P2567	Direct Ozone Reduction Catalyst Temperature Sensor Circuit
+P2568	Direct Ozone Reduction Catalyst Temperature Sensor Circuit Range/Performance
+P2569	Direct Ozone Reduction Catalyst Temperature Sensor Circuit Low
+P256A	Engine Idle Speed Selector Sensor/Switch Circuit/Open
+P256B	Engine Idle Speed Selector Sensor/Switch Range/Performance
+P256C	Engine Idle Speed Selector Sensor/Switch Circuit Low
+P256D	Engine Idle Speed Selector Sensor/Switch Circuit High
+P256E	Engine Idle Speed Selector Sensor/Switch Circuit Intermittent/Erratic
+P256F	ISO/SAE reserved
+P2570	Direct Ozone Reduction Catalyst Temperature Sensor Circuit High
+P2571	Direct Ozone Reduction Catalyst Temperature Sensor Circuit Intermittent/Erratic
+P2572	Direct Ozone Reduction Catalyst Deterioration Sensor Circuit
+P2573	Direct Ozone Reduction Catalyst Deterioration Sensor Circuit Range/Performance
+P2574	Direct Ozone Reduction Catalyst Deterioration Sensor Circuit Low
+P2575	Direct Ozone Reduction Catalyst Deterioration Sensor Circuit High
+P2576	Direct Ozone Reduction Catalyst Deterioration Sensor Circuit Intermittent/Erratic
+P2577	Direct Ozone Reduction Catalyst Efficiency Below Threshold
+P2578	Turbocharger Speed Sensor Circuit
+P2579	Turbocharger Speed Sensor Circuit Range/Performance
+P257A	Vacuum Reservoir Control Circuit Open
+P257B	Vacuum Reservoir Control Circuit Low
+P257C	Vacuum Reservoir Control Circuit High
+P257D	Engine Hood Switch Circuit Range/Performance
+P257E	Engine Hood Switch Circuit Low
+P257F	Engine Hood Switch Circuit High
+P2580	Turbocharger Speed Sensor Circuit Low
+P2581	Turbocharger Speed Sensor Circuit High
+P2582	Turbocharger Speed Sensor Circuit Intermittent
+P2583	Cruise Control Front Distance Range Sensor
+P2584	Fuel Additive Control Module Requested MIL Illumination
+P2585	Fuel Additive Control Module Warning Lamp Request
+P2586	Turbo şarj Takviye Kontrolü Pozisyon Sensör B Devresi
+P2587	Turbo şarj Takviye Kontrolü Pozisyon Sensör B Devresi Aralıklı / Düzensiz / Performansı
+P2588	Turbo şarj Takviye Kontrolü Pozisyon Sensör B Devresi Düşük
+P2589	Turbo şarj Takviye Kontrolü Pozisyon Sensör B Devresi Yüksek
+P2590	Turbo şarj Takviye Kontrolü Pozisyon Sensör B Devresi Aralıklı / Düzensiz
+P2600	Coolant Pump Control Circuit/Open
+P2601	Coolant Pump Control Circuit Range/Performance
+P2602	Coolant Pump Control Circuit Low
+P2603	Coolant Pump Control Circuit High
+P2604	Hava Emiş Isıtıcısı A Devresi Aralıklı / Düzensiz / Performansı
+P2605	Hava Emiş Isıtıcısı B Devresi/Açık
+P2606	Hava Emiş Isıtıcısı B Devresi Aralıklı / Düzensiz / Performansı
+P2607	Hava Emiş Isıtıcısı B Devresi Düşük
+P2608	Hava Emiş Isıtıcısı B Devresi Yüksek
+P2609	Hava Emiş Isıtıcısı Sistem Performans
+P260A	PTO Kontrol Devresi/Açık
+P260B	PTO Kontrol Devresi Düşük
+P260C	PTO Kontrol Devresi Yüksek
+P260D	PTO Engaged Lambası Kontrol Devresi
+P260E	ISO/SAE reserved
+P260F	Evaporative System Monitoring Processor Performance
+P2610	ECM/PCM Internal Engine Off Timer Performance
+P2611	A/C Refrigerant Distribution Valve Control Circuit/Open
+P2612	A/C Refrigerant Distribution Valve Control Circuit Low
+P2613	A/C Refrigerant Distribution Valve Control Circuit High
+P2614	Camshaft Position Signal Output Circuit/Open
+P2615	Camshaft Position Signal Output Circuit Low
+P2616	Camshaft Position Signal Output Circuit High
+P2617	Crankshaft Position Signal Output Circuit/Open
+P2618	Crankshaft Position Signal Output Circuit Low
+P2619	Crankshaft Position Signal Output Circuit High
+P2620	Throttle Position Output Circuit/Open
+P2621	Throttle Position Output Circuit Low
+P2622	Throttle Position Output Circuit High
+P2623	Injector Control Pressure Regulator Circuit/Open
+P2624	Injector Control Pressure Regulator Circuit Low
+P2625	Injector Control Pressure Regulator Circuit High
+P2626	O2 Sensör Pompalama Akım Trim Devresi/Açık Bank 1 Sensör 1
+P2627	O2 Sensör Pompalama Akım Trim Devresi Düşük Bank 1 Sensör 1
+P2628	O2 Sensör Pompalama Akım Trim Devresi Yüksek Bank 1 Sensör 1
+P2629	O2 Sensör Pompalama Akım Trim Devresi/Açık Bank 2 Sensör 1
+P2630	O2 Sensör Pompalama Akım Trim Devresi Düşük Bank 2 Sensör 1
+P2631	O2 Sensör Pompalama Akım Trim Devresi Yüksek Bank 2 Sensör 1
+P2632	Yakıt Pompası B Kontrol Devresi /Açık
+P2633	Yakıt Pompası B Kontrol Devresi Düşük
+P2634	Yakıt Pompası B Kontrol Devresi Yüksek
+P2635	Yakıt Pompası A Düşük Akış/Performans
+P2636	Yakıt Pompası B Düşük Akış/Performans
+P2637	Torque Management Feedback Signal A
+P2638	Torque Management Feedback Signal A Range/Performance
+P2639	Torque Management Feedback Signal A Low
+P2640	Torque Management Feedback Signal A High
+P2641	Torque Management Feedback Signal B
+P2642	Torque Management Feedback Signal B Range/Performance
+P2643	Torque Management Feedback Signal B Low
+P2644	Torque Management Feedback Signal B High
+P2645	A Rocker Arm Actuator Control Circuit/Open Bank 1
+P2646	A Rocker Arm Actuator System Performance or Stuck Off Bank 1
+P2647	A Rocker Arm Actuator System Stuck On Bank 1
+P2648	A Rocker Arm Actuator Control Circuit Low Bank 1
+P2649	A Rocker Arm Actuator Control Circuit High Bank 1
+P264A	A Rocker Arm Actuator Position Sensor Circuit Bank 1
+P264B	A Rocker Arm Actuator Position Sensor Circuit Range/Performance Bank 1
+P264C	A Rocker Arm Actuator Position Sensor Circuit Low Bank 1
+P264D	A Rocker Arm Actuator Position Sensor Circuit High Bank 1
+P264E	A Rocker Arm Actuator Position Sensor Circuit Intermittent/Erratic Bank 1
+P2650	B Rocker Arm Actuator Control Circuit/Open Bank 1
+P2651	B Rocker Arm Actuator System Performance/Stuck Off Bank 1
+P2652	B Rocker Arm Actuator System Stuck On Bank 1
+P2653	B Rocker Arm Actuator Control Circuit Low Bank 1
+P2654	B Rocker Arm Actuator Control Circuit High Bank 1
+P2655	A Rocker Arm Actuator Control Circuit/Open Bank 2
+P2656	A Rocker Arm Actuator System Performance or Stuck Off Bank 2
+P2657	A Rocker Arm Actuator System Stuck On Bank 2
+P2658	A Rocker Arm Actuator Control Circuit Low Bank 2
+P2659	A Rocker Arm Actuator Control Circuit High Bank 2
+P265A	B Rocker Arm Actuator Position Sensor Circuit Bank 1
+P265B	B Rocker Arm Actuator Position Sensor Circuit Range/Performance Bank 1
+P265C	B Rocker Arm Actuator Position Sensor Circuit Low Bank 1
+P265D	B Rocker Arm Actuator Position Sensor Circuit High Bank 1
+P265E	B Rocker Arm Actuator Position Sensor Circuit Intermittent/Erratic Bank 1
+P2660	B Rocker Arm Actuator Control Circuit/Open Bank 2
+P2661	B Rocker Arm Actuator System Performance/Stuck Off Bank 2
+P2662	B Rocker Arm Actuator System Stuck On Bank 2
+P2663	B Rocker Arm Actuator Control Circuit Low Bank 2
+P2664	B Rocker Arm Actuator Control Circuit High Bank 2
+P2665	Fuel Shutoff Valve B Control Circuit/Open
+P2666	Fuel Shutoff Valve B Control Circuit Low
+P2667	Fuel Shutoff Valve B Control Circuit High
+P2668	Fuel Mode Indicator Lamp Control Circuit
+P2669	Aktüatör Besleme Gerilimi (Voltajı) B Devresi /Açık
+P266A	A Rocker Arm Actuator Position Sensor Circuit Bank 2
+P266B	A Rocker Arm Actuator Position Sensor Circuit Range/Performance Bank 2
+P266C	A Rocker Arm Actuator Position Sensor Circuit Low Bank 2
+P266D	A Rocker Arm Actuator Position Sensor Circuit High Bank 2
+P266E	A Rocker Arm Actuator Position Sensor Circuit Intermittent/Erratic Bank 2
+P2670	Aktüatör Besleme Gerilimi (Voltajı) B Devresi Düşük
+P2671	Aktüatör Besleme Gerilimi (Voltajı) B Devresi Yüksek
+P2672	Injection Pump Timing Offset
+P2673	Injection Pump Timing Calibration Not Learned
+P2674	Injection Pump Fuel Calibration Not Learned
+P2675	Air Cleaner Inlet Control Circuit/Open
+P2676	Air Cleaner Inlet Control Circuit Low
+P2677	Air Cleaner Inlet Control Circuit High
+P2678	Coolant Degassing Valve Control Circuit/Open
+P2679	Coolant Degassing Valve Control Circuit Low
+P267A	B Rocker Arm Actuator Position Sensor Circuit Bank 2
+P267B	B Rocker Arm Actuator Position Sensor Circuit Range/Performance Bank 2
+P267C	B Rocker Arm Actuator Position Sensor Circuit Low Bank 2
+P267D	B Rocker Arm Actuator Position Sensor Circuit High Bank 2
+P267E	B Rocker Arm Actuator Position Sensor Circuit Intermittent/Erratic Bank 2
+P2680	Coolant Degassing Valve Control Circuit High
+P2681	Engine Coolant Bypass Valve Control Circuit/Open
+P2682	Engine Coolant Bypass Valve Control Circuit Low
+P2683	Engine Coolant Bypass Valve Control Circuit High
+P2684	Aktüatör Besleme Gerilimi (Voltajı) "C" Devresi/Açık
+P2685	Aktüatör Besleme Gerilimi (Voltajı) "C" Devresi Düşük
+P2686	Aktüatör Besleme Gerilimi (Voltajı) "C" Devresi Yüksek
+P2687	Fuel Supply Heater Control Circuit/Open
+P2688	Fuel Supply Heater Control Circuit Low
+P2689	Fuel Supply Heater Control Circuit High
+P2700	Şanzıman Sürtünme Elemanı A Zaman Aralığı / Performansı
+P2701	Şanzıman Sürtünme Elemanı B Zaman Aralığı / Performansı
+P2702	Şanzıman Sürtünme Elemanı "C" Zaman Aralığı / Performansı
+P2703	Şanzıman Sürtünme Elemanı "D" Zaman Aralığı / Performansı
+P2704	Şanzıman Sürtünme Elemanı "E" Zaman Aralığı / Performansı
+P2705	Şanzıman Sürtünme Elemanı "F" Zaman Aralığı / Performansı
+P2706	Vites Değiştirme Solenoidi "F"
+P2707	Vites Değiştirme Solenoidi "F" Performans/Kapalı, Sıkışmış
+P2708	Vites Değiştirme Solenoidi "F" Sıkışmış
+P2709	Vites Değiştirme Solenoidi "F" Elektirik Sorunu
+P2710	Vites Değiştirme Solenoidi "F" Aralıklı
+P2711	Unexpected Mechanical Gear Disengagement
+P2712	Hydraulic Power Unit Leakage
+P2713	Basınç Kontrol Solenoidi "D"
+P2714	Basınç Kontrol Solenoidi "D" Performans/Kapalı, Sıkışmış
+P2715	Basınç Kontrol Solenoidi "D" Sıkışmış
+P2716	Basınç Kontrol Solenoidi "D" Elektirik Sorunu
+P2717	Basınç Kontrol Solenoidi "D" Aralıklı
+P2718	Basınç Kontrol Solenoidi "D" Kontrol Devresi/Açık
+P2719	Basınç Kontrol Solenoidi "D" Kontrol Devresi Aralıklı / Düzensiz / Performansı
+P2720	Basınç Kontrol Solenoidi "D" Kontrol Devresi Düşük
+P2721	Basınç Kontrol Solenoidi "D" Kontrol Devresi Yüksek
+P2722	Basınç Kontrol Solenoidi "E"
+P2723	Basınç Kontrol Solenoidi "E" Performans/Kapalı, Sıkışmış
+P2724	Basınç Kontrol Solenoidi "E" Sıkışmış
+P2725	Basınç Kontrol Solenoidi "E" Electrical
+P2726	Basınç Kontrol Solenoidi "E" Aralıklı
+P2727	Basınç Kontrol Solenoidi "E" Kontrol Devresi/Açık
+P2728	Basınç Kontrol Solenoidi "E" Kontrol Devresi Aralıklı / Düzensiz / Performansı
+P2729	Basınç Kontrol Solenoidi "E" Kontrol Devresi Düşük
+P2730	Basınç Kontrol Solenoidi "E" Kontrol Devresi Yüksek
+P2731	Basınç Kontrol Solenoidi "F"
+P2732	Basınç Kontrol Solenoidi "F" Performans/Kapalı, Sıkışmış
+P2733	Basınç Kontrol Solenoidi "F" Sıkışmış
+P2734	Basınç Kontrol Solenoidi "F" Electrical
+P2735	Basınç Kontrol Solenoidi "F" Aralıklı
+P2736	Basınç Kontrol Solenoidi "F" Kontrol Devresi/Açık
+P2737	Basınç Kontrol Solenoidi "F" Kontrol Devresi Aralıklı / Düzensiz / Performansı
+P2738	Basınç Kontrol Solenoidi "F" Kontrol Devresi Düşük
+P2739	Basınç Kontrol Solenoidi "F" Kontrol Devresi Yüksek
+P273A	Transmission Friction Element G Apply Time Range/Performance
+P273B	Transmission Friction Element H Apply Time Range/Performance
+P2740	Şanzıman Yağı Sıcaklık Sensörü B Devresi"
+P2741	Şanzıman Yağı Sıcaklık Sensörü B Devresi Aralıklı / Düzensiz / Performansı
+P2742	Şanzıman Yağı Sıcaklık Sensörü B Devresi Düşük
+P2743	Şanzıman Yağı Sıcaklık Sensörü B Devresi Yüksek
+P2744	Şanzıman Yağı Sıcaklık Sensörü B Devresi Aralıklı
+P2745	Ara Mil Hız Sensör B Devresi
+P2746	Ara Mil Hız Sensör B Devresi Aralıklı / Düzensiz / Performansı
+P2747	Ara Mil Hız Sensör B Devresi Sinyal Yok
+P2748	Ara Mil Hız Sensör B Devresi Aralıklı
+P2749	Ara Mil Hız Sensör "C" Devresi
+P2750	Ara Mil Hız Sensör "C" Devresi Aralıklı / Düzensiz / Performansı
+P2751	Ara Mil Hız Sensör "C" Devresi Sinyal Yok
+P2752	Ara Mil Hız Sensör "C" Devresi Aralıklı
+P2753	Transmission Fluid Cooler Control Circuit/Open
+P2754	Transmission Fluid Cooler Control Circuit Low
+P2755	Transmission Fluid Cooler Control Circuit High
+P2756	Torque Converter Clutch Pressure Control Solenoid
+P2757	Torque Converter Clutch Pressure Control Solenoid Control Circuit Performance/Stuck Off
+P2758	Torque Converter Clutch Pressure Control Solenoid Control Circuit Stuck On
+P2759	Torque Converter Clutch Pressure Control Solenoid Control Circuit Electrical
+P2760	Torque Converter Clutch Pressure Control Solenoid Control Circuit Intermittent
+P2761	Torque Converter Clutch Pressure Control Solenoid Control Circuit/Open
+P2762	Torque Converter Clutch Pressure Control Solenoid Control Circuit Range/Performance
+P2763	Torque Converter Clutch Pressure Control Solenoid Control Circuit High
+P2764	Torque Converter Clutch Pressure Control Solenoid Control Circuit Low
+P2765	Input/Turbine Speed Sensor B Circuit
+P2766	Input/Turbine Speed Sensor B Circuit Range/Performance
+P2767	Input/Turbine Speed Sensor B Circuit No Signal
+P2768	Input/Turbine Speed Sensor B Circuit Intermittent
+P2769	Torque Converter Clutch Circuit Low
+P2770	Torque Converter Clutch Circuit High
+P2771	Four Wheel Drive (4WD) Low Switch Circuit
+P2772	Four Wheel Drive (4WD) Low Switch Circuit Range/Performance
+P2773	Four Wheel Drive (4WD) Low Switch Circuit Low
+P2774	Four Wheel Drive (4WD) Low Switch Circuit High
+P2775	Upshift Switch Circuit Range/Performance
+P2776	Upshift Switch Circuit Low
+P2777	Upshift Switch Circuit High
+P2778	Upshift Switch Circuit Intermittent/Erratic
+P2779	Downshift Switch Circuit Range/Performance
+P2780	Downshift Switch Circuit Low
+P2781	Downshift Switch Circuit High
+P2782	Downshift Switch Circuit Intermittent/Erratic
+P2783	Torque Converter Temperature Too High
+P2784	Input/Turbine Speed Sensor A/B Correlation
+P2785	Clutch Actuator Temperature Too High
+P2786	Gear Shift Actuator Temperature Too High
+P2787	Clutch Temperature Too High
+P2788	Auto Shift Manual Adaptive Learning at Limit
+P2789	Clutch Adaptive Learning at Limit
+P278A	Kick Down Switch Circuit
+P278B	Kick Down Switch Circuit Range/Performance
+P278C	Kick Down Switch Circuit Low
+P278D	Kick Down Switch Circuit High
+P278E	Kick Down Switch Circuit Intermittent/Erratic
+P278F	SAE/ISO reserved
+P2790	Gate Select Direction Circuit
+P2791	Gate Select Direction Circuit Low
+P2792	Gate Select Direction Circuit High
+P2793	Gear Shift Direction Circuit
+P2794	Gear Shift Direction Circuit Low
+P2795	Gear Shift Direction Circuit High
+P2796	Auxiliary Transmission Fluid Pump Control Circuit/Open
+P2797	Auxiliary Transmission Fluid Pump Performance
+P2798	Auxiliary Transmission Fluid Pump Control Circuit Low
+P2799	Auxiliary Transmission Fluid Pump Control Circuit High
+P2800	Transmission Range Sensor B Circuit (PRNDL Input)
+P2801	Şanzıman Aralığı Sensör B Devresi Aralıklı / Düzensiz / Performansı
+P2802	Transmission Range Sensor B Circuit Low
+P2803	Transmission Range Sensor B Circuit High
+P2804	Transmission Range Sensor B Intermittent
+P2805	Transmission Range Sensor A/B Correlation
+P2806	Transmission Range Sensor Alignment
+P2807	Basınç Kontrol Solenoidi "G"
+P2808	Basınç Kontrol Solenoidi "G" Performans/Kapalı, Sıkışmış
+P2809	Basınç Kontrol Solenoidi "G" Sıkışmış
+P2810	Basınç Kontrol Solenoidi "G" Elektirik Sorunu
+P2811	Basınç Kontrol Solenoidi "G" Aralıklı
+P2812	Basınç Kontrol Solenoidi "G" Kontrol Devresi/Açık
+P2813	Basınç Kontrol Solenoidi "G" Kontrol Devresi Aralıklı / Düzensiz / Performansı
+P2814	Basınç Kontrol Solenoidi "G" Kontrol Devresi Düşük
+P2815	Basınç Kontrol Solenoidi "G" Kontrol Devresi Yüksek
+P2816	Basınç Kontrol Solenoidi "H"
+P2817	Basınç Kontrol Solenoidi "H" Performans/Kapalı, Sıkışmış
+P2818	Basınç Kontrol Solenoidi "H" Sıkışmış
+P2819	Basınç Kontrol Solenoidi "H" Elektirik Sorunu
+P281A	Basınç Kontrol Solenoidi "H" Aralıklı
+P281B	Basınç Kontrol Solenoidi "H" Kontrol Devresi/Açık
+P281C	Basınç Kontrol Solenoidi "H" Kontrol Devresi Aralıklı / Düzensiz / Performansı
+P281D	Basınç Kontrol Solenoidi "H" Kontrol Devresi Düşük
+P281E	Basınç Kontrol Solenoidi "H" Kontrol Devresi Yüksek
+P281F	Basınç Kontrol Solenoidi "J"
+P2820	Basınç Kontrol Solenoidi "J" Performans/Kapalı, Sıkışmış
+P2821	Basınç Kontrol Solenoidi "J" Sıkışmış
+P2822	Basınç Kontrol Solenoidi "J" Elektirik Sorunu
+P2823	Basınç Kontrol Solenoidi "J" Aralıklı
+P2824	Basınç Kontrol Solenoidi "J" Kontrol Devresi/Açık
+P2825	Basınç Kontrol Solenoidi "J" Kontrol Devresi Aralıklı / Düzensiz / Performansı
+P2826	Basınç Kontrol Solenoidi "J" Kontrol Devresi Düşük
+P2827	Basınç Kontrol Solenoidi "J" Kontrol Devresi Yüksek
+P2828	Basınç Kontrol Solenoidi "K"
+P2829	Basınç Kontrol Solenoidi "K" Performans/Kapalı, Sıkışmış
+P282A	Basınç Kontrol Solenoidi "K" Sıkışmış
+P282B	Basınç Kontrol Solenoidi "K" Elektirik Sorunu
+P282C	Basınç Kontrol Solenoidi "K" Aralıklı
+P282D	Basınç Kontrol Solenoidi "K" Kontrol Devresi/Açık
+P282E	Basınç Kontrol Solenoidi "K" Kontrol Devresi Aralıklı / Düzensiz / Performansı
+P282F	Basınç Kontrol Solenoidi "K" Kontrol Devresi Düşük
+P2830	Basınç Kontrol Solenoidi "K" Kontrol Devresi Yüksek
+P2A00	O2 Sensor Circuit Range/Performance Bank 1 Sensor 1
+P2A01	O2 Sensor Circuit Range/Performance Bank 1 Sensor 2
+P2A02	O2 Sensor Circuit Range/Performance Bank 1 Sensor 3
+P2A03	O2 Sensor Circuit Range/Performance Bank 2 Sensor 1
+P2A04	O2 Sensor Circuit Range/Performance Bank 2 Sensor 2
+P2A05	O2 Sensor Circuit Range/Performance Bank 2 Sensor 3
+P2A06	O2 Sensor Negative Voltage Bank 1 Sensor 1
+P2A07	O2 Sensor Negative Voltage Bank 1 Sensor 2
+P2A08	O2 Sensor Negative Voltage Bank 1 Sensor 3
+P2A09	O2 Sensor Negative Voltage Bank 2 Sensor 1
+P2A10	O2 Sensor Negative Voltage Bank 2 Sensor 2
+P2A11	O2 Sensor Negative Voltage Bank 2 Sensor 3
+P3400	Cylinder Deactivation System Bank 1
+P3401	Silindir 1 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi/Açık
+P3402	Silindir 1 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Performans
+P3403	Silindir 1 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Düşük
+P3404	Silindir 1 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Yüksek
+P3405	Silindir 1 Egzoz Valfi Kontrol Devresi/Açık
+P3406	Silindir 1 Egzoz Valfi Kontrol Devresi Performans
+P3407	Silindir 1 Egzoz Valfi Kontrol Devresi Düşük
+P3408	Silindir 1 Egzoz Valfi Kontrol Devresi Yüksek
+P3409	Silindir 2 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi/Açık
+P3410	Silindir 2 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Performans
+P3411	Silindir 2 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Düşük
+P3412	Silindir 2 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Yüksek
+P3413	Silindir 2 Egzoz Valfi Kontrol Devresi/Açık
+P3414	Silindir 2 Egzoz Valfi Kontrol Devresi Performans
+P3415	Silindir 2 Egzoz Valfi Kontrol Devresi Düşük
+P3416	Silindir 2 Egzoz Valfi Kontrol Devresi Yüksek
+P3417	Silindir 3 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi/Açık
+P3418	Silindir 3 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Performans
+P3419	Silindir 3 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Düşük
+P3420	Silindir 3 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Yüksek
+P3421	Silindir 3 Egzoz Valfi Kontrol Devresi/Açık
+P3422	Silindir 3 Egzoz Valfi Kontrol Devresi Performans
+P3423	Silindir 3 Egzoz Valfi Kontrol Devresi Düşük
+P3424	Silindir 3 Egzoz Valfi Kontrol Devresi Yüksek
+P3425	Silindir 4 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi/Açık
+P3426	Silindir 4 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Performans
+P3427	Silindir 4 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Düşük
+P3428	Silindir 4 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Yüksek
+P3429	Silindir 4 Egzoz Valfi Kontrol Devresi/Açık
+P3430	Silindir 4 Egzoz Valfi Kontrol Devresi Performans
+P3431	Silindir 4 Egzoz Valfi Kontrol Devresi Düşük
+P3432	Silindir 4 Egzoz Valfi Kontrol Devresi Yüksek
+P3433	Silindir 5 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi/Açık
+P3434	Silindir 5 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Performans
+P3435	Silindir 5 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Düşük
+P3436	Silindir 5 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Yüksek
+P3437	Silindir 5 Egzoz Valfi Kontrol Devresi/Açık
+P3438	Silindir 5 Egzoz Valfi Kontrol Devresi Performans
+P3439	Silindir 5 Egzoz Valfi Kontrol Devresi Düşük
+P3440	Silindir 5 Egzoz Valfi Kontrol Devresi Yüksek
+P3441	Silindir 6 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi/Açık
+P3442	Silindir 6 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Performans
+P3443	Silindir 6 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Düşük
+P3444	Silindir 6 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Yüksek
+P3445	Silindir 6 Egzoz Valfi Kontrol Devresi/Açık
+P3446	Silindir 6 Egzoz Valfi Kontrol Devresi Performans
+P3447	Silindir 6 Egzoz Valfi Kontrol Devresi Düşük
+P3448	Silindir 6 Egzoz Valfi Kontrol Devresi Yüksek
+P3449	Silindir 7 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi/Açık
+P3450	Silindir 7 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Performans
+P3451	Silindir 7 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Düşük
+P3452	Silindir 7 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Yüksek
+P3453	Silindir 7 Egzoz Valfi Kontrol Devresi/Açık
+P3454	Silindir 7 Egzoz Valfi Kontrol Devresi Performans
+P3455	Silindir 7 Egzoz Valfi Kontrol Devresi Düşük
+P3456	Silindir 7 Egzoz Valfi Kontrol Devresi Yüksek
+P3457	Silindir 8 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi/Açık
+P3458	Silindir 8 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Performans
+P3459	Silindir 8 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Düşük
+P3460	Silindir 8 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Yüksek
+P3461	Silindir 8 Egzoz Valfi Kontrol Devresi/Açık
+P3462	Silindir 8 Egzoz Valfi Kontrol Devresi Performans
+P3463	Silindir 8 Egzoz Valfi Kontrol Devresi Düşük
+P3464	Silindir 8 Egzoz Valfi Kontrol Devresi Yüksek
+P3465	Silindir 9 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi/Açık
+P3466	Silindir 9 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Performans
+P3467	Silindir 9 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Düşük
+P3468	Silindir 9 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Yüksek
+P3469	Silindir 9 Egzoz Valfi Kontrol Devresi/Açık
+P3470	Silindir 9 Egzoz Valfi Kontrol Devresi Performans
+P3471	Silindir 9 Egzoz Valfi Kontrol Devresi Düşük
+P3472	Silindir 9 Egzoz Valfi Kontrol Devresi Yüksek
+P3473	Silindir 10 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi/Açık
+P3474	Silindir 10 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Performans
+P3475	Silindir 10 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Düşük
+P3476	Silindir 10 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Yüksek
+P3477	Silindir 10 Egzoz Valfi Kontrol Devresi/Açık
+P3478	Silindir 10 Egzoz Valfi Kontrol Devresi Performans
+P3479	Silindir 10 Egzoz Valfi Kontrol Devresi Düşük
+P3480	Silindir 10 Egzoz Valfi Kontrol Devresi Yüksek
+P3481	Silindir 11 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi/Açık
+P3482	Silindir 11 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Performans
+P3483	Silindir 11 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Düşük
+P3484	Silindir 11 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Yüksek
+P3485	Silindir 11 Egzoz Valfi Kontrol Devresi/Açık
+P3486	Silindir 11 Egzoz Valfi Kontrol Devresi Performans
+P3487	Silindir 11 Egzoz Valfi Kontrol Devresi Düşük
+P3488	Silindir 11 Egzoz Valfi Kontrol Devresi Yüksek
+P3489	Silindir 12 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi/Açık
+P3490	Silindir 12 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Performans
+P3491	Silindir 12 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Düşük
+P3492	Silindir 12 Devre Dışı Bırakma/Giriş Valfi Kontrol Devresi Yüksek
+P3493	Silindir 12 Egzoz Valfi Kontrol Devresi/Açık
+P3494	Silindir 12 Egzoz Valfi Kontrol Devresi Performans
+P3495	Silindir 12 Egzoz Valfi Kontrol Devresi Düşük
+P3496	Silindir 12 Egzoz Valfi Kontrol Devresi Yüksek
+P3497	Cylinder Deactivation System Bank 2

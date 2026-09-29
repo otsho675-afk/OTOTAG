@@ -1,3 +1,5 @@
+# pubspec.yaml
+
 name: ototag
 description: Oto Eslestirme Sistemi
 publish_to: 'none'
@@ -60,12 +62,14 @@ flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/images/logo.png"
+  remove_alpha_ios: true
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/
     - assets/sounds/
+    - assets/arizakodlari.txt
     - config.env
   fonts:
     - family: Roboto

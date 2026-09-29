@@ -1468,7 +1468,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                       const Text("Premium'a Geçin", textAlign: TextAlign.center, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
                       const SizedBox(height: 10),
                       const Text(
-                        "Ücretsiz 3 araç ekleme sınırına ulaştınız. Garajınıza sınırsız araç eklemek ve tüm bakım takiplerini eksiksiz yapmak için kilidi açın.",
+                        "Ücretsiz 1 araç ekleme sınırına ulaştınız. Garajınıza sınırsız araç eklemek ve tüm bakım takiplerini eksiksiz yapmak için kilidi açın.",
                         textAlign: TextAlign.center,
                         style: TextStyle(fontSize: 14, color: _subtitleColor, height: 1.5, fontWeight: FontWeight.w500),
                       ),
@@ -2556,7 +2556,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.keyH, control: true): () {
-          if (vehicles.length >= 3 && !isPremium) {
+          if (vehicles.length >= 1 && !isPremium) {
             _showPremiumModal();
           } else {
             _showVehicleDialog();
@@ -2738,7 +2738,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> with 
                                             ),
                                             child: ElevatedButton.icon(
                                               onPressed: () {
-                                                if (vehicles.length >= 3 && !isPremium) {
+                                                if (vehicles.length >= 1 && !isPremium) {
                                                   _showPremiumModal();
                                                 } else {
                                                   _showVehicleDialog();

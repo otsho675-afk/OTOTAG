@@ -25,6 +25,7 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart'; 
 import 'services/live_activity_service.dart'; 
 import 'package:audioplayers/audioplayers.dart'; 
+import 'diagnostic_screen.dart'; 
 
 class ProviderMapScreen extends StatefulWidget {
   final int providerId;
@@ -191,6 +192,11 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     _initLocationStream(); 
     _fetchEarningsAndPerformance();
     _startJobRefreshTimer();
+    
+    // Açılışta 30 günlük süreyi doğrula
+    if (isOnline) {
+      _handleGoOnline();
+    }
   }
 
   Future<Uint8List> _createCustomCustomerMarkerBytes({int width = 140, int height = 160}) async {
@@ -3321,6 +3327,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
         } else if (index == 4) {
           HapticFeedback.selectionClick();
           Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen(userId: widget.providerId, userType: 'provider')));
+        } else if (index == 5) {
+          HapticFeedback.selectionClick();
+          Navigator.push(context, MaterialPageRoute(builder: (context) => const DiagnosticScreen(userType: 'provider')));
         }
       },
       child: Container(
@@ -3525,6 +3534,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                   children: [
                     _buildNavItem(0, Icons.map_rounded, "Harita"),
                     _buildNavItem(1, Icons.history_rounded, "İşlemler"),
+                    _buildNavItem(5, Icons.car_repair_rounded, "Arıza/OBD"),
                     _buildNavItem(2, Icons.account_balance_wallet_rounded, "Kazanç"),
                     _buildNavItem(3, Icons.schedule_rounded, "Mesai"),
                     _buildNavItem(4, Icons.person_rounded, "Profil"),
@@ -3767,6 +3777,24 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           _buildPerformanceBadge(),
+                                          SizedBox(width: isSmallScreen ? 6 : 10),
+                                          Container(
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: const Color(0xFF00E5FF).withValues(alpha: 0.15),
+                                              border: Border.all(color: const Color(0xFF00E5FF).withValues(alpha: 0.4), width: 1.5)
+                                            ),
+                                            child: IconButton(
+                                              padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
+                                              constraints: const BoxConstraints(),
+                                              tooltip: "OBD-II Arıza Teşhis Rehberi",
+                                              icon: Icon(Icons.car_repair_rounded, color: const Color(0xFF00E5FF), size: isSmallScreen ? 18 : 22),
+                                              onPressed: () {
+                                                HapticFeedback.selectionClick();
+                                                Navigator.push(context, MaterialPageRoute(builder: (_) => const DiagnosticScreen(userType: 'provider')));
+                                              },
+                                            ),
+                                          ),
                                           SizedBox(width: isSmallScreen ? 6 : 10),
                                           Container(
                                             decoration: BoxDecoration(

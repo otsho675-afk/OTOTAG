@@ -1,7 +1,7 @@
 name: ototag
 description: Oto Eslestirme Sistemi
 publish_to: 'none'
-version: 1.0.0+67
+version: 1.0.0+68
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -47,6 +47,7 @@ dependencies:
   share_plus: ^12.0.2
   pusher_channels_flutter: ^2.6.0
   live_activities: ^2.4.0
+  audioplayers: ^6.8.1
 
 dev_dependencies:
   flutter_test:
@@ -64,6 +65,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/sounds/
     - config.env
   fonts:
     - family: Roboto

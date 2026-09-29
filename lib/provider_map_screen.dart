@@ -24,6 +24,7 @@ import 'provider_bids_screen.dart';
 import 'package:firebase_analytics/firebase_analytics.dart'; 
 import 'package:firebase_crashlytics/firebase_crashlytics.dart'; 
 import 'services/live_activity_service.dart'; 
+import 'package:audioplayers/audioplayers.dart'; 
 
 class ProviderMapScreen extends StatefulWidget {
   final int providerId;
@@ -42,6 +43,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
   amaps.AppleMapController? _appleMapController;
   late PageController _pageController;
   FlutterLocalNotificationsPlugin? flutterLocalNotificationsPlugin;
+  final AudioPlayer _audioPlayer = AudioPlayer(); // Ses efekti için eklendi
   
   Position? currentPosition;
   StreamSubscription<Position>? _positionStream; 
@@ -613,7 +615,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
       isScrollControlled: true,
       enableDrag: false,
       isDismissible: false,
-      barrierColor: pureBlack.withValues(alpha: 0.60), 
+      barrierColor: pureBlack.withValues(alpha: 0.65), 
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder( 
         builder: (context, setDialogState) {
@@ -713,47 +715,50 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             canPop: !isSubmitting,
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final bool isSmallScreen = constraints.maxWidth < 400;
-                final double dialogWidth = constraints.maxWidth > 600 ? 550 : constraints.maxWidth;
+                final bool isSmallScreen = constraints.maxWidth < 390;
+                final double dialogWidth = constraints.maxWidth > 600 ? 560 : constraints.maxWidth;
                 final bottomInset = MediaQuery.of(context).viewInsets.bottom;
                 
                 return Padding(
                   padding: EdgeInsets.only(bottom: bottomInset),
                   child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
                     child: BackdropFilter(
-                      filter: ui.ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                      filter: ui.ImageFilter.blur(sigmaX: 25, sigmaY: 25),
                       child: Container(
                         width: dialogWidth,
                         constraints: BoxConstraints(
                           maxHeight: MediaQuery.of(context).size.height * 0.88,
                         ),
                         decoration: BoxDecoration(
-                          color: panelBlack.withValues(alpha: 0.95),
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
-                          border: Border.all(color: neonGreen.withValues(alpha: 0.4), width: 2),
+                          color: panelBlack.withValues(alpha: 0.98),
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                          border: Border.all(color: neonGreen.withValues(alpha: 0.35), width: 1.5),
                           boxShadow: [
-                            BoxShadow(color: pureBlack.withValues(alpha: 0.9), blurRadius: 60, offset: const Offset(0, -10))
+                            BoxShadow(color: pureBlack.withValues(alpha: 0.95), blurRadius: 40, offset: const Offset(0, -10)),
+                            BoxShadow(color: neonGreen.withValues(alpha: 0.06), blurRadius: 30),
                           ]
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                            // 1. ÜST BAŞLIK VE TALEP BİLGİ ALANI
                             Padding(
-                              padding: EdgeInsets.only(
-                                left: isSmallScreen ? 16 : 24, 
-                                right: isSmallScreen ? 16 : 24, 
-                                top: 16,
-                                bottom: 12
+                              padding: EdgeInsets.fromLTRB(
+                                isSmallScreen ? 16 : 20, 
+                                12, 
+                                isSmallScreen ? 16 : 20, 
+                                8
                               ),
                               child: Column(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Center(
                                     child: Container(
-                                      width: 48,
-                                      height: 5,
-                                      margin: const EdgeInsets.only(bottom: 16),
+                                      width: 44,
+                                      height: 4.5,
+                                      margin: const EdgeInsets.only(bottom: 14),
                                       decoration: BoxDecoration(
                                         color: Colors.white24,
                                         borderRadius: BorderRadius.circular(10)
@@ -761,60 +766,66 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                     ),
                                   ),
                                   Row(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
                                       Container(
-                                        padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                                        padding: const EdgeInsets.all(12),
                                         decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            colors: [neonGreen.withValues(alpha: 0.25), neonGreen.withValues(alpha: 0.05)], 
-                                            begin: Alignment.topLeft, 
-                                            end: Alignment.bottomRight
-                                          ),
-                                          borderRadius: BorderRadius.circular(22),
-                                          border: Border.all(color: neonGreen.withValues(alpha: 0.5), width: 1.5),
-                                          boxShadow: [BoxShadow(color: neonGreen.withValues(alpha: 0.15), blurRadius: 15)]
+                                          color: neonGreen.withValues(alpha: 0.12),
+                                          borderRadius: BorderRadius.circular(18),
+                                          border: Border.all(color: neonGreen.withValues(alpha: 0.35), width: 1.2),
                                         ),
-                                        child: Icon(_getServiceIcon(serviceType), color: neonGreen, size: isSmallScreen ? 24 : 28),
+                                        child: Icon(_getServiceIcon(serviceType), color: neonGreen, size: isSmallScreen ? 22 : 24),
                                       ),
-                                      SizedBox(width: isSmallScreen ? 12 : 16),
+                                      const SizedBox(width: 12),
                                       Expanded(
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(
                                               "$serviceName Talebi", 
-                                              style: TextStyle(color: Colors.white, fontSize: isSmallScreen ? 18 : 22, fontWeight: FontWeight.w900, letterSpacing: -0.5), 
+                                              style: TextStyle(
+                                                color: Colors.white, 
+                                                fontSize: isSmallScreen ? 17 : 19, 
+                                                fontWeight: FontWeight.w900, 
+                                                letterSpacing: -0.4
+                                              ), 
                                               maxLines: 1, 
                                               overflow: TextOverflow.ellipsis
                                             ),
-                                            const SizedBox(height: 6),
+                                            const SizedBox(height: 4),
                                             Row(
                                               children: [
-                                                Container(
-                                                  padding: const EdgeInsets.all(4),
-                                                  decoration: BoxDecoration(color: alertRed.withValues(alpha: 0.2), shape: BoxShape.circle),
-                                                  child: const Icon(Icons.location_on_rounded, color: alertRed, size: 12),
+                                                const Icon(Icons.near_me_rounded, color: neonGreen, size: 13),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  "$distance KM", 
+                                                  style: const TextStyle(color: neonGreen, fontSize: 12, fontWeight: FontWeight.w900)
                                                 ),
                                                 const SizedBox(width: 6),
+                                                Container(width: 3, height: 3, decoration: const BoxDecoration(color: Colors.white30, shape: BoxShape.circle)),
+                                                const SizedBox(width: 6),
                                                 Text(
-                                                  "$distance KM Uzaklıkta", 
-                                                  style: TextStyle(color: textGray.withValues(alpha: 0.9), fontSize: isSmallScreen ? 12 : 13, fontWeight: FontWeight.w700)
+                                                  "~$autoTimeStr Dk Varış", 
+                                                  style: const TextStyle(color: textGray, fontSize: 12, fontWeight: FontWeight.w700)
                                                 ),
                                               ],
                                             )
                                           ],
                                         ),
                                       ),
+                                      const SizedBox(width: 8),
+                                      // SAYAÇ / DURUM ROZETİ
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                         decoration: BoxDecoration(
                                           color: isMyTurn 
-                                              ? (remainingSeconds <= 5 ? alertRed : neonGreen).withValues(alpha: 0.15) 
+                                              ? (remainingSeconds <= 5 ? alertRed.withValues(alpha: 0.15) : neonGreen.withValues(alpha: 0.15)) 
                                               : Colors.white.withValues(alpha: 0.05),
-                                          borderRadius: BorderRadius.circular(16),
+                                          borderRadius: BorderRadius.circular(14),
                                           border: Border.all(
                                             color: isMyTurn 
-                                                ? (remainingSeconds <= 5 ? alertRed : neonGreen).withValues(alpha: 0.4) 
+                                                ? (remainingSeconds <= 5 ? alertRed.withValues(alpha: 0.5) : neonGreen.withValues(alpha: 0.4)) 
                                                 : Colors.white24,
                                           ),
                                         ),
@@ -824,64 +835,98 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                             Icon(
                                               isMyTurn ? Icons.timer_rounded : Icons.hourglass_top_rounded, 
                                               color: isMyTurn ? (remainingSeconds <= 5 ? alertRed : neonGreen) : Colors.white70, 
-                                              size: 16
+                                              size: 14
                                             ),
-                                            const SizedBox(width: 6),
+                                            const SizedBox(width: 5),
                                             Text(
                                               isMyTurn ? "${remainingSeconds}s" : "Bekleniyor",
                                               style: TextStyle(
                                                 color: isMyTurn ? (remainingSeconds <= 5 ? alertRed : neonGreen) : Colors.white70,
                                                 fontWeight: FontWeight.w900,
-                                                fontSize: 14,
+                                                fontSize: 13,
                                               ),
                                             ),
                                           ],
                                         ),
                                       ),
                                       const SizedBox(width: 8),
-                                      Container(
-                                        decoration: BoxDecoration(
-                                          color: neonGreen.withValues(alpha: 0.15),
-                                          shape: BoxShape.circle,
-                                          border: Border.all(color: neonGreen.withValues(alpha: 0.3))
-                                        ),
-                                        child: IconButton(
-                                          onPressed: isSubmitting ? null : () {
-                                            HapticFeedback.selectionClick();
-                                            _suspendedJobs[jobId] = {
-                                              'serviceName': serviceName,
-                                              'probDesc': probDesc,
-                                              'distance': distance,
-                                              'serviceType': serviceType,
-                                            };
-                                            if (context.mounted) {
-                                              Navigator.pop(context);
-                                              _showTopSnackBar("İş askıya alındı. Müşteri karşı teklif verdiğinde ekranınız otomatik açılacaktır.");
-                                            }
-                                          },
-                                          tooltip: "Askıya Al",
-                                          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: neonGreen, size: 24)
+                                      // AŞAĞI AL / ASKIYA AL BUTONU
+                                      InkWell(
+                                        onTap: isSubmitting ? null : () {
+                                          HapticFeedback.selectionClick();
+                                          _suspendedJobs[jobId] = {
+                                            'serviceName': serviceName,
+                                            'probDesc': probDesc,
+                                            'distance': distance,
+                                            'serviceType': serviceType,
+                                          };
+                                          if (context.mounted) {
+                                            Navigator.pop(context);
+                                            _showTopSnackBar("İş askıya alındı. Müşteri karşı teklif verdiğinde ekranınız otomatik açılacaktır.");
+                                          }
+                                        },
+                                        borderRadius: BorderRadius.circular(20),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(7),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(alpha: 0.06),
+                                            shape: BoxShape.circle,
+                                            border: Border.all(color: Colors.white10),
+                                          ),
+                                          child: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white70, size: 22),
                                         ),
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 16),
+                                  const SizedBox(height: 12),
+                                  // MÜŞTERİ NOTU / AÇIKLAMA KARTI
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                     decoration: BoxDecoration(
                                       color: pureBlack, 
-                                      borderRadius: BorderRadius.circular(20), 
-                                      border: const Border(left: BorderSide(color: neonGreen, width: 4))
+                                      borderRadius: BorderRadius.circular(16), 
+                                      border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
                                     ),
                                     child: Row(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        const Icon(Icons.format_quote_rounded, color: neonGreen, size: 20),
-                                        const SizedBox(width: 12),
+                                        Container(
+                                          margin: const EdgeInsets.only(top: 2),
+                                          width: 3,
+                                          height: 28,
+                                          decoration: BoxDecoration(
+                                            color: neonGreen,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
                                         Expanded(
-                                          child: Text(
-                                            probDesc.isNotEmpty ? probDesc : "Müşteri detaylı bir açıklama belirtmedi. Gerekirse teklif sonrası detayları öğrenebilirsiniz.", 
-                                            style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: isSmallScreen ? 12 : 13, height: 1.4, fontWeight: FontWeight.w600)
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              const Text(
+                                                "MÜŞTERİ NOTU",
+                                                style: TextStyle(
+                                                  color: textGray,
+                                                  fontSize: 9.5,
+                                                  fontWeight: FontWeight.w800,
+                                                  letterSpacing: 0.6,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                probDesc.trim().isNotEmpty ? probDesc : "Müşteri özel bir açıklama belirtmedi. Detayları teklif sonrası öğrenebilirsiniz.", 
+                                                style: TextStyle(
+                                                  color: Colors.white.withValues(alpha: 0.85), 
+                                                  fontSize: isSmallScreen ? 12 : 12.5, 
+                                                  height: 1.35, 
+                                                  fontWeight: FontWeight.w600
+                                                ),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ],
                                           ),
                                         ),
                                       ],
@@ -891,41 +936,114 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                               ),
                             ),
                             
+                            // 2. ORTA ALAN: BOŞ DURUM VEYA PAZARLIK GEÇMİŞİ
                             Flexible(
                               child: Container(
-                                margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
+                                margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 20, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: pureBlack.withValues(alpha: 0.6),
-                                  borderRadius: BorderRadius.circular(24),
-                                  border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.5)
+                                  color: pureBlack,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: Colors.white.withValues(alpha: 0.06), width: 1.2)
                                 ),
                                 child: bidHistory.isEmpty 
-                                  ? Center(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(20),
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Container(
-                                              padding: const EdgeInsets.all(16),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white.withValues(alpha: 0.03),
-                                                shape: BoxShape.circle
+                                  ? Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Container(
+                                                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white.withValues(alpha: 0.03),
+                                                    borderRadius: BorderRadius.circular(14),
+                                                    border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+                                                  ),
+                                                  child: Column(
+                                                    children: [
+                                                      const Icon(Icons.route_rounded, color: neonGreen, size: 18),
+                                                      const SizedBox(height: 4),
+                                                      Text("$distance KM", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
+                                                      const SizedBox(height: 2),
+                                                      const Text("Mesafe", style: TextStyle(color: textGray, fontSize: 10, fontWeight: FontWeight.w600)),
+                                                    ],
+                                                  ),
+                                                ),
                                               ),
-                                              child: Icon(Icons.forum_rounded, color: Colors.white.withValues(alpha: 0.15), size: 40),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Container(
+                                                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white.withValues(alpha: 0.03),
+                                                    borderRadius: BorderRadius.circular(14),
+                                                    border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+                                                  ),
+                                                  child: Column(
+                                                    children: [
+                                                      const Icon(Icons.timer_outlined, color: neonGreen, size: 18),
+                                                      const SizedBox(height: 4),
+                                                      Text("~$autoTimeStr Dk", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
+                                                      const SizedBox(height: 2),
+                                                      const Text("Tahmini Varış", style: TextStyle(color: textGray, fontSize: 10, fontWeight: FontWeight.w600)),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Container(
+                                                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white.withValues(alpha: 0.03),
+                                                    borderRadius: BorderRadius.circular(14),
+                                                    border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+                                                  ),
+                                                  child: const Column(
+                                                    children: [
+                                                      Icon(Icons.handshake_outlined, color: neonGreen, size: 18),
+                                                      SizedBox(height: 4),
+                                                      Text("Canlı", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
+                                                      SizedBox(height: 2),
+                                                      Text("Pazarlık", style: TextStyle(color: textGray, fontSize: 10, fontWeight: FontWeight.w600)),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 14),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                            decoration: BoxDecoration(
+                                              color: neonGreen.withValues(alpha: 0.08),
+                                              borderRadius: BorderRadius.circular(12),
+                                              border: Border.all(color: neonGreen.withValues(alpha: 0.2)),
                                             ),
-                                            const SizedBox(height: 12),
-                                            Text("Pazarlığı Başlatın", style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 15, fontWeight: FontWeight.w800)),
-                                            const SizedBox(height: 4),
-                                            Text("Müşteriye ilk teklifinizi aşağıdan iletin.", style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11, fontWeight: FontWeight.w600)),
-                                          ],
-                                        ),
+                                            child: const Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Icon(Icons.bolt_rounded, color: neonGreen, size: 16),
+                                                SizedBox(width: 6),
+                                                Flexible(
+                                                  child: Text(
+                                                    "İlk fiyat teklifinizi belirleyip hemen müşteriye iletin.",
+                                                    style: TextStyle(color: neonGreen, fontSize: 11.5, fontWeight: FontWeight.w700),
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     )
                                   : ListView.builder(
                                       controller: scrollController,
-                                      padding: const EdgeInsets.all(16),
+                                      padding: const EdgeInsets.all(12),
                                       physics: const BouncingScrollPhysics(),
                                       shrinkWrap: true,
                                       itemCount: bidHistory.length,
@@ -935,22 +1053,22 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                         return Align(
                                           alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
                                           child: Container(
-                                            margin: const EdgeInsets.only(bottom: 12),
-                                            constraints: BoxConstraints(maxWidth: dialogWidth * 0.8),
-                                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                            margin: const EdgeInsets.only(bottom: 10),
+                                            constraints: BoxConstraints(maxWidth: dialogWidth * 0.78),
+                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                             decoration: BoxDecoration(
-                                              gradient: isMine 
-                                                  ? LinearGradient(colors: [neonGreen.withValues(alpha: 0.15), neonGreen.withValues(alpha: 0.05)]) 
-                                                  : LinearGradient(colors: [Colors.white.withValues(alpha: 0.1), Colors.white.withValues(alpha: 0.05)]),
+                                              color: isMine 
+                                                  ? neonGreen.withValues(alpha: 0.12)
+                                                  : Colors.white.withValues(alpha: 0.06),
                                               borderRadius: BorderRadius.only(
-                                                topLeft: const Radius.circular(20),
-                                                topRight: const Radius.circular(20),
-                                                bottomLeft: Radius.circular(isMine ? 20 : 6),
-                                                bottomRight: Radius.circular(isMine ? 6 : 20),
+                                                topLeft: const Radius.circular(18),
+                                                topRight: const Radius.circular(18),
+                                                bottomLeft: Radius.circular(isMine ? 18 : 4),
+                                                bottomRight: Radius.circular(isMine ? 4 : 18),
                                               ),
                                               border: Border.all(
-                                                color: isMine ? neonGreen.withValues(alpha: 0.4) : Colors.white.withValues(alpha: 0.15),
-                                                width: 1.5
+                                                color: isMine ? neonGreen.withValues(alpha: 0.35) : Colors.white12,
+                                                width: 1.2
                                               )
                                             ),
                                             child: Column(
@@ -960,61 +1078,24 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                                   mainAxisSize: MainAxisSize.min,
                                                   children: [
                                                     Icon(isMine ? Icons.person_rounded : Icons.support_agent_rounded, size: 12, color: isMine ? neonGreen : Colors.white70),
-                                                    const SizedBox(width: 6),
-                                                    Text(isMine ? "Sizin Teklifiniz" : "Müşteri Teklifi", style: TextStyle(color: isMine ? neonGreen : Colors.white70, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                                                    const SizedBox(width: 4),
+                                                    Text(isMine ? "Sizin Teklifiniz" : "Müşteri Teklifi", style: TextStyle(color: isMine ? neonGreen : Colors.white70, fontSize: 10, fontWeight: FontWeight.w800)),
                                                   ],
                                                 ),
-                                                const SizedBox(height: 8),
-                                                Wrap(
-                                                  spacing: 12,
-                                                  runSpacing: 6,
+                                                const SizedBox(height: 6),
+                                                Row(
+                                                  mainAxisSize: MainAxisSize.min,
                                                   children: [
-                                                    Row(
-                                                      mainAxisSize: MainAxisSize.min,
-                                                      children: [
-                                                        Container(
-                                                          padding: const EdgeInsets.all(4),
-                                                          decoration: BoxDecoration(color: Colors.black38, borderRadius: BorderRadius.circular(8)),
-                                                          child: const Icon(Icons.payments_rounded, color: Colors.white, size: 14)
-                                                        ),
-                                                        const SizedBox(width: 6),
-                                                        Text("${bid['price']} ₺", style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)),
-                                                      ],
-                                                    ),
-                                                    Row(
-                                                      mainAxisSize: MainAxisSize.min,
-                                                      children: [
-                                                        Container(
-                                                          padding: const EdgeInsets.all(4),
-                                                          decoration: BoxDecoration(color: Colors.black38, borderRadius: BorderRadius.circular(8)),
-                                                          child: const Icon(Icons.timer_rounded, color: Colors.white, size: 14)
-                                                        ),
-                                                        const SizedBox(width: 6),
-                                                        Text("${bid['time']} Dk", style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)),
-                                                      ],
-                                                    ),
+                                                    Text("${bid['price']} ₺", style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
+                                                    const SizedBox(width: 8),
+                                                    Text("(${bid['time']} Dk)", style: const TextStyle(color: textGray, fontSize: 12, fontWeight: FontWeight.w700)),
                                                   ],
                                                 ),
                                                 if (bid['status'] != null) ...[
-                                                  const SizedBox(height: 8),
-                                                  Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.black.withValues(alpha: 0.4),
-                                                      borderRadius: BorderRadius.circular(8),
-                                                      border: Border.all(color: isMine ? neonGreen.withValues(alpha: 0.2) : Colors.amber.withValues(alpha: 0.2))
-                                                    ),
-                                                    child: Row(
-                                                      mainAxisSize: MainAxisSize.min,
-                                                      children: [
-                                                        SizedBox(
-                                                          width: 8, height: 8, 
-                                                          child: isMine ? const CircularProgressIndicator(color: neonGreen, strokeWidth: 2) : const Icon(Icons.info_rounded, color: Colors.amber, size: 8)
-                                                        ),
-                                                        const SizedBox(width: 6),
-                                                        Text(bid['status'], style: TextStyle(color: isMine ? neonGreen.withValues(alpha: 0.9) : Colors.amber, fontSize: 10, fontWeight: FontWeight.w800)),
-                                                      ],
-                                                    ),
+                                                  const SizedBox(height: 6),
+                                                  Text(
+                                                    bid['status'], 
+                                                    style: TextStyle(color: isMine ? neonGreen.withValues(alpha: 0.8) : Colors.amber, fontSize: 10, fontWeight: FontWeight.w700)
                                                   ),
                                                 ]
                                               ],
@@ -1026,30 +1107,31 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                               ),
                             ),
                             
+                            // 3. ALT GİRİŞ VE AKSİYON PANELİ
                             Container(
-                              margin: const EdgeInsets.only(top: 16),
                               padding: EdgeInsets.fromLTRB(
-                                isSmallScreen ? 16 : 24, 
-                                16, 
-                                isSmallScreen ? 16 : 24, 
-                                24 + MediaQuery.paddingOf(context).bottom
+                                isSmallScreen ? 16 : 20, 
+                                12, 
+                                isSmallScreen ? 16 : 20, 
+                                16 + MediaQuery.paddingOf(context).bottom
                               ),
                               decoration: BoxDecoration(
-                                color: pureBlack,
-                                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                                border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.05), width: 1.5))
+                                color: panelBlack,
+                                border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.06), width: 1.2))
                               ),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
+                                  // MÜŞTERİ KARŞI TEKLİFİNİ KABUL ET BUTONU
                                   if (bidHistory.isNotEmpty && bidHistory.last['is_mine'] == false) ...[
                                     Container(
                                       width: double.infinity,
                                       margin: const EdgeInsets.only(bottom: 12),
+                                      height: 50,
                                       decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(22),
+                                        borderRadius: BorderRadius.circular(18),
                                         color: neonGreen,
-                                        boxShadow: [BoxShadow(color: neonGreen.withValues(alpha: 0.4), blurRadius: 20, offset: const Offset(0, 6))]
+                                        boxShadow: [BoxShadow(color: neonGreen.withValues(alpha: 0.35), blurRadius: 16, offset: const Offset(0, 4))]
                                       ),
                                       child: ElevatedButton(
                                         onPressed: isSubmitting ? null : () async {
@@ -1094,71 +1176,82 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Colors.transparent,
                                           shadowColor: Colors.transparent,
-                                          padding: const EdgeInsets.symmetric(vertical: 16),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18))
                                         ),
                                         child: isSubmitting 
-                                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 3.5))
+                                            ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 3))
                                             : Row(
                                                 mainAxisAlignment: MainAxisAlignment.center,
                                                 children: [
                                                   const Icon(Icons.handshake_rounded, color: pureBlack, size: 20),
                                                   const SizedBox(width: 8),
-                                                  Text("Teklifi Kabul Et (${bidHistory.last['price']} ₺)", style: TextStyle(color: pureBlack, fontSize: isSmallScreen ? 14 : 16, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                                                  Text("Teklifi Kabul Et (${bidHistory.last['price']} ₺)", style: TextStyle(color: pureBlack, fontSize: isSmallScreen ? 14 : 15, fontWeight: FontWeight.w900, letterSpacing: 0.3)),
                                                 ],
                                               ),
                                       )
                                     ),
                                   ],
       
+                                  // FİYAT VE SÜRE GİRİŞ SATIRI
                                   Row(
                                     children: [
                                       Expanded(
-                                        flex: 2,
+                                        flex: 3,
                                         child: Container(
-                                          height: 56,
+                                          height: 52,
                                           decoration: BoxDecoration(
-                                            color: panelBlack,
-                                            borderRadius: BorderRadius.circular(20),
-                                            border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1.5),
+                                            color: pureBlack,
+                                            borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(color: Colors.white.withValues(alpha: 0.12), width: 1.2),
                                           ),
                                           child: Row(
                                             children: [
-                                              const Padding(padding: EdgeInsets.symmetric(horizontal: 14), child: Icon(Icons.payments_rounded, color: neonGreen, size: 22)),
+                                              const Padding(
+                                                padding: EdgeInsets.symmetric(horizontal: 12),
+                                                child: Icon(Icons.payments_rounded, color: neonGreen, size: 20),
+                                              ),
                                               Expanded(
                                                 child: TextField(
                                                   controller: priceController,
                                                   keyboardType: TextInputType.number,
                                                   inputFormatters: [FilteringTextInputFormatter.digitsOnly], 
-                                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18),
+                                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 17),
                                                   decoration: InputDecoration(
-                                                    hintText: "Fiyat (₺)",
-                                                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 15, fontWeight: FontWeight.w600),
+                                                    hintText: "Teklif Fiyatı (₺)",
+                                                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 13.5, fontWeight: FontWeight.w600),
                                                     border: InputBorder.none,
-                                                    contentPadding: const EdgeInsets.only(bottom: 6),
+                                                    isDense: true,
+                                                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
                                                   ),
+                                                  onChanged: (_) => setDialogState(() {}),
                                                 ),
                                               ),
                                             ],
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 12),
+                                      const SizedBox(width: 10),
                                       Expanded(
-                                        flex: 1,
+                                        flex: 2,
                                         child: Container(
-                                          height: 56,
+                                          height: 52,
                                           decoration: BoxDecoration(
-                                            color: neonGreen.withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(20),
-                                            border: Border.all(color: neonGreen.withValues(alpha: 0.3), width: 1.5),
+                                            color: neonGreen.withValues(alpha: 0.08),
+                                            borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(color: neonGreen.withValues(alpha: 0.25), width: 1.2),
                                           ),
                                           child: Column(
                                             mainAxisAlignment: MainAxisAlignment.center,
                                             children: [
-                                              const Text("Süre", style: TextStyle(color: neonGreen, fontSize: 10, fontWeight: FontWeight.w700)),
+                                              const Text("Tahmini Süre", style: TextStyle(color: textGray, fontSize: 10, fontWeight: FontWeight.w700)),
                                               const SizedBox(height: 2),
-                                              FittedBox(fit: BoxFit.scaleDown, child: Text("$autoTimeStr Dk", style: const TextStyle(color: neonGreen, fontWeight: FontWeight.w900, fontSize: 15))),
+                                              FittedBox(
+                                                fit: BoxFit.scaleDown, 
+                                                child: Text(
+                                                  "$autoTimeStr Dk", 
+                                                  style: const TextStyle(color: neonGreen, fontWeight: FontWeight.w900, fontSize: 15)
+                                                )
+                                              ),
                                             ],
                                           ),
                                         ),
@@ -1166,28 +1259,44 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                     ],
                                   ),
                                   
-                                  const SizedBox(height: 12),
+                                  const SizedBox(height: 10),
+                                  // HIZLI FİYAT BUTONLARI (DİNAMİK SEÇİM DURUMLU)
                                   SingleChildScrollView(
                                     scrollDirection: Axis.horizontal,
                                     physics: const BouncingScrollPhysics(),
                                     child: Row(
-                                      children: [500, 750, 1000, 1500, 2000].map((quickVal) {
+                                      children: [500, 750, 1000, 1500, 2000, 2500].map((quickVal) {
+                                        final bool isChipSelected = priceController.text.trim() == quickVal.toString();
                                         return Padding(
-                                          padding: const EdgeInsets.only(right: 10),
+                                          padding: const EdgeInsets.only(right: 8),
                                           child: InkWell(
                                             onTap: () {
                                               HapticFeedback.selectionClick();
                                               setDialogState(() => priceController.text = quickVal.toString());
                                             },
-                                            borderRadius: BorderRadius.circular(14),
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                            borderRadius: BorderRadius.circular(12),
+                                            child: AnimatedContainer(
+                                              duration: const Duration(milliseconds: 200),
+                                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                                               decoration: BoxDecoration(
-                                                color: Colors.white.withValues(alpha: 0.05),
-                                                borderRadius: BorderRadius.circular(14),
-                                                border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.2),
+                                                color: isChipSelected ? neonGreen : Colors.white.withValues(alpha: 0.05),
+                                                borderRadius: BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color: isChipSelected ? neonGreen : Colors.white.withValues(alpha: 0.1), 
+                                                  width: 1.2
+                                                ),
+                                                boxShadow: isChipSelected 
+                                                    ? [BoxShadow(color: neonGreen.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 2))]
+                                                    : [],
                                               ),
-                                              child: Text("$quickVal ₺", style: const TextStyle(color: neonGreen, fontWeight: FontWeight.w800, fontSize: 14)),
+                                              child: Text(
+                                                "$quickVal ₺", 
+                                                style: TextStyle(
+                                                  color: isChipSelected ? pureBlack : Colors.white, 
+                                                  fontWeight: isChipSelected ? FontWeight.w900 : FontWeight.w700, 
+                                                  fontSize: 13
+                                                )
+                                              ),
                                             ),
                                           ),
                                         );
@@ -1195,24 +1304,24 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                     ),
                                   ),
                                   
-                                  const SizedBox(height: 16),
-                                  
+                                  const SizedBox(height: 14),
+                                  // VAZGEÇ VE TEKLİFİ İLET BUTONLARI
                                   Row(
                                     children: [
                                       Expanded(
                                         flex: 1,
-                                        child: Container(
-                                          height: 54,
-                                          decoration: BoxDecoration(
-                                            borderRadius: BorderRadius.circular(22),
-                                            color: panelBlack,
-                                            border: Border.all(color: alertRed.withValues(alpha: 0.6), width: 1.5)
-                                          ),
-                                          child: ElevatedButton(
+                                        child: SizedBox(
+                                          height: 52,
+                                          child: OutlinedButton(
                                             onPressed: isSubmitting ? null : () async {
                                               HapticFeedback.heavyImpact();
                                               countdownTimer?.cancel();
-                                              _suspendedJobs.remove(jobId);
+                                              _suspendedJobs[jobId] = {
+                                                'serviceName': serviceName,
+                                                'probDesc': probDesc,
+                                                'distance': distance,
+                                                'serviceType': serviceType,
+                                              };
                                               
                                               setDialogState(() => isSubmitting = true);
                                               
@@ -1231,27 +1340,36 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                                 _showTopSnackBar("İşlem reddedildi. Yeni çağrılar bekleniyor.", isError: true);
                                               }
                                             },
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.transparent,
-                                              shadowColor: Colors.transparent,
+                                            style: OutlinedButton.styleFrom(
+                                              backgroundColor: alertRed.withValues(alpha: 0.08),
+                                              side: BorderSide(color: alertRed.withValues(alpha: 0.4), width: 1.2),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                               padding: EdgeInsets.zero,
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))
                                             ),
                                             child: isSubmitting 
-                                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: alertRed, strokeWidth: 3))
-                                                : Text("Vazgeç", style: TextStyle(color: alertRed, fontSize: isSmallScreen ? 13 : 15, fontWeight: FontWeight.w900)),
+                                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: alertRed, strokeWidth: 2.5))
+                                                : const Row(
+                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    children: [
+                                                      Icon(Icons.close_rounded, color: alertRed, size: 18),
+                                                      SizedBox(width: 4),
+                                                      Text("Vazgeç", style: TextStyle(color: alertRed, fontSize: 14, fontWeight: FontWeight.w800)),
+                                                    ],
+                                                  ),
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 12),
+                                      const SizedBox(width: 10),
                                       Expanded(
                                         flex: 2,
                                         child: Container(
-                                          height: 54,
+                                          height: 52,
                                           decoration: BoxDecoration(
-                                            borderRadius: BorderRadius.circular(22),
+                                            borderRadius: BorderRadius.circular(16),
                                             color: neonGreen,
-                                            boxShadow: [BoxShadow(color: neonGreen.withValues(alpha: 0.4), blurRadius: 20, offset: const Offset(0, 6))]
+                                            boxShadow: [
+                                              BoxShadow(color: neonGreen.withValues(alpha: 0.35), blurRadius: 16, offset: const Offset(0, 4))
+                                            ]
                                           ),
                                           child: ElevatedButton(
                                             onPressed: isSubmitting ? null : () async {
@@ -1259,7 +1377,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                                  _showTopSnackBar("Şu anda müşterinin yanıt vermesi bekleniyor.", isError: true);
                                                  return;
                                               }
-                                              if (priceController.text.isEmpty) {
+                                              if (priceController.text.trim().isEmpty) {
                                                 _showTopSnackBar("Lütfen geçerli bir fiyat teklifi girin.", isError: true);
                                                 return;
                                               }
@@ -1292,6 +1410,11 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                                 
                                                 if (mounted) {
                                                   if (data['status'] == 'success') {
+                                                    try {
+                                                      await _audioPlayer.play(AssetSource('sounds/bid_sound.mp3'));
+                                                    } catch (e) {
+                                                      debugPrint("Ses efekti oynatılamadı: $e");
+                                                    }
                                                     _sendTelemetry(
                                                       eventType: 'button_click',
                                                       eventName: 'usta_teklif_gonderdi',
@@ -1359,16 +1482,25 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor: Colors.transparent,
                                               shadowColor: Colors.transparent,
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))
+                                              padding: EdgeInsets.zero,
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
                                             ),
                                             child: isSubmitting 
-                                                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 3.5))
-                                                : Row(
+                                                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 3))
+                                                : const Row(
                                                     mainAxisAlignment: MainAxisAlignment.center,
                                                     children: [
-                                                      const Icon(Icons.send_rounded, color: pureBlack, size: 20),
-                                                      const SizedBox(width: 10),
-                                                      Text("Teklifi İlet", style: TextStyle(color: pureBlack, fontSize: isSmallScreen ? 14 : 16, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                                                      Icon(Icons.bolt_rounded, color: pureBlack, size: 20),
+                                                      SizedBox(width: 6),
+                                                      Text(
+                                                        "Teklifi İlet", 
+                                                        style: TextStyle(
+                                                          color: pureBlack, 
+                                                          fontSize: 15, 
+                                                          fontWeight: FontWeight.w900, 
+                                                          letterSpacing: 0.4
+                                                        )
+                                                      ),
                                                     ],
                                                   ),
                                           ),
@@ -2127,6 +2259,16 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
     Future.delayed(const Duration(milliseconds: 600), () => SystemSound.play(SystemSoundType.alert));
   }
 
+  Future<void> _playNewJobSound() async {
+    try {
+      HapticFeedback.heavyImpact();
+      // Haritaya yeni iş düştüğünde çalacak farklı ses efekti
+      await _audioPlayer.play(AssetSource('sounds/new_job_sound.mp3'));
+    } catch (e) {
+      debugPrint("Yeni iş ses efekti oynatılamadı: $e");
+    }
+  }
+
   Future<void> _fetchNearbyJobs({bool isAuto = false, int radius = 10}) async {
     if (currentPosition == null || !isOnline || isSuspended) return; 
     if (_isFetchingJobs && !isAuto) return; 
@@ -2160,7 +2302,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen> with TickerProvid
             final newJobData = fetchedJobs.firstWhere((j) => (int.tryParse(j['id']?.toString() ?? '0') ?? 0) == newJobId);
             
             if (isAuto) {
-              _playAlertSound();
+              _playNewJobSound(); // Farklı olan yeni iş bildirim sesi çalınır
               _showLocalNotification("📍 Yakınınızda yeni bir iş var!", "${_getServiceName(newJobData['service_type']?.toString() ?? '')} için bölgenizde yeni bir iş talebi var!");
             }
             

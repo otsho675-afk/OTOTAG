@@ -16,7 +16,7 @@ import 'provider_profile_screen.dart';
 import 'customer_dashboard_screen.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'services/live_activity_service.dart';
-
+import 'package:audioplayers/audioplayers.dart';
 
 class CustomerBidsScreen extends StatefulWidget {
   final int jobId;
@@ -60,6 +60,8 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
   Timer? _statusTextTimer;
   int _statusMessageIndex = 0;
   DateTime? _waitStartTime;
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  bool _isSoundPlaying = false;
 
   void _sendTelemetry({required String eventType, required String eventName, int duration = 0, Map<String, dynamic>? meta}) {
     Future.microtask(() async {
@@ -129,7 +131,26 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
 
   Timer? _fallbackTimer;
 
+  Future<void> _playSearchingSound() async {
+    if (!_isSoundPlaying) {
+      await _audioPlayer.setReleaseMode(ReleaseMode.loop);
+      // Ses dosyanızın tam yolunu aşağıya kendi projenize göre girin
+      await _audioPlayer.play(AssetSource('sounds/searching.mp3')); 
+      _isSoundPlaying = true;
+    }
+  }
+
+  Future<void> _playBidSound() async {
+    try {
+      // Kendi ses efektinizin adını buraya yazın
+      await _audioPlayer.play(AssetSource('sounds/bid_sound.mp3'));
+    } catch (e) {
+      debugPrint("Ses efekti oynatılamadı: $e");
+    }
+  }
+
   void _startTimers() {
+    _playSearchingSound();
     _initWebSocket(); 
     _fetchBids(); 
 
@@ -189,6 +210,8 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
   }
 
   void _cleanupTimers() {
+    _audioPlayer.stop();
+    _isSoundPlaying = false;
     _radiusTimer?.cancel();
     _blipTimer?.cancel();
     _statusTextTimer?.cancel();
@@ -211,6 +234,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
     _listAnimController.dispose();
     _toolOrbitController.dispose();
     _blips.dispose();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -303,7 +327,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
   // -------------------------------------------------------------------------
 
   Future<void> _fetchBids() async {
-    if (!mounted || _isFetching || _isDialogActive) return;
+    if (!mounted || _isFetching) return;
     _isFetching = true;
 
     try {
@@ -528,6 +552,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
       );
       final data = json.decode(response.body);
       if (data['status'] == 'success') {
+        _playBidSound(); // Ses efektini çal
         _showTopSnackBar("Karşı teklifiniz ustaya iletildi.", isNewJob: true);
         LiveActivityService().updateOfferStatus(
           statusText: "Karşı teklifiniz iletildi",
@@ -768,6 +793,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
       
       final data = json.decode(response.body);
       if (data['status'] == 'success' && mounted) {
+        try {
+          _audioPlayer.play(AssetSource('sounds/match_success.mp3'));
+        } catch (_) {}
         try {
           FirebaseAnalytics.instance.logEvent(
             name: 'customer_accepted_bid',

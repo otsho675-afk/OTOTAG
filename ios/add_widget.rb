@@ -1,3 +1,4 @@
+# add_widget.rb
 require 'xcodeproj'
 
 project_path = 'ios/Runner.xcodeproj'
@@ -38,6 +39,8 @@ widget_target.build_configurations.each do |config|
   config.build_settings['GENERATE_INFOPLIST_FILE'] = 'NO'
   config.build_settings['CURRENT_PROJECT_VERSION'] = '$(FLUTTER_BUILD_NUMBER)'
   config.build_settings['MARKETING_VERSION'] = '$(FLUTTER_BUILD_NAME)'
+  config.build_settings['ASSETCATALOG_COMPILER_APPICON_NAME'] = ''
+  config.build_settings['ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME'] = 'AccentColor'
 end
 
 # 3. Dosyaları gruba ekle ve Target ile bağla
@@ -47,11 +50,26 @@ group.set_source_tree('SOURCE_ROOT')
 swift_file = group.new_file('RepairLiveActivity/RepairLiveActivity.swift')
 widget_target.add_file_references([swift_file])
 
-# Assets varsa ekle
+# Assets.xcassets ve logo2.imageset'i her iki hedefe (Widget + Runner) bağla
 assets_path = 'RepairLiveActivity/Assets.xcassets'
-if File.exist?(File.join('ios', assets_path))
+full_assets_path = File.join('ios', assets_path)
+
+if File.exist?(full_assets_path)
+  # Eski referans varsa temizle
+  existing_ref = project.files.find { |f| f.path == assets_path || f.path == 'Assets.xcassets' }
+  existing_ref.remove_from_project if existing_ref
+
   assets_file = group.new_file(assets_path)
-  widget_target.resources_build_phase.add_file_reference(assets_file)
+  
+  # Widget Resources aşamasına ekle
+  widget_target.resources_build_phase.add_file_reference(assets_file, true)
+  
+  # Runner Resources aşamasına da ekle (logo paylaşımı garanti olsun)
+  runner_target.resources_build_phase.add_file_reference(assets_file, true)
+  
+  puts "Assets.xcassets başarıyla hem RepairLiveActivity hem Runner hedeflerine bağlandı."
+else
+  puts "UYARI: #{full_assets_path} klasörü bulunamadı!"
 end
 
 # 4. Runner Target bağımlılığı ekle
@@ -83,4 +101,4 @@ end
 
 # 6. Projeyi kaydet
 project.save
-puts "Tebrikler! #{target_name} hedefi ve derleme sıralaması başarıyla optimize edildi."
+puts "Tebrikler! #{target_name} hedefi ve Assets.xcassets logo bağlantıları başarıyla güncellendi."

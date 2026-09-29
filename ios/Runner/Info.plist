@@ -24,8 +24,12 @@
     <string>$(FLUTTER_BUILD_NUMBER)</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
+
+    <!-- App Store İkon Tanımı (ITMS-90713 Çözümü) -->
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
     
-    <!-- iOS ve iPad Acilis Cokmesini Onleyen Ayar -->
+    <!-- iOS ve iPad Açılış Çökmesini Önleyen Ayar -->
     <key>UIRequiresFullScreen</key>
     <true/>
     
@@ -46,13 +50,13 @@
     <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
     
-    <!-- Dynamic Island ve Canli Etkinlik Izinleri -->
+    <!-- Dynamic Island ve Canlı Etkinlik İzinleri -->
     <key>NSSupportsLiveActivities</key>
     <true/>
     <key>NSSupportsLiveActivitiesFrequentUpdates</key>
     <true/>
     
-    <!-- App Store Connect Ihracat Uyumlulugu Uyarisi -->
+    <!-- App Store Connect İhracat Uyumluluğu Uyarısı -->
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
 
@@ -60,7 +64,7 @@
     <key>GIDClientID</key>
     <string>73273804842-u0lcirptug9aotm2m6gn27g92hftt5ud.apps.googleusercontent.com</string>
 
-    <!-- Google Sign-In URL Semasi -->
+    <!-- Google Sign-In URL Şeması -->
     <key>CFBundleURLTypes</key>
     <array>
         <dict>
@@ -73,7 +77,7 @@
         </dict>
     </array>
     
-    <!-- iOS Arka Plan Bildirim & Konum Akisi -->
+    <!-- iOS Arka Plan Bildirim & Konum Akışı -->
     <key>UIBackgroundModes</key>
     <array>
         <string>fetch</string>
@@ -81,7 +85,7 @@
         <string>remote-notification</string>
     </array>
     
-    <!-- Konum Izinleri -->
+    <!-- Konum İzinleri -->
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>Yol yardım talebinizi en yakın çekici ve ustalara iletmek için konumunuza ihtiyaç duyarız.</string>
     <key>NSLocationAlwaysUsageDescription</key>
@@ -89,7 +93,7 @@
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
     <string>İşlem devam ederken ustanın size ulaşabilmesi ve yeni iş bildirimleri alabilmeniz için konumunuz arka planda güncellenir.</string>
     
-    <!-- Kamera, Galeri ve Mikrofon Izinleri -->
+    <!-- Kamera, Galeri ve Mikrofon İzinleri -->
     <key>NSCameraUsageDescription</key>
     <string>Aracınızın arıza durumunu veya yedek parça fotoğraflarını çekmek için kamera izni gereklidir.</string>
     <key>NSPhotoLibraryUsageDescription</key>
@@ -99,7 +103,7 @@
     <key>NSMicrophoneUsageDescription</key>
     <string>Sohbet ekranında sorunla ilgili video çekip gönderebilmeniz için mikrofon erişimi gereklidir.</string>
 
-    <!-- URL Launcher Semalari -->
+    <!-- URL Launcher Şemaları -->
     <key>LSApplicationQueriesSchemes</key>
     <array>
       <string>https</string>

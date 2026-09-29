@@ -50,24 +50,17 @@ group.set_source_tree('SOURCE_ROOT')
 swift_file = group.new_file('RepairLiveActivity/RepairLiveActivity.swift')
 widget_target.add_file_references([swift_file])
 
-# Assets.xcassets ve logo2.imageset'i her iki hedefe (Widget + Runner) bağla
+# Assets.xcassets SADECE Widget hedefine bağlanır (Runner'a bağlanmaz)
 assets_path = 'RepairLiveActivity/Assets.xcassets'
 full_assets_path = File.join('ios', assets_path)
 
 if File.exist?(full_assets_path)
-  # Eski referans varsa temizle
   existing_ref = project.files.find { |f| f.path == assets_path || f.path == 'Assets.xcassets' }
   existing_ref.remove_from_project if existing_ref
 
   assets_file = group.new_file(assets_path)
-  
-  # Widget Resources aşamasına ekle
   widget_target.resources_build_phase.add_file_reference(assets_file, true)
-  
-  # Runner Resources aşamasına da ekle (logo paylaşımı garanti olsun)
-  runner_target.resources_build_phase.add_file_reference(assets_file, true)
-  
-  puts "Assets.xcassets başarıyla hem RepairLiveActivity hem Runner hedeflerine bağlandı."
+  puts "Assets.xcassets başarıyla RepairLiveActivity hedefine bağlandı."
 else
   puts "UYARI: #{full_assets_path} klasörü bulunamadı!"
 end
@@ -88,8 +81,7 @@ embed_phase.dst_subfolder_spec = '13'
 file_ref = embed_phase.add_file_reference(widget_target.product_reference)
 file_ref.settings = { 'ATTRIBUTES' => ['RemoveHeadersOnCopy', 'CodeSignOnCopy'] }
 
-# 5. KRİTİK ADIM (Cycle Hatasını Önleme):
-# Embed fazını Flutter/CocoaPods Run Script aşamalarından ÖNCEYE taşı
+# 5. Cycle Hatasını Önleme (Run Script fazlarından önceye taşı)
 runner_target.build_phases.delete(embed_phase)
 first_script_idx = runner_target.build_phases.index { |p| p.is_a?(Xcodeproj::Project::Object::PBXShellScriptBuildPhase) }
 
@@ -101,4 +93,4 @@ end
 
 # 6. Projeyi kaydet
 project.save
-puts "Tebrikler! #{target_name} hedefi ve Assets.xcassets logo bağlantıları başarıyla güncellendi."
+puts "Tebrikler! #{target_name} hedefi başarıyla güncellendi."

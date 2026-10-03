@@ -1,4 +1,5 @@
 import 'services/adaptive_polling.dart';
+import 'services/provider_job_feed.dart';
 import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
 import 'package:flutter/services.dart';
@@ -75,6 +76,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
   bool _isFetchingJobs = false;
   bool _isCheckingActiveJob = false;
   bool _isUpdatingLocation = false;
+  bool _isInitializingLocation = false;
+  String? _locationIssue;
 
   String _lastBidPrice = "";
   // Çoklu askıya alınan işlerin hafızası (JobId -> Bilgiler)
@@ -87,7 +90,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
   final ValueNotifier<LatLng?> _animatedProviderPos = ValueNotifier(null);
   final ValueNotifier<double> _animatedHeading = ValueNotifier(0.0);
 
-  double _searchRadius = 10.0;
+  double _searchRadius = 50.0;
+  String? _jobFeedIssue;
 
   TimeOfDay? _plannedStartTime;
   TimeOfDay? _plannedEndTime;
@@ -150,7 +154,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
     WidgetsBinding.instance.addObserver(this);
     _checkActiveJob();
     if (!kIsWeb) {
-
       flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
       _initNotifications();
     }
@@ -173,7 +176,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
           double diff = (_targetHeading - _oldHeading) % 360.0;
           if (diff > 180.0) {
             diff -= 360.0;
-          } else if (diff < -180.0) { diff += 360.0; }
+          } else if (diff < -180.0) {
+            diff += 360.0;
+          }
 
           if (currentPosition != null && currentPosition!.speed >= 1.5) {
             _animatedHeading.value =
@@ -298,8 +303,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
       final Uint8List markerBytes = await _createCustomCustomerMarkerBytes();
       if (mounted) {
         setState(() {
-          _customerMarkerIconGmaps =
-              gmaps.BitmapDescriptor.bytes(markerBytes);
+          _customerMarkerIconGmaps = gmaps.BitmapDescriptor.bytes(markerBytes);
           _customerMarkerIconAmaps =
               amaps.BitmapDescriptor.fromBytes(markerBytes);
         });
@@ -504,11 +508,13 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
         isDismissible: false,
         barrierColor: pureBlack.withValues(alpha: 0.65),
         backgroundColor: Colors.transparent,
-        builder: (context) =>
-            StatefulBuilder(builder: (context, updateDialog) {
+        builder: (context) => StatefulBuilder(builder: (context, updateDialog) {
               void setDialogState(VoidCallback update) {
-                if (mounted && context.mounted && _isModalOpen) updateDialog(update);
+                if (mounted && context.mounted && _isModalOpen) {
+                  updateDialog(update);
+                }
               }
+
               void onTimeout() {
                 if (mounted && _isModalOpen) {
                   _suspendedJobs.remove(jobId);
@@ -569,7 +575,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                           parsedHistory.add({
                             "bid_id": (b['bid_id'] ?? b['id'] ?? '').toString(),
                             "price": b['amount'].toString(),
-                            "offer_version": b['negotiation_count']?.toString() ?? '0',
+                            "offer_version":
+                                b['negotiation_count']?.toString() ?? '0',
                             "time": b['estimated_time']?.toString() ?? "30",
                             "is_mine": isMine,
                             "status": isMine
@@ -1357,7 +1364,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                             "amount": bidHistory
                                                                 .last["price"]
                                                                 .toString(),
-                                                            "offer_version": bidHistory.last["offer_version"].toString(),
+                                                            "offer_version":
+                                                                bidHistory.last[
+                                                                        "offer_version"]
+                                                                    .toString(),
                                                             "user_type":
                                                                 "provider"
                                                           }).timeout(
@@ -1682,7 +1692,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                             },
                                                           ).timeout(
                                                                   _apiTimeout);
-                                                        } catch (e) { debugPrint("İşlem bildirimi tamamlanamadı."); }
+                                                        } catch (e) {
+                                                          debugPrint(
+                                                              "İşlem bildirimi tamamlanamadı.");
+                                                        }
                                                       }
 
                                                       if (context.mounted) {
@@ -1799,7 +1812,11 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
 
                                                       if (bidHistory
                                                           .isNotEmpty) {
-                                                        requestBody["offer_version"] = bidHistory.last["offer_version"].toString();
+                                                        requestBody[
+                                                                "offer_version"] =
+                                                            bidHistory.last[
+                                                                    "offer_version"]
+                                                                .toString();
                                                         requestBody["bid_id"] =
                                                             bidHistory
                                                                 .last["bid_id"]
@@ -1873,7 +1890,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                                           .trim()
                                                                 },
                                                               );
-                                                            } catch (e) { debugPrint("İşlem bildirimi tamamlanamadı."); }
+                                                            } catch (e) {
+                                                              debugPrint(
+                                                                  "İşlem bildirimi tamamlanamadı.");
+                                                            }
 
                                                             _lastBidPrice =
                                                                 priceController
@@ -2103,8 +2123,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
           await Future.wait([
             _checkActiveJob(),
             _checkSuspendedJobBids(),
-            if (currentPosition != null)
-              _fetchNearbyJobs(isAuto: true, radius: _searchRadius.toInt()),
+            _fetchNearbyJobs(isAuto: true, radius: _searchRadius.toInt()),
           ]);
         });
     _jobPollingTimer!.start();
@@ -2422,6 +2441,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
 
   void _updatePositionInternal(Position position, {bool isFirst = false}) {
     if (!mounted) return;
+    if (!position.latitude.isFinite ||
+        !position.longitude.isFinite ||
+        position.latitude.abs() > 90 ||
+        position.longitude.abs() > 180) {
+      return;
+    }
 
     if (!kIsWeb) {
       try {
@@ -2435,6 +2460,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
     }
 
     currentPosition = position;
+    _locationIssue = null;
     LatLng newPos = LatLng(position.latitude, position.longitude);
 
     _animatedProviderPos.value = newPos;
@@ -2458,11 +2484,18 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
   }
 
   Future<void> _initLocationStream() async {
+    if (_isInitializingLocation || !mounted) return;
+    _isInitializingLocation = true;
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         if (mounted) {
-          setState(() => isLoading = false);
+          setState(() {
+            isLoading = false;
+            _locationIssue =
+                'Konum servisi kapalı. Talepleri almak için konumu açın.';
+            _jobFeedIssue = _locationIssue;
+          });
           _showTopSnackBar("Lütfen GPS / Konum servisini açınız.",
               isError: true);
         }
@@ -2472,14 +2505,19 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied ||
-            permission == LocationPermission.deniedForever) {
-          if (mounted) {
-            setState(() => isLoading = false);
-            _showTopSnackBar("Konum izni verilmedi.", isError: true);
-          }
-          return;
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+            _locationIssue =
+                'Konum izni kapalı. Tarayıcı veya telefon ayarlarından izin verip yeniden deneyin.';
+            _jobFeedIssue = _locationIssue;
+          });
+          _showTopSnackBar("Konum izni verilmedi.", isError: true);
         }
+        return;
       }
 
       try {
@@ -2494,14 +2532,20 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
       }
 
       Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
-        timeLimit: const Duration(seconds: 4),
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 15),
       ).then((fastPos) {
         if (mounted) {
           _updatePositionInternal(fastPos, isFirst: currentPosition == null);
         }
       }).catchError((_) {
-        debugPrint("GPS arka planda aranıyor...");
+        if (mounted && currentPosition == null) {
+          setState(() {
+            _locationIssue =
+                'Konum alınamadı. Konum iznini ve bağlantınızı kontrol edip yeniden deneyin.';
+            _jobFeedIssue = _locationIssue;
+          });
+        }
       });
 
       late LocationSettings locationSettings;
@@ -2538,7 +2582,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
         );
       }
 
-      _positionStream?.cancel();
+      await _positionStream?.cancel();
+      if (!mounted) return;
       _positionStream =
           Geolocator.getPositionStream(locationSettings: locationSettings)
               .listen((Position position) {
@@ -2609,7 +2654,15 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
         FirebaseCrashlytics.instance
             .recordError(e, stack, reason: 'Usta harita konum servisi kopması');
       } catch (_) {}
-      if (mounted) setState(() => isLoading = false);
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+          _locationIssue = 'Konum servisi başlatılamadı. Yeniden deneyin.';
+          _jobFeedIssue = _locationIssue;
+        });
+      }
+    } finally {
+      _isInitializingLocation = false;
     }
   }
 
@@ -2727,7 +2780,15 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
   }
 
   Future<void> _fetchNearbyJobs({bool isAuto = false, int radius = 10}) async {
-    if (currentPosition == null || !isOnline || isSuspended) return;
+    if (!mounted || !isOnline || isSuspended) return;
+    if (currentPosition == null) {
+      final issue = _locationIssue ??
+          'Konumunuz alınıyor. Konum izni açıksa talepler otomatik yüklenecek.';
+      if (_jobFeedIssue != issue) {
+        setState(() => _jobFeedIssue = issue);
+      }
+      return;
+    }
     if (_isFetchingJobs || !mounted) return;
     _isFetchingJobs = true;
 
@@ -2747,83 +2808,90 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
               "$baseUrl?action=get_pending_jobs&lat=$targetLat&lng=$targetLng&provider_id=${widget.providerId}&radius=$radius&_t=$timestamp"))
           .timeout(_apiTimeout);
 
-      if (response.statusCode == 200) {
-        Map<String, dynamic> data = {};
-        try {
-          data = json.decode(response.body);
-        } catch (e) {
-          debugPrint("Sunucu JSON ayrıştırma hatası");
+      if (!mounted || !isOnline || isSuspended || _isNavigating) return;
+      final feed = ProviderJobFeed.fromResponse(response);
+      if (_jobFeedIssue != feed.issue) {
+        setState(() {
+          if (_jobFeedIssue != null &&
+              feed.issue == null &&
+              feed.jobs.isNotEmpty) {
+            _showJobCard = true;
+          }
+          _jobFeedIssue = feed.issue;
+        });
+      }
+      final fetchedJobs = feed.jobs;
+      final Set<int> currentJobIds = fetchedJobs
+          .map((j) => int.tryParse(j['id']?.toString() ?? '0') ?? 0)
+          .toSet();
+
+      final newJobs = currentJobIds.difference(knownJobIds);
+      if (newJobs.isNotEmpty) {
+        final newJobId = newJobs.first;
+        final newJobData = fetchedJobs.firstWhere(
+            (j) => (int.tryParse(j['id']?.toString() ?? '0') ?? 0) == newJobId);
+
+        if (isAuto) {
+          _playNewJobSound(); // Farklı olan yeni iş bildirim sesi çalınır
+          _showLocalNotification("📍 Yakınınızda yeni bir iş var!",
+              "${_getServiceName(newJobData['service_type']?.toString() ?? '')} için bölgenizde yeni bir iş talebi var!");
         }
-        if (data['status'] == 'success' && mounted) {
-          final List<Map<String, dynamic>> fetchedJobs = (data['jobs'] as List?)
-                  ?.map((e) => Map<String, dynamic>.from(e as Map))
-                  .toList() ??
-              [];
-          final Set<int> currentJobIds = fetchedJobs
-              .map((j) => int.tryParse(j['id']?.toString() ?? '0') ?? 0)
-              .toSet();
 
-          final newJobs = currentJobIds.difference(knownJobIds);
-          if (newJobs.isNotEmpty) {
-            final newJobId = newJobs.first;
-            final newJobData = fetchedJobs.firstWhere((j) =>
-                (int.tryParse(j['id']?.toString() ?? '0') ?? 0) == newJobId);
+        // Dynamic Island: Usta için Yeni İş Fırsatı Bildirimi
+        final double jobDist = newJobData['distance'] != null
+            ? _parseDouble(newJobData['distance'])
+            : 0.0;
+        LiveActivityService().startJobAlert(
+          jobId: newJobId.toString(),
+          serviceTitle:
+              "${_getServiceName(newJobData['service_type']?.toString() ?? '')} Talebi",
+          distanceText: "${jobDist.toStringAsFixed(1)} KM",
+          timeoutSeconds: 60,
+          statusText: "Yeni İş Fırsatı!",
+        );
 
-            if (isAuto) {
-              _playNewJobSound(); // Farklı olan yeni iş bildirim sesi çalınır
-              _showLocalNotification("📍 Yakınınızda yeni bir iş var!",
-                  "${_getServiceName(newJobData['service_type']?.toString() ?? '')} için bölgenizde yeni bir iş talebi var!");
+        setState(() {
+          _showJobCard = true;
+          _currentJobIndex = fetchedJobs.indexWhere((j) =>
+              (int.tryParse(j['id']?.toString() ?? '0') ?? 0) == newJobId);
+          if (_currentJobIndex == -1) _currentJobIndex = 0;
+        });
+
+        _animatedMapMove(
+            LatLng(_parseDouble(newJobData['latitude']),
+                _parseDouble(newJobData['longitude'])),
+            16.0,
+            avoidBottomSheet: true);
+      }
+
+      bool listChanged = jobList.length != fetchedJobs.length ||
+          !setEquals(knownJobIds, currentJobIds) ||
+          jsonEncode(jobList) != jsonEncode(fetchedJobs);
+
+      if (listChanged) {
+        setState(() {
+          jobList = fetchedJobs;
+          knownJobIds = currentJobIds;
+
+          if (_showJobCard && jobList.isNotEmpty) {
+            if (_currentJobIndex >= jobList.length) {
+              _currentJobIndex = jobList.length - 1;
             }
-
-            // Dynamic Island: Usta için Yeni İş Fırsatı Bildirimi
-            final double jobDist = newJobData['distance'] != null
-                ? _parseDouble(newJobData['distance'])
-                : 0.0;
-            LiveActivityService().startJobAlert(
-              jobId: newJobId.toString(),
-              serviceTitle:
-                  "${_getServiceName(newJobData['service_type']?.toString() ?? '')} Talebi",
-              distanceText: "${jobDist.toStringAsFixed(1)} KM",
-              timeoutSeconds: 60,
-              statusText: "Yeni İş Fırsatı!",
-            );
-
-            setState(() {
-              _showJobCard = true;
-              _currentJobIndex = fetchedJobs.indexWhere((j) =>
-                  (int.tryParse(j['id']?.toString() ?? '0') ?? 0) == newJobId);
-              if (_currentJobIndex == -1) _currentJobIndex = 0;
-            });
-
-            _animatedMapMove(
-                LatLng(_parseDouble(newJobData['latitude']),
-                    _parseDouble(newJobData['longitude'])),
-                16.0,
-                avoidBottomSheet: true);
+          } else if (_showJobCard && jobList.isEmpty) {
+            _showJobCard = false;
+            _currentJobIndex = 0;
           }
-
-          bool listChanged = jobList.length != fetchedJobs.length ||
-              !setEquals(knownJobIds, currentJobIds) ||
-              jsonEncode(jobList) != jsonEncode(fetchedJobs);
-
-          if (listChanged) {
-            setState(() {
-              jobList = fetchedJobs;
-              knownJobIds = currentJobIds;
-
-              if (_showJobCard && jobList.isNotEmpty) {
-                if (_currentJobIndex >= jobList.length) {
-                  _currentJobIndex = jobList.length - 1;
-                }
-              } else if (_showJobCard && jobList.isEmpty) {
-                _showJobCard = false;
-                _currentJobIndex = 0;
-              }
-            });
-          }
-        }
+        });
       }
     } catch (e) {
+      if (mounted && isOnline) {
+        setState(() {
+          _jobFeedIssue = e is ProviderFeedException
+              ? e.message
+              : 'Talepler güncellenemedi. Bağlantınızı kontrol edin; otomatik tekrar denenecek.';
+          _showJobCard = false;
+        });
+      }
       if (!isAuto && mounted) {
         _showTopSnackBar("İşler yüklenirken hata oluştu.", isError: true);
       }
@@ -2850,6 +2918,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
 
       final data = json.decode(response.body);
 
+      if (!mounted) return;
+
       if (response.statusCode == 200 && data['status'] == 'success') {
         final bool canWork = data['can_work'] ?? false;
         if (canWork) {
@@ -2864,6 +2934,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
             isCheckingSubscription = false;
           });
           _positionStream?.resume();
+          if (currentPosition == null) unawaited(_initLocationStream());
           _startJobRefreshTimer();
           _fetchNearbyJobs(radius: _searchRadius.toInt());
         } else {
@@ -2875,6 +2946,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
         _showTopSnackBar("Abonelik durumu doğrulanamadı.", isError: true);
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => isCheckingSubscription = false);
       _showTopSnackBar("Bağlantı hatası oluştu.", isError: true);
     }
@@ -4120,6 +4192,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 400;
         final bottomInset = MediaQuery.paddingOf(context).bottom;
+        final topInset = MediaQuery.paddingOf(context).top;
+        final jobCardVisible =
+            isOnline && jobList.isNotEmpty && _showJobCard && !_isModalOpen;
+        final jobCardHeight = _isJobCardExpanded
+            ? (MediaQuery.textScalerOf(context).scale(1) > 1.3 ? 240.0 : 208.0)
+            : 56.0;
 
         return Scaffold(
           backgroundColor: bgColor,
@@ -4411,8 +4489,49 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                         ),
                       ),
                     if (isOnline) ...[
+                      if (_jobFeedIssue != null)
+                        Positioned(
+                          bottom: jobCardVisible
+                              ? bottomInset + jobCardHeight + 104
+                              : bottomInset + 16,
+                          left: 16,
+                          right: 16,
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 520),
+                              child: Material(
+                                color: panelBlack,
+                                borderRadius: BorderRadius.circular(18),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(14),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(_jobFeedIssue!,
+                                          style: const TextStyle(
+                                              color: Colors.white)),
+                                      TextButton.icon(
+                                        onPressed: () async {
+                                          if (currentPosition == null) {
+                                            await _initLocationStream();
+                                          }
+                                          await _fetchNearbyJobs(
+                                              radius: _searchRadius.toInt());
+                                        },
+                                        icon: const Icon(Icons.refresh),
+                                        label: const Text('Yeniden kontrol et'),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                       Positioned(
-                          top: MediaQuery.paddingOf(context).top + 12,
+                          top: topInset + 12,
                           left: 16,
                           right: 16,
                           child: Center(
@@ -4430,7 +4549,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                           radius: _searchRadius.toInt()))))),
                       if (isOnline)
                         Positioned(
-                          top: MediaQuery.paddingOf(context).top + 100,
+                          // Header has two rows. Start below it so the range
+                          // slider cannot cover the online switch or subtitle.
+                          top: topInset + 168,
                           right: 16,
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(24),
@@ -4511,9 +4632,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                         ),
                       Positioned(
                         right: 16,
-                        bottom: (jobList.isNotEmpty && _showJobCard)
-                            ? (bottomInset + 265)
-                            : (bottomInset + (isSmallScreen ? 90 : 102)),
+                        bottom: jobCardVisible
+                            ? bottomInset + jobCardHeight + 104
+                            : bottomInset + (isSmallScreen ? 90 : 102),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 300),
                           child: ClipRRect(
@@ -4633,23 +4754,14 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                       AnimatedPositioned(
                         duration: const Duration(milliseconds: 500),
                         curve: Curves.easeOutExpo,
-                        bottom: (isOnline &&
-                                jobList.isNotEmpty &&
-                                _showJobCard &&
-                                !_isModalOpen)
-                            ? (bottomInset + 84)
-                            : -350,
+                        bottom: jobCardVisible ? (bottomInset + 84) : -350,
                         left: _isJobCardExpanded
                             ? 14
                             : MediaQuery.of(context).size.width / 2 - 80,
                         right: _isJobCardExpanded
                             ? 14
                             : MediaQuery.of(context).size.width / 2 - 80,
-                        height: _isJobCardExpanded
-                            ? (MediaQuery.textScalerOf(context).scale(1) > 1.3
-                                ? 230
-                                : 195)
-                            : 56,
+                        height: jobCardHeight,
                         child: AnimatedSwitcher(
                           duration: const Duration(milliseconds: 400),
                           transitionBuilder:

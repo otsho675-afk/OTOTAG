@@ -130,6 +130,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
       final ui.FrameInfo fi = await codec.getNextFrame();
       final ByteData? byteData =
           await fi.image.toByteData(format: ui.ImageByteFormat.png);
+      fi.image.dispose();
+      codec.dispose();
       return byteData?.buffer.asUint8List();
     } catch (e) {
       debugPrint("Araba simgesi boyutlandırma hatası: $e");
@@ -178,10 +180,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
     if (kIsWeb) return;
 
     if (jobStatus == 'completed' || jobStatus == 'cancelled') {
-      if (_isLiveActivityStarted) {
-        LiveActivityService().endTracking();
-        _isLiveActivityStarted = false;
-      }
+      unawaited(LiveActivityService().endTracking());
+      _isLiveActivityStarted = false;
       return;
     }
 
@@ -417,7 +417,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
           double diff = (_targetHeading - _oldHeading) % 360.0;
           if (diff > 180.0) {
             diff -= 360.0;
-          } else if (diff < -180.0) { diff += 360.0; }
+          } else if (diff < -180.0) {
+            diff += 360.0;
+          }
           _animatedHeading.value = _oldHeading + diff * _slideController.value;
         }
       });
@@ -1179,6 +1181,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
     } else if (state == AppLifecycleState.resumed) {
       if (_isPusherInitialized) pusher.connect();
       if (jobStatus != 'completed' && jobStatus != 'cancelled') _startTimer();
+      unawaited(_fetchJobStatus());
       _startReroutingEngine();
     }
   }
@@ -1212,9 +1215,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
     _googleMapController?.dispose();
     _appleMapController = null;
 
-    if (_isLiveActivityStarted) {
-      LiveActivityService().endTracking();
-    }
+    unawaited(LiveActivityService().endTracking());
 
     super.dispose();
   }
@@ -1345,10 +1346,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
       if (data['status'] == 'success') {
         if (mounted) {
           _positionStream?.cancel();
-          if (_isLiveActivityStarted) {
-            LiveActivityService().endTracking();
-            _isLiveActivityStarted = false;
-          }
+          await LiveActivityService().endTracking();
+          if (!mounted) return;
+          _isLiveActivityStarted = false;
           if (_isNavigating) return;
           _isNavigating = true;
           _showTopSnackBar("İşlem iptal edildi.");
@@ -1559,10 +1559,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
 
         if (newJobStatus == 'cancelled') {
           _positionStream?.cancel();
-          if (_isLiveActivityStarted) {
-            LiveActivityService().endTracking();
-            _isLiveActivityStarted = false;
-          }
+          await LiveActivityService().endTracking();
+          if (!mounted) return;
+          _isLiveActivityStarted = false;
           if (_isNavigating) return;
           _isNavigating = true;
           try {
@@ -1710,11 +1709,15 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
               providerId != 0 &&
               !_isProviderLocationSubscribed) {
             try {
-              unawaited(pusher.subscribe(channelName: "user_location_$providerId").catchError((Object error) {
+              unawaited(pusher
+                  .subscribe(channelName: "user_location_$providerId")
+                  .catchError((Object error) {
                 _isProviderLocationSubscribed = false;
               }));
               _isProviderLocationSubscribed = true;
-            } catch (e) { debugPrint("Konum kanalı bağlanamadı; HTTP takibi sürüyor."); }
+            } catch (e) {
+              debugPrint("Konum kanalı bağlanamadı; HTTP takibi sürüyor.");
+            }
           }
 
           bool apiIsRated = data['is_rated'] == true ||
@@ -1785,10 +1788,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
 
           if (jobStatus == 'completed') {
             _positionStream?.cancel();
-            if (_isLiveActivityStarted) {
-              LiveActivityService().endTracking();
-              _isLiveActivityStarted = false;
-            }
+            unawaited(LiveActivityService().endTracking());
+            _isLiveActivityStarted = false;
 
             if (widget.userType == 'provider') {
               if (!_isNavigating) {
@@ -1847,12 +1848,16 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
               .get(Uri.parse(
                   "$_baseUrl?action=get_bids&job_id=${widget.jobId}&user_type=provider&provider_id=${widget.userId}&_t=$stamp"))
               .timeout(_apiTimeout);
+          if (!mounted || _isNavigating || bidRes.statusCode != 200) return;
           final bidData = json.decode(bidRes.body);
-          if (bidData['status'] == 'success') {
-            List bidsList = bidData['bids'];
+          if (bidData is Map && bidData['status'] == 'success') {
+            final bidsList =
+                bidData['bids'] is List ? bidData['bids'] as List : const [];
             if (bidsList.isNotEmpty) {
               String? previousLastBidder = activeBid?['last_bidder'];
-              setState(() => activeBid = bidsList[0]);
+              if (bidsList.first is! Map) return;
+              setState(() =>
+                  activeBid = Map<String, dynamic>.from(bidsList.first as Map));
 
               if (previousLastBidder == 'provider' &&
                   activeBid!['last_bidder'] == 'customer') {
@@ -1873,8 +1878,12 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                     .timeout(_apiTimeout);
                 if (!mounted) return;
                 final verifyData = json.decode(verifyRes.body);
-                if (verifyData['status']?.toString().toLowerCase() !=
-                    'searching') {
+                if (verifyRes.statusCode != 200 ||
+                    verifyData is! Map ||
+                    (verifyData['job_status'] ?? verifyData['status'])
+                            ?.toString()
+                            .toLowerCase() !=
+                        'searching') {
                   return;
                 }
 
@@ -2267,11 +2276,17 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
         "🚨 Güvenli Yol Yardımı Canlı Takibi:\nAracım şu an yolda tamir/kurtarma sürecinde. Ustanın konumunu ve aracımı canlı takip etmek için bağlantı:\n$trackUrl";
     final shareBox = context.findRenderObject() as RenderBox?;
     try {
-      await SharePlus.instance.share(ShareParams(text: shareText, subject: 'OtoTAG Canlı Yol Yardımı Takibi',
+      await SharePlus.instance.share(ShareParams(
+          text: shareText,
+          subject: 'OtoTAG Canlı Yol Yardımı Takibi',
           sharePositionOrigin: shareBox != null && shareBox.hasSize
-              ? shareBox.localToGlobal(Offset.zero) & shareBox.size : const Rect.fromLTWH(1, 1, 1, 1)));
+              ? shareBox.localToGlobal(Offset.zero) & shareBox.size
+              : const Rect.fromLTWH(1, 1, 1, 1)));
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Paylaşım açılamadı. Tekrar deneyin.')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Paylaşım açılamadı. Tekrar deneyin.')));
+      }
     }
   }
 
@@ -3923,22 +3938,29 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                           ),
                         GestureDetector(
                           onTap: () {
+                            final senderId = widget.userId ??
+                                (widget.userType == 'provider'
+                                    ? providerId
+                                    : customerId) ??
+                                0;
+                            final receiverId = widget.userType == 'provider'
+                                ? (customerId ?? 0)
+                                : (providerId ?? 0);
+                            if (senderId <= 0 || receiverId <= 0) {
+                              _showTopSnackBar(
+                                  'Sohbet için eşleşme bilgileri yükleniyor.');
+                              _fetchJobStatus();
+                              return;
+                            }
                             setState(() => _isInChat = true);
                             Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                     builder: (context) => ChatScreen(
                                           jobId: widget.jobId,
-                                          currentUserId: widget.userId ??
-                                              (widget.userType == 'provider'
-                                                  ? providerId
-                                                  : customerId) ??
-                                              0,
+                                          currentUserId: senderId,
                                           currentUserType: widget.userType,
-                                          receiverId:
-                                              widget.userType == 'provider'
-                                                  ? (customerId ?? 0)
-                                                  : (providerId ?? 0),
+                                          receiverId: receiverId,
                                           receiverName: contactName,
                                         ))).then((_) {
                               if (mounted) {

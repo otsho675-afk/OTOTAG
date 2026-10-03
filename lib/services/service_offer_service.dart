@@ -82,6 +82,13 @@ class ServiceOfferService {
   Future<Map<String, dynamic>> cancel(int jobId) =>
       _read(_client.post(_uri('cancel_job'),
           body: {'job_id': '$jobId', 'expected_status': 'searching'}));
+
+  Future<Map<String, dynamic>> expireUnansweredSearch(
+          int jobId, int customerId) =>
+      _read(_client.post(_uri('expire_unanswered_service_job'), body: {
+        'job_id': '$jobId',
+        'customer_id': '$customerId',
+      }));
   void dispose() {
     if (_ownsClient) _client.close();
   }

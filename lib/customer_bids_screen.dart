@@ -21,11 +21,13 @@ class CustomerBidsScreen extends StatefulWidget {
       required this.customerId,
       this.service,
       this.enableRealtime = true,
-      this.trackingBuilder});
+      this.trackingBuilder,
+      this.dashboardBuilder});
   final int jobId, customerId;
   final ServiceOfferService? service;
   final bool enableRealtime;
   final WidgetBuilder? trackingBuilder;
+  final WidgetBuilder? dashboardBuilder;
   @override
   State<CustomerBidsScreen> createState() => _CustomerBidsScreenState();
 }
@@ -39,6 +41,8 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
   String? _error, _status;
   bool _loading = true, _fetching = false, _busy = false, _dialog = false;
   bool _foreground = true, _covered = false, _navigating = false;
+  Timer? _unansweredTimer;
+  bool _expiryAttempted = false;
   int _revision = 0;
   String _sort = 'price';
   bool get _active => mounted && _foreground && !_covered && !_navigating;
@@ -87,6 +91,8 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
       if (widget.enableRealtime && !kIsWeb) unawaited(_connect());
     } else {
       _polling.stop();
+      _unansweredTimer?.cancel();
+      _unansweredTimer = null;
       unawaited(_live.disconnect());
     }
   }
@@ -95,6 +101,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _polling.dispose();
+    _unansweredTimer?.cancel();
     if (!_navigating) unawaited(LiveActivityService().endTracking());
     unawaited(_live.dispose());
     if (widget.service == null) _service.dispose();
@@ -120,6 +127,12 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
         _error = null;
         _loading = false;
       });
+      if (bids.isEmpty && _status == 'searching') {
+        _startUnansweredTimer();
+      } else {
+        _unansweredTimer?.cancel();
+        _unansweredTimer = null;
+      }
       _routeFromStatus();
     } catch (e) {
       if (mounted && revision == _revision) {
@@ -131,6 +144,36 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
       if (propagate) rethrow;
     } finally {
       _fetching = false;
+    }
+  }
+
+  void _startUnansweredTimer() {
+    if (_expiryAttempted || _unansweredTimer != null) return;
+    _unansweredTimer = Timer(const Duration(seconds: 20), () {
+      _unansweredTimer = null;
+      if (_active) unawaited(_expireUnansweredSearch());
+    });
+  }
+
+  Future<void> _expireUnansweredSearch() async {
+    if (!_active ||
+        _expiryAttempted ||
+        _busy ||
+        _status != 'searching' ||
+        _bids.isNotEmpty) {
+      return;
+    }
+    _expiryAttempted = true;
+    try {
+      final result = await _service.expireUnansweredSearch(
+          widget.jobId, widget.customerId);
+      if (!mounted) return;
+      _status = result['job_status']?.toString() ?? _status;
+      _routeFromStatus();
+      if (_active) await _load();
+    } catch (_) {
+      // A later polling response decides the visible state; never retry a
+      // state-changing request automatically.
     }
   }
 
@@ -156,11 +199,16 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
     } else if (_status == 'cancelled') {
       _navigating = true;
       _polling.stop();
-      unawaited(LiveActivityService().endTracking());
-      Navigator.of(context).pushReplacement(MaterialPageRoute(
-          builder: (_) =>
-              CustomerDashboardScreen(customerId: widget.customerId)));
+      unawaited(_leaveCancelledJob());
     }
+  }
+
+  Future<void> _leaveCancelledJob() async {
+    await LiveActivityService().endTracking();
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(MaterialPageRoute(
+        builder: widget.dashboardBuilder ??
+            (_) => CustomerDashboardScreen(customerId: widget.customerId)));
   }
 
   Future<void> _mutate(Future<Map<String, dynamic>> Function() action) async {
@@ -363,6 +411,10 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
                                                         : Icons
                                                             .handshake_outlined,
                                                 stage: list.isEmpty ? 0 : 1,
+                                                searching: list.isEmpty &&
+                                                    !_busy &&
+                                                    !_loading &&
+                                                    _status == 'searching',
                                                 active: _error == null),
                                             if (_error != null)
                                               Padding(

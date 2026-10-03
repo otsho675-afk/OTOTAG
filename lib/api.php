@@ -1982,6 +1982,9 @@ switch ($action) {
                 }
             }
         }
+        if (trim((string)$message_text)==='' && $media_url===null) {
+            sendResponse(422,['status'=>'error','message'=>'Dosya yüklenemedi. Yeniden deneyin.']);
+        }
 
         try {
             $stmt = $pdo->prepare("INSERT INTO messages (job_id, sender_id, sender_type, receiver_id, message_text, media_url, media_type) VALUES (?, ?, ?, ?, ?, ?, ?)");
@@ -1995,29 +1998,15 @@ switch ($action) {
             $notifTitle = "Yeni Mesaj (" . $senderName . ")";
             $notifMsg = ($media_type === 'text' && !empty($message_text)) ? $message_text : "Size bir medya gönderdi.";
             
-            $notifInsert = $pdo->prepare("INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)");
-            $notifInsert->execute([$receiver_id, $notifTitle, $notifMsg]);
-
             try {
-                if (empty($receiver_id) || $receiver_id == '0') {
-                    $jobUserStmt = $pdo->prepare("SELECT customer_id, provider_id FROM jobs WHERE id = ?");
-                    $jobUserStmt->execute([$job_id]);
-                    $jobUsers = $jobUserStmt->fetch();
-                    if ($jobUsers) {
-                        $receiver_id = ($sender_id == $jobUsers['provider_id']) ? $jobUsers['customer_id'] : $jobUsers['provider_id'];
-                    }
-                }
+                $notifInsert = $pdo->prepare("INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)");
+                $notifInsert->execute([$receiver_id, $notifTitle, $notifMsg]);
+            } catch (Throwable $e) { error_log('Chat inbox notification failed.'); }
 
-                if (!empty($receiver_id)) {
-                    sendOneSignalPush(
-                        (string)$receiver_id, 
-                        $notifTitle, 
-                        $notifMsg, 
-                        ['type' => 'chat', 'job_id' => (string)$job_id]
-                    );
-                }
-            } catch (Exception $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();}
+            // A notification failure must not turn an already saved message
+            // into a client error and cause the sender to retry it twice.
+            sendOneSignalPush((string)$receiver_id, $notifTitle, $notifMsg,
+                ['type' => 'chat', 'job_id' => (string)$job_id]);
 
             if ($redis && !empty($receiver_id)) {
                 $redis->del("unread_msg_" . $receiver_id);
@@ -2035,7 +2024,8 @@ switch ($action) {
                     "created_at" => date('Y-m-d H:i:s')
                 ]
             ];
-            triggerPusherEvent("private-chat_".$job_id, "new_message", $payload);
+            try { triggerPusherEvent("private-chat_".$job_id, "new_message", $payload); }
+            catch (Throwable $e) { error_log('Chat realtime event failed.'); }
             sendResponse(201, ["status" => "success", "message" => "Mesaj iletildi."]);
         } catch (Exception $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
@@ -2057,7 +2047,9 @@ switch ($action) {
             $messages = $stmt->fetchAll();
 
             // 350K Optimizasyonu: Her mesaj okumada gereksiz DB yazmasını (Write-Lock) engelle. Sadece okunmamış varsa güncelle.
-            $pdo->prepare("UPDATE messages SET is_read = 1 WHERE job_id = ? AND receiver_id = ? AND is_read = 0")->execute([$job_id, $user_id]);
+            $readUpdate=$pdo->prepare("UPDATE messages SET is_read = 1 WHERE job_id = ? AND receiver_id = ? AND is_read = 0");
+            $readUpdate->execute([$job_id, $user_id]);
+            if ($redis && $readUpdate->rowCount()>0) $redis->del('unread_msg_'.$user_id);
 
             sendResponse(200, ["status" => "success", "messages" => $messages]);
         } catch (Exception $e) {
@@ -3910,6 +3902,15 @@ switch ($action) {
         if ($method !== 'POST') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
         try {
             $jobId=(int)($_POST['job_id'] ?? 0);
+            $actor=authenticateRequest();
+            $owner=$pdo->prepare('SELECT customer_id, provider_id FROM jobs WHERE id=?');
+            $owner->execute([$jobId]);
+            $owner=$owner->fetch(PDO::FETCH_ASSOC);
+            if (!$owner || (($actor['user_type'] ?? '') !== 'admin' &&
+                (int)$actor['user_id'] !== (int)$owner['customer_id'] &&
+                (int)$actor['user_id'] !== (int)($owner['provider_id'] ?? 0))) {
+                sendResponse(403,['status'=>'error','message'=>'Bu talebi iptal etme yetkiniz yok.']);
+            }
             $job=serviceCancelJob($pdo,$jobId,$_POST['expected_status'] ?? null);
             if ($job['status']!=='cancelled') {
                 $targets=array_values(array_filter([(string)$job['customer_id'],(string)($job['provider_id'] ?? '')]));
@@ -3919,6 +3920,47 @@ switch ($action) {
             }
             sendResponse(200,['status'=>'success','message'=>'Talep iptal edildi.']);
         } catch (DomainException $e) { sendResponse(409,['status'=>'error','message'=>$e->getMessage()]); }
+        break;
+
+    case 'expire_unanswered_service_job':
+        if ($method !== 'POST') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
+        $jobId=(int)($_POST['job_id'] ?? 0);
+        $customerId=(int)($_POST['customer_id'] ?? 0);
+        if ($jobId<=0 || $customerId<=0) sendResponse(400,['status'=>'error','message'=>'Geçersiz talep bilgisi.']);
+        authenticateRequest($customerId);
+        try {
+            $pdo->beginTransaction();
+            $jobStmt=$pdo->prepare('SELECT id, customer_id, provider_id, status, service_type FROM jobs WHERE id=? AND customer_id=? FOR UPDATE');
+            $jobStmt->execute([$jobId,$customerId]);
+            $job=$jobStmt->fetch(PDO::FETCH_ASSOC);
+            if (!$job || $job['service_type']==='rentacar') {
+                throw new DomainException('Açık servis talebi bulunamadı.');
+            }
+            if ($job['status'] !== 'searching') {
+                $pdo->commit();
+                sendResponse(200,['status'=>'success','job_status'=>$job['status'],'expired'=>false]);
+            }
+            $bidStmt=$pdo->prepare("SELECT COUNT(*) FROM bids WHERE job_id=? AND status IN ('pending','negotiating','accepted')");
+            $bidStmt->execute([$jobId]);
+            if ((int)$bidStmt->fetchColumn() > 0) {
+                $pdo->commit();
+                sendResponse(200,['status'=>'success','job_status'=>'searching','expired'=>false]);
+            }
+            $pdo->prepare("UPDATE jobs SET status='cancelled' WHERE id=? AND status='searching'")->execute([$jobId]);
+            $pdo->commit();
+            try {
+                triggerPusherEvent('job_'.$jobId,'status_update',['job_status'=>'cancelled','job_id'=>$jobId,'reason'=>'no_provider_response']);
+                triggerPusherEvent('global_jobs','job_cancelled',['job_id'=>$jobId]);
+            } catch (Throwable $e) { error_log('Timed-out job realtime update failed.'); }
+            sendResponse(200,['status'=>'success','job_status'=>'cancelled','expired'=>true]);
+        } catch (DomainException $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            sendResponse(409,['status'=>'error','message'=>$e->getMessage()]);
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            error_log('Unanswered service job expiry failed: '.$e->getMessage());
+            sendResponse(500,['status'=>'error','message'=>'Talep süresi güncellenemedi.']);
+        }
         break;
 
     case 'customer_payment':
@@ -4063,7 +4105,7 @@ switch ($action) {
         $provider = $stmt->fetch();
         if (!$provider) sendResponse(404, ["status" => "error", "message" => "Usta bulunamadı."]);
 
-        $ratingsStmt = $pdo->prepare("SELECT r.rating, r.comment, r.created_at, u.name as customer_name FROM ratings r JOIN users u ON r.customer_id = u.id WHERE r.provider_id = ? AND r.comment IS NOT NULL AND TRIM(r.comment) != '' ORDER BY r.created_at DESC");
+        $ratingsStmt = $pdo->prepare("SELECT r.rating, r.comment, DATE_FORMAT(r.created_at, '%d.%m.%Y') AS date, u.name as customer_name FROM ratings r JOIN users u ON r.customer_id = u.id WHERE r.provider_id = ? AND r.comment IS NOT NULL AND TRIM(r.comment) != '' ORDER BY r.created_at DESC LIMIT 50");
         $ratingsStmt->execute([$provider_id]);
         $ratings = $ratingsStmt->fetchAll();
 
@@ -4071,10 +4113,13 @@ switch ($action) {
         $avgStmt->execute([$provider_id]);
         $stats = $avgStmt->fetch();
 
+        $completedStmt = $pdo->prepare("SELECT COUNT(*) FROM jobs WHERE provider_id=? AND status='completed'");
+        $completedStmt->execute([$provider_id]);
         $profilePayload = [
             "status" => "success", 
             "provider" => $provider, 
-            "stats" => ["average" => $stats['avg_rating'] ?? "0.0", "total" => $stats['total_reviews']], 
+            "stats" => ["average" => $stats['avg_rating'] ?? "0.0", "total" => $stats['total_reviews'] ?? 0,
+                "completed_jobs" => (int)$completedStmt->fetchColumn()],
             "reviews" => $ratings
         ];
         if ($redis) {

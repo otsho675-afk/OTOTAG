@@ -122,6 +122,10 @@ Future<void> _startApp() async {
             requestAppUpdateCheck();
             return;
           }
+          if (event.notification.additionalData?['type'] == 'chat') {
+            // Leave foreground chat notifications visible as system banners.
+            return;
+          }
           event
               .preventDefault(); // Varsayılan ve UI engelleyebilen sistem bildirimini durdur
 

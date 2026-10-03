@@ -26,6 +26,9 @@ workflows:
         script: |
           flutter build ipa --release \
             --export-options-plist=/Users/builder/export_options.plist
+      - name: iPhone Bildirim Imzasini Dogrula
+        script: |
+          python3 scripts/verify_ios_push.py
     artifacts:
       - build/ios/ipa/*.ipa
     publishing:

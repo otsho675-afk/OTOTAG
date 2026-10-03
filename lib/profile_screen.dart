@@ -2,6 +2,7 @@ import 'widgets/google_login_button.dart';
 import 'subscriptions_screen.dart';
 // profile_screen.dart
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'core/constants/app_constants.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -99,7 +100,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   @override
   void dispose() {
-    _httpClient.close();
+    if (widget.client == null) _httpClient.close();
     _nameController.dispose();
     _phoneController.dispose();
     _ibanController.dispose();
@@ -200,64 +201,28 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Future<void> _fetchProfileData() async {
     try {
-      final futures = <Future<http.Response>>[
-        _httpClient
-            .get(Uri.parse(
-                "$baseUrl?action=get_profile&user_id=${widget.userId}"))
-            .timeout(_apiTimeout),
-        _httpClient
-            .get(Uri.parse(
-                "$baseUrl?action=get_history&user_id=${widget.userId}&user_type=${widget.userType}"))
-            .timeout(_apiTimeout),
-      ];
-
-      if (widget.userType == 'provider') {
-        futures.add(_httpClient
-            .get(Uri.parse(
-                "$baseUrl?action=get_earnings&provider_id=${widget.userId}"))
-            .timeout(_apiTimeout));
-      }
-
-      final responses = <http.Response>[];
-      for (var future in futures) {
-        responses.add(await future);
-      }
-
+      final response = await _httpClient
+          .get(
+              Uri.parse("$baseUrl?action=get_profile&user_id=${widget.userId}"))
+          .timeout(_apiTimeout);
       if (!mounted) return;
-
-      if (responses[0].statusCode == 200 && responses[1].statusCode == 200) {
-        final pData = json.decode(responses[0].body);
-        final hData = json.decode(responses[1].body);
-
-        if (widget.userType == 'provider' &&
-            responses.length > 2 &&
-            responses[2].statusCode == 200) {
-          final eData = json.decode(responses[2].body);
-          if (eData['status'] == 'success') {
-            earnings = eData['earnings'] ?? earnings;
-          }
-        }
-
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (response.statusCode == 200 &&
+          data is Map &&
+          data['status'] == 'success' &&
+          data['profile'] is Map) {
         setState(() {
-          profile = pData['profile'] ?? {};
+          profile = Map<String, dynamic>.from(data['profile'] as Map);
           _nameController.text = profile['name']?.toString() ?? '';
           _phoneController.text = profile['phone']?.toString() ?? '';
           _ibanController.text = profile['iban']?.toString() ?? '';
           _mapLinkController.text = profile['map_link']?.toString() ?? '';
           selectedService =
               profile['service_category']?.toString() ?? 'mechanic';
-          historyJobs = (hData['history'] as List<dynamic>?)
-                  ?.where((job) =>
-                      job['status'] == 'completed' ||
-                      (job['service_type'] == 'rentacar' &&
-                          job['status'] == 'cancelled'))
-                  .toList() ??
-              [];
-          _historyPage = 1;
           isLoading = false;
         });
-
         _listAnimController.forward();
+        unawaited(_loadProfileExtras());
       } else {
         setState(() => isLoading = false);
         _showCustomSnackBar("Veriler sunucudan alınamadı.", isError: true);
@@ -270,6 +235,44 @@ class _ProfileScreenState extends State<ProfileScreen>
             isError: true);
       }
     }
+  }
+
+  Future<void> _loadProfileExtras() async {
+    try {
+      final response = await _httpClient
+          .get(Uri.parse(
+              "$baseUrl?action=get_history&user_id=${widget.userId}&user_type=${widget.userType}"))
+          .timeout(_apiTimeout);
+      if (mounted && response.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        if (data is Map && data['history'] is List) {
+          setState(() {
+            historyJobs = (data['history'] as List)
+                .whereType<Map>()
+                .where((job) =>
+                    job['status'] == 'completed' ||
+                    (job['service_type'] == 'rentacar' &&
+                        job['status'] == 'cancelled'))
+                .toList();
+            _historyPage = 1;
+          });
+        }
+      }
+    } catch (_) {/* Profile is usable without history. */}
+    if (widget.userType != 'provider') return;
+    try {
+      final response = await _httpClient
+          .get(Uri.parse(
+              "$baseUrl?action=get_earnings&provider_id=${widget.userId}"))
+          .timeout(_apiTimeout);
+      if (mounted && response.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        if (data is Map && data['earnings'] is Map) {
+          setState(() =>
+              earnings = Map<String, dynamic>.from(data['earnings'] as Map));
+        }
+      }
+    } catch (_) {/* Profile is usable without earnings. */}
   }
 
   Future<void> _linkGoogleAccount() async {
@@ -1663,8 +1666,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                         color: Colors.white, strokeWidth: 2))
                                 : const FittedBox(
                                     child: Text("Kalıcı Sil",
-                                        textScaler:
-                                            TextScaler.linear(1.0),
+                                        textScaler: TextScaler.linear(1.0),
                                         style: TextStyle(
                                             color: Colors.white,
                                             fontWeight: FontWeight.w900,
@@ -1833,150 +1835,132 @@ class _ProfileScreenState extends State<ProfileScreen>
                     )
                   ],
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                child: Column(
                   children: [
-                    // Parlayan Canlı Avatar
-                    RepaintBoundary(
-                      child: AnimatedBuilder(
-                          animation: _pulseController,
-                          builder: (context, child) {
-                            return Container(
-                              width: 66,
-                              height: 66,
-                              decoration: BoxDecoration(
-                                  color: _primaryColor,
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                        color: _primaryColor.withValues(
-                                            alpha: 0.35 +
-                                                (_pulseController.value *
-                                                    0.25)),
-                                        blurRadius: 22,
-                                        spreadRadius:
-                                            _pulseController.value * 3,
-                                        offset: const Offset(0, 4)),
-                                  ]),
-                              child: Center(
-                                child: Icon(
-                                    isProvider
-                                        ? _getServiceIcon(
-                                            profile['service_category']
-                                                ?.toString())
-                                        : _isRentacar
-                                            ? Icons.storefront_rounded
-                                            : Icons.person_rounded,
-                                    size: 34,
-                                    color: Colors.black),
-                              ),
-                            );
-                          }),
-                    ),
-                    const SizedBox(width: 18),
-                    // Kullanıcı Bilgisi
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            profile['name']?.toString().isNotEmpty == true
-                                ? profile['name'].toString()
-                                : "Kullanıcı",
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.5),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 5),
-                          Row(
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Parlayan Canlı Avatar
+                        RepaintBoundary(
+                          child: AnimatedBuilder(
+                              animation: _pulseController,
+                              builder: (context, child) {
+                                return Container(
+                                  width: 66,
+                                  height: 66,
+                                  decoration: BoxDecoration(
+                                      color: _primaryColor,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                            color: _primaryColor.withValues(
+                                                alpha: 0.35 +
+                                                    (_pulseController.value *
+                                                        0.25)),
+                                            blurRadius: 22,
+                                            spreadRadius:
+                                                _pulseController.value * 3,
+                                            offset: const Offset(0, 4)),
+                                      ]),
+                                  child: Center(
+                                    child: Icon(
+                                        isProvider
+                                            ? _getServiceIcon(
+                                                profile['service_category']
+                                                    ?.toString())
+                                            : _isRentacar
+                                                ? Icons.storefront_rounded
+                                                : Icons.person_rounded,
+                                        size: 34,
+                                        color: Colors.black),
+                                  ),
+                                );
+                              }),
+                        ),
+                        const SizedBox(width: 18),
+                        // Kullanıcı Bilgisi
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.phone_android_rounded,
-                                  color: Colors.white.withValues(alpha: 0.5),
-                                  size: 15),
-                              const SizedBox(width: 6),
-                              Expanded(
+                              Text(
+                                profile['name']?.toString().isNotEmpty == true
+                                    ? profile['name'].toString()
+                                    : "Kullanıcı",
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -0.5),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 5),
+                              Row(
+                                children: [
+                                  Icon(Icons.phone_android_rounded,
+                                      color:
+                                          Colors.white.withValues(alpha: 0.5),
+                                      size: 15),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      profile['phone']?.toString().isNotEmpty ==
+                                              true
+                                          ? profile['phone'].toString()
+                                          : "Telefon yok",
+                                      style: const TextStyle(
+                                          color: _subtitleColor,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: _primaryColor.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                      color:
+                                          _primaryColor.withValues(alpha: 0.3),
+                                      width: 1),
+                                ),
                                 child: Text(
-                                  profile['phone']?.toString().isNotEmpty ==
-                                          true
-                                      ? profile['phone'].toString()
-                                      : "Telefon yok",
+                                  isProvider
+                                      ? "Usta / ${_getServiceTypeName(profile['service_category']?.toString())}"
+                                      : _isRentacar
+                                          ? "Rent A Car Hesabı"
+                                          : "Müşteri Hesabı",
                                   style: const TextStyle(
-                                      color: _subtitleColor,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                      color: _primaryColor,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.2),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: _primaryColor.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                  color: _primaryColor.withValues(alpha: 0.3),
-                                  width: 1),
-                            ),
-                            child: Text(
-                              isProvider
-                                  ? "Usta / ${_getServiceTypeName(profile['service_category']?.toString())}"
-                                  : _isRentacar
-                                      ? "Rent A Car Hesabı"
-                                      : "Müşteri Hesabı",
-                              style: const TextStyle(
-                                  color: _primaryColor,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.2),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 10),
-                    // KART İÇİ ÇIKIŞ YAP BUTONU
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: _handleLogout,
-                        borderRadius: BorderRadius.circular(16),
-                        splashColor: _dangerColor.withValues(alpha: 0.3),
-                        highlightColor: Colors.transparent,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: _dangerColor.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                                color: _dangerColor.withValues(alpha: 0.4),
-                                width: 1.5),
-                          ),
-                          child: const Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.logout_rounded,
-                                  color: _dangerColor, size: 22),
-                              SizedBox(height: 4),
-                              Text(
-                                "Çıkış Yap",
-                                style: TextStyle(
-                                    color: _dangerColor,
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 12,
-                                    letterSpacing: -0.2),
-                              ),
-                            ],
-                          ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _handleLogout,
+                        icon: const Icon(Icons.logout_rounded, size: 18),
+                        label: const Text('Çıkış Yap'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: _dangerColor,
+                          side: BorderSide(
+                              color: _dangerColor.withValues(alpha: 0.45)),
                         ),
                       ),
                     ),
@@ -1998,14 +1982,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ),
                   ),
                   const SizedBox(width: 10),
-                  const Text(
+                  const Expanded(
+                      child: Text(
                     "Sosyal Hesap Bağlantıları",
                     style: TextStyle(
                         fontSize: 19,
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
                         letterSpacing: -0.4),
-                  ),
+                  )),
                 ],
               ),
               const SizedBox(height: 14),
@@ -2205,37 +2190,36 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ),
                   ),
                   const SizedBox(width: 10),
-                  const Text(
+                  const Expanded(
+                      child: Text(
                     "Kullanıcı İşlemleri",
                     style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
                         letterSpacing: -0.4),
-                  ),
+                  )),
                 ],
               ),
 
               const SizedBox(height: 18),
 
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: constraints.maxWidth > 480 ? 2 : 2,
-                childAspectRatio: (constraints.maxWidth < 360 ? .85 : 1.15) /
-                    MediaQuery.textScalerOf(context).scale(1),
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
+              Column(
                 children: [
                   _buildSweetActionButton(
                     icon: Icons.workspace_premium_outlined,
                     title: 'Aboneliklerim',
                     subtitle: 'Paketler & kalan süre',
                     accentColor: _primaryColor,
-                    gradientColors: const [Color(0xFF00FFA3), Color(0xFF00B074)],
+                    gradientColors: const [
+                      Color(0xFF00FFA3),
+                      Color(0xFF00B074)
+                    ],
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => SubscriptionsScreen(userId: widget.userId, userType: widget.userType))),
+                        builder: (_) => SubscriptionsScreen(
+                            userId: widget.userId, userType: widget.userType))),
                   ),
+                  const SizedBox(height: 10),
                   _buildSweetActionButton(
                     icon: Icons.manage_accounts_rounded,
                     title: "Profili Düzenle",
@@ -2249,6 +2233,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ],
                     onTap: _showEditProfileDialog,
                   ),
+                  const SizedBox(height: 10),
                   _buildSweetActionButton(
                     icon: Icons.receipt_long_rounded,
                     title: "Geçmişim",
@@ -2262,6 +2247,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       DefaultTabController.of(tabContext).animateTo(1);
                     },
                   ),
+                  const SizedBox(height: 10),
                   _buildSweetActionButton(
                     icon: Icons.lock_reset_rounded,
                     title: "Şifre Değiştir",
@@ -2273,6 +2259,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ],
                     onTap: _showChangePasswordDialog,
                   ),
+                  const SizedBox(height: 10),
                   _buildSweetActionButton(
                     icon: Icons.mark_chat_unread_rounded,
                     title: "Geri Bildirim",
@@ -2428,89 +2415,52 @@ class _ProfileScreenState extends State<ProfileScreen>
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(18),
         splashColor: accentColor.withValues(alpha: 0.2),
         highlightColor: accentColor.withValues(alpha: 0.1),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             color: _cardColor.withValues(alpha: 0.75),
-            borderRadius: BorderRadius.circular(26),
-            border: Border.all(
-                color: accentColor.withValues(alpha: 0.25), width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: accentColor.withValues(alpha: 0.12),
-                blurRadius: 18,
-                spreadRadius: 1,
-                offset: const Offset(0, 6),
-              )
-            ],
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Row(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: gradientColors,
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: gradientColors.first.withValues(alpha: 0.4),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        )
-                      ],
-                    ),
-                    child: Icon(icon, color: Colors.black, size: 24),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.06),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(Icons.arrow_forward_rounded,
-                        color: accentColor, size: 16),
-                  ),
-                ],
+              Container(
+                padding: const EdgeInsets.all(11),
+                decoration: BoxDecoration(
+                  color: gradientColors.first.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: accentColor, size: 23),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: -0.3,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white.withValues(alpha: 0.5),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(title,
+                        style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 3),
+                    Text(subtitle,
+                        style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: _subtitleColor),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right_rounded, color: accentColor, size: 20),
             ],
           ),
         ),
@@ -2845,8 +2795,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                             Colors.black.withValues(alpha: 0.7),
                                         borderRadius: BorderRadius.circular(8)),
                                     child: const Text("ÖNCESİ",
-                                        textScaler:
-                                            TextScaler.linear(1.0),
+                                        textScaler: TextScaler.linear(1.0),
                                         style: TextStyle(
                                             color: Colors.white,
                                             fontSize: 10,
@@ -2883,8 +2832,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                             .withValues(alpha: 0.9),
                                         borderRadius: BorderRadius.circular(8)),
                                     child: const Text("SONRASI",
-                                        textScaler:
-                                            TextScaler.linear(1.0),
+                                        textScaler: TextScaler.linear(1.0),
                                         style: TextStyle(
                                             color: Colors.black,
                                             fontSize: 10,
@@ -2967,8 +2915,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 children: [
                                   const Expanded(
                                       child: Text("Usta Başlangıç",
-                                          textScaler:
-                                              TextScaler.linear(1.0),
+                                          textScaler: TextScaler.linear(1.0),
                                           style: TextStyle(
                                               color: Colors.white,
                                               fontSize: 15))),

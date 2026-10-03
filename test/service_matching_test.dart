@@ -14,6 +14,7 @@ import 'package:ototag/rental_booking_screen.dart';
 import 'package:ototag/services/service_offer_service.dart';
 import 'package:ototag/services/rental_service.dart';
 import 'package:ototag/widgets/matching_status_card.dart';
+import 'package:ototag/widgets/matching_radar.dart';
 
 final offer = <String, dynamic>{
   'bid_id': 7,
@@ -58,7 +59,9 @@ Future<void> mount(WidgetTester tester, ServiceOfferService service,
               service: service,
               enableRealtime: false,
               trackingBuilder: (_) =>
-                  const Scaffold(body: Text('Takip ekranı'))))));
+                  const Scaffold(body: Text('Takip ekranı')),
+              dashboardBuilder: (_) =>
+                  const Scaffold(body: Text('Talep kapandı'))))));
   await tester.pumpAndSettle();
 }
 
@@ -112,6 +115,58 @@ void main() {
                     stage: 2)))));
     await tester.pumpAndSettle();
     expect(tester.binding.hasScheduledFrame, isFalse);
+  });
+
+  testWidgets(
+      'waiting customer shows radar until the first verified offer arrives',
+      (tester) async {
+    var hasOffer = false;
+    final service = ServiceOfferService(
+        client: MockClient((_) async => response(hasOffer
+            ? snapshot()
+            : {'status': 'success', 'job_status': 'searching', 'bids': []})));
+    await tester.pumpWidget(MaterialApp(
+        theme: appTheme(),
+        home: CustomerBidsScreen(
+            jobId: 9,
+            customerId: 45,
+            service: service,
+            enableRealtime: false)));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(MatchingRadar), findsOneWidget);
+    expect(find.text('Usta teklifleri bekleniyor'), findsOneWidget);
+    hasOffer = true;
+    await tester.tap(find.byTooltip('Teklifleri yenile'));
+    await tester.pumpAndSettle();
+    expect(find.byType(MatchingRadar), findsNothing);
+    expect(find.text('1 teklif geldi'), findsOneWidget);
+    expect(tester.binding.hasScheduledFrame, isFalse);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('unanswered search closes once and returns customer to dashboard',
+      (tester) async {
+    var expiryPosts = 0;
+    final service = ServiceOfferService(client: MockClient((request) async {
+      if (request.method == 'POST') {
+        expiryPosts++;
+        expect(request.url.queryParameters['action'],
+            'expire_unanswered_service_job');
+        expect(request.bodyFields['job_id'], '9');
+        expect(request.bodyFields['customer_id'], '1');
+        return response({'status': 'success', 'job_status': 'cancelled'});
+      }
+      return response(
+          {'status': 'success', 'job_status': 'searching', 'bids': []});
+    }));
+    await mount(tester, service);
+    await tester.pump(const Duration(seconds: 21));
+    await tester.pumpAndSettle();
+    expect(expiryPosts, 1);
+    expect(find.text('Talep kapandı'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
   });
 
   testWidgets('acceptance sends shown price/version once and navigates once',

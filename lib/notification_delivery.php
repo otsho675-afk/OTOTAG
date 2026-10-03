@@ -93,6 +93,15 @@ function vehicleReminderPlan($rawDate,$now=null) {
     $stage=$days<0 ? 'late-'.(int)floor((abs($days)-1)/7) : ($days===0 ? 'today':($days<=3?'soon-3':($days<=7?'soon-7':'soon-15')));
     return ['days'=>$days,'stage'=>$stage,'label'=>$days<0 ? abs($days).' gün geçti' : ($days===0?'Bugün son gün':$days.' gün kaldı')];
 }
+function vehicleReminderScanDue($lastScan,$now=null) {
+    $now=($now ?? new DateTimeImmutable('now',new DateTimeZone('Europe/Istanbul')))
+        ->setTimezone(new DateTimeZone('Europe/Istanbul'));
+    // Revisit edited/new vehicles during the day. Per-vehicle stage keys still
+    // deduplicate reminders, so a repeated scan does not repeat a sent warning.
+    return (int)$now->format('G')>=9 &&
+        ((int)$lastScan<=0 || (int)$lastScan>$now->getTimestamp() ||
+        $now->getTimestamp()-(int)$lastScan>=300);
+}
 function vehicleReminderQueue($pdo,$now=null) {
     $now=$now ?? new DateTimeImmutable('now',new DateTimeZone('Europe/Istanbul'));
     $now=$now->setTimezone(new DateTimeZone('Europe/Istanbul'));

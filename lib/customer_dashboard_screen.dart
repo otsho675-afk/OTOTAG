@@ -32,6 +32,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'services/vehicle_kilometer_reminder.dart';
+import 'services/live_activity_service.dart';
 
 class TurkishPlateFormatter extends TextInputFormatter {
   @override
@@ -542,7 +543,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
   @override
   void initState() {
     super.initState();
-    _dayTicker = CalendarDayTicker(() { if (mounted) setState(() {}); });
+    _dayTicker = CalendarDayTicker(() {
+      if (mounted) setState(() {});
+    });
     _vehiclePageController =
         PageController(viewportFraction: _lastViewportFraction);
     WidgetsBinding.instance.addObserver(this);
@@ -555,8 +558,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
     });
     _startTimers();
 
-    if (!kIsWeb) {
-    }
+    if (!kIsWeb) {}
   }
 
   Future<void> _checkFirstTimeTutorial() async {
@@ -1003,11 +1005,16 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
           activeJobStatus = data['job_status']?.toString();
           activeServiceType = data['service_type']?.toString();
         });
-      } else if (mounted) {
+      } else if (data['status'] == 'success' && mounted) {
         setState(() {
           activeJobId = null;
           activeJobStatus = null;
         });
+        // Serverda aktif talep yoksa eski oturumdan kalan adayı da kapat.
+        // Arama ekranı bu sayfanın üstündeyse onun yeni aktivitesine dokunma.
+        if (ModalRoute.of(context)?.isCurrent ?? true) {
+          await LiveActivityService().endTracking();
+        }
       }
     } catch (e) {
       debugPrint("Check active job error: $e");
@@ -1663,6 +1670,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
       activeJobStatus = null;
     }
 
+    await LiveActivityService().endTracking();
+
     try {
       await AppSession.clear();
     } catch (e) {
@@ -1811,7 +1820,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
 
             // Deadlines are delivered by the server worker, even when the app is closed.
             if (!kIsWeb) {
-              unawaited(notificationHelper.clearLegacyVehicleReminders(fetchedVehicles));
+              unawaited(notificationHelper
+                  .clearLegacyVehicleReminders(fetchedVehicles));
             }
             return; // Başarılı, döngüyü sonlandır
           }
@@ -1901,7 +1911,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
             await FirebaseAnalytics.instance.logEvent(
                 name: 'vehicle_added', parameters: {'brand_model': brandModel});
           }
-        } catch (e) { debugPrint("İsteğe bağlı analiz kaydı gönderilemedi."); }
+        } catch (e) {
+          debugPrint("İsteğe bağlı analiz kaydı gönderilemedi.");
+        }
 
         await _fetchVehicles();
       } else {
@@ -3660,12 +3672,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
 
   Widget _buildModernVehicleCard(Map<String, dynamic> vehicle, Color cardColor,
       Color textColor, Color subtitleColor, bool isSelected) {
-    final rawInsDate =
-        VehicleDeadline.parse(vehicle['insurance_date']);
+    final rawInsDate = VehicleDeadline.parse(vehicle['insurance_date']);
     final insDate =
         rawInsDate != null ? getInsuranceExpiryDate(rawInsDate) : null;
-    final rawInspDate =
-        VehicleDeadline.parse(vehicle['inspection_date']);
+    final rawInspDate = VehicleDeadline.parse(vehicle['inspection_date']);
     final inspDate = rawInspDate != null
         ? getInspectionExpiryDate(
             rawInspDate, vehicle['brand_model']?.toString())
@@ -4785,9 +4795,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
 
       if (!mounted) return;
       final shareBox = context.findRenderObject() as RenderBox?;
-      await SharePlus.instance.share(ShareParams(files: [XFile(file.path)],
+      await SharePlus.instance.share(ShareParams(
+          files: [XFile(file.path)],
           sharePositionOrigin: shareBox != null && shareBox.hasSize
-              ? shareBox.localToGlobal(Offset.zero) & shareBox.size : const Rect.fromLTWH(1, 1, 1, 1),
+              ? shareBox.localToGlobal(Offset.zero) & shareBox.size
+              : const Rect.fromLTWH(1, 1, 1, 1),
           text:
               '🚗 $plate Araç Karnesi ektedir. Ototag ile aracımı kolayca takip ediyorum!'));
       _showTopSnackBar("Araç Karnesi başarıyla oluşturuldu.");

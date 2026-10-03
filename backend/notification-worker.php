@@ -11,9 +11,10 @@ try {
     if ((int)$pdo->query("SELECT GET_LOCK(CONCAT(DATABASE(),':notifications'),0)")->fetchColumn()!==1) exit(0);
     try {
         $today=(new DateTimeImmutable('now',new DateTimeZone('Europe/Istanbul')));
-        $previous=$pdo->query("SELECT setting_value FROM app_settings WHERE setting_key='vehicle_reminder_day'")->fetchColumn();
-        if ((int)$today->format('G')>=9 && $previous!==$today->format('Y-m-d')) {
+        $previous=$pdo->query("SELECT setting_value FROM app_settings WHERE setting_key='vehicle_reminder_scan_at'")->fetchColumn();
+        if (vehicleReminderScanDue($previous,$today)) {
             vehicleReminderQueue($pdo,$today);
+            $pdo->prepare("INSERT INTO app_settings(setting_key,setting_value) VALUES ('vehicle_reminder_scan_at',?) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)")->execute([(string)$today->getTimestamp()]);
             $pdo->prepare("INSERT INTO app_settings(setting_key,setting_value) VALUES ('vehicle_reminder_day',?) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)")->execute([$today->format('Y-m-d')]);
         }
         notificationDrain($pdo,100);

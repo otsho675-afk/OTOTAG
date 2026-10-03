@@ -15,6 +15,11 @@ notificationEnsureSchema($pdo);
 $env=[]; $count=0;
 function checkNotification($ok,$label) { global $count; if (!$ok) throw new RuntimeException('FAIL: '.$label); $count++; echo "PASS: $label\n"; }
 $today=new DateTimeImmutable('2026-10-03 09:00:00',new DateTimeZone('Europe/Istanbul'));
+checkNotification(!vehicleReminderScanDue(0,$today->setTime(8,59)),'reminder scan respects quiet hours');
+checkNotification(vehicleReminderScanDue(0,$today),'first reminder scan is due');
+checkNotification(!vehicleReminderScanDue($today->getTimestamp()-299,$today),'reminder scans are throttled');
+checkNotification(vehicleReminderScanDue($today->getTimestamp()-300,$today),'edited vehicles are reconsidered within five minutes');
+checkNotification(vehicleReminderScanDue($today->getTimestamp()+300,$today),'future stale scan timestamp recovers');
 checkNotification(vehicleReminderPlan('2026-10-02',$today)['label']==='1 gün geçti','overdue date has accurate calendar day count');
 checkNotification(vehicleReminderPlan('2026-10-03',$today)['label']==='Bugün son gün','today is not expired');
 checkNotification(vehicleReminderPlan('2026-10-02 00:00:00',$today)['days']===-1,'legacy datetime deadline is handled as a calendar date');
@@ -26,6 +31,12 @@ $pdo->exec("INSERT INTO vehicles VALUES(1,1,'42 TAG 1','2026-10-02','2026-10-10'
 checkNotification(vehicleReminderQueue($pdo,$today->setTime(8,59))===0,'quiet hours do not notify');
 checkNotification(vehicleReminderQueue($pdo,$today)===3,'closed app reminders created server side');
 checkNotification(vehicleReminderQueue($pdo,$today)===0,'repeated worker does not duplicate reminders');
+$pdo->exec("INSERT INTO vehicles VALUES(3,2,'42 TAG 3','2026-10-05',NULL)");
+checkNotification(vehicleReminderQueue($pdo,$today->modify('+5 minutes'))===1,'vehicle added after daily scan receives a reminder');
+checkNotification(vehicleReminderQueue($pdo,$today->modify('+10 minutes'))===0,'subsequent scans do not repeat new vehicle reminder');
+$pdo->exec('DELETE FROM vehicles WHERE id=3');
+$pdo->exec("DELETE FROM notification_outbox WHERE JSON_UNQUOTE(JSON_EXTRACT(payload,'$.data.vehicle_id'))='3'");
+$pdo->exec("DELETE FROM notifications WHERE message LIKE '42 TAG 3%'");
 checkNotification((int)$pdo->query('SELECT COUNT(*) FROM notifications')->fetchColumn()===3,'reminders saved to inbox');
 checkNotification(vehicleReminderQueue($pdo,$today->modify('+1 day'))===1,'newly overdue reminder is emitted once');
 checkNotification(vehicleReminderQueue($pdo,$today->modify('+4 days'))===1,'insurance enters 3 day warning without repeating overdue');

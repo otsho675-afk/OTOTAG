@@ -1,0 +1,7 @@
+# aaPanel > Web Sitesi > eliteagency.sbs > Yapılandırma: server bloğuna ekleyin.
+# Mevcut eşdeğer kurallar varsa çakışan location bloklarını tekrar eklemeyin.
+location ~ /\.(?!well-known/) { deny all; }
+location ~* \.(?:bak|sql|log|p8|pem|key)$ { deny all; }
+location ^~ /php_jwt/ { deny all; }
+location ~ ^/(?:env-kurulum|server_configuration|api_runtime|api_authorization|oauth_verification|purchase_verification|rentacar_api|rental_rules|rental_reputation|registration_rules|turkish_cities|service_matching|map_routing)\.php$ { deny all; }
+# PHP require_once dosyaları kullanmaya devam eder; HTTP erişimi engellenir.

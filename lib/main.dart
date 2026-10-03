@@ -1,47 +1,48 @@
+import 'admin_dashboard_screen.dart';
 // main.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; 
+import 'package:flutter/services.dart';
 import 'dart:ui';
-import 'dart:io';
+import 'dart:async';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'; 
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:timezone/data/latest_all.dart' as tz; 
+import 'package:timezone/data/latest_all.dart' as tz;
 
 // --- FİREBASE İÇİN EKLENEN PAKETLER ---
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
-import 'firebase_options.dart'; 
+import 'firebase_options.dart';
 
-import 'package:shared_preferences/shared_preferences.dart';
 import 'customer_dashboard_screen.dart';
 import 'provider_map_screen.dart';
 import 'login_screen.dart' show LoginScreen;
 import 'package:quick_actions/quick_actions.dart';
+import 'package:http/http.dart' as http;
+import 'services/app_session.dart';
+import 'services/authenticated_http_client.dart';
+import 'services/platform_http_client.dart';
+import 'rent_a_car_panel_screen.dart';
+import 'core/theme/app_theme.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-// Android SSL El Sıkışma & Ara Sertifika Uyumlayıcı ve Soket Optimizasyonu
-class CustomHttpOverrides extends HttpOverrides {
-  @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    return super.createHttpClient(context)
-      ..badCertificateCallback = (X509Certificate cert, String host, int port) {
-        return kDebugMode;
-      }
-      ..idleTimeout = const Duration(seconds: 3) // EKLENEN KOD: Boşta kalan (Askıda kalan) bağlantıları 3 saniyede serbest bırakır.
-      ..connectionTimeout = const Duration(seconds: 15); // EKLENEN KOD: İlk bağlantı süresini kısıtlar.
-  }
+void main() {
+  http.runWithClient(
+      _startApp, () => AuthenticatedHttpClient(createPlatformHttpClient()));
 }
 
-void main() async {
+Future<void> _startApp() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+  final mobile = !kIsWeb &&
+      [TargetPlatform.android, TargetPlatform.iOS]
+          .contains(defaultTargetPlatform);
+
   // YENİ EKLENEN KOD: Android 15 (Edge-to-Edge) Uyumluluğu
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  
+
   // Yerel saat dilimi veritabanını başlat (Zamanlanmış bildirimler için zorunludur)
   tz.initializeTimeZones();
 
@@ -52,12 +53,12 @@ void main() async {
     );
 
     // Crashlytics Web ortamını desteklemediği için yalnızca mobilde çalıştırılır
-    if (!kIsWeb) {
+    if (mobile) {
       // Arayüz (Flutter) çökmelerini yakala
       FlutterError.onError = (errorDetails) {
         FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
       };
-      
+
       // Arka plan ve API (Asenkron) çökmelerini yakala
       PlatformDispatcher.instance.onError = (error, stack) {
         FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
@@ -71,11 +72,6 @@ void main() async {
     debugPrint("Firebase başlatılamadı: $e");
   }
 
-  // Tüm uygulama genelinde geçersiz/eksik SSL sertifika engellerini kaldır
-  if (!kIsWeb) {
-    HttpOverrides.global = CustomHttpOverrides();
-  }
-  
   try {
     await dotenv.load(fileName: "config.env");
   } catch (e) {
@@ -83,59 +79,93 @@ void main() async {
   }
 
   // --- ONESIGNAL GÜNCEL YAPILANDIRMASI ---
-  if (!kIsWeb) {
-    String oneSignalAppId = dotenv.env['ONESIGNAL_APP_ID'] ?? "c12cca1e-ad0b-4d18-8746-661dc4cbdad9";
-    
-    if (oneSignalAppId.isNotEmpty) {
-      // 1. Loglama ayarını açın (Test ortamı için faydalı, canlıda kapatabilirsiniz)
-      OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
+  try {
+    await AppSession.restore();
+  } catch (e) {
+    debugPrint('Oturum geri yüklenemedi: $e');
+  }
+  if (mobile) {
+    String oneSignalAppId = dotenv.env['ONESIGNAL_APP_ID'] ??
+        "c12cca1e-ad0b-4d18-8746-661dc4cbdad9";
 
-      // 2. Uygulama ID'sini tanımlayın
-      OneSignal.initialize(oneSignalAppId);
+    try {
+      if (oneSignalAppId.isNotEmpty) {
+        // 1. Loglama ayarını açın (Test ortamı için faydalı, canlıda kapatabilirsiniz)
+        OneSignal.Debug.setLogLevel(
+            kDebugMode ? OSLogLevel.verbose : OSLogLevel.none);
 
-      // 3. Kullanıcı iznini isteyin
-      OneSignal.Notifications.requestPermission(true);
-      
-      // 4. Gelen bildirime tıklandığında ne olacağını belirler
-      OneSignal.Notifications.addClickListener((event) {
-        debugPrint('BİLDİRİME TIKLANDI: ${event.notification.title}');
-        // Yönlendirme mantığını buraya ekleyebilirsiniz
-      });
+        // 2. Uygulama ID'sini tanımlayın
+        OneSignal.initialize(oneSignalAppId);
 
-      // Arka plan bildirim yetkisi - Extension dosyalarınız tam ise OS bu hook'u kullanır.
-      OneSignal.Notifications.addForegroundWillDisplayListener((event) {
-        event.preventDefault(); // Varsayılan ve UI engelleyebilen sistem bildirimini durdur
-        
-        // Hangi sayfada olunursa olunsun navigatorKey üzerinden akıllı overlay bildirimi göster
-        if (navigatorKey.currentContext != null) {
-          SmartNotificationHelper.show(
-            context: navigatorKey.currentContext!,
-            title: event.notification.title ?? 'Yeni Bildirim',
-            body: event.notification.body ?? '',
-          );
-        } else {
-          event.notification.display(); // Bağlam bulunamazsa güvenlik önlemi olarak standardı kullan
-        }
-      });
+        // 3. Kullanıcı iznini isteyin
+        unawaited(OneSignal.Notifications.requestPermission(true)
+            .then<void>((_) {}, onError: (Object _) {}));
 
-    } else {
-      debugPrint("Uyarı: OneSignal APP ID bulunamadı.");
+        // 4. Gelen bildirime tıklandığında ne olacağını belirler
+        OneSignal.Notifications.addClickListener((event) {
+          debugPrint('BİLDİRİME TIKLANDI: ${event.notification.title}');
+          // Yönlendirme mantığını buraya ekleyebilirsiniz
+        });
+
+        // Arka plan bildirim yetkisi - Extension dosyalarınız tam ise OS bu hook'u kullanır.
+        OneSignal.Notifications.addForegroundWillDisplayListener((event) {
+          event
+              .preventDefault(); // Varsayılan ve UI engelleyebilen sistem bildirimini durdur
+
+          // Hangi sayfada olunursa olunsun navigatorKey üzerinden akıllı overlay bildirimi göster
+          if (navigatorKey.currentContext != null) {
+            SmartNotificationHelper.show(
+              context: navigatorKey.currentContext!,
+              title: event.notification.title ?? 'Yeni Bildirim',
+              body: event.notification.body ?? '',
+            );
+          } else {
+            event.notification
+                .display(); // Bağlam bulunamazsa güvenlik önlemi olarak standardı kullan
+          }
+        });
+      } else {
+        debugPrint("Uyarı: OneSignal APP ID bulunamadı.");
+      }
+    } catch (_) {
+      debugPrint('Bildirim servisi başlatılamadı; uygulama devam ediyor.');
     }
 
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: Colors.transparent, // Edge-to-Edge için transparent yapıldı
+        systemNavigationBarColor:
+            Colors.transparent, // Edge-to-Edge için transparent yapıldı
         systemNavigationBarIconBrightness: Brightness.light,
       ),
     );
-    
+
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
     ]);
   }
+
+  AppSession.invalidations.listen((_) {
+    if (mobile) {
+      unawaited(() async {
+        try {
+          await OneSignal.logout();
+        } catch (_) {
+          debugPrint('Bildirim oturumu kapatılamadı.');
+        }
+      }());
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (AppSession.token == null) {
+        navigatorKey.currentState?.pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
+            (_) => false);
+      }
+    });
+    WidgetsBinding.instance.scheduleFrame();
+  });
 
   runApp(const MyApp());
 }
@@ -149,7 +179,8 @@ class MyApp extends StatelessWidget {
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
-            textScaler: const TextScaler.linear(1.0),
+            textScaler:
+                MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.4),
           ),
           child: child!,
         );
@@ -157,24 +188,17 @@ class MyApp extends StatelessWidget {
       navigatorKey: navigatorKey,
       title: 'Oto Tamir App',
       debugShowCheckedModeBanner: false,
-
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [
-        Locale('tr', 'TR'), 
-        Locale('en', 'US'), 
+        Locale('tr', 'TR'),
+        Locale('en', 'US'),
       ],
       locale: const Locale('tr', 'TR'),
-
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFF030305),
-        useMaterial3: true,
-        fontFamily: 'Inter', 
-      ),
-      
+      theme: appTheme(),
       home: const SplashScreen(),
     );
   }
@@ -187,23 +211,24 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _opacityAnimation;
-  Widget? _nextScreen; 
+  Widget? _nextScreen;
   final QuickActions quickActions = const QuickActions();
 
   @override
   void initState() {
     super.initState();
-    _setupQuickActions(); 
-    _checkLoginStatus(); // Oturumu arka planda kontrol et
-    
+    _setupQuickActions();
+    final loginStatus = _checkLoginStatus();
+
     // Toplam animasyon süresi
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000), 
+      duration: const Duration(milliseconds: 2000),
     );
 
     // BÜYÜME (SCALE) ANİMASYONU: Bekle -> Hafifçe Küçül -> Hızla Devasa Boyuta Büyü
@@ -212,33 +237,35 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       TweenSequenceItem(tween: ConstantTween<double>(1.0), weight: 60.0),
       // Esneme payı için hafifçe küçül
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.0, end: 0.85).chain(CurveTween(curve: Curves.easeInOutCubic)), 
-        weight: 15.0
-      ),
+          tween: Tween<double>(begin: 1.0, end: 0.85)
+              .chain(CurveTween(curve: Curves.easeInOutCubic)),
+          weight: 15.0),
       // Ekrana doğru hızla yaklaş ve patla (zoom in)
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0.85, end: 40.0).chain(CurveTween(curve: Curves.easeInExpo)), 
-        weight: 25.0
-      ),
+          tween: Tween<double>(begin: 0.85, end: 40.0)
+              .chain(CurveTween(curve: Curves.easeInExpo)),
+          weight: 25.0),
     ]).animate(_animationController);
-    
+
     // GÖRÜNÜRLÜK (OPACITY) ANİMASYONU: Büyüme bitene kadar tam görünür kal, sonunda kaybol
     _opacityAnimation = TweenSequence<double>([
       TweenSequenceItem(tween: ConstantTween<double>(1.0), weight: 85.0),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.0, end: 0.0).chain(CurveTween(curve: Curves.easeOut)), 
-        weight: 15.0
-      ),
+          tween: Tween<double>(begin: 1.0, end: 0.0)
+              .chain(CurveTween(curve: Curves.easeOut)),
+          weight: 15.0),
     ]).animate(_animationController);
-    
+
     // Animasyonu başlat ve bitince diğer ekrana geç
-    _animationController.forward().then((_) {
+    _animationController.forward().then((_) async {
+      await loginStatus;
       if (mounted) {
         if (!kIsWeb) HapticFeedback.lightImpact();
         Navigator.pushReplacement(
           context,
           PageRouteBuilder(
-            pageBuilder: (_, __, ___) => _nextScreen ?? const RoleSelectionScreen(),
+            pageBuilder: (_, __, ___) =>
+                _nextScreen ?? const RoleSelectionScreen(),
             // Logo zaten ekranı kapladığı için ekran geçiş süresini sıfırlıyoruz
             transitionDuration: const Duration(milliseconds: 0),
           ),
@@ -248,12 +275,13 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 
   void _setupQuickActions() {
-    if (kIsWeb) return; 
-    
+    if (kIsWeb ||
+        ![TargetPlatform.android, TargetPlatform.iOS]
+            .contains(defaultTargetPlatform)) return;
+
     quickActions.initialize((String shortcutType) async {
-      final prefs = await SharedPreferences.getInstance();
-      final int? userId = prefs.getInt('logged_in_user_id');
-      final String? userType = prefs.getString('logged_in_user_type');
+      final int? userId = AppSession.userId;
+      final String? userType = AppSession.userType;
 
       if (userId != null && userType == 'customer') {
         if (shortcutType == 'action_mechanic') {
@@ -269,29 +297,48 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     });
 
     quickActions.setShortcutItems(<ShortcutItem>[
-      const ShortcutItem(type: 'action_mechanic', localizedTitle: 'Tamirci Çağır', icon: 'marker_mechanic'),
-      const ShortcutItem(type: 'action_tow', localizedTitle: 'Çekici Çağır', icon: 'marker_tow'),
-      const ShortcutItem(type: 'action_tire', localizedTitle: 'Lastikçi Çağır', icon: 'marker_tire'),
-      const ShortcutItem(type: 'action_wash', localizedTitle: 'Oto Yıkama Çağır', icon: 'marker_wash'),
+      const ShortcutItem(
+          type: 'action_mechanic',
+          localizedTitle: 'Tamirci Çağır',
+          icon: 'marker_mechanic'),
+      const ShortcutItem(
+          type: 'action_tow',
+          localizedTitle: 'Çekici Çağır',
+          icon: 'marker_tow'),
+      const ShortcutItem(
+          type: 'action_tire',
+          localizedTitle: 'Lastikçi Çağır',
+          icon: 'marker_tire'),
+      const ShortcutItem(
+          type: 'action_wash',
+          localizedTitle: 'Oto Yıkama Çağır',
+          icon: 'marker_wash'),
     ]);
   }
 
   Future<void> _checkLoginStatus() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final int? userId = prefs.getInt('logged_in_user_id');
-      final String? userType = prefs.getString('logged_in_user_type');
-      
+      final int? userId = AppSession.userId;
+      final String? userType = AppSession.userType;
+
       if (userId != null && userType != null) {
-        if (!kIsWeb) {
-          OneSignal.login(userId.toString()); 
+        if (!kIsWeb &&
+            [TargetPlatform.android, TargetPlatform.iOS]
+                .contains(defaultTargetPlatform)) {
+          try {
+            await OneSignal.login(userId.toString());
+          } catch (_) {}
         }
         await Future.delayed(const Duration(milliseconds: 300));
-        
+
         if (userType == 'customer') {
           _nextScreen = CustomerDashboardScreen(customerId: userId);
         } else if (userType == 'provider') {
           _nextScreen = ProviderMapScreen(providerId: userId);
+        } else if (userType == 'rentacar') {
+          _nextScreen = RentACarPanelScreen(companyId: userId);
+        } else if (userType == 'admin') {
+          _nextScreen = const AdminDashboardScreen();
         }
       }
     } catch (e) {
@@ -311,7 +358,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     final double logoSize = size.width > 600 ? 160 : 120;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF030305), // veya yeşil arkaplan istiyorsanız: Color(0xFF00B050)
+      backgroundColor: const Color(
+          0xFF030305), // veya yeşil arkaplan istiyorsanız: Color(0xFF00B050)
       body: Center(
         child: AnimatedBuilder(
           animation: _animationController,
@@ -322,27 +370,22 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 opacity: _opacityAnimation.value,
                 child: Container(
                   padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF00FFA3).withValues(alpha: 0.25), 
-                        blurRadius: 50, 
-                        spreadRadius: 10
-                      )
-                    ]
-                  ),
-                  child: Image.asset(
-                    'assets/images/logo.png', 
-                    // YENİ EKLENEN KOD: Asset resminin boyutunu kısıtladık
-                    cacheWidth: (logoSize * MediaQuery.of(context).devicePixelRatio).round(),
-                    height: logoSize, 
-                    errorBuilder: (context, error, stackTrace) => Icon(
-                      Icons.directions_car_rounded, 
-                      color: const Color(0xFF00FFA3), 
-                      size: logoSize
-                    )
-                  ),
+                  decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [
+                    BoxShadow(
+                        color: const Color(0xFF00FFA3).withValues(alpha: 0.25),
+                        blurRadius: 50,
+                        spreadRadius: 10)
+                  ]),
+                  child: Image.asset('assets/images/logo.png',
+                      // YENİ EKLENEN KOD: Asset resminin boyutunu kısıtladık
+                      cacheWidth:
+                          (logoSize * MediaQuery.of(context).devicePixelRatio)
+                              .round(),
+                      height: logoSize,
+                      errorBuilder: (context, error, stackTrace) => Icon(
+                          Icons.directions_car_rounded,
+                          color: const Color(0xFF00FFA3),
+                          size: logoSize)),
                 ),
               ),
             );
@@ -370,98 +413,102 @@ class RoleSelectionScreen extends StatelessWidget {
               height: MediaQuery.sizeOf(context).width * 1.2,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [const Color(0xFF00FFA3).withValues(alpha: 0.12), Colors.transparent],
-                  stops: const [0.1, 0.8]
-                ),
+                gradient: RadialGradient(colors: [
+                  const Color(0xFF00FFA3).withValues(alpha: 0.12),
+                  Colors.transparent
+                ], stops: const [
+                  0.1,
+                  0.8
+                ]),
               ),
             ),
           ),
           SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 500),
-                    child: TweenAnimationBuilder<double>(
-                      tween: Tween<double>(begin: 0.0, end: 1.0),
-                      duration: const Duration(milliseconds: 800),
-                      curve: Curves.easeOutCubic,
-                      builder: (context, value, child) {
-                        return Opacity(
-                          opacity: value,
-                          child: Transform.translate(
-                            offset: Offset(0, 30 * (1 - value)),
-                            child: child,
-                          ),
-                        );
-                      },
-                      child: SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(),
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: constraints.maxWidth > 600 ? 0 : 24.0, 
-                            vertical: 24.0
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Align(
-                                alignment: Alignment.center,
-                                child: Image.asset(
-                                  'assets/images/logo.png', 
+            child: LayoutBuilder(builder: (context, constraints) {
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 500),
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween<double>(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 800),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, value, child) {
+                      return Opacity(
+                        opacity: value,
+                        child: Transform.translate(
+                          offset: Offset(0, 30 * (1 - value)),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: constraints.maxWidth > 600 ? 0 : 24.0,
+                            vertical: 24.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Align(
+                              alignment: Alignment.center,
+                              child: Image.asset('assets/images/logo.png',
                                   // YENİ EKLENEN KOD: Asset resminin boyutunu kısıtladık
-                                  cacheWidth: (80 * MediaQuery.of(context).devicePixelRatio).round(),
-                                  height: 80, 
-                                  errorBuilder: (context, error, stackTrace) => const Icon(
-                                    Icons.directions_car_rounded, 
-                                    color: Color(0xFF00FFA3), 
-                                    size: 80
-                                  )
-                                ),
-                              ),
-                              const SizedBox(height: 50),
-                              const Text(
-                                "Hoş Geldiniz",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -1.0),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                "Lütfen devam etmek istediğiniz rolü seçin",
-                                style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), fontWeight: FontWeight.w500, height: 1.4),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 60),
-                              
-                              _buildRoleButton(
-                                context: context,
-                                title: "Hizmet Almak İstiyorum",
-                                subtitle: "Çekici, tamirci veya yıkama ara",
-                                icon: Icons.person_search_rounded,
-                                userType: 'customer',
-                              ),
-                              
-                              const SizedBox(height: 20),
-                              
-                              _buildRoleButton(
-                                context: context,
-                                title: "Hizmet Vermek İstiyorum",
-                                subtitle: "Müşterilere hizmet sun ve kazan",
-                                icon: Icons.engineering_rounded,
-                                userType: 'provider',
-                                isOutline: true,
-                              ),
-                            ],
-                          ),
+                                  cacheWidth: (80 *
+                                          MediaQuery.of(context)
+                                              .devicePixelRatio)
+                                      .round(),
+                                  height: 80,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      const Icon(Icons.directions_car_rounded,
+                                          color: Color(0xFF00FFA3), size: 80)),
+                            ),
+                            const SizedBox(height: 50),
+                            const Text(
+                              "Hoş Geldiniz",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontSize: 34,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                  letterSpacing: -1.0),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              "Lütfen devam etmek istediğiniz rolü seçin",
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white.withValues(alpha: 0.6),
+                                  fontWeight: FontWeight.w500,
+                                  height: 1.4),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 60),
+                            _buildRoleButton(
+                              context: context,
+                              title: "Hizmet Almak İstiyorum",
+                              subtitle: "Çekici, tamirci veya yıkama ara",
+                              icon: Icons.person_search_rounded,
+                              userType: 'customer',
+                            ),
+                            const SizedBox(height: 20),
+                            _buildRoleButton(
+                              context: context,
+                              title: "Hizmet Vermek İstiyorum",
+                              subtitle: "Müşterilere hizmet sun ve kazan",
+                              icon: Icons.engineering_rounded,
+                              userType: 'provider',
+                              isOutline: true,
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ),
-                );
-              }
-            ),
+                ),
+              );
+            }),
           ),
         ],
       ),
@@ -483,7 +530,8 @@ class RoleSelectionScreen extends StatelessWidget {
           context,
           PageRouteBuilder(
             pageBuilder: (_, __, ___) => LoginScreen(userType: userType),
-            transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
+            transitionsBuilder: (_, anim, __, child) =>
+                FadeTransition(opacity: anim, child: child),
           ),
         );
       },
@@ -494,22 +542,36 @@ class RoleSelectionScreen extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         decoration: BoxDecoration(
-          color: isOutline ? Colors.white.withValues(alpha: 0.02) : const Color(0xFF00FFA3),
+          color: isOutline
+              ? Colors.white.withValues(alpha: 0.02)
+              : const Color(0xFF00FFA3),
           borderRadius: BorderRadius.circular(28),
-          border: isOutline ? Border.all(color: const Color(0xFF00FFA3).withValues(alpha: 0.8), width: 2) : null,
-          boxShadow: isOutline ? [] : [
-            BoxShadow(color: const Color(0xFF00FFA3).withValues(alpha: 0.35), blurRadius: 25, offset: const Offset(0, 8))
-          ],
+          border: isOutline
+              ? Border.all(
+                  color: const Color(0xFF00FFA3).withValues(alpha: 0.8),
+                  width: 2)
+              : null,
+          boxShadow: isOutline
+              ? []
+              : [
+                  BoxShadow(
+                      color: const Color(0xFF00FFA3).withValues(alpha: 0.35),
+                      blurRadius: 25,
+                      offset: const Offset(0, 8))
+                ],
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: isOutline ? const Color(0xFF00FFA3).withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(20)
-              ),
-              child: Icon(icon, size: 30, color: isOutline ? const Color(0xFF00FFA3) : Colors.black87),
+                  color: isOutline
+                      ? const Color(0xFF00FFA3).withValues(alpha: 0.15)
+                      : Colors.black.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20)),
+              child: Icon(icon,
+                  size: 30,
+                  color: isOutline ? const Color(0xFF00FFA3) : Colors.black87),
             ),
             const SizedBox(width: 20),
             Expanded(
@@ -519,37 +581,38 @@ class RoleSelectionScreen extends StatelessWidget {
                   Text(
                     title,
                     style: TextStyle(
-                      fontSize: 18, 
-                      fontWeight: FontWeight.w900, 
-                      color: isOutline ? Colors.white : Colors.black87,
-                      letterSpacing: -0.5
-                    ),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: isOutline ? Colors.white : Colors.black87,
+                        letterSpacing: -0.5),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     subtitle,
                     style: TextStyle(
-                      fontSize: 14, 
-                      fontWeight: FontWeight.w600, 
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
                       color: isOutline ? Colors.white60 : Colors.black54,
                     ),
                   ),
                 ],
               ),
             ),
-            Icon(
-              Icons.arrow_forward_ios_rounded, 
-              color: isOutline ? const Color(0xFF00FFA3) : Colors.black54, 
-              size: 20
-            )
+            Icon(Icons.arrow_forward_ios_rounded,
+                color: isOutline ? const Color(0xFF00FFA3) : Colors.black54,
+                size: 20)
           ],
         ),
       ),
     );
   }
 }
+
 class SmartNotificationHelper {
-  static void show({required BuildContext context, required String title, required String body}) {
+  static void show(
+      {required BuildContext context,
+      required String title,
+      required String body}) {
     final overlay = Overlay.of(context);
     late OverlayEntry overlayEntry;
 
@@ -557,12 +620,14 @@ class SmartNotificationHelper {
       builder: (context) {
         final size = MediaQuery.of(context).size;
         final topPadding = MediaQuery.of(context).padding.top;
-        
+
         // Tablet/Web boyutlarında bildirimi ortala ve genişliğini kısıtla, mobilde tam genişlik kullan
-        final double horizontalMargin = size.width > 600 ? (size.width - 400) / 2 : 16.0;
+        final double horizontalMargin =
+            size.width > 600 ? (size.width - 400) / 2 : 16.0;
 
         return Positioned(
-          top: topPadding + 10, // Her zaman güvenli alandan 10 piksel aşağıda çıkar
+          top: topPadding +
+              10, // Her zaman güvenli alandan 10 piksel aşağıda çıkar
           left: horizontalMargin,
           right: horizontalMargin,
           child: Material(
@@ -585,7 +650,8 @@ class SmartNotificationHelper {
                 },
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   decoration: BoxDecoration(
                     color: const Color(0xFF151518),
                     borderRadius: BorderRadius.circular(16),
@@ -596,7 +662,9 @@ class SmartNotificationHelper {
                         offset: const Offset(0, 10),
                       ),
                     ],
-                    border: Border.all(color: const Color(0xFF00FFA3).withValues(alpha: 0.6), width: 1.5),
+                    border: Border.all(
+                        color: const Color(0xFF00FFA3).withValues(alpha: 0.6),
+                        width: 1.5),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -604,10 +672,12 @@ class SmartNotificationHelper {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF00FFA3).withValues(alpha: 0.15),
+                          color:
+                              const Color(0xFF00FFA3).withValues(alpha: 0.15),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.notifications_active_rounded, color: Color(0xFF00FFA3), size: 24),
+                        child: const Icon(Icons.notifications_active_rounded,
+                            color: Color(0xFF00FFA3), size: 24),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -618,8 +688,8 @@ class SmartNotificationHelper {
                             Text(
                               title,
                               style: const TextStyle(
-                                color: Colors.white, 
-                                fontSize: 16, 
+                                color: Colors.white,
+                                fontSize: 16,
                                 fontWeight: FontWeight.w800,
                                 fontFamily: 'Inter',
                               ),
@@ -628,7 +698,7 @@ class SmartNotificationHelper {
                             Text(
                               body,
                               style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.8), 
+                                color: Colors.white.withValues(alpha: 0.8),
                                 fontSize: 14,
                                 fontFamily: 'Inter',
                                 height: 1.4,
@@ -643,7 +713,8 @@ class SmartNotificationHelper {
                         },
                         child: const Padding(
                           padding: EdgeInsets.only(left: 8.0),
-                          child: Icon(Icons.close_rounded, color: Colors.white54, size: 22),
+                          child: Icon(Icons.close_rounded,
+                              color: Colors.white54, size: 22),
                         ),
                       ),
                     ],

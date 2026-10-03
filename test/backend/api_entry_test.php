@@ -1,0 +1,273 @@
+<?php
+// End-to-end requests through the actual api.php dispatcher on an isolated localhost server.
+require __DIR__.'/../../lib/oauth_verification.php';
+require __DIR__.'/../../lib/server_configuration.php';
+function assertApi($condition,$label) { global $count; if (!$condition) throw new RuntimeException('FAIL: '.$label); $count++; echo "PASS: $label\n"; }
+function jwtToken($id,$role,$exp=null,$algorithm='HS256',$secret=null) {
+    $secret=$secret ?? str_repeat('test-only-secret-',3);
+    return \Firebase\JWT\JWT::encode(['user_id'=>$id,'user_type'=>$role,'iat'=>time(),'exp'=>$exp ?? time()+3600],$secret,$algorithm);
+}
+function requestApi($action,$token=null,$params=[],$get=false,$origin=null) {
+    $url='http://127.0.0.1:33308/api.php?action='.$action;
+    if ($get && $params) $url.='&'.http_build_query($params);
+    $context=stream_context_create(['http'=>['method'=>$get?'GET':'POST','ignore_errors'=>true,'timeout'=>15,
+        'header'=>"Content-Type: application/x-www-form-urlencoded\r\n".($token ? 'Authorization: Bearer '.$token."\r\n" : '').($origin ? 'Origin: '.$origin."\r\n" : ''),
+        'content'=>$get?'':http_build_query($params)]]);
+    $body=file_get_contents($url,false,$context);
+    $data=json_decode($body,true);
+    preg_match('/\s(\d{3})\s/',$http_response_header[0],$match);
+    if (!is_array($data)) throw new RuntimeException('Invalid API response: '.substr($body,0,300));
+    return ['http'=>(int)$match[1], 'headers'=>$http_response_header]+$data;
+}
+function multipartApi($action,$token,$fields) {
+    $curl=curl_init('http://127.0.0.1:33308/api.php?action='.$action);
+    curl_setopt_array($curl,[CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>$fields,CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>15,CURLOPT_HTTPHEADER=>['Authorization: Bearer '.$token]]);
+    $body=curl_exec($curl); $code=curl_getinfo($curl,CURLINFO_HTTP_CODE); curl_close($curl);
+    $data=json_decode($body,true);
+    if (!is_array($data)) throw new RuntimeException('Invalid multipart response.');
+    return ['http'=>$code]+$data;
+}
+$count=0;
+$root=realpath(__DIR__.'/../..'); $serverRoot=$root.'/.dart_tool/api_http';
+if (!is_dir($serverRoot)) mkdir($serverRoot,0755,true);
+foreach (glob($root.'/lib/*.php') as $file) copy($file,$serverRoot.'/'.basename($file));
+function copyFolder($from,$to) { if (!is_dir($to)) mkdir($to,0755,true); foreach (new DirectoryIterator($from) as $entry) {
+    if ($entry->isDot()) continue; if ($entry->isDir()) copyFolder($entry->getPathname(),$to.'/'.$entry->getFilename());
+    else copy($entry->getPathname(),$to.'/'.$entry->getFilename());
+} }
+copyFolder($root.'/lib/php_jwt',$serverRoot.'/php_jwt');
+file_put_contents($serverRoot.'/.env', 'DB_HOST="127.0.0.1;port=33307"'."\n".'DB_NAME="ototag_rental_regression"'."\n".'DB_USER="root"'."\n".'DB_PASS=""'."\n".'JWT_SECRET="'.str_repeat('test-only-secret-',3).'"'."\n".'GOOGLE_OAUTH_CLIENT_IDS="test-client"'."\n".'APPLE_OAUTH_CLIENT_IDS="com.oto.tag"');
+$pdo=new PDO('mysql:host=127.0.0.1;port=33307;dbname=ototag_rental_regression;charset=utf8mb4','root','',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
+// This isolated fixture also exercises the existing full profile columns.
+foreach (['service_category'=>"VARCHAR(50) DEFAULT 'none'",'iban'=>"VARCHAR(50) DEFAULT ''",'is_premium'=>'TINYINT DEFAULT 0'] as $column=>$definition) {
+    if (!$pdo->query("SHOW COLUMNS FROM users LIKE '$column'")->fetch()) $pdo->exec("ALTER TABLE users ADD `$column` $definition");
+}
+$pdo->exec('CREATE TABLE IF NOT EXISTS admins (id INT AUTO_INCREMENT PRIMARY KEY,username VARCHAR(100),password VARCHAR(255))');
+$pdo->exec('DELETE FROM admins');
+$pdo->exec('CREATE TABLE IF NOT EXISTS vehicles (id INT PRIMARY KEY,customer_id INT,plate VARCHAR(50))');
+$pdo->exec('CREATE TABLE IF NOT EXISTS vehicle_records (id INT PRIMARY KEY,vehicle_id INT,description TEXT)');
+$pdo->exec("REPLACE INTO vehicles VALUES (1,1,'42 TAG 403')");
+$pdo->exec("REPLACE INTO vehicle_records VALUES (1,1,'Test')");
+$pdo->exec("REPLACE INTO users (id,name,city,user_type,status,is_suspended) VALUES (20,'Usta','Konya','provider','active',0)");
+$pdo->exec("REPLACE INTO jobs (id,customer_id,provider_id,service_type,status,city,agreed_price) VALUES (900,1,20,'mechanic','matched','Konya',500)");
+$pipes=[]; $process=proc_open([PHP_BINARY,'-S','127.0.0.1:33308','-t',$serverRoot],[1=>['file',$serverRoot.'/server.log','a'],2=>['file',$serverRoot.'/server.log','a']],$pipes);
+try {
+    for ($i=0;$i<30;$i++) { $socket=@fsockopen('127.0.0.1',33308,$errno,$errstr,0.1); if ($socket) { fclose($socket); break; } usleep(100000); }
+    assertApi(requestApi('get_rentacar_listings',null,[],true)['http']===401,'api.php dispatch denies anonymous rental access');
+    assertApi(requestApi('register',null,['name'=>['invalid'],'user_type'=>'customer'])['http']===422,'array fields are rejected before they can crash registration');
+    assertApi(requestApi('oauth_login',null,['oauth_provider'=>['google']])['http']===422,'malformed OAuth transport returns JSON validation error');
+    assertApi(requestApi('get_profile',null,['user_id'=>['invalid']],true)['http']===422,'array query values cannot reach typed authorization or SQL');
+    assertApi(requestApi('register',null,['name'=>str_repeat('x',262145)])['http']===422,'oversized text fields rejected before database work');
+    $customer=jwtToken(1,'customer'); $other=jwtToken(2,'customer'); $firm=jwtToken(10,'rentacar');
+    assertApi(requestApi('delete_history',$customer,['user_id'=>1,'user_type'=>'customer','job_ids'=>json_encode(range(1,101))])['http']===422,'JSON bulk history deletion is bounded before SQL work');
+    assertApi(requestApi('delete_history',$customer,['user_id'=>1,'user_type'=>'customer','job_ids'=>'[1,[2]]'])['http']===422,'nested JSON history identifiers cannot crash or become another ID');
+    assertApi(requestApi('delete_history',$customer,['user_id'=>1,'user_type'=>'customer','job_ids'=>'1,-2'])['http']===422,'negative history identifiers cannot enter SQL');
+    $business=requestApi('check_provider_subscription',$firm,['provider_id'=>10],true);
+    assertApi($business['http']===200 && $business['can_work'] && $business['trial_end']!==null,'firm reaches authenticated business subscription status');
+    assertApi(requestApi('check_provider_subscription',$other,['provider_id'=>10],true)['http']===403,'customer cannot read private firm subscription');
+    assertApi(requestApi('check_provider_subscription',$firm,['provider_id'=>12],true)['http']===403,'firm cannot inspect rival billing');
+    assertApi(requestApi('check_provider_subscription',jwtToken(20,'provider'),['provider_id'=>20],true)['http']===200,'provider retains own subscription endpoint');
+    $obd=requestApi('check_obd_subscription',$firm,['user_id'=>10],true);
+    assertApi($obd['http']===200 && $obd['is_subscribed'] && $obd['included_in_business'],'firm business trial includes diagnostic entitlement without missing-column failure');
+    assertApi(requestApi('renew_provider_subscription',$firm,['provider_id'=>10,'user_type'=>'rentacar','platform'=>'apple','product_id'=>'ototag_premium_monthly','purchase_token'=>'invalid'])['http']===422,'customer premium product cannot buy firm entitlement');
+    assertApi(requestApi('renew_provider_subscription',$other,['provider_id'=>2,'user_type'=>'customer','platform'=>'google','product_id'=>'provider_monthly_subscription','purchase_token'=>'invalid'])['http']===403,'customer role cannot buy business entitlement');
+    $appleConfig=requestApi('renew_provider_subscription',$firm,['provider_id'=>10,'user_type'=>'rentacar','platform'=>'apple','product_id'=>'ototag_provider_monthly','purchase_token'=>'test-receipt']);
+    assertApi($appleConfig['http']===503 && $appleConfig['error_code']==='APPLE_PURCHASE_CONFIGURATION','missing Apple verification secret is an actionable server configuration error');
+    $googleConfig=requestApi('renew_provider_subscription',$firm,['provider_id'=>10,'user_type'=>'rentacar','platform'=>'google','package_name'=>'com.oto.tag','product_id'=>'provider_monthly_subscription','purchase_token'=>'test-receipt']);
+    assertApi($googleConfig['http']===503 && $googleConfig['error_code']==='GOOGLE_PURCHASE_CONFIGURATION','missing Google service account is an actionable server configuration error');
+    assertApi((int)$pdo->query('SELECT COUNT(*) FROM in_app_purchases WHERE user_id=10')->fetchColumn()===0,'configuration failures never grant or record a purchase');
+    $mapProfile=['user_id'=>10,'name'=>'Konya Firma','map_link'=>'https://maps.app.goo.gl/profileLocation'];
+    assertApi(requestApi('update_profile',$firm,$mapProfile)['http']===200,'firm edits registered map link through authenticated profile');
+    assertApi(requestApi('get_profile',$firm,['user_id'=>10],true)['profile']['map_link']===$mapProfile['map_link'],'own profile returns map link for editing');
+    assertApi(requestApi('update_profile',$other,$mapProfile)['http']===403,'another account cannot edit firm map link');
+    assertApi(requestApi('update_profile',$customer,['user_id'=>1,'name'=>'Customer','map_link'=>$mapProfile['map_link']])['http']===403,'customer cannot set a firm map link');
+    $badMap=$mapProfile; $badMap['map_link']='javascript:alert(1)'; $badMap['name']='Must not save';
+    assertApi(requestApi('update_profile',$firm,$badMap)['http']===422,'unsafe map link rejected before profile write');
+    $savedProfile=requestApi('get_profile',$firm,['user_id'=>10],true)['profile'];
+    assertApi($savedProfile['name']==='Konya Firma' && $savedProfile['map_link']===$mapProfile['map_link'],'invalid edit preserves all prior profile fields');
+    assertApi(requestApi('get_rentacar_listings',$customer,[],true)['http']===200,'api.php dispatch reaches rental module');
+    assertApi(requestApi('get_rentacar_history',$customer,[],true)['http']===200,'actual dispatcher exposes private rental history');
+    assertApi(requestApi('get_rentacar_history',null,[],true)['http']===401,'history requires authentication');
+    $local = requestApi('get_rentacar_listings',$customer,[],true,'http://localhost:60369');
+    assertApi(in_array('Access-Control-Allow-Origin: http://localhost:60369',$local['headers'],true),'local Flutter CORS header');
+    $evil = requestApi('get_rentacar_listings',$customer,[],true,'http://localhost.evil.test:60369');
+    assertApi(!preg_grep('/^Access-Control-Allow-Origin:/i',$evil['headers']),'untrusted origin gets no CORS permission');
+    $configuredEnv = file_get_contents($serverRoot.'/.env');
+    file_put_contents($serverRoot.'/.env', preg_replace('/^JWT_SECRET=.*$/m','JWT_SECRET=""',$configuredEnv));
+    $missing = requestApi('get_ads',null,[],true,'http://localhost:60369');
+    assertApi($missing['http']===503 && strpos($missing['message'],'JWT_SECRET')!==false,'missing JWT gives actionable configuration error');
+    assertApi(in_array('Access-Control-Allow-Origin: http://localhost:60369',$missing['headers'],true),'CORS header survives configuration failure');
+    $preflight = stream_context_create(['http'=>['method'=>'OPTIONS','ignore_errors'=>true,'timeout'=>5,
+        'header'=>"Origin: http://localhost:60369\r\nAccess-Control-Request-Method: POST\r\nAccess-Control-Request-Headers: authorization,content-type\r\n"]]);
+    $preflightBody = file_get_contents('http://127.0.0.1:33308/api.php',false,$preflight);
+    assertApi(strpos($http_response_header[0],'204')!==false && $preflightBody==='','OPTIONS succeeds before missing JWT or authentication');
+    assertApi(in_array('Access-Control-Allow-Origin: http://localhost:60369',$http_response_header,true),'OPTIONS permits the real local development origin');
+    copy($root.'/backend/env-kurulum.php',$serverRoot.'/env-kurulum.php');
+    $installer = proc_open([PHP_BINARY,$serverRoot.'/env-kurulum.php'],[1=>['pipe','w'],2=>['pipe','w']],$installerPipes);
+    stream_get_contents($installerPipes[1]); $installerError = stream_get_contents($installerPipes[2]);
+    fclose($installerPipes[1]); fclose($installerPipes[2]);
+    assertApi(proc_close($installer)===0,'installer succeeds on existing env');
+    $installed = parseServerEnvironment(file_get_contents($serverRoot.'/.env'));
+    assertApi($installed['DB_NAME']==='ototag_rental_regression' && $installed['DB_HOST']==='127.0.0.1;port=33307' && strlen($installed['JWT_SECRET'])===64,'installer preserves database and generates signing secret');
+    assertApi(requestApi('get_rentacar_listings',jwtToken(1,'customer',null,'HS256',$installed['JWT_SECRET']),[],true,'http://localhost:60369')['http']===200,'installed env restores real API without 503');
+    $beforeRepeat = file_get_contents($serverRoot.'/.env');
+    $installer = proc_open([PHP_BINARY,$serverRoot.'/env-kurulum.php'],[1=>['pipe','w'],2=>['pipe','w']],$installerPipes);
+    stream_get_contents($installerPipes[1]); stream_get_contents($installerPipes[2]);
+    fclose($installerPipes[1]); fclose($installerPipes[2]);
+    assertApi(proc_close($installer)===0 && file_get_contents($serverRoot.'/.env')===$beforeRepeat,'repeat installer preserves signing key and entire env');
+    file_put_contents($serverRoot.'/.env',$configuredEnv);
+    $pdo->exec("DELETE FROM ads");
+    $pdo->exec("INSERT INTO ads (title,description,image_url,priority) VALUES ('Test','Test','uploads/ads/missing-file.jpg',1)");
+    $ads = requestApi('get_ads',null,[],true);
+    assertApi($ads['http']===200 && $ads['ads'][0]['image_url']===null,'missing ad file uses fallback instead of repeated 404');
+    assertApi($pdo->query('SELECT image_url FROM ads LIMIT 1')->fetchColumn()==='uploads/ads/missing-file.jpg','missing image fallback preserves stored advertisement');
+    assertApi(requestApi('get_rentacar_listings',$firm,['company_id'=>10],true)['http']===200,'firm session reaches its own listings');
+    assertApi(requestApi('get_rentacar_listings',jwtToken(1,'customer',time()-1),[],true)['http']===401,'expired JWT denied');
+    assertApi(requestApi('get_rentacar_listings',jwtToken(1,'customer',null,'HS256','wrong-secret-wrong-secret-wrong-secret'),[],true)['http']===401,'forged JWT denied');
+    assertApi(requestApi('get_profile',$other,['user_id'=>1],true)['http']===403,'another profile cannot be read');
+    assertApi(requestApi('get_vehicle_records',$other,['vehicle_id'=>1],true)['http']===403,'another vehicle records cannot be read');
+    assertApi(requestApi('get_messages',$other,['job_id'=>900,'user_id'=>2,'receiver_id'=>20],true)['http']===403,'unrelated user cannot read chat');
+    assertApi(requestApi('send_message',$customer,['job_id'=>900,'sender_id'=>1,'receiver_id'=>10,'message_text'=>'Test'])['http']===403,'spoofed chat receiver denied');
+    assertApi(requestApi('pusher_auth',$other,['socket_id'=>'1.2','channel_name'=>'private-chat_900'])['http']===403,'unrelated private chat subscription denied');
+    assertApi(requestApi('pusher_auth',$customer,['socket_id'=>'1.2','channel_name'=>'private-chat_900'])['http']===200,'participant private chat subscription allowed');
+    assertApi(requestApi('send_notification',$customer,['target'=>'all','title'=>'Test','message'=>'Test'])['http']!==200,'customer cannot broadcast notifications');
+    assertApi(requestApi('get_feedbacks',$customer,[],true)['http']===403,'customer cannot access admin feedback');
+    assertApi(requestApi('admin_login',null,['username'=>'admin','password'=>'admin123'])['http']===401,'master password fallback removed');
+    assertApi((int)$pdo->query('SELECT COUNT(*) FROM admins')->fetchColumn()===0,'default admin is not silently created');
+    assertApi(requestApi('oauth_login',null,['oauth_provider'=>'google','oauth_id'=>'forged-id','user_type'=>'customer'])['http']===401,'unsigned OAuth identity denied');
+    assertApi(requestApi('register',null,['user_type'=>'admin'])['http']===422,'public registration cannot create admin');
+    assertApi(requestApi('create_ticket',$customer,['job_id'=>900,'customer_id'=>2,'provider_id'=>20,'subject'=>'Test','message'=>'Test'])['http']===403,'spoofed support participants denied');
+    $pdo->exec("UPDATE users SET status='pending' WHERE id=10");
+    assertApi(requestApi('get_rentacar_listings',$firm,['company_id'=>10],true)['http']===403,'pending firm cannot access rental matching');
+    $pdo->exec("UPDATE users SET status='active' WHERE id=10");
+    $tickets=requestApi('get_tickets',jwtToken(99,'admin'),[],true);
+    assertApi($tickets['http']===200 && count($tickets['tickets'])>=2,'reservation complaints appear through real admin dispatcher');
+    $companyReports=array_filter($tickets['tickets'],function($t){return $t['creator_type']==='rentacar';});
+    assertApi(count($companyReports)>0 && array_values($companyReports)[0]['reporter_name']==='Konya Firma','admin sees correct reporter for company complaint');
+    assertApi(requestApi('get_tickets',$customer,[],true)['http']===403,'customers cannot read private admin complaints');
+    $rental=$pdo->query("SELECT b.* FROM rentacar_bids b JOIN jobs j ON j.id=b.job_id JOIN users c ON c.id=j.customer_id WHERE b.job_id IS NOT NULL ORDER BY b.job_id DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+    $rentalCustomer=jwtToken((int)$rental['customer_id'],'customer');
+    assertApi(requestApi('get_rentacar_booking',$rentalCustomer,['job_id'=>$rental['job_id']],true)['http']===200,'authenticated booking endpoint returns pickup detail');
+    assertApi(requestApi('report_rentacar_booking',jwtToken(3,'customer'),['job_id'=>$rental['job_id'],'subject'=>'Diğer','message'=>'Başkasının rezervasyonu hakkında şikayet'])['http']===403,'real JWT dispatcher denies unrelated reservation complaint');
+    $png=$serverRoot.'/test-photo.png';
+    file_put_contents($png,base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zl1sAAAAASUVORK5CYII='));
+    $fields=['brand'=>'Fiat','model'=>'Egea','plate'=>'42 API 999','model_year'=>'2024','daily_price'=>'1000','description'=>'HTTP fotoğraf testi'];
+    $created=multipartApi('create_rentacar_listing',$firm,$fields+['image_1'=>new CURLFile($png,'image/png','car.png')]);
+    assertApi($created['http']===201,'real multipart request creates listing with verified PNG');
+    $listingId=$created['listing_id'];
+    $photo=$pdo->query('SELECT photo1 FROM rentacar_listings WHERE id='.(int)$listingId)->fetchColumn();
+    assertApi(is_file($serverRoot.'/'.$photo),'photo saved under API root uploads');
+    $rival=multipartApi('update_rentacar_listing',jwtToken(12,'rentacar'),$fields+['listing_id'=>$listingId,'listing_version'=>1,'remove_photo_1'=>1]);
+    assertApi($rival['http']===403 && is_file($serverRoot.'/'.$photo),'rival cannot modify listing or delete its photo');
+    $updated=multipartApi('update_rentacar_listing',$firm,$fields+['listing_id'=>$listingId,'listing_version'=>1,'remove_photo_1'=>1]);
+    clearstatcache(true,$serverRoot.'/'.$photo);
+    assertApi($updated['http']===200 && !is_file($serverRoot.'/'.$photo),'owner photo removal cleans unreferenced physical file');
+    $beforeFiles=count(glob($serverRoot.'/uploads/rentacar/*'));
+    $stale=multipartApi('update_rentacar_listing',$firm,$fields+['listing_id'=>$listingId,'listing_version'=>1,'image_1'=>new CURLFile($png,'image/png','car.png')]);
+    assertApi($stale['http']===409 && count(glob($serverRoot.'/uploads/rentacar/*'))===$beforeFiles,'stale multipart update leaves no orphan upload');
+    $evil=$serverRoot.'/test-not-image.txt'; file_put_contents($evil,'This is not an image');
+    assertApi(multipartApi('update_rentacar_listing',$firm,$fields+['listing_id'=>$listingId,'listing_version'=>2,'image_1'=>new CURLFile($evil,'image/png','fake.png')])['http']===422,'client image extension and MIME cannot bypass content validation');
+    $reservation=requestApi('reserve_rentacar_listing',$other,['listing_id'=>$listingId,'listing_version'=>2,'rent_days'=>3,'total_budget'=>'3000','amount'=>'0.01']);
+    assertApi($reservation['http']===201 && $reservation['amount']==='3000.00','real api.php creates immediate total-budget reservation');
+    assertApi(requestApi('reserve_rentacar_listing',$other,['listing_id'=>$listingId,'listing_version'=>2,'rent_days'=>3,'total_budget'=>'3000'])['job_id']===$reservation['job_id'],'real HTTP retry returns same job');
+    assertApi(requestApi('admin_cancel_rentacar_booking',$other,['job_id'=>$reservation['job_id']])['http']===403,'customer cannot impersonate admin cancellation');
+    assertApi(requestApi('admin_cancel_rentacar_booking',$firm,['job_id'=>$reservation['job_id']])['http']===403,'firm cannot impersonate admin cancellation');
+    assertApi(requestApi('admin_delete_job',jwtToken(99,'admin'),['job_id'=>$reservation['job_id']])['http']===409,'rental booking cannot be deleted into an orphan reserved vehicle');
+    assertApi(requestApi('delete_account',$other,['user_id'=>2])['http']===409,'active reservation cannot be orphaned by customer account deletion');
+    assertApi(requestApi('delete_account',$firm,['user_id'=>10])['http']===409,'active reservation cannot be orphaned by company account deletion');
+    assertApi(requestApi('admin_delete_user',jwtToken(99,'admin'),['user_id'=>10])['http']===409,'admin must resolve active reservation before deleting company');
+    assertApi(requestApi('admin_cancel_rentacar_booking',jwtToken(99,'admin'),['job_id'=>$reservation['job_id']])['http']===200,'admin resolves reservation by cancellation');
+    assertApi($pdo->query('SELECT status FROM rentacar_listings WHERE id='.(int)$listingId)->fetchColumn()==='active','admin cancellation releases vehicle');
+    assertApi(requestApi('get_rentacar_booking',$other,['job_id'=>$reservation['job_id']],true)['booking']['job_status']==='cancelled','admin cancellation preserves reservation history');
+    assertApi(requestApi('admin_cancel_rentacar_booking',jwtToken(99,'admin'),['job_id'=>$reservation['job_id']])['http']===200,'admin cancellation retry is idempotent');
+    $removable=$pdo->query('SELECT id,offer_version FROM rentacar_bids WHERE job_id='.(int)$reservation['job_id'])->fetch(PDO::FETCH_ASSOC);
+    assertApi(requestApi('delete_rentacar_bid',$customer,['bid_id'=>$removable['id'],'offer_version'=>$removable['offer_version']])['http']===403,'real dispatcher rejects removing someone else offer');
+    assertApi(requestApi('delete_rentacar_bid',$other,['bid_id'=>$removable['id'],'offer_version'=>$removable['offer_version']])['http']===200,'real JWT dispatcher removes own closed offer');
+    assertApi((bool)array_filter(requestApi('get_rentacar_history',$other,[],true)['history'],function($row)use($reservation){return (int)$row['job_id']===(int)$reservation['job_id'];}),'removed offer remains in real private history endpoint');
+    $history=requestApi('get_history',$other,['user_id'=>2,'user_type'=>'customer'],true);
+    $cancelledHistory=array_filter($history['history'],function($row)use($reservation){return (int)$row['job_id']===$reservation['job_id'];});
+    assertApi(count($cancelledHistory)===1 && array_values($cancelledHistory)[0]['rental_car_model']==='Fiat Egea','customer history includes cancelled reservation with immutable vehicle details');
+    $adminToken=jwtToken(99,'admin');
+    assertApi(requestApi('admin_get_rental_activity',$customer,[],true)['http']===403,'real dispatcher blocks customer live audit');
+    assertApi(requestApi('admin_get_rental_detail',$firm,['bid_id'=>1],true)['http']===403,'real dispatcher blocks firm private audit');
+    assertApi(requestApi('admin_get_rental_activity',$adminToken,[],true)['http']===200,'real dispatcher permits administrator activity');
+    assertApi(requestApi('get_rentacar_booking',$adminToken,['job_id'=>$reservation['job_id']],true)['http']===200,'real dispatcher permits administrator reservation detail');
+    assertApi(requestApi('pusher_auth',$customer,['socket_id'=>'1.2','channel_name'=>'private-admin_rental'])['http']===403,'customer cannot subscribe private admin channel');
+    assertApi(requestApi('pusher_auth',$firm,['socket_id'=>'1.2','channel_name'=>'private-admin_rental'])['http']===403,'firm cannot subscribe private admin channel');
+    assertApi(requestApi('pusher_auth',$adminToken,['socket_id'=>'1.2','channel_name'=>'private-admin_rental'])['http']===200,'administrator can authenticate live channel');
+    assertApi(requestApi('pusher_auth',$adminToken,['socket_id'=>'1.2','channel_name'=>'private-admin_rental_forged'])['http']===403,'admin channel suffix cannot bypass authorization');
+    assertApi(requestApi('get_rentacar_company_profile',$customer,['company_id'=>10],true)['http']===200,'real dispatcher exposes company reputation to customers');
+    assertApi(requestApi('get_rentacar_company_profile',$adminToken,['company_id'=>10],true)['http']===200,'real dispatcher exposes company reputation to administrator');
+    assertApi(requestApi('add_rentacar_review',$other,['job_id'=>$reservation['job_id'],'rating'=>5])['http']===409,'cancelled HTTP booking cannot be rated');
+    $v=(int)$pdo->query('SELECT listing_version FROM rentacar_listings WHERE id='.(int)$listingId)->fetchColumn();
+    $next=requestApi('reserve_rentacar_listing',$other,['listing_id'=>$listingId,'listing_version'=>$v,'rent_days'=>1,'total_budget'=>'1000']);
+    assertApi($next['http']===201,'new HTTP booking after cancellation');
+    assertApi(requestApi('add_rentacar_review',$other,['job_id'=>$next['job_id'],'rating'=>5])['http']===409,'HTTP review before rental return blocked');
+    $bid=$pdo->query('SELECT * FROM rentacar_bids WHERE job_id='.(int)$next['job_id'])->fetch(PDO::FETCH_ASSOC);
+    assertApi(requestApi('complete_rentacar_booking',$firm,['bid_id'=>$bid['id'],'offer_version'=>$bid['offer_version']])['http']===200,'HTTP rental completes after return');
+    assertApi(requestApi('get_rentacar_booking',$other,['job_id'=>$next['job_id']],true)['booking']['can_review']===true,'HTTP booking offers rating only after completion');
+    assertApi(requestApi('add_rentacar_review',$firm,['job_id'=>$next['job_id'],'rating'=>5])['http']===403,'HTTP company cannot self-rate');
+    assertApi(requestApi('add_rentacar_review',$adminToken,['job_id'=>$next['job_id'],'rating'=>5])['http']===403,'HTTP admin cannot manually grant stars');
+    assertApi(requestApi('add_rentacar_review',$other,['job_id'=>$next['job_id'],'rating'=>4,'comment'=>'İade süreci başarılı.'])['http']===201,'HTTP completed customer review is saved');
+    assertApi(requestApi('add_rentacar_review',$other,['job_id'=>$next['job_id'],'rating'=>4,'comment'=>'İade süreci başarılı.'])['http']===200,'HTTP review network retry is idempotent');
+    $audit=requestApi('get_rentacar_booking',$adminToken,['job_id'=>$next['job_id']],true);
+    assertApi(in_array('review_added',array_column($audit['events'],'event_type'),true),'real administrator sees rating stage in audit');
+    // Ordinary provider matching must be as strict as rental matching.
+    foreach (['lat'=>'DECIMAL(10,7) DEFAULT 0','lng'=>'DECIMAL(10,7) DEFAULT 0','password'=>"VARCHAR(255) DEFAULT ''",'tax_plate'=>'VARCHAR(255) NULL','driver_license'=>'VARCHAR(255) NULL','vehicle_photo'=>'VARCHAR(255) NULL','equipment_photo'=>'VARCHAR(255) NULL','tracking_code'=>'VARCHAR(20) NULL','ip_address'=>'VARCHAR(100) NULL'] as $column=>$definition) {
+        if (!$pdo->query("SHOW COLUMNS FROM users LIKE '$column'")->fetch()) $pdo->exec("ALTER TABLE users ADD `$column` $definition");
+    }
+    foreach (['problem_description'=>"TEXT NULL",'search_radius'=>'INT DEFAULT 50','issue_photo'=>'VARCHAR(255) NULL','issue_audio'=>'VARCHAR(255) NULL','match_code'=>'VARCHAR(20) NULL'] as $column=>$definition) {
+        if (!$pdo->query("SHOW COLUMNS FROM jobs LIKE '$column'")->fetch()) $pdo->exec("ALTER TABLE jobs ADD `$column` $definition");
+    }
+    $pdo->exec("CREATE TABLE IF NOT EXISTS bids (id INT AUTO_INCREMENT PRIMARY KEY,job_id INT,provider_id INT,amount DECIMAL(10,2),estimated_time INT DEFAULT 30,provider_note TEXT,last_bidder VARCHAR(20) DEFAULT 'provider',negotiation_count INT DEFAULT 0,status VARCHAR(30) DEFAULT 'pending') ENGINE=InnoDB");
+    $pdo->exec('DELETE FROM bids WHERE provider_id BETWEEN 800 AND 804');
+    $pdo->exec('CREATE TABLE IF NOT EXISTS ratings (id INT AUTO_INCREMENT PRIMARY KEY,job_id INT,provider_id INT,customer_id INT,rating INT,rater_type VARCHAR(20)) ENGINE=InnoDB');
+    $pdo->exec("INSERT INTO users(id,name,city,user_type,status,service_category,lat,lng,created_at) VALUES (800,'Tow','Konya','provider','active','tow',37.87,32.48,NOW()),(801,'Other City','Ankara','provider','active','mechanic',37.87,32.48,NOW()),(802,'Local Mechanic','Konya','provider','active','mechanic',37.87,32.48,NOW()),(803,'Expired','Konya','provider','active','mechanic',37.87,32.48,DATE_SUB(NOW(),INTERVAL 40 DAY)),(804,'Second Local','Konya','provider','active','mechanic',37.87,32.48,NOW())");
+    $pdo->exec("INSERT INTO jobs(id,customer_id,service_type,status,city,latitude,longitude,search_radius) VALUES (9501,1,'mechanic','searching','Konya',37.87,32.481,10),(9502,2,'mechanic','searching','Konya',37.87,32.482,10),(9503,1,'tow','searching','Konya',37.87,32.481,10),(9504,1,'mechanic','searching','Ankara',37.87,32.481,10)");
+    $pending=requestApi('get_pending_jobs',jwtToken(800,'provider'),['provider_id'=>800,'lat'=>37.87,'lng'=>32.48,'radius'=>10],true);
+    assertApi($pending['http']===200 && array_column($pending['jobs'],'id')===[9503],'tow operator sees only same-city tow jobs');
+    assertApi(requestApi('place_bid',jwtToken(800,'provider'),['provider_id'=>800,'job_id'=>9501,'amount'=>500])['http']===403,'wrong service category cannot bid via direct API');
+    assertApi(requestApi('place_bid',jwtToken(801,'provider'),['provider_id'=>801,'job_id'=>9501,'amount'=>500])['http']===403,'wrong registered city cannot bid via direct API');
+    assertApi(requestApi('get_pending_jobs',jwtToken(803,'provider'),['provider_id'=>803,'lat'=>37.87,'lng'=>32.48],true)['subscription_required']===true,'expired provider receives no fresh jobs');
+    assertApi(requestApi('place_bid',jwtToken(803,'provider'),['provider_id'=>803,'job_id'=>9501,'amount'=>500])['http']===403,'expired provider cannot bypass subscription through bidding');
+    assertApi(requestApi('place_bid',jwtToken(802,'provider'),['provider_id'=>802,'job_id'=>9501,'amount'=>'1e999'])['http']===422,'nonfinite bid cannot enter database');
+    assertApi(requestApi('place_bid',jwtToken(802,'provider'),['provider_id'=>802,'job_id'=>9501,'amount'=>500])['http']===201,'correct eligible nearby provider places bid');
+    $providerBid=$pdo->query('SELECT * FROM bids WHERE job_id=9501 AND provider_id=802')->fetch();
+    assertApi(requestApi('accept_bid',jwtToken(802,'provider'),['job_id'=>9501,'provider_id'=>802,'bid_id'=>$providerBid['id'],'amount'=>1,'user_type'=>'provider'])['http']===403,'provider cannot accept its own offer');
+    assertApi(requestApi('accept_bid',$customer,['job_id'=>9501,'provider_id'=>802,'bid_id'=>$providerBid['id'],'amount'=>1,'user_type'=>'customer'])['http']===200,'customer accepts server-priced eligible offer');
+    assertApi($pdo->query('SELECT agreed_price FROM jobs WHERE id=9501')->fetchColumn()==='500.00','caller cannot lower accepted price');
+    assertApi(requestApi('place_bid',jwtToken(802,'provider'),['provider_id'=>802,'job_id'=>9502,'amount'=>500])['http']===403,'busy provider cannot bid on a second job');
+    assertApi(requestApi('counter_bid',$customer,['bid_id'=>$providerBid['id'],'amount'=>600,'user_type'=>'customer'])['http']===409,'counteroffer cannot change an accepted job');
+    assertApi(requestApi('get_directions',null,['job_id'=>9501,'origin'=>'37.87,32.48'],true)['http']===401,'route requires authentication');
+    assertApi(requestApi('get_directions',$other,['job_id'=>9501,'origin'=>'37.87,32.48'],true)['http']===403,'unrelated account cannot access job routing');
+    assertApi(requestApi('get_directions',$customer,['job_id'=>9501,'origin'=>'NaN,32'],true)['http']===422,'route coordinate injection rejected before network access');
+    assertApi(requestApi('get_directions',$customer,['job_id'=>9503,'origin'=>'37.87,32.48'],true)['http']===409,'unmatched job cannot consume routing service');
+    assertApi(requestApi('register',null,['name'=>'New User','phone'=>'1','city'=>'Konya','password'=>'testpass','user_type'=>'customer'])['http']===422,'registration requires valid phone even outside app');
+    assertApi(requestApi('register',null,['name'=>'New User','phone'=>'05465551212','city'=>'Bilinmiyor','password'=>'testpass','user_type'=>'customer'])['http']===422,'registration cannot bypass city selection');
+    assertApi(requestApi('register',null,['name'=>'Firm','phone'=>'05465551212','city'=>'Konya','password'=>'testpass','user_type'=>'rentacar','map_link'=>'https://maps.app.goo.gl/test'])['http']===422,'firm cannot bypass banking information');
+    assertApi(requestApi('register',null,['name'=>'Firm','phone'=>'05465551212','city'=>'Konya','password'=>'testpass','user_type'=>'rentacar','map_link'=>'https://maps.app.goo.gl/test','iban'=>'TR'.str_repeat('1',24)])['http']===422,'firm cannot bypass verification document');
+    assertApi(requestApi('update_location',jwtToken(802,'provider'),['user_id'=>802,'user_type'=>'provider','lat'=>'91','lng'=>'32','save_db'=>1])['http']===422,'invalid GPS cannot be broadcast or stored');
+    $pdo->exec('ALTER TABLE users MODIFY id INT NOT NULL AUTO_INCREMENT');
+    foreach (['email'=>'VARCHAR(255) NULL','suspension_end_date'=>'DATETIME NULL'] as $column=>$definition) {
+        if (!$pdo->query("SHOW COLUMNS FROM users LIKE '$column'")->fetch()) $pdo->exec("ALTER TABLE users ADD `$column` $definition");
+    }
+    $pdo->exec('CREATE TABLE IF NOT EXISTS banned_ips (id INT AUTO_INCREMENT PRIMARY KEY,ip_address VARCHAR(100))');
+    $newAccount=['name'=>'Yeni Müşteri','phone'=>'+90 546 555 12 12','city'=>' konya ','password'=>'testpass','user_type'=>'customer'];
+    $registered=requestApi('register',null,$newAccount);
+    assertApi($registered['http']===201 && $registered['account_status']==='active','complete customer registration succeeds through actual dispatcher');
+    $newId=(int)$registered['user_id'];
+    $saved=$pdo->query('SELECT * FROM users WHERE id='.$newId)->fetch();
+    assertApi($saved['city']==='Konya' && $saved['phone']==='05465551212' && password_verify('testpass',$saved['password']),'registration stores canonical city phone and hashed password');
+    assertApi(requestApi('login',null,['phone'=>'0546 555 12 12','password'=>'testpass','user_type'=>'customer'])['http']===200,'registered customer signs in with formatted phone');
+    assertApi(requestApi('login',null,['phone'=>'+90 546 555 12 12','password'=>'testpass','user_type'=>'customer'])['http']===200,'international phone prefix signs into same account');
+    assertApi(requestApi('register',null,$newAccount)['http']===409,'duplicate normalized phone cannot create another customer');
+    $newFirm=['name'=>'Yeni Firma','phone'=>'05465551213','city'=>'Konya','password'=>'testpass','user_type'=>'rentacar','map_link'=>'https://maps.app.goo.gl/test','iban'=>'TR'.str_repeat('1',24),'tax_plate'=>new CURLFile($png,'image/png','tax.png')];
+    $firmRegistered=multipartApi('register',null,$newFirm);
+    assertApi($firmRegistered['http']===201 && $firmRegistered['account_status']==='pending','complete firm registration with document awaits admin approval');
+    assertApi(requestApi('login',null,['phone'=>'05465551213','password'=>'testpass','user_type'=>'provider'])['http']===403,'unapproved firm cannot enter business workspace');
+    $pdo->exec("UPDATE users SET status='active' WHERE id=".(int)$firmRegistered['user_id']);
+    assertApi(requestApi('login',null,['phone'=>'05465551213','password'=>'testpass','user_type'=>'provider'])['user_type']==='rentacar','approved firm login preserves correct rentacar role');
+    $pdo->exec("UPDATE users SET status='banned' WHERE id=2");
+    assertApi(requestApi('place_bid',jwtToken(804,'provider'),['provider_id'=>804,'job_id'=>9502,'amount'=>500])['http']===403,'direct provider bid cannot match a banned customer');
+    echo "\n$count API entry checks passed.\n";
+} finally { proc_terminate($process); proc_close($process); }

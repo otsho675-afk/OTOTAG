@@ -50,3 +50,12 @@ app.*.map.json
 config.env
 # Widget Preview related
 .widget_preview/
+
+# Private credentials and signing material
+.env
+.env.*
+!.env.example
+*.p8
+*.jks
+*.keystore
+backend/*.zip

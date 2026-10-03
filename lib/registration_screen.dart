@@ -1,8 +1,11 @@
+import 'widgets/google_login_button.dart';
 // Dosya: registration_screen.dart
-import 'package:flutter/material.dart'; import 'core/constants/app_constants.dart';
-import 'package:flutter/services.dart'; 
+import 'package:flutter/material.dart';
+import 'core/constants/app_constants.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'services/app_session.dart';
 import 'dart:ui';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -14,11 +17,13 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'customer_dashboard_screen.dart';
 import 'provider_map_screen.dart';
 import 'login_screen.dart';
+import 'rent_a_car_panel_screen.dart';
 
 // Akıllı IBAN Formatlayıcı
 class SmartIbanFormatter extends TextInputFormatter {
   @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
     var text = newValue.text.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
     if (text.isNotEmpty && !text.startsWith('TR')) {
       text = 'TR${text.replaceAll('TR', '')}';
@@ -26,7 +31,7 @@ class SmartIbanFormatter extends TextInputFormatter {
       text = 'TR';
     }
     if (text.length > 26) text = text.substring(0, 26);
-    
+
     var buffer = StringBuffer();
     for (int i = 0; i < text.length; i++) {
       buffer.write(text[i]);
@@ -35,19 +40,22 @@ class SmartIbanFormatter extends TextInputFormatter {
       }
     }
     var string = buffer.toString();
-    return newValue.copyWith(text: string, selection: TextSelection.collapsed(offset: string.length));
+    return newValue.copyWith(
+        text: string,
+        selection: TextSelection.collapsed(offset: string.length));
   }
 }
 
 // Türk Plaka Formatlayıcı (42 TAG 403)
 class TurkishPlateFormatter extends TextInputFormatter {
   @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
     String text = newValue.text
         .toUpperCase()
         .replaceAll('İ', 'I')
         .replaceAll(RegExp(r'[^A-Z0-9]'), '');
-        
+
     if (text.isEmpty) return newValue.copyWith(text: '');
 
     final StringBuffer sb = StringBuffer();
@@ -104,11 +112,14 @@ class TurkishPlateFormatter extends TextInputFormatter {
 // Akıllı Telefon Formatlayıcı
 class SmartPhoneFormatter extends TextInputFormatter {
   @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
     var text = newValue.text.replaceAll(RegExp(r'\D'), '');
-    if (text.isEmpty) return newValue.copyWith(text: '', selection: const TextSelection.collapsed(offset: 0));
+    if (text.isEmpty)
+      return newValue.copyWith(
+          text: '', selection: const TextSelection.collapsed(offset: 0));
     if (text.length > 11) text = text.substring(0, 11);
-    
+
     var buffer = StringBuffer();
     for (int i = 0; i < text.length; i++) {
       buffer.write(text[i]);
@@ -117,7 +128,9 @@ class SmartPhoneFormatter extends TextInputFormatter {
       }
     }
     var string = buffer.toString();
-    return newValue.copyWith(text: string, selection: TextSelection.collapsed(offset: string.length));
+    return newValue.copyWith(
+        text: string,
+        selection: TextSelection.collapsed(offset: string.length));
   }
 }
 
@@ -125,14 +138,16 @@ class RegistrationScreen extends StatefulWidget {
   final String userType;
   final String? oauthProvider;
   final String? oauthId;
+  final String? oauthToken;
   final String? oauthEmail;
   final String? initialName;
 
   const RegistrationScreen({
-    super.key, 
+    super.key,
     required this.userType,
     this.oauthProvider,
     this.oauthId,
+    this.oauthToken,
     this.oauthEmail,
     this.initialName,
   });
@@ -147,25 +162,129 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _ibanController = TextEditingController();
   final TextEditingController _plateController = TextEditingController();
-  
+  final TextEditingController _mapLinkController = TextEditingController();
+
   final FocusNode _nameFocus = FocusNode();
   final FocusNode _phoneFocus = FocusNode();
   final FocusNode _passwordFocus = FocusNode();
   final FocusNode _ibanFocus = FocusNode();
   final FocusNode _plateFocus = FocusNode();
-  
-  String _selectedService = 'mechanic';
+  final FocusNode _mapLinkFocus = FocusNode();
+
+  String _selectedService = '';
   String? _selectedCity;
   bool isRegistering = false;
-  bool _obscurePassword = true; 
+  bool _obscurePassword = true;
 
   String? _currentOauthProvider;
   String? _currentOauthId;
+  String? _currentOauthToken;
   String? _currentOauthEmail;
 
-  final Duration _apiTimeout = const Duration(seconds: 25); 
+  // Adım takibi için eklendi
+  int _currentStep = 0;
 
-  static const String _iosGoogleClientId = '73273804842-u0lcirptug9aotm2m6gn27g92hftt5ud.apps.googleusercontent.com';
+  final Duration _apiTimeout = const Duration(seconds: 25);
+
+  void _nextStep() {
+    HapticFeedback.selectionClick();
+    FocusScope.of(context).unfocus();
+
+    // Usta (Provider) için Adım 0: Kategori Doğrulaması
+    if (widget.userType == 'provider' && _currentStep == 0) {
+      if (_selectedService.isEmpty) {
+        _showCustomSnackBar('Lütfen ilk olarak bir hizmet kategorisi seçiniz.',
+            isError: true);
+        return;
+      }
+    }
+
+    // Temel Bilgiler Adımı Doğrulaması (Müşteri/Rentacar için 0, Usta için 1)
+    int basicInfoStepIndex = widget.userType == 'provider' ? 1 : 0;
+    if (_currentStep == basicInfoStepIndex) {
+      if (_nameController.text.trim().isEmpty) {
+        _showCustomSnackBar(
+            widget.userType == 'rentacar'
+                ? 'Lütfen firma ismini giriniz.'
+                : 'Lütfen ad ve soyadınızı giriniz.',
+            isError: true);
+        return;
+      }
+      String rawPhone =
+          _phoneController.text.trim().replaceAll(RegExp(r'\D'), '');
+      if (!RegExp(r'^(?:0|90)?[2-5][0-9]{9}$').hasMatch(rawPhone)) {
+        _showCustomSnackBar('Lütfen geçerli bir telefon numarası giriniz.',
+            isError: true);
+        return;
+      }
+      if (_currentOauthId == null &&
+          _passwordController.text.trim().length < 6) {
+        _showCustomSnackBar('Şifreniz en az 6 karakter olmalıdır.',
+            isError: true);
+        return;
+      }
+    }
+
+    // Şehir / Konum / Banka Doğrulaması
+    if (_currentStep == basicInfoStepIndex + 1) {
+      if (_selectedCity == null || _selectedCity!.isEmpty) {
+        _showCustomSnackBar('Lütfen bulunduğunuz şehri seçiniz.',
+            isError: true);
+        return;
+      }
+
+      if (widget.userType != 'customer') {
+        if (widget.userType == 'rentacar' || _selectedService == 'rentacar') {
+          if (_mapLinkController.text.trim().isEmpty) {
+            _showCustomSnackBar('Firma harita linki zorunludur.',
+                isError: true);
+            return;
+          }
+        } else {
+          String cleanPlate = _plateController.text.trim().toUpperCase();
+          if (cleanPlate.isEmpty || cleanPlate.length < 5) {
+            _showCustomSnackBar(
+                'Lütfen geçerli bir araç/çekici plakası giriniz.',
+                isError: true);
+            return;
+          }
+        }
+
+        String cleanIban =
+            _ibanController.text.replaceAll(' ', '').toUpperCase();
+        if (cleanIban.length != 26 || !cleanIban.startsWith('TR')) {
+          _showCustomSnackBar(
+              'Lütfen geçerli bir 26 haneli TR IBAN numarası giriniz.',
+              isError: true);
+          return;
+        }
+      }
+    }
+
+    int maxSteps = widget.userType == 'customer'
+        ? 2
+        : (widget.userType == 'provider' ? 4 : 3);
+    if (_currentStep < maxSteps - 1) {
+      setState(() {
+        _currentStep++;
+      });
+    } else {
+      _register(); // Son adımdaysa kayıt işlemini başlat
+    }
+  }
+
+  void _prevStep() {
+    HapticFeedback.selectionClick();
+    FocusScope.of(context).unfocus();
+    if (_currentStep > 0) {
+      setState(() {
+        _currentStep--;
+      });
+    }
+  }
+
+  static const String _iosGoogleClientId =
+      '73273804842-u0lcirptug9aotm2m6gn27g92hftt5ud.apps.googleusercontent.com';
 
   static const Color neonGreen = Color(0xFF00FFA3);
   static const Color pureBlack = Color(0xFF030305);
@@ -174,7 +293,87 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   static const Color alertRed = Color(0xFFFF3366);
 
   final List<String> _cities = [
-    "Adana", "Adıyaman", "Afyonkarahisar", "Ağrı", "Amasya", "Ankara", "Antalya", "Artvin", "Aydın", "Balıkesir", "Bilecik", "Bingöl", "Bitlis", "Bolu", "Burdur", "Bursa", "Çanakkale", "Çankırı", "Çorum", "Denizli", "Diyarbakır", "Edirne", "Elazığ", "Erzincan", "Erzurum", "Eskişehir", "Gaziantep", "Giresun", "Gümüşhane", "Hakkari", "Hatay", "Isparta", "Mersin", "İstanbul", "İzmir", "Kars", "Kastamonu", "Kayseri", "Kırklareli", "Kırşehir", "Kocaeli", "Konya", "Kütahya", "Malatya", "Manisa", "Kahramanmaraş", "Mardin", "Muğla", "Muş", "Nevşehir", "Niğde", "Ordu", "Rize", "Sakarya", "Samsun", "Siirt", "Sinop", "Sivas", "Tekirdağ", "Tokat", "Trabzon", "Tunceli", "Şanlıurfa", "Uşak", "Van", "Yozgat", "Zonguldak", "Aksaray", "Bayburt", "Karaman", "Kırıkkale", "Batman", "Şırnak", "Bartın", "Ardahan", "Iğdır", "Yalova", "Karabük", "Kilis", "Osmaniye", "Düzce"
+    "Adana",
+    "Adıyaman",
+    "Afyonkarahisar",
+    "Ağrı",
+    "Amasya",
+    "Ankara",
+    "Antalya",
+    "Artvin",
+    "Aydın",
+    "Balıkesir",
+    "Bilecik",
+    "Bingöl",
+    "Bitlis",
+    "Bolu",
+    "Burdur",
+    "Bursa",
+    "Çanakkale",
+    "Çankırı",
+    "Çorum",
+    "Denizli",
+    "Diyarbakır",
+    "Edirne",
+    "Elazığ",
+    "Erzincan",
+    "Erzurum",
+    "Eskişehir",
+    "Gaziantep",
+    "Giresun",
+    "Gümüşhane",
+    "Hakkari",
+    "Hatay",
+    "Isparta",
+    "Mersin",
+    "İstanbul",
+    "İzmir",
+    "Kars",
+    "Kastamonu",
+    "Kayseri",
+    "Kırklareli",
+    "Kırşehir",
+    "Kocaeli",
+    "Konya",
+    "Kütahya",
+    "Malatya",
+    "Manisa",
+    "Kahramanmaraş",
+    "Mardin",
+    "Muğla",
+    "Muş",
+    "Nevşehir",
+    "Niğde",
+    "Ordu",
+    "Rize",
+    "Sakarya",
+    "Samsun",
+    "Siirt",
+    "Sinop",
+    "Sivas",
+    "Tekirdağ",
+    "Tokat",
+    "Trabzon",
+    "Tunceli",
+    "Şanlıurfa",
+    "Uşak",
+    "Van",
+    "Yozgat",
+    "Zonguldak",
+    "Aksaray",
+    "Bayburt",
+    "Karaman",
+    "Kırıkkale",
+    "Batman",
+    "Şırnak",
+    "Bartın",
+    "Ardahan",
+    "Iğdır",
+    "Yalova",
+    "Karabük",
+    "Kilis",
+    "Osmaniye",
+    "Düzce"
   ];
   final String baseUrl = AppConstants.baseUrl;
 
@@ -189,6 +388,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     _ibanController.text = 'TR';
     _currentOauthProvider = widget.oauthProvider;
     _currentOauthId = widget.oauthId;
+    _currentOauthToken = widget.oauthToken;
     _currentOauthEmail = widget.oauthEmail;
 
     if (widget.initialName != null && widget.initialName!.isNotEmpty) {
@@ -203,11 +403,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     _passwordController.dispose();
     _ibanController.dispose();
     _plateController.dispose();
+    _mapLinkController.dispose();
     _nameFocus.dispose();
     _phoneFocus.dispose();
     _passwordFocus.dispose();
     _ibanFocus.dispose();
     _plateFocus.dispose();
+    _mapLinkFocus.dispose();
     super.dispose();
   }
 
@@ -215,7 +417,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     HapticFeedback.selectionClick();
     final pickedFile = await ImagePicker().pickImage(
       source: ImageSource.gallery,
-      imageQuality: 70, 
+      imageQuality: 70,
     );
     if (pickedFile != null) {
       HapticFeedback.lightImpact();
@@ -246,17 +448,26 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
-            child: Icon(isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded, color: Colors.white, size: 22),
+            decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                shape: BoxShape.circle),
+            child: Icon(
+                isError
+                    ? Icons.error_outline_rounded
+                    : Icons.check_circle_outline_rounded,
+                color: Colors.white,
+                size: 22),
           ),
           const SizedBox(width: 14),
           Expanded(
-            child: Text(
-              message,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13, letterSpacing: 0.2)
-            ),
+            child: Text(message,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    letterSpacing: 0.2)),
           ),
         ],
       ),
@@ -264,7 +475,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       behavior: SnackBarBehavior.floating,
       dismissDirection: DismissDirection.up,
       margin: EdgeInsets.only(
-        bottom: MediaQuery.of(context).size.height - (MediaQuery.of(context).padding.top + 120),
+        bottom: MediaQuery.of(context).size.height -
+            (MediaQuery.of(context).padding.top + 120),
         left: 20,
         right: 20,
       ),
@@ -278,7 +490,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     if (!kIsWeb) HapticFeedback.selectionClick();
     try {
       final GoogleSignIn googleSignIn = GoogleSignIn(
-        clientId: (!kIsWeb && Platform.isIOS) ? _iosGoogleClientId : null,
+        clientId: kIsWeb
+            ? AppConstants.googleWebClientId
+            : Platform.isIOS
+                ? _iosGoogleClientId
+                : null,
+        serverClientId: kIsWeb ? null : AppConstants.googleWebClientId,
         scopes: const ['email', 'profile'],
       );
 
@@ -293,21 +510,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       if (!mounted) return;
 
       if (account != null) {
-        setState(() {
-          _currentOauthProvider = 'google';
-          _currentOauthId = account.id;
-          _currentOauthEmail = account.email;
-          if (account.displayName != null && account.displayName!.isNotEmpty) {
-            _nameController.text = account.displayName!;
-          }
-        });
-        _showCustomSnackBar("Google bağlandı! Şimdi zorunlu telefon ve şehir alanlarını doldurunuz.", isError: false);
+        await _googleRegistrationAccount(account);
       }
     } on PlatformException catch (e) {
       debugPrint("Google Sign Up Platform Exception: ${e.code} - ${e.message}");
       if (!mounted) return;
       if (e.code != 'sign_in_canceled' && e.code != 'canceled') {
-        _showCustomSnackBar("Google bağlantısı tamamlanamadı (${e.code}).", isError: true);
+        _showCustomSnackBar("Google bağlantısı tamamlanamadı (${e.code}).",
+            isError: true);
       }
     } catch (e) {
       debugPrint("Google Sign Up Error: $e");
@@ -316,16 +526,46 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     }
   }
 
+  Future<void> _googleRegistrationAccount(GoogleSignInAccount account) async {
+    final proof = (await account.authentication).idToken;
+    if (!mounted) return;
+    if (proof == null || proof.isEmpty) {
+      _showCustomSnackBar('Google kimliği doğrulanamadı. Tekrar bağlanın.',
+          isError: true);
+      return;
+    }
+    setState(() {
+      _currentOauthProvider = 'google';
+      _currentOauthId = account.id;
+      _currentOauthToken = proof;
+      _currentOauthEmail = account.email;
+      if ((account.displayName ?? '').isNotEmpty)
+        _nameController.text = account.displayName!;
+    });
+    _showCustomSnackBar(
+        'Google bağlandı. Telefon, şehir ve hesabına gerekli bilgileri tamamla.',
+        isError: false);
+  }
+
+  bool get _appleAvailable => kIsWeb
+      ? AppConstants.appleServiceId.isNotEmpty &&
+          AppConstants.appleRedirectUri.isNotEmpty
+      : defaultTargetPlatform == TargetPlatform.iOS;
+
   Future<void> _signUpWithApple() async {
-    if (!kIsWeb) HapticFeedback.selectionClick();
-    
-    if (!kIsWeb && Platform.isAndroid) {
-      _showCustomSnackBar("Apple ile bağlantı yalnızca iOS cihazlarda desteklenmektedir.", isError: true);
+    if (!_appleAvailable) {
+      _showCustomSnackBar('Apple girişi için iPhone uygulamasını kullanın.',
+          isError: true);
       return;
     }
 
     try {
       final credential = await SignInWithApple.getAppleIDCredential(
+        webAuthenticationOptions: kIsWeb
+            ? WebAuthenticationOptions(
+                clientId: AppConstants.appleServiceId,
+                redirectUri: Uri.parse(AppConstants.appleRedirectUri))
+            : null,
         scopes: [
           AppleIDAuthorizationScopes.email,
           AppleIDAuthorizationScopes.fullName,
@@ -342,15 +582,19 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       setState(() {
         _currentOauthProvider = 'apple';
         _currentOauthId = credential.userIdentifier ?? '';
+        _currentOauthToken = credential.identityToken;
         _currentOauthEmail = credential.email ?? '';
         if (fullName.isNotEmpty) {
           _nameController.text = fullName;
         }
       });
-      _showCustomSnackBar("Apple bağlandı! Şimdi zorunlu telefon ve şehir alanlarını doldurunuz.", isError: false);
+      _showCustomSnackBar(
+          "Apple bağlandı! Şimdi zorunlu telefon ve şehir alanlarını doldurunuz.",
+          isError: false);
     } catch (e) {
       if (!mounted) return;
-      _showCustomSnackBar("Apple bağlantısı başarısız veya iptal edildi.", isError: true);
+      _showCustomSnackBar("Apple bağlantısı başarısız veya iptal edildi.",
+          isError: true);
     }
   }
 
@@ -365,7 +609,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         return StatefulBuilder(
           builder: (stfContext, setModalState) {
             List<String> filteredCities = _cities
-                .where((city) => city.toLowerCase().contains(searchQuery.toLowerCase()))
+                .where((city) =>
+                    city.toLowerCase().contains(searchQuery.toLowerCase()))
                 .toList();
 
             return BackdropFilter(
@@ -374,8 +619,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 height: MediaQuery.of(modalContext).size.height * 0.75,
                 decoration: BoxDecoration(
                   color: panelBlack.withValues(alpha: 0.95),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.5),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(32)),
+                  border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.08), width: 1.5),
                 ),
                 child: SafeArea(
                   child: Column(
@@ -383,8 +630,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       const SizedBox(height: 12),
                       Center(
                         child: Container(
-                          width: 48, height: 6,
-                          decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)),
+                          width: 48,
+                          height: 6,
+                          decoration: BoxDecoration(
+                              color: Colors.white24,
+                              borderRadius: BorderRadius.circular(10)),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -394,11 +644,18 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           children: [
                             Container(
                               padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(color: neonGreen.withValues(alpha: 0.1), shape: BoxShape.circle),
-                              child: const Icon(Icons.location_city_rounded, color: neonGreen, size: 20),
+                              decoration: BoxDecoration(
+                                  color: neonGreen.withValues(alpha: 0.1),
+                                  shape: BoxShape.circle),
+                              child: const Icon(Icons.location_city_rounded,
+                                  color: neonGreen, size: 20),
                             ),
                             const SizedBox(width: 12),
-                            const Text("Şehir Seçiniz", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
+                            const Text("Şehir Seçiniz",
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w900)),
                           ],
                         ),
                       ),
@@ -409,16 +666,22 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.04),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                            border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.08)),
                           ),
                           child: TextField(
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600),
                             decoration: const InputDecoration(
                               hintText: "Şehir ara...",
-                              hintStyle: TextStyle(color: textGray, fontSize: 14),
-                              prefixIcon: Icon(Icons.search_rounded, color: neonGreen, size: 20),
+                              hintStyle:
+                                  TextStyle(color: textGray, fontSize: 14),
+                              prefixIcon: Icon(Icons.search_rounded,
+                                  color: neonGreen, size: 20),
                               border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(vertical: 14),
+                              contentPadding:
+                                  EdgeInsets.symmetric(vertical: 14),
                             ),
                             onChanged: (val) {
                               setModalState(() {
@@ -431,28 +694,44 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       const SizedBox(height: 12),
                       Expanded(
                         child: filteredCities.isEmpty
-                            ? const Center(child: Text("Şehir bulunamadı", style: TextStyle(color: textGray)))
+                            ? const Center(
+                                child: Text("Şehir bulunamadı",
+                                    style: TextStyle(color: textGray)))
                             : ListView.separated(
                                 physics: const BouncingScrollPhysics(),
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 8),
                                 itemCount: filteredCities.length,
-                                separatorBuilder: (_, __) => Divider(color: Colors.white.withValues(alpha: 0.04), height: 1),
+                                separatorBuilder: (_, __) => Divider(
+                                    color: Colors.white.withValues(alpha: 0.04),
+                                    height: 1),
                                 itemBuilder: (itemContext, index) {
                                   final city = filteredCities[index];
                                   final isSelected = _selectedCity == city;
                                   return Material(
                                     color: Colors.transparent,
                                     child: ListTile(
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                              horizontal: 12, vertical: 4),
                                       title: Text(
                                         city,
                                         style: TextStyle(
-                                          color: isSelected ? neonGreen : Colors.white,
-                                          fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+                                          color: isSelected
+                                              ? neonGreen
+                                              : Colors.white,
+                                          fontWeight: isSelected
+                                              ? FontWeight.w900
+                                              : FontWeight.w600,
                                           fontSize: 15,
                                         ),
                                       ),
-                                      trailing: isSelected ? const Icon(Icons.check_circle_rounded, color: neonGreen, size: 20) : null,
+                                      trailing: isSelected
+                                          ? const Icon(
+                                              Icons.check_circle_rounded,
+                                              color: neonGreen,
+                                              size: 20)
+                                          : null,
                                       onTap: () {
                                         HapticFeedback.selectionClick();
                                         setState(() {
@@ -478,108 +757,162 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   Future<void> _register() async {
     HapticFeedback.lightImpact();
-    FocusScope.of(context).unfocus(); 
+    FocusScope.of(context).unfocus();
     TextInput.finishAutofillContext();
 
     String rawName = _nameController.text.trim();
     String rawPhone = _phoneController.text.trim();
     String rawPass = _passwordController.text.trim();
 
-    if (rawName.isEmpty) {
+    if (rawName.length < 2) {
       HapticFeedback.vibrate();
       _showCustomSnackBar('Lütfen ad ve soyadınızı giriniz.', isError: true);
       return;
     }
 
-    String sanitizedPhone = rawPhone.replaceAll(RegExp(r'\D'), ''); 
+    String sanitizedPhone = rawPhone.replaceAll(RegExp(r'\D'), '');
     if (sanitizedPhone.startsWith('90') && sanitizedPhone.length == 12) {
       sanitizedPhone = sanitizedPhone.substring(2);
     }
-    if (sanitizedPhone.length == 10 && sanitizedPhone.startsWith('5')) {
+    if (sanitizedPhone.length == 10) {
       sanitizedPhone = '0$sanitizedPhone';
     }
-    if (sanitizedPhone.isEmpty || sanitizedPhone.length != 11 || !sanitizedPhone.startsWith('05')) {
+    if (sanitizedPhone.isEmpty ||
+        sanitizedPhone.length != 11 ||
+        !RegExp(r'^0[2-5][0-9]{9}$').hasMatch(sanitizedPhone)) {
       HapticFeedback.vibrate();
-      _showCustomSnackBar('Telefon numarası kesinlikle zorunludur (Örn: 05XX...).', isError: true);
+      _showCustomSnackBar(
+          'Telefon numarası kesinlikle zorunludur (Örn: 05XX...).',
+          isError: true);
       return;
     }
 
     if (_selectedCity == null || _selectedCity!.isEmpty) {
       HapticFeedback.vibrate();
-      _showCustomSnackBar('Lütfen bulunduğunuz şehri seçiniz (Zorunludur).', isError: true);
+      _showCustomSnackBar('Lütfen bulunduğunuz şehri seçiniz (Zorunludur).',
+          isError: true);
       return;
     }
 
     if (_currentOauthId == null && rawPass.length < 6) {
       HapticFeedback.vibrate();
-      _showCustomSnackBar('Şifreniz en az 6 karakter olmalıdır.', isError: true);
+      _showCustomSnackBar('Şifreniz en az 6 karakter olmalıdır.',
+          isError: true);
       return;
     }
 
-    if (widget.userType == 'provider') {
-      if (_selectedService.isEmpty || _selectedService == 'none') {
+    if (widget.userType == 'provider' || widget.userType == 'rentacar') {
+      if (widget.userType == 'provider' &&
+          (_selectedService.isEmpty || _selectedService == 'none')) {
         HapticFeedback.vibrate();
-        _showCustomSnackBar('Usta kaydı için hizmet kategorisi seçimi zorunludur.', isError: true);
+        _showCustomSnackBar(
+            'Usta kaydı için hizmet kategorisi seçimi zorunludur.',
+            isError: true);
         return;
       }
 
       String cleanIban = _ibanController.text.replaceAll(' ', '').toUpperCase();
       if (cleanIban.length != 26 || !cleanIban.startsWith('TR')) {
         HapticFeedback.vibrate();
-        _showCustomSnackBar('Usta kaydı için geçerli bir 26 haneli TR IBAN zorunludur.', isError: true);
+        _showCustomSnackBar(
+            'Usta kaydı için geçerli bir 26 haneli TR IBAN zorunludur.',
+            isError: true);
         return;
       }
 
-      String cleanPlate = _plateController.text.trim().toUpperCase();
-      if (cleanPlate.isEmpty || cleanPlate.length < 5) {
-        HapticFeedback.vibrate();
-        _showCustomSnackBar('Lütfen geçerli bir araç/çekici plakası giriniz (Örn: 42 TAG 403).', isError: true);
-        return;
-      }
-
-      if (_selectedService == 'wash') {
-        if (_driverLicense == null || _vehiclePhoto == null || _equipmentPhoto == null) {
+      if (widget.userType != 'rentacar' && _selectedService != 'rentacar') {
+        String cleanPlate = _plateController.text.trim().toUpperCase();
+        if (cleanPlate.isEmpty || cleanPlate.length < 5) {
           HapticFeedback.vibrate();
-          _showCustomSnackBar('Oto yıkama için ehliyet, araç ve ekipman fotoğraflarının tamamı zorunludur.', isError: true);
+          _showCustomSnackBar(
+              'Lütfen geçerli bir araç/çekici plakası giriniz (Örn: 42 TAG 403).',
+              isError: true);
+          return;
+        }
+      } else {
+        if (_mapLinkController.text.trim().isEmpty) {
+          HapticFeedback.vibrate();
+          _showCustomSnackBar('Firma harita linki zorunludur.', isError: true);
+          return;
+        }
+      }
+
+      if (_selectedService == 'wash' && widget.userType != 'rentacar') {
+        if (_driverLicense == null ||
+            _vehiclePhoto == null ||
+            _equipmentPhoto == null) {
+          HapticFeedback.vibrate();
+          _showCustomSnackBar(
+              'Oto yıkama için ehliyet, araç ve ekipman fotoğraflarının tamamı zorunludur.',
+              isError: true);
           return;
         }
       } else {
         if (_taxPlate == null) {
           HapticFeedback.vibrate();
-          _showCustomSnackBar('Usta kaydı için vergi levhası yüklenmesi zorunludur.', isError: true);
+          _showCustomSnackBar(
+              (widget.userType == 'rentacar' || _selectedService == 'rentacar')
+                  ? 'Firma kaydı için vergi levhası yüklenmesi zorunludur.'
+                  : 'Usta kaydı için vergi levhası yüklenmesi zorunludur.',
+              isError: true);
           return;
         }
       }
     }
 
+    final registrationPassword = rawPass;
     setState(() => isRegistering = true);
-    
+
     try {
-      if (widget.userType == 'provider') {
-        var request = http.MultipartRequest('POST', Uri.parse("$baseUrl?action=register"));
+      if (widget.userType == 'provider' || widget.userType == 'rentacar') {
+        var request = http.MultipartRequest(
+            'POST', Uri.parse("$baseUrl?action=register"));
         request.fields['name'] = rawName;
         request.fields['phone'] = sanitizedPhone;
-        request.fields['password'] = rawPass.isNotEmpty ? rawPass : 'oauth_temp_pass';
-        request.fields['user_type'] = widget.userType;
-        request.fields['service_category'] = _selectedService;
-        request.fields['iban'] = _ibanController.text.replaceAll(' ', '').toUpperCase();
-        request.fields['tow_plate'] = _plateController.text.trim().toUpperCase();
+        request.fields['password'] = registrationPassword;
+        // API'nin Rent a car firmasını doğru algılaması için user_type değiştiriliyor
+        request.fields['user_type'] =
+            (widget.userType == 'rentacar' || _selectedService == 'rentacar')
+                ? 'rentacar'
+                : widget.userType;
+        request.fields['service_category'] =
+            _selectedService.isEmpty ? 'rentacar' : _selectedService;
+        request.fields['iban'] =
+            _ibanController.text.replaceAll(' ', '').toUpperCase();
+
+        // Firma ise map_link, Usta ise plaka gönderilir
+        if (widget.userType == 'rentacar' || _selectedService == 'rentacar') {
+          request.fields['map_link'] = _mapLinkController.text.trim();
+        } else {
+          request.fields['tow_plate'] =
+              _plateController.text.trim().toUpperCase();
+        }
+
         request.fields['city'] = _selectedCity!;
         request.fields['oauth_provider'] = _currentOauthProvider ?? '';
         request.fields['oauth_id'] = _currentOauthId ?? '';
+        request.fields['oauth_token'] = _currentOauthToken ?? '';
         request.fields['email'] = _currentOauthEmail ?? '';
 
-        if (_selectedService == 'wash') {
-          request.files.add(http.MultipartFile.fromBytes('driver_license', await _driverLicense!.readAsBytes(), filename: _driverLicense!.name));
-          request.files.add(http.MultipartFile.fromBytes('vehicle_photo', await _vehiclePhoto!.readAsBytes(), filename: _vehiclePhoto!.name));
-          request.files.add(http.MultipartFile.fromBytes('equipment_photo', await _equipmentPhoto!.readAsBytes(), filename: _equipmentPhoto!.name));
+        if (_selectedService == 'wash' && widget.userType != 'rentacar') {
+          request.files.add(http.MultipartFile.fromBytes(
+              'driver_license', await _driverLicense!.readAsBytes(),
+              filename: _driverLicense!.name));
+          request.files.add(http.MultipartFile.fromBytes(
+              'vehicle_photo', await _vehiclePhoto!.readAsBytes(),
+              filename: _vehiclePhoto!.name));
+          request.files.add(http.MultipartFile.fromBytes(
+              'equipment_photo', await _equipmentPhoto!.readAsBytes(),
+              filename: _equipmentPhoto!.name));
         } else {
-          request.files.add(http.MultipartFile.fromBytes('tax_plate', await _taxPlate!.readAsBytes(), filename: _taxPlate!.name));
+          request.files.add(http.MultipartFile.fromBytes(
+              'tax_plate', await _taxPlate!.readAsBytes(),
+              filename: _taxPlate!.name));
         }
 
         var streamedResponse = await request.send().timeout(_apiTimeout);
         var response = await http.Response.fromStream(streamedResponse);
-        _handleResponse(response.body, response.statusCode);
+        await _handleResponse(response.body, response.statusCode);
       } else {
         final response = await http.post(
           Uri.parse("$baseUrl?action=register"),
@@ -587,135 +920,178 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           body: {
             "name": rawName,
             "phone": sanitizedPhone,
-            "password": rawPass.isNotEmpty ? rawPass : 'oauth_temp_pass',
+            "password": registrationPassword,
             "user_type": widget.userType,
             "service_category": 'none',
             "iban": '',
             "city": _selectedCity!,
             "oauth_provider": _currentOauthProvider ?? '',
             "oauth_id": _currentOauthId ?? '',
+            "oauth_token": _currentOauthToken ?? '',
             "email": _currentOauthEmail ?? '',
           },
         ).timeout(_apiTimeout);
-        _handleResponse(response.body, response.statusCode);
+        await _handleResponse(response.body, response.statusCode);
       }
     } catch (e) {
       if (mounted) {
         HapticFeedback.vibrate();
-        _showCustomSnackBar('Bağlantı hatası: Sunucu yanıt vermiyor.', isError: true);
+        _showCustomSnackBar('Bağlantı hatası: Sunucu yanıt vermiyor.',
+            isError: true);
       }
     } finally {
       if (mounted) setState(() => isRegistering = false);
     }
   }
 
-  void _handleResponse(String responseBody, int statusCode) {
+  Future<void> _handleResponse(String responseBody, int statusCode) async {
     try {
       final data = json.decode(responseBody);
       if (!mounted) return;
 
-      if ((statusCode == 200 || statusCode == 201) && data['status'] == 'success') {
+      if ((statusCode == 200 || statusCode == 201) &&
+          data['status'] == 'success') {
         HapticFeedback.mediumImpact();
         if (data['account_status'] == 'pending') {
           String trackingCode = data['tracking_code']?.toString() ?? "";
           showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (dialogContext) {
-              return BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                child: AlertDialog(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28), 
-                    side: BorderSide(color: Colors.white.withValues(alpha: 0.08))
-                  ),
-                  backgroundColor: panelBlack.withValues(alpha: 0.98),
-                  elevation: 0,
-                  title: Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: neonGreen.withValues(alpha: 0.1), 
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.check_circle_outline_rounded, color: neonGreen, size: 36),
-                      ),
-                      const SizedBox(height: 20),
-                      const Text("Kayıt Başarılı", textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 22, letterSpacing: -0.5)),
-                    ],
-                  ),
-                  content: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
+              context: context,
+              barrierDismissible: false,
+              builder: (dialogContext) {
+                return BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                  child: AlertDialog(
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(28),
+                        side: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.08))),
+                    backgroundColor: panelBlack.withValues(alpha: 0.98),
+                    elevation: 0,
+                    title: Column(
                       children: [
-                        Text("Belgeleriniz alındı. Yönetici onayının ardından giriş yapabilirsiniz.", textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontWeight: FontWeight.w500, height: 1.4, fontSize: 14)),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: neonGreen.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.check_circle_outline_rounded,
+                              color: neonGreen, size: 36),
+                        ),
+                        const SizedBox(height: 20),
+                        const Text("Kayıt Başarılı",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                fontSize: 22,
+                                letterSpacing: -0.5)),
+                      ],
+                    ),
+                    content: SingleChildScrollView(
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Text(
+                            "Belgeleriniz alındı. Yönetici onayının ardından giriş yapabilirsiniz.",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.7),
+                                fontWeight: FontWeight.w500,
+                                height: 1.4,
+                                fontSize: 14)),
                         const SizedBox(height: 24),
-                        const Text("Başvuru Takip Numaranız", style: TextStyle(fontWeight: FontWeight.w700, color: neonGreen, fontSize: 13)),
+                        const Text("Başvuru Takip Numaranız",
+                            style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: neonGreen,
+                                fontSize: 13)),
                         const SizedBox(height: 8),
                         Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.03), 
-                            borderRadius: BorderRadius.circular(18), 
-                            border: Border.all(color: neonGreen.withValues(alpha: 0.3), width: 1.5)
-                          ),
-                          child: Center(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: SelectableText(
-                                trackingCode, 
-                                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: neonGreen, letterSpacing: 2)
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 16, horizontal: 12),
+                            decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.03),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                    color: neonGreen.withValues(alpha: 0.3),
+                                    width: 1.5)),
+                            child: Center(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: SelectableText(trackingCode,
+                                    style: const TextStyle(
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.w900,
+                                        color: neonGreen,
+                                        letterSpacing: 2)),
                               ),
-                            ),
-                          )
-                        ),
+                            )),
                         const SizedBox(height: 14),
-                        const Text("Durumunuzu sorgulamak için bu numarayı kaydedin.", textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: textGray, fontWeight: FontWeight.w500)),
-                      ]
+                        const Text(
+                            "Durumunuzu sorgulamak için bu numarayı kaydedin.",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: textGray,
+                                fontWeight: FontWeight.w500)),
+                      ]),
                     ),
-                  ),
-                  actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                  actions: [
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: neonGreen, 
-                          foregroundColor: Colors.black,
-                          padding: const EdgeInsets.symmetric(vertical: 16), 
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), 
-                          elevation: 0,
+                    actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                    actions: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: neonGreen,
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16)),
+                            elevation: 0,
+                          ),
+                          onPressed: () {
+                            HapticFeedback.selectionClick();
+                            Navigator.pushReplacement(
+                                dialogContext,
+                                MaterialPageRoute(
+                                    builder: (context) => LoginScreen(
+                                        userType: widget.userType)));
+                          },
+                          child: const Text("Tamam, Anladım",
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w900, fontSize: 16)),
                         ),
-                        onPressed: () {
-                          HapticFeedback.selectionClick();
-                          Navigator.pushReplacement(dialogContext, MaterialPageRoute(builder: (context) => LoginScreen(userType: widget.userType)));
-                        },
-                        child: const Text("Tamam, Anladım", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-                      ),
-                    )
-                  ],
-                ),
-              );
-            }
-          );
+                      )
+                    ],
+                  ),
+                );
+              });
         } else {
+          await AppSession.save(Map<String, dynamic>.from(data));
+          if (!mounted) return;
           int userId = int.parse(data['user_id'].toString());
           Navigator.pushReplacement(context, MaterialPageRoute(
-            builder: (context) => widget.userType == 'customer' 
-                ? CustomerDashboardScreen(customerId: userId)
-                : ProviderMapScreen(providerId: userId),
+            builder: (context) {
+              if (widget.userType == 'customer') {
+                return CustomerDashboardScreen(customerId: userId);
+              } else if (widget.userType == 'rentacar') {
+                return RentACarPanelScreen(companyId: userId);
+              } else {
+                return ProviderMapScreen(providerId: userId);
+              }
+            },
           ));
         }
       } else {
         HapticFeedback.vibrate();
-        _showCustomSnackBar(data['message'] ?? 'Kayıt başarısız', isError: true);
+        _showCustomSnackBar(data['message'] ?? 'Kayıt başarısız',
+            isError: true);
       }
     } catch (e) {
       if (mounted) {
         HapticFeedback.vibrate();
-        _showCustomSnackBar('Sunucu hatası oluştu veya yanıt doğrulanamadı.', isError: true);
+        _showCustomSnackBar('Sunucu hatası oluştu veya yanıt doğrulanamadı.',
+            isError: true);
       }
     }
   }
@@ -736,10 +1112,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       decoration: BoxDecoration(
-        color: focusNode.hasFocus ? Colors.white.withValues(alpha: 0.06) : Colors.white.withValues(alpha: 0.03),
+        color: focusNode.hasFocus
+            ? Colors.white.withValues(alpha: 0.06)
+            : Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: focusNode.hasFocus ? neonGreen : Colors.white.withValues(alpha: 0.05),
+          color: focusNode.hasFocus
+              ? neonGreen
+              : Colors.white.withValues(alpha: 0.05),
           width: focusNode.hasFocus ? 1.5 : 1.0,
         ),
       ),
@@ -756,26 +1136,32 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             textCapitalization: capitalization,
             inputFormatters: inputFormatters,
             autofillHints: autofillHints,
-            onEditingComplete: onEditingComplete ?? () => FocusScope.of(context).nextFocus(),
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
+            onEditingComplete:
+                onEditingComplete ?? () => FocusScope.of(context).nextFocus(),
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
             decoration: InputDecoration(
               labelText: label,
               labelStyle: TextStyle(
-                color: focusNode.hasFocus ? neonGreen : textGray, 
-                fontSize: 13, 
-                fontWeight: FontWeight.w500
-              ),
+                  color: focusNode.hasFocus ? neonGreen : textGray,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500),
               prefixIcon: Padding(
-                padding: const EdgeInsets.only(left: 16, right: 12), 
-                child: Icon(icon, color: focusNode.hasFocus ? neonGreen : neonGreen.withValues(alpha: 0.7), size: 20)
-              ),
-              suffixIcon: isPasswordField 
+                  padding: const EdgeInsets.only(left: 16, right: 12),
+                  child: Icon(icon,
+                      color: focusNode.hasFocus
+                          ? neonGreen
+                          : neonGreen.withValues(alpha: 0.7),
+                      size: 20)),
+              suffixIcon: isPasswordField
                   ? Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: IconButton(
                         splashRadius: 20,
                         icon: Icon(
-                          _obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                          _obscurePassword
+                              ? Icons.visibility_off_rounded
+                              : Icons.visibility_rounded,
                           color: Colors.white54,
                           size: 18,
                         ),
@@ -786,11 +1172,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           });
                         },
                       ),
-                    ) 
+                    )
                   : null,
               filled: true,
               fillColor: Colors.transparent,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
               border: InputBorder.none,
             ),
           ),
@@ -815,18 +1202,25 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
             child: Row(
               children: [
-                const Icon(Icons.location_city_rounded, color: neonGreen, size: 20),
+                const Icon(Icons.location_city_rounded,
+                    color: neonGreen, size: 20),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text("Bulunduğunuz Şehir", style: TextStyle(color: textGray, fontSize: 11, fontWeight: FontWeight.w600)),
+                      const Text("Bulunduğunuz Şehir",
+                          style: TextStyle(
+                              color: textGray,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600)),
                       const SizedBox(height: 2),
                       Text(
                         _selectedCity ?? "Şehir Seçmek İçin Dokunun",
                         style: TextStyle(
-                          color: _selectedCity != null ? Colors.white : Colors.white38,
+                          color: _selectedCity != null
+                              ? Colors.white
+                              : Colors.white38,
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                         ),
@@ -836,7 +1230,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     ],
                   ),
                 ),
-                const Icon(Icons.keyboard_arrow_down_rounded, color: neonGreen, size: 20),
+                const Icon(Icons.keyboard_arrow_down_rounded,
+                    color: neonGreen, size: 20),
               ],
             ),
           ),
@@ -845,7 +1240,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  Widget _buildGlassDropdown(String label, IconData icon, String? value, List<DropdownMenuItem<String>> items, Function(String?) onChanged) {
+  Widget _buildGlassDropdown(String label, IconData icon, String? value,
+      List<DropdownMenuItem<String>> items, Function(String?) onChanged) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.03),
@@ -859,18 +1255,26 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           child: DropdownButtonFormField<String>(
             isExpanded: true,
             initialValue: value,
-            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: neonGreen),
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
+            icon:
+                const Icon(Icons.keyboard_arrow_down_rounded, color: neonGreen),
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
             dropdownColor: panelBlack,
             decoration: InputDecoration(
               labelText: label,
-              labelStyle: const TextStyle(color: textGray, fontSize: 13, fontWeight: FontWeight.w500),
-              prefixIcon: Padding(padding: const EdgeInsets.only(left: 16, right: 12), child: Icon(icon, color: neonGreen, size: 20)),
+              labelStyle: const TextStyle(
+                  color: textGray, fontSize: 13, fontWeight: FontWeight.w500),
+              prefixIcon: Padding(
+                  padding: const EdgeInsets.only(left: 16, right: 12),
+                  child: Icon(icon, color: neonGreen, size: 20)),
               filled: true,
               fillColor: Colors.transparent,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
               border: InputBorder.none,
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: neonGreen, width: 1.5)),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: const BorderSide(color: neonGreen, width: 1.5)),
             ),
             items: items,
             onChanged: (val) {
@@ -889,9 +1293,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       padding: const EdgeInsets.only(bottom: 14),
       child: Container(
         decoration: BoxDecoration(
-          color: isSelected ? neonGreen.withValues(alpha: 0.06) : Colors.white.withValues(alpha: 0.03),
+          color: isSelected
+              ? neonGreen.withValues(alpha: 0.06)
+              : Colors.white.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isSelected ? neonGreen.withValues(alpha: 0.4) : Colors.white.withValues(alpha: 0.05), width: 1.5),
+          border: Border.all(
+              color: isSelected
+                  ? neonGreen.withValues(alpha: 0.4)
+                  : Colors.white.withValues(alpha: 0.05),
+              width: 1.5),
         ),
         child: Material(
           color: Colors.transparent,
@@ -915,7 +1325,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                 width: 44,
                                 height: 44,
                                 color: neonGreen.withValues(alpha: 0.2),
-                                child: const Icon(Icons.image, color: neonGreen, size: 20),
+                                child: const Icon(Icons.image,
+                                    color: neonGreen, size: 20),
                               ),
                             )
                           : Image.file(
@@ -927,7 +1338,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                 width: 44,
                                 height: 44,
                                 color: neonGreen.withValues(alpha: 0.2),
-                                child: const Icon(Icons.image, color: neonGreen, size: 20),
+                                child: const Icon(Icons.image,
+                                    color: neonGreen, size: 20),
                               ),
                             ),
                     )
@@ -938,23 +1350,28 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         color: Colors.white.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.upload_file_rounded, color: Colors.white70, size: 22),
+                      child: const Icon(Icons.upload_file_rounded,
+                          color: Colors.white70, size: 22),
                     ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          title, 
-                          style: TextStyle(color: isSelected ? neonGreen : Colors.white, fontWeight: FontWeight.w800, fontSize: 14),
-                          maxLines: 1, 
-                          overflow: TextOverflow.ellipsis
-                        ),
+                        Text(title,
+                            style: TextStyle(
+                                color: isSelected ? neonGreen : Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 14),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
                         const SizedBox(height: 2),
                         Text(
                           isSelected ? file.name : "Fotoğraf veya Belge Seç",
-                          style: TextStyle(color: isSelected ? Colors.white70 : textGray, fontSize: 12, fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                              color: isSelected ? Colors.white70 : textGray,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -963,12 +1380,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   ),
                   if (isSelected)
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, color: alertRed, size: 20),
+                      icon: const Icon(Icons.close_rounded,
+                          color: alertRed, size: 20),
                       onPressed: () => _clearImage(type),
                       tooltip: "Kaldır",
                     )
                   else
-                    const Icon(Icons.add_a_photo_rounded, color: textGray, size: 18),
+                    const Icon(Icons.add_a_photo_rounded,
+                        color: textGray, size: 18),
                 ],
               ),
             ),
@@ -985,7 +1404,350 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         children: [
           Icon(icon, color: neonGreen, size: 18),
           const SizedBox(width: 8),
-          Text(title, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.3)),
+          Text(title,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCurrentStepContent(bool isCustomer) {
+    if (widget.userType == 'provider') {
+      if (_currentStep == 0) return _buildProviderStep0_Service();
+      if (_currentStep == 1) return _buildCommonStep_BasicInfo();
+      if (_currentStep == 2) return _buildProviderStep2_LocationAndVehicle();
+      if (_currentStep == 3) return _buildProviderStep3_Documents();
+    } else if (widget.userType == 'rentacar') {
+      if (_currentStep == 0) return _buildCommonStep_BasicInfo();
+      if (_currentStep == 1) return _buildProviderStep2_LocationAndVehicle();
+      if (_currentStep == 2) return _buildProviderStep3_Documents();
+    } else {
+      if (_currentStep == 0) return _buildCommonStep_BasicInfo();
+      if (_currentStep == 1) return _buildCustomerStep1_Location();
+    }
+    return const SizedBox();
+  }
+
+  Widget _buildProviderStep0_Service() {
+    return KeyedSubtree(
+      key: const ValueKey('step0_service'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionHeader(
+              "Hangi hizmeti veriyorsunuz?", Icons.build_circle_outlined),
+          const SizedBox(height: 10),
+          _buildGlassDropdown("Hizmet Kategorisi Seçin", Icons.handyman_rounded,
+              _selectedService.isEmpty ? null : _selectedService, const [
+            DropdownMenuItem(
+                value: 'mechanic',
+                child: Text("Tamirci",
+                    maxLines: 1, overflow: TextOverflow.ellipsis)),
+            DropdownMenuItem(
+                value: 'tow',
+                child: Text("Çekici",
+                    maxLines: 1, overflow: TextOverflow.ellipsis)),
+            DropdownMenuItem(
+                value: 'tire',
+                child: Text("Lastikçi",
+                    maxLines: 1, overflow: TextOverflow.ellipsis)),
+            DropdownMenuItem(
+                value: 'wash',
+                child: Text("Oto Yıkama",
+                    maxLines: 1, overflow: TextOverflow.ellipsis)),
+            DropdownMenuItem(
+                value: 'rentacar',
+                child: Text("Rent A Car (Araç Kiralama)",
+                    maxLines: 1, overflow: TextOverflow.ellipsis)),
+          ], (val) {
+            setState(() {
+              _selectedService = val ?? '';
+              _taxPlate = null;
+              _driverLicense = null;
+              _vehiclePhoto = null;
+              _equipmentPhoto = null;
+            });
+          }),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: neonGreen.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: neonGreen.withValues(alpha: 0.2)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.info_outline_rounded, color: neonGreen, size: 28),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    "Müşterilerin size ulaşabilmesi için doğru hizmet kategorisini seçmeniz önemlidir. Seçiminizi yapıp devam edin.",
+                    style: TextStyle(
+                        color: Colors.white70, fontSize: 13, height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCommonStep_BasicInfo() {
+    return KeyedSubtree(
+      key: const ValueKey('step_basic'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: kIsWeb
+                    ? GoogleLoginButton(
+                        clientId: AppConstants.googleWebClientId,
+                        onSignedIn: _googleRegistrationAccount,
+                        onError: (message) =>
+                            _showCustomSnackBar(message, isError: true))
+                    : InkWell(
+                        onTap: _signUpWithGoogle,
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.04),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.1)),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.g_mobiledata_rounded,
+                                  color: Colors.white, size: 28),
+                              SizedBox(width: 8),
+                              Text("Google",
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 13)),
+                            ],
+                          ),
+                        ),
+                      ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: InkWell(
+                  onTap: _appleAvailable ? _signUpWithApple : null,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.04),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.1)),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.apple_rounded,
+                            color: Colors.white, size: 20),
+                        SizedBox(width: 8),
+                        Text("Apple",
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (_currentOauthProvider != null) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: neonGreen.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: neonGreen.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                      _currentOauthProvider == 'google'
+                          ? Icons.g_mobiledata_rounded
+                          : Icons.apple_rounded,
+                      color: neonGreen,
+                      size: 20),
+                  const SizedBox(width: 8),
+                  Text("${_currentOauthProvider!.toUpperCase()} Bağlandı",
+                      style: const TextStyle(
+                          color: neonGreen,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800)),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 28),
+          _buildSectionHeader("Kişisel Bilgiler", Icons.badge_rounded),
+          _buildGlassTextField(
+            controller: _nameController,
+            focusNode: _nameFocus,
+            label: widget.userType == 'rentacar' ? "Firma İsmi" : "Ad Soyad",
+            icon: widget.userType == 'rentacar'
+                ? Icons.store_rounded
+                : Icons.person_rounded,
+            isPasswordField: false,
+            type: TextInputType.name,
+            autofillHints: const [AutofillHints.name],
+            capitalization: TextCapitalization.words,
+            onEditingComplete: () =>
+                FocusScope.of(context).requestFocus(_phoneFocus),
+          ),
+          const SizedBox(height: 14),
+          _buildGlassTextField(
+            controller: _phoneController,
+            focusNode: _phoneFocus,
+            label: "Telefon Numarası (Örn: 0535...)",
+            icon: Icons.phone_android_rounded,
+            isPasswordField: false,
+            type: TextInputType.phone,
+            autofillHints: const [AutofillHints.telephoneNumber],
+            inputFormatters: [
+              SmartPhoneFormatter(),
+              LengthLimitingTextInputFormatter(15)
+            ],
+            onEditingComplete: () =>
+                FocusScope.of(context).requestFocus(_passwordFocus),
+          ),
+          const SizedBox(height: 14),
+          _buildGlassTextField(
+            controller: _passwordController,
+            focusNode: _passwordFocus,
+            label: _currentOauthProvider != null
+                ? "Şifre (Opsiyonel)"
+                : "Şifre (En az 6 karakter)",
+            icon: Icons.lock_outline_rounded,
+            isPasswordField: true,
+            autofillHints: const [AutofillHints.newPassword],
+            textInputAction: TextInputAction.done,
+            onEditingComplete: () => FocusScope.of(context).unfocus(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCustomerStep1_Location() {
+    return KeyedSubtree(
+      key: const ValueKey('step_customer_loc'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionHeader("Bölge & Konum Seçimi", Icons.map_rounded),
+          _buildCitySelectorTile(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProviderStep2_LocationAndVehicle() {
+    return KeyedSubtree(
+      key: const ValueKey('step_provider_loc'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionHeader("Bölge & Konum Seçimi", Icons.map_rounded),
+          _buildCitySelectorTile(),
+          const SizedBox(height: 24),
+          _buildSectionHeader(
+              (widget.userType == 'rentacar' || _selectedService == 'rentacar')
+                  ? "Firma Bilgileri & Banka"
+                  : "Hizmet Aracı & Banka",
+              Icons.directions_car_filled_rounded),
+          if (widget.userType == 'rentacar' || _selectedService == 'rentacar')
+            _buildGlassTextField(
+              controller: _mapLinkController,
+              focusNode: _mapLinkFocus,
+              label: "Firma Google Harita Linki",
+              icon: Icons.map_rounded,
+              isPasswordField: false,
+              type: TextInputType.url,
+              textInputAction: TextInputAction.next,
+              onEditingComplete: () =>
+                  FocusScope.of(context).requestFocus(_ibanFocus),
+            )
+          else
+            _buildGlassTextField(
+              controller: _plateController,
+              focusNode: _plateFocus,
+              label: "Hizmet / Çekici Araç Plakası (Örn: 42 TAG 403)",
+              icon: Icons.pin_rounded,
+              isPasswordField: false,
+              type: TextInputType.text,
+              textInputAction: TextInputAction.next,
+              capitalization: TextCapitalization.characters,
+              inputFormatters: [
+                TurkishPlateFormatter(),
+                LengthLimitingTextInputFormatter(11)
+              ],
+              onEditingComplete: () =>
+                  FocusScope.of(context).requestFocus(_ibanFocus),
+            ),
+          const SizedBox(height: 14),
+          _buildGlassTextField(
+            controller: _ibanController,
+            focusNode: _ibanFocus,
+            label: "IBAN Numarası (26 Haneli Zorunlu)",
+            icon: Icons.account_balance_rounded,
+            isPasswordField: false,
+            type: TextInputType.text,
+            textInputAction: TextInputAction.done,
+            capitalization: TextCapitalization.characters,
+            inputFormatters: [
+              SmartIbanFormatter(),
+              LengthLimitingTextInputFormatter(32)
+            ],
+            onEditingComplete: () => FocusScope.of(context).unfocus(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProviderStep3_Documents() {
+    return KeyedSubtree(
+      key: const ValueKey('step_provider_docs'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionHeader(
+              (widget.userType == 'rentacar' || _selectedService == 'rentacar')
+                  ? "Firma Doğrulama Belgeleri"
+                  : "Yetki ve Doğrulama Belgeleri",
+              Icons.verified_user_rounded),
+          if (_selectedService == 'wash' && widget.userType != 'rentacar') ...[
+            _buildFilePicker(
+                "Ehliyet Fotoğrafı", _driverLicense, 'driver_license'),
+            _buildFilePicker(
+                "Hizmet Aracı Fotoğrafı", _vehiclePhoto, 'vehicle_photo'),
+            _buildFilePicker(
+                "Mobil Ekipman Fotoğrafı", _equipmentPhoto, 'equipment_photo'),
+          ] else ...[
+            _buildFilePicker("Vergi Levhası", _taxPlate, 'tax_plate'),
+          ]
         ],
       ),
     );
@@ -996,7 +1758,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     final size = MediaQuery.of(context).size;
     final isCustomer = widget.userType == 'customer';
     final isTablet = size.width > 600;
-    
+
     return Scaffold(
       backgroundColor: pureBlack,
       extendBodyBehindAppBar: true,
@@ -1004,16 +1766,22 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         leading: IconButton(
           icon: Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.08), shape: BoxShape.circle),
-            child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.white),
+            decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                shape: BoxShape.circle),
+            child: const Icon(Icons.arrow_back_ios_new_rounded,
+                size: 16, color: Colors.white),
           ),
           onPressed: () {
             HapticFeedback.selectionClick();
             Navigator.pop(context);
           },
         ),
-        title: Image.asset('assets/images/logo.png', height: 28, errorBuilder: (_, __, ___) => const Icon(Icons.car_repair_rounded, color: neonGreen, size: 28)), 
-        backgroundColor: Colors.transparent, 
+        title: Image.asset('assets/images/logo.png',
+            height: 28,
+            errorBuilder: (_, __, ___) => const Icon(Icons.car_repair_rounded,
+                color: neonGreen, size: 28)),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
         flexibleSpace: ClipRect(
@@ -1034,7 +1802,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [neonGreen.withValues(alpha: 0.08), Colors.transparent],
+                  colors: [
+                    neonGreen.withValues(alpha: 0.08),
+                    Colors.transparent
+                  ],
                   stops: const [0.1, 0.8],
                 ),
               ),
@@ -1043,292 +1814,231 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           SafeArea(
             child: Center(
               child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: isTablet ? 550 : double.infinity),
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isTablet ? 0.0 : 20.0, 
-                    vertical: 16.0
-                  ),
-                  child: AutofillGroup(
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: neonGreen.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: neonGreen.withValues(alpha: 0.25), width: 1.5),
-                          ),
-                          child: Icon(isCustomer ? Icons.person_add_rounded : Icons.handyman_rounded, size: 36, color: neonGreen),
-                        ),
-                        const SizedBox(height: 18),
-                        Text(
-                          isCustomer ? "Müşteri Hesabı Oluştur" : "Usta Hesabı Oluştur", 
-                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          "Lütfen bilgilerinizi eksiksiz ve doğru doldurunuz", 
-                          style: TextStyle(fontSize: 13, color: textGray, fontWeight: FontWeight.w500)
-                        ),
-                        
-                        // HIZLI SOSYAL KAYIT SEÇENEKLERİ
-                        const SizedBox(height: 20),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: InkWell(
-                                onTap: _signUpWithGoogle,
-                                borderRadius: BorderRadius.circular(16),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.04),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                                  ),
-                                  child: const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.g_mobiledata_rounded, color: Colors.white, size: 28),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        "Google ile Kaydol",
-                                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: InkWell(
-                                onTap: _signUpWithApple,
-                                borderRadius: BorderRadius.circular(16),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.04),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                                  ),
-                                  child: const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.apple_rounded, color: Colors.white, size: 20),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        "Apple ile Kaydol",
-                                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        if (_currentOauthProvider != null) ...[
-                          const SizedBox(height: 14),
+                constraints:
+                    BoxConstraints(maxWidth: isTablet ? 550 : double.infinity),
+                child: Column(
+                  children: [
+                    // --- ÜST BAŞLIK VE ADIM (STEP) ÇUBUĞU ---
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                      child: Column(
+                        children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              color: neonGreen.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: neonGreen.withValues(alpha: 0.3)),
+                              color: neonGreen.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: neonGreen.withValues(alpha: 0.25),
+                                  width: 1.5),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(_currentOauthProvider == 'google' ? Icons.g_mobiledata_rounded : Icons.apple_rounded, color: neonGreen, size: 20),
-                                const SizedBox(width: 8),
-                                Text(
-                                  "${_currentOauthProvider!.toUpperCase()} Bağlandı (Telefon & Şehir Zorunlu)",
-                                  style: const TextStyle(color: neonGreen, fontSize: 12, fontWeight: FontWeight.w800),
+                            child: Icon(
+                                widget.userType == 'customer'
+                                    ? Icons.person_add_rounded
+                                    : (widget.userType == 'rentacar'
+                                        ? Icons.car_rental_rounded
+                                        : Icons.handyman_rounded),
+                                size: 36,
+                                color: neonGreen),
+                          ),
+                          const SizedBox(height: 18),
+                          Text(
+                              widget.userType == 'customer'
+                                  ? "Müşteri Hesabı Oluştur"
+                                  : (widget.userType == 'rentacar'
+                                      ? "Firma Hesabı Oluştur"
+                                      : "Usta Hesabı Oluştur"),
+                              style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                  letterSpacing: -0.5)),
+                          const SizedBox(height: 16),
+                          // Dinamik Adım (Step) Çubuğu
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(
+                                isCustomer
+                                    ? 2
+                                    : (widget.userType == 'provider' ? 4 : 3),
+                                (index) {
+                              bool isActive = index <= _currentStep;
+                              return AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                margin:
+                                    const EdgeInsets.symmetric(horizontal: 4),
+                                width: isActive ? 28 : 10,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: isActive
+                                      ? neonGreen
+                                      : Colors.white.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(4),
+                                  boxShadow: isActive
+                                      ? [
+                                          BoxShadow(
+                                              color: neonGreen.withValues(
+                                                  alpha: 0.3),
+                                              blurRadius: 6)
+                                        ]
+                                      : [],
                                 ),
-                              ],
-                            ),
+                              );
+                            }),
                           ),
+                          const SizedBox(height: 20),
                         ],
-                        const SizedBox(height: 28),
-                    
-                        _buildSectionHeader("Temel Bilgiler", Icons.badge_rounded),
-                        _buildGlassTextField(
-                          controller: _nameController,
-                          focusNode: _nameFocus,
-                          label: "Ad Soyad", 
-                          icon: Icons.person_rounded, 
-                          isPasswordField: false, 
-                          type: TextInputType.name, 
-                          autofillHints: const [AutofillHints.name],
-                          capitalization: TextCapitalization.words,
-                          onEditingComplete: () => FocusScope.of(context).requestFocus(_phoneFocus),
-                        ),
-                        const SizedBox(height: 14),
-                        _buildGlassTextField(
-                          controller: _phoneController, 
-                          focusNode: _phoneFocus,
-                          label: "Telefon Numarası (Zorunlu - Örn: 0535...)", 
-                          icon: Icons.phone_android_rounded, 
-                          isPasswordField: false, 
-                          type: TextInputType.phone,
-                          autofillHints: const [AutofillHints.telephoneNumber],
-                          inputFormatters: [
-                            SmartPhoneFormatter(), 
-                            LengthLimitingTextInputFormatter(15), 
-                          ],
-                          onEditingComplete: () => FocusScope.of(context).requestFocus(_passwordFocus),
-                        ),
-                        const SizedBox(height: 14),
-                        _buildGlassTextField(
-                          controller: _passwordController, 
-                          focusNode: _passwordFocus,
-                          label: _currentOauthProvider != null ? "Şifre (Opsiyonel)" : "Şifre (En az 6 karakter)", 
-                          icon: Icons.lock_outline_rounded, 
-                          isPasswordField: true,
-                          autofillHints: const [AutofillHints.newPassword],
-                          textInputAction: isCustomer ? TextInputAction.done : TextInputAction.next,
-                          onEditingComplete: () {
-                            if (isCustomer) {
-                              FocusScope.of(context).unfocus();
-                              _register();
-                            } else {
-                              FocusScope.of(context).requestFocus(_ibanFocus);
-                            }
-                          },
-                        ),
-                    
-                        const SizedBox(height: 24),
-                        _buildSectionHeader("Bölge & Konum (Zorunlu)", Icons.map_rounded),
-                        _buildCitySelectorTile(),
-                    
-                        if (!isCustomer) ...[
-                          const SizedBox(height: 24),
-                          _buildSectionHeader("Hizmet Aracı & Banka (Zorunlu)", Icons.directions_car_filled_rounded),
-                          _buildGlassTextField(
-                            controller: _plateController,
-                            focusNode: _plateFocus,
-                            label: "Hizmet / Çekici Araç Plakası (Örn: 42 TAG 403)",
-                            icon: Icons.pin_rounded,
-                            isPasswordField: false,
-                            type: TextInputType.text,
-                            textInputAction: TextInputAction.next,
-                            capitalization: TextCapitalization.characters,
-                            inputFormatters: [
-                              TurkishPlateFormatter(),
-                              LengthLimitingTextInputFormatter(11),
-                            ],
-                            onEditingComplete: () => FocusScope.of(context).requestFocus(_ibanFocus),
-                          ),
-                          const SizedBox(height: 14),
-                          _buildGlassTextField(
-                            controller: _ibanController, 
-                            focusNode: _ibanFocus,
-                            label: "IBAN Numarası (26 Haneli Zorunlu)", 
-                            icon: Icons.account_balance_rounded, 
-                            isPasswordField: false, 
-                            type: TextInputType.text,
-                            textInputAction: TextInputAction.done,
-                            capitalization: TextCapitalization.characters,
-                            inputFormatters: [
-                              SmartIbanFormatter(), 
-                              LengthLimitingTextInputFormatter(32), 
-                            ],
-                            onEditingComplete: () {
-                              FocusScope.of(context).unfocus();
-                            },
-                          ),
-                          const SizedBox(height: 14),
-                          _buildGlassDropdown(
-                            "Hizmet Kategorisi",
-                            Icons.build_circle_outlined,
-                            _selectedService,
-                            const [
-                              DropdownMenuItem(value: 'mechanic', child: Text("Tamirci", maxLines: 1, overflow: TextOverflow.ellipsis)),
-                              DropdownMenuItem(value: 'tow', child: Text("Çekici", maxLines: 1, overflow: TextOverflow.ellipsis)),
-                              DropdownMenuItem(value: 'tire', child: Text("Lastikçi", maxLines: 1, overflow: TextOverflow.ellipsis)),
-                              DropdownMenuItem(value: 'wash', child: Text("Oto Yıkama", maxLines: 1, overflow: TextOverflow.ellipsis)),
-                            ],
-                            (val) {
-                              setState(() {
-                                _selectedService = val!;
-                                _taxPlate = null; _driverLicense = null; _vehiclePhoto = null; _equipmentPhoto = null;
-                              });
-                            }
-                          ),
-                          const SizedBox(height: 24),
-                          _buildSectionHeader("Yetki ve Doğrulama Belgeleri (Zorunlu)", Icons.verified_user_rounded),
-                          
-                          if (_selectedService == 'wash') ...[
-                            _buildFilePicker("Ehliyet Fotoğrafı", _driverLicense, 'driver_license'),
-                            _buildFilePicker("Hizmet Aracı Fotoğrafı", _vehiclePhoto, 'vehicle_photo'),
-                            _buildFilePicker("Mobil Ekipman Fotoğrafı", _equipmentPhoto, 'equipment_photo'),
-                          ] else ...[
-                            _buildFilePicker("Vergi Levhası", _taxPlate, 'tax_plate'),
-                          ]
-                        ],
-                        
-                        const SizedBox(height: 32),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: isRegistering ? null : _register,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: neonGreen, 
-                              foregroundColor: Colors.black,
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(vertical: 20),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                            ),
-                            child: isRegistering 
-                              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3)) 
-                              : const Text("Hesabımı Oluştur", style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, letterSpacing: -0.3)),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        
-                        TextButton(
-                          onPressed: () {
-                            HapticFeedback.selectionClick();
-                            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen(userType: widget.userType)));
-                          },
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                          ),
-                          child: RichText(
-                            text: const TextSpan(
-                              text: "Zaten hesabınız var mı? ",
-                              style: TextStyle(color: textGray, fontSize: 14, fontWeight: FontWeight.w500),
-                              children: [
-                                TextSpan(text: "Giriş Yap", style: TextStyle(color: neonGreen, fontWeight: FontWeight.w800))
-                              ]
-                            ),
-                          ),
-                        ),
-                    
-                        const SizedBox(height: 12),
-                        GestureDetector(
-                          onTap: () async {
-                            HapticFeedback.selectionClick();
-                            final url = Uri.parse('https://eliteagency.sbs/gizlilik_politikasi.html');
-                            if (await canLaunchUrl(url)) {
-                              await launchUrl(url);
-                            }
-                          },
-                          child: const Text(
-                            "Gizlilik Politikası ve Kullanım Koşulları",
-                            style: TextStyle(color: textGray, decoration: TextDecoration.underline, fontSize: 12, fontWeight: FontWeight.w500),
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                      ],
+                      ),
                     ),
-                  ),
+
+                    // --- ORTA KAYDIRILABİLİR İÇERİK ALANI (Animasyonlu) ---
+                    Expanded(
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        child: AutofillGroup(
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 400),
+                            transitionBuilder: (child, animation) =>
+                                FadeTransition(
+                                    opacity: animation,
+                                    child: SlideTransition(
+                                      position: Tween<Offset>(
+                                              begin: const Offset(0.05, 0),
+                                              end: Offset.zero)
+                                          .animate(animation),
+                                      child: child,
+                                    )),
+                            child: _buildCurrentStepContent(isCustomer),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // --- ALT İLERİ/GERİ BUTONLARI ---
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              if (_currentStep > 0) ...[
+                                Expanded(
+                                  flex: 1,
+                                  child: OutlinedButton(
+                                    onPressed: _prevStep,
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 20),
+                                      side: BorderSide(
+                                          color: Colors.white
+                                              .withValues(alpha: 0.2),
+                                          width: 1.5),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(20)),
+                                    ),
+                                    child: const Icon(Icons.arrow_back_rounded,
+                                        size: 24),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                              ],
+                              Expanded(
+                                flex: 3,
+                                child: ElevatedButton(
+                                  onPressed: isRegistering ? null : _nextStep,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: neonGreen,
+                                    foregroundColor: Colors.black,
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 20),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(20)),
+                                  ),
+                                  child: isRegistering
+                                      ? const SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                              color: Colors.black,
+                                              strokeWidth: 3))
+                                      : Text(
+                                          _currentStep ==
+                                                  (isCustomer
+                                                      ? 1
+                                                      : (widget.userType ==
+                                                              'provider'
+                                                          ? 3
+                                                          : 2))
+                                              ? "Hesabımı Oluştur"
+                                              : "İleri",
+                                          style: const TextStyle(
+                                              fontSize: 17,
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: -0.3)),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          TextButton(
+                            onPressed: () {
+                              HapticFeedback.selectionClick();
+                              Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => LoginScreen(
+                                          userType: widget.userType)));
+                            },
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 10),
+                            ),
+                            child: RichText(
+                              text: const TextSpan(
+                                  text: "Zaten hesabınız var mı? ",
+                                  style: TextStyle(
+                                      color: textGray,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500),
+                                  children: [
+                                    TextSpan(
+                                        text: "Giriş Yap",
+                                        style: TextStyle(
+                                            color: neonGreen,
+                                            fontWeight: FontWeight.w800))
+                                  ]),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          GestureDetector(
+                            onTap: () async {
+                              HapticFeedback.selectionClick();
+                              final url = Uri.parse(
+                                  'https://eliteagency.sbs/gizlilik_politikasi.html');
+                              if (await canLaunchUrl(url)) {
+                                await launchUrl(url);
+                              }
+                            },
+                            child: const Text(
+                              "Gizlilik Politikası ve Kullanım Koşulları",
+                              style: TextStyle(
+                                  color: textGray,
+                                  decoration: TextDecoration.underline,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                      ),
+                    )
+                  ],
                 ),
               ),
             ),

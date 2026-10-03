@@ -11,14 +11,14 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
 
 // Siber Tema Renk Paleti (V2 - Ultra Modern Glassmorphism)
-const Color neonGreen = Color(0xFF00FFA3);
-const Color darkGreen = Color(0xFF0A2B1D);
-const Color pureBlack = Color(0xFF05070F); 
-const Color panelBlack = Color(0xFF131624); 
-const Color textGray = Color(0x99FFFFFF);
-const Color alertRed = Color(0xFFFF2A5F);
-const Color goldAccent = Color(0xFFFFB800);
-const Color neonCyan = Color(0xFF00E5FF);
+const Color neonGreen = AppConstants.primaryColor;
+const Color darkGreen = Color(0xFF002200);
+const Color pureBlack = AppConstants.bgColor; 
+const Color panelBlack = AppConstants.cardColor; 
+const Color textGray = Color(0xFFFFFFFF);
+const Color alertRed = Color(0xFFFFFFFF);
+const Color goldAccent = Color(0xFFFFFFFF);
+const Color neonCyan = Color(0xFFFFFFFF);
 
 class SparePartsMarketScreen extends StatefulWidget {
   final int currentUserId;

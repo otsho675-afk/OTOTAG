@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
+import 'services/rental_service.dart';
+import 'admin_rental_monitor_screen.dart';
+import 'rentacar_company_profile_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
@@ -370,7 +373,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     });
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: const Text("Seçilen öğeler panonuzdan gizlendi."),
-      backgroundColor: Colors.blueAccent,
+      backgroundColor: AppConstants.cardColor,
       behavior: SnackBarBehavior.floating,
       margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -407,7 +410,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       )
     ) ?? false;
 
-    if (!confirm) return;
+    if (!confirm || !mounted) return;
 
     setState(() => isLoading = true);
     
@@ -713,7 +716,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     try {
       final response = await http.get(Uri.parse("$baseUrl?action=get_provider_profile&provider_id=$providerId"));
       // ignore: use_build_context_synchronously
-      if (mounted) { Navigator.pop(context); } 
+      if (!context.mounted) return; Navigator.pop(context); 
       
       final data = json.decode(response.body);
       if (response.statusCode == 200 && data is Map && data['status'] == 'success') {
@@ -834,7 +837,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("İptal")),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+            style: ElevatedButton.styleFrom(backgroundColor: AppConstants.primaryColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
             child: const Text("Güncelle", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
@@ -939,7 +942,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       )
     ) ?? false;
 
-    if (!confirm) return;
+    if (!confirm || !mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: const Text("Derin optimizasyon başlatıldı, lütfen bekleyin..."), 
@@ -1118,7 +1121,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       )
     ) ?? false;
 
-    if (!confirm) return;
+    if (!confirm || !mounted) return;
 
     try {
       final Map<String, String> body = {
@@ -1196,7 +1199,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       )
     ) ?? false;
 
-    if (!confirm) return;
+    if (!confirm || !mounted) return;
 
     try {
       final response = await http.post(
@@ -1255,7 +1258,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       )
     ) ?? false;
 
-    if (!confirm) return;
+    if (!confirm || !mounted) return;
 
     try {
       final response = await http.post(
@@ -1314,7 +1317,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       )
     ) ?? false;
 
-    if (!confirm) return;
+    if (!confirm || !mounted) return;
 
     setState(() => isLoading = true);
     try {
@@ -1325,6 +1328,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         "user_type": "customer",
         "is_sale": "false",
       });
+      if (!mounted) return;
       final data = json.decode(res.body);
       if (data['status'] == 'success') {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -1345,6 +1349,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ));
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: const Text("Bağlantı hatası."), 
         backgroundColor: Colors.red, 
@@ -1433,8 +1438,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   icon: const Icon(Icons.open_in_browser, size: 18),
                   label: const Text("Tam Boyutta Aç"),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueAccent, 
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppConstants.primaryColor, foregroundColor: Colors.black,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
@@ -1547,7 +1551,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 children: [
                                   const Icon(Icons.star_rounded, color: Colors.orange, size: 14),
                                   const SizedBox(width: 4),
-                                  Text("${user['rating'] ?? '5.0'} (${user['reviews_count'] ?? '0'})", style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12)),
+                                  Text(user['user_type'] == 'rentacar' && rentalId(user['reviews_count']) == 0 ? 'Henüz puan yok' : "${user['rating'] ?? '0'} (${user['reviews_count'] ?? '0'})", style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12)),
                                 ],
                               ),
                             ),
@@ -1829,16 +1833,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue.shade600,
+              backgroundColor: AppConstants.primaryColor,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             ),
             onPressed: () => Navigator.pop(context), 
-            child: const Text("Tamam", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+            child: const Text("Tamam", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold))
           )
         ],
       )
     );
+  }
+
+  bool _rentalCancelling = false;
+  Future<void> _cancelRentalReservation(int jobId) async {
+    if (_rentalCancelling) return;
+    _rentalCancelling = true;
+    final api = RentalService();
+    try {
+      final confirmed = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+        title: const Text('Rezervasyonu iptal et'),
+        content: Text('Rezervasyon #$jobId iptal edilecek. Araç yeniden müsait olur; rezervasyon ve şikâyet geçmişi korunur.'),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx,false), child: const Text('Vazgeç')),
+          FilledButton(onPressed: () => Navigator.pop(ctx,true), child: const Text('İptali onayla'))]));
+      if (confirmed != true || !mounted) return;
+      final response = await api.adminCancel(jobId);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${response['message']}')));
+      await _fetchTickets();
+    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'))); }
+    finally { api.dispose(); _rentalCancelling = false; }
   }
 
   void _showTicketDetailsDialog(Map<String, dynamic> ticket, Color cardColor) {
@@ -1868,7 +1891,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               const Divider(height: 1),
               _detailRow("Müşteri", ticket['customer_name']?.toString() ?? 'Bilinmiyor', isDark),
               const Divider(height: 1),
-              _detailRow("Usta", ticket['provider_name']?.toString() ?? 'Bilinmiyor', isDark),
+              _detailRow(ticket['subject']?.toString().startsWith('[KİRALAMA]') == true ? "Rent A Car" : "Usta", ticket['provider_name']?.toString() ?? 'Bilinmiyor', isDark),
+              const Divider(height: 1),
+              _detailRow("Şikâyet eden", (ticket['reporter_name'] ?? ticket['customer_name'])?.toString() ?? 'Bilinmiyor', isDark),
               const Divider(height: 1),
               _detailRow("Tarih", _formatDate(ticket['created_at']?.toString()), isDark),
               const Divider(height: 1),
@@ -1890,6 +1915,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ),
         actionsAlignment: MainAxisAlignment.spaceBetween,
         actions: [
+          if (ticket['subject']?.toString().startsWith('[KİRALAMA]') == true)
+            TextButton(onPressed: () { Navigator.pop(context); _cancelRentalReservation(int.tryParse('${ticket['job_id']}') ?? 0); },
+              child: const Text('Rezervasyonu iptal et')),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
@@ -1901,12 +1929,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.purple.shade600,
+              backgroundColor: AppConstants.primaryColor,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             ),
             onPressed: () => Navigator.pop(context), 
-            child: const Text("Tamam", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+            child: const Text("Tamam", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold))
           )
         ],
       )
@@ -2699,7 +2727,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       }
     } catch (_) {}
 
-    if (mounted) { Navigator.pop(context); }
+    if (!context.mounted) return; Navigator.pop(context);
 
     showModalBottomSheet(
       context: context,
@@ -2798,8 +2826,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           icon: const Icon(Icons.add, size: 16),
                           label: const Text("Yeni Ekle", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blueAccent, 
-                            foregroundColor: Colors.white, 
+                            backgroundColor: AppConstants.primaryColor, foregroundColor: Colors.black, 
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8)
                           ),
@@ -2977,10 +3004,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
                           if (response.statusCode == 200 || response.statusCode == 201) {
                             await _fetchAds();
+                            if (!context.mounted) return;
                             onSuccess();
-                            if (mounted) { Navigator.pop(context); }
+                            if (!context.mounted) return; Navigator.pop(context);
                           } else {
-                            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                               content: const Text("Reklam eklenemedi."),
                               behavior: SnackBarBehavior.floating,
                               margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
@@ -2988,7 +3016,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             ));
                           }
                         } catch (e) {
-                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                             content: Text("Bağlantı hatası: $e"),
                             behavior: SnackBarBehavior.floating,
                             margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
@@ -2998,7 +3026,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           setSheetState(() => isSavingAd = false);
                         }
                       },
-                      style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), backgroundColor: Colors.blueAccent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                      style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), backgroundColor: AppConstants.primaryColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
                       child: isSavingAd 
                         ? const Center(child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                         : const Text("Reklamı Kaydet", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
@@ -3155,10 +3183,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
                           if (response.statusCode == 200) {
                             await _fetchAds();
+                            if (!context.mounted) return;
                             onSuccess();
-                            if (mounted) { Navigator.pop(context); }
+                            if (!context.mounted) return; Navigator.pop(context);
                           } else {
-                            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                               content: const Text("Reklam güncellenemedi."),
                               behavior: SnackBarBehavior.floating,
                               margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
@@ -3166,7 +3195,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             ));
                           }
                         } catch (e) {
-                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                             content: Text("Bağlantı hatası: $e"),
                             behavior: SnackBarBehavior.floating,
                             margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
@@ -3176,7 +3205,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           setSheetState(() => isSavingAd = false);
                         }
                       },
-                      style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), backgroundColor: Colors.blueAccent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                      style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), backgroundColor: AppConstants.primaryColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
                       child: isSavingAd 
                         ? const Center(child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                         : const Text("Değişiklikleri Kaydet", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
@@ -3476,6 +3505,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         elevation: 0,
         centerTitle: true,
         surfaceTintColor: Colors.transparent,
+        actions: [IconButton(tooltip: 'Kiralama canlı takip', icon: const Icon(Icons.directions_car_outlined), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminRentalMonitorScreen())))],
       ),
       body: SafeArea(
         bottom: false,
@@ -4103,7 +4133,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                   } else if (value == 'punish') {
                                     _showPunishmentDialog(userId, user['name']?.toString() ?? 'Kullanıcı', !isCustomer);
                                   } else if (value == 'reviews' && !isCustomer) {
-                                    _fetchAndShowProviderReviews(userId, user['name']?.toString() ?? 'Usta');
+                                    if (user['user_type'] == 'rentacar') {
+                                      Navigator.push(context, MaterialPageRoute(builder: (_) => RentacarCompanyProfileScreen(companyId: userId)));
+                                    } else {
+                                      _fetchAndShowProviderReviews(userId, user['name']?.toString() ?? 'Usta');
+                                    }
                                   }
                                 },
                                 itemBuilder: (context) => <PopupMenuEntry<String>>[
@@ -4537,6 +4571,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         matchesFilter = ticket['creator_type'] == 'customer';
       } else if (ticketFilter == 'from_provider') {
         matchesFilter = ticket['creator_type'] == 'provider';
+      } else if (ticketFilter == 'from_rentacar') {
+        matchesFilter = ticket['creator_type'] == 'rentacar';
       }
       
       return matchesSearch && matchesFilter;
@@ -4643,6 +4679,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               _buildFilterChip("Müşteriden", "from_customer", ticketFilter, (val) => setState(() => ticketFilter = val)),
               const SizedBox(width: 8),
               _buildFilterChip("Ustadan", "from_provider", ticketFilter, (val) => setState(() => ticketFilter = val)),
+              const SizedBox(width: 8),
+              _buildFilterChip("Rent A Car'dan", "from_rentacar", ticketFilter, (val) => setState(() => ticketFilter = val)),
             ],
           ),
         ),
@@ -4711,8 +4749,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               children: [
                                 Text("#$ticketId - ${ticket['subject'] ?? 'Konu Yok'}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
                                 const SizedBox(height: 3),
-                                Text("Eden: ${ticket['customer_name'] ?? 'Bilinmiyor'}", style: TextStyle(color: Colors.grey.shade600, fontSize: 11), overflow: TextOverflow.ellipsis),
-                                Text("Edilen: ${ticket['provider_name'] ?? 'Bilinmiyor'}", style: TextStyle(color: Colors.grey.shade600, fontSize: 11), overflow: TextOverflow.ellipsis),
+                                Text("Eden: ${ticket['reporter_name'] ?? ticket['customer_name'] ?? 'Bilinmiyor'}", style: TextStyle(color: Colors.grey.shade600, fontSize: 11), overflow: TextOverflow.ellipsis),
+                                Text("Edilen: ${ticket['reported_name'] ?? ticket['provider_name'] ?? 'Bilinmiyor'}", style: TextStyle(color: Colors.grey.shade600, fontSize: 11), overflow: TextOverflow.ellipsis),
                               ],
                             ),
                           ),

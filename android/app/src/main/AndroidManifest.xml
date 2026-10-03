@@ -54,6 +54,7 @@
     </queries>
 
     <application
+        android:allowBackup="false"
         android:label="Oto Sistem"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
@@ -68,7 +69,7 @@
         <!-- Google Maps API Anahtarı (Zorunlu) -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyA_NvuYHjKyG7O0ZDYJLvxfgClvdHlMlJU"/>
+            android:value="${googleMapsApiKey}"/>
 
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">

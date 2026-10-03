@@ -10,7 +10,7 @@ import 'dart:io';
 import 'dart:ui';
 import 'package:image_picker/image_picker.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
-import 'package:pusher_channels_flutter/pusher_channels_flutter.dart';
+import 'services/realtime_client.dart';
 
 class ChatScreen extends StatefulWidget {
   final int jobId;
@@ -39,8 +39,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   // Mesajları ters sırada tutacağız (reverse: true için)
   List messages = [];
   bool isUploading = false;
-  PusherChannelsFlutter pusher = PusherChannelsFlutter.getInstance();
+  final RealtimeClient pusher = RealtimeClient();
   bool _isFetching = false;
+  Timer? _fallbackPoller;
   bool _isTyping = false; 
   final http.Client _httpClient = http.Client(); // Yüksek trafikte socket tüketimini önleyen bağlantı havuzu
 
@@ -90,22 +91,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           }
         },
         onEvent: (event) {
-          if (event.eventName == "new_message") {
-            if (mounted) {
-              try {
-                final data = json.decode(event.data.toString());
-                if (data['message'] != null) {
-                  setState(() {
-                    messages.insert(0, data['message']);
-                  });
-                  _markAsRead(); 
-                } else {
-                  _fetchMessages();
-                }
-              } catch (e) {
-                _fetchMessages();
-              }
-            }
+          if (event.eventName == "new_message" && mounted) {
+            _fetchMessages();
           }
         },
       );
@@ -118,24 +105,35 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   void _startPolling() {
     _initWebSocket();
+    _startFallbackPolling();
+  }
+
+  void _startFallbackPolling() {
+    _fallbackPoller?.cancel();
+    _fallbackPoller = Timer.periodic(const Duration(seconds: 6), (_) {
+      if (mounted && !pusher.isSubscribed('private-chat_${widget.jobId}')) _fetchMessages();
+    });
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _fallbackPoller?.cancel();
       pusher.disconnect();
     } else if (state == AppLifecycleState.resumed) {
       pusher.connect();
       // Uygulama uyandığında WebSocket kopukluğu sırasında kaçırılan mesajları senkronize et
       _fetchMessages();
+      _startFallbackPolling();
     }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _fallbackPoller?.cancel();
     pusher.unsubscribe(channelName: "private-chat_${widget.jobId}");
-    pusher.disconnect();
+    pusher.dispose();
     _msgController.dispose();
     _httpClient.close(); // Bellek sızıntısını ve açık bağlantıları sonlandırır
     super.dispose();
@@ -147,7 +145,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     
     try {
       final response = await _httpClient.get(Uri.parse(
-          "$baseUrl?action=get_messages&job_id=${widget.jobId}&user_id=${widget.currentUserId}&receiver_id=${widget.receiverId}"));
+          "$baseUrl?action=get_messages&job_id=${widget.jobId}&user_id=${widget.currentUserId}&receiver_id=${widget.receiverId}"))
+          .timeout(const Duration(seconds: 15));
       
       if (response.statusCode == 200 && mounted) {
         final data = json.decode(response.body);
@@ -273,9 +272,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   // Siber Tema Renk Paleti (V2 - Ultra Modern Glassmorphism)
   static const Color neonGreen = Color(0xFF00FFA3);
-  static const Color pureBlack = Color(0xFF05070F); 
-  static const Color panelBlack = Color(0xFF131624); 
-  static const Color neonCyan = Color(0xFF00E5FF);
+  static const Color pureBlack = AppConstants.bgColor; 
+  static const Color panelBlack = AppConstants.cardColor; 
+  static const Color neonCyan = AppConstants.primaryColor;
   static const Color alertRed = Color(0xFFFF2A5F);
 
   @override

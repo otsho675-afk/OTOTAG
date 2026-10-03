@@ -10,7 +10,7 @@ import 'dart:async';
 import 'dart:ui';
 import 'dart:math' as math;
 import 'package:onesignal_flutter/onesignal_flutter.dart';
-import 'package:pusher_channels_flutter/pusher_channels_flutter.dart';
+import 'services/realtime_client.dart';
 import 'job_tracking_screen.dart';
 import 'provider_profile_screen.dart';
 import 'customer_dashboard_screen.dart';
@@ -44,7 +44,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
   bool _isFetching = false;
   bool _isNavigating = false; 
   final http.Client _httpClient = http.Client();
-  PusherChannelsFlutter pusher = PusherChannelsFlutter.getInstance();
+  final RealtimeClient pusher = RealtimeClient();
   
   final String baseUrl = AppConstants.baseUrl;
 
@@ -226,7 +226,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen> with TickerProv
       LiveActivityService().endTracking();
     }
     pusher.unsubscribe(channelName: "job_${widget.jobId}");
-    pusher.disconnect();
+    pusher.dispose();
     _httpClient.close();
     _radarController.dispose();
     _rippleController.dispose();

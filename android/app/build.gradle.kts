@@ -7,6 +7,16 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Use the same app configuration as Flutter; a source-code key is unnecessary.
+val mapsConfig = rootProject.file("../config.env")
+val configuredMapsKey = if (mapsConfig.exists()) mapsConfig.readLines()
+    .firstOrNull { it.trim().startsWith("GOOGLE_MAPS_API_KEY=") }
+    ?.substringAfter('=')?.trim()?.trim('"', '\'') ?: "" else ""
+val googleMapsKey = providers.gradleProperty("OTOTAG_GOOGLE_MAPS_API_KEY")
+    .orElse(providers.environmentVariable("OTOTAG_GOOGLE_MAPS_API_KEY"))
+    .getOrElse(configuredMapsKey)
+if (googleMapsKey.isBlank()) throw GradleException("config.env içinde GOOGLE_MAPS_API_KEY gerekli.")
+
 android {
     namespace = "com.oto.tag"
     // Hata veren eklentilerin istediği minimum derleme sürümü 36 olarak ayarlandı
@@ -20,6 +30,7 @@ android {
     }
 
     defaultConfig {
+        manifestPlaceholders["googleMapsApiKey"] = googleMapsKey
         applicationId = "com.oto.tag"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion

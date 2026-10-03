@@ -246,6 +246,54 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
     }
   }
 
+  Future<void> _agree() async {
+    if (_busy || _booking == null) return;
+    final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => Theme(
+            data: rentalTheme(),
+            child: AlertDialog(
+                title: const Text('Anlaşma sağlandı mı?'),
+                content: const Text(
+                    'Onayladığında müşteriye kayıtlı teslim konumun için yol tarifi açılır. Ödeme ve teslim koşullarını taraflar kendi aralarında belirler.'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Vazgeç')),
+                  FilledButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('Anlaştık'))
+                ])));
+    if (confirmed != true || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await _service.respond('agree_rentacar_booking', _booking!);
+      await _load();
+      _message('Anlaşma kaydedildi. Müşteri artık yol tarifi alabilir.');
+    } catch (e) {
+      _message('$e');
+      await _load();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _call(String phone) async {
+    final normalized = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (!RegExp(r'^\+?[0-9]{7,15}$').hasMatch(normalized)) {
+      _message('Geçerli telefon numarası bulunamadı.');
+      return;
+    }
+    try {
+      if (!await launchUrl(Uri(scheme: 'tel', path: normalized),
+          mode: LaunchMode.externalApplication)) {
+        _message('Telefon araması açılamadı.');
+      }
+    } catch (_) {
+      _message('Telefon araması açılamadı.');
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Theme(
       data: rentalTheme(),
@@ -280,25 +328,48 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
         lat.abs() <= 90 &&
         lng.abs() <= 180;
     final done = b['job_status'] == 'completed';
-    // New reservations retain the agreed location. Older reservations use the profile link.
-    final directions = rentalMapUri(b['pickup_map_link']) ??
-        (hasLocation
-            ? Uri.https('www.google.com', '/maps/dir/',
-                {'api': '1', 'destination': '$lat,$lng'})
-            : rentalMapUri(b['company_map_link']));
     final cancelled = b['job_status'] == 'cancelled';
+    final agreed =
+        b['agreement_at'] != null && '${b['agreement_at']}'.isNotEmpty;
+    // The customer receives the saved pickup location only after agreement.
+    final directions = !agreed || done || cancelled || widget.company
+        ? null
+        : rentalMapUri(b['pickup_map_link']) ??
+            (hasLocation
+                ? Uri.https('www.google.com', '/maps/dir/',
+                    {'api': '1', 'destination': '$lat,$lng'})
+                : rentalMapUri(b['company_map_link']));
     return Center(
         child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 900),
             child: ListView(padding: const EdgeInsets.all(20), children: [
               MatchingStatusCard(
-                title: cancelled ? 'Rezervasyon iptal edildi' : done ? 'Kiralama tamamlandı' : 'Eşleşmeniz tamamlandı',
-                message: cancelled ? 'Güncel durumu aşağıdan inceleyebilirsiniz.' : done
-                    ? 'Kiralama kaydınız ve işlem geçmişiniz burada.'
-                    : 'Araç size ayrıldı. Teslim konumunu ve anlaşma detaylarını aşağıdan inceleyebilirsiniz.',
-                icon: cancelled ? Icons.event_busy_outlined : done ? Icons.task_alt : Icons.handshake_outlined,
-                steps: const ['Araç seçimi', 'Rezervasyon', 'Tamamlandı'],
-                stage: done ? 2 : 1, active: !cancelled),
+                  title: cancelled
+                      ? 'Eşleşme iptal edildi'
+                      : done
+                          ? 'Kiralama tamamlandı'
+                          : agreed
+                              ? 'Anlaşma sağlandı'
+                              : 'Görüşme başladı',
+                  message: cancelled
+                      ? 'Güncel durumu aşağıdan inceleyebilirsiniz.'
+                      : done
+                          ? 'Kiralama kaydınız ve işlem geçmişiniz burada.'
+                          : agreed
+                              ? 'Firma anlaşmayı onayladı. Müşteri artık yol tarifi alabilir.'
+                              : 'Teklif kabul edildi. Mesajlaşın veya telefonla görüşün; firma anlaştığınızı onaylayınca teslim konumu açılır.',
+                  icon: cancelled
+                      ? Icons.event_busy_outlined
+                      : done
+                          ? Icons.task_alt
+                          : Icons.handshake_outlined,
+                  steps: const ['Teklif', 'Görüşme', 'Anlaşma', 'Bitiş'],
+                  stage: done
+                      ? 3
+                      : agreed
+                          ? 2
+                          : 1,
+                  active: !cancelled),
               const SizedBox(height: 20),
               Wrap(spacing: 8, runSpacing: 8, children: [
                 RentalTag('Rezervasyon #${widget.jobId}', accent: true),
@@ -306,7 +377,9 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
                     ? 'İptal edildi'
                     : done
                         ? 'Tamamlandı'
-                        : 'Rezerve edildi')
+                        : agreed
+                            ? 'Anlaşıldı'
+                            : 'Görüşme aşaması')
               ]),
               const SizedBox(height: 20),
               OutlinedButton.icon(
@@ -367,6 +440,10 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
                     const SizedBox(height: 10),
                     Text('${b['rent_days']} gün',
                         style: const TextStyle(color: Colors.white)),
+                    const SizedBox(height: 8),
+                    const Text(
+                        'Ödeme uygulama dışında, taraflar arasında yapılır.',
+                        style: TextStyle(color: rentalMuted, fontSize: 12)),
                     const SizedBox(height: 14),
                     Text('Rezervasyon: ${_date(b['reserved_at'])}',
                         style: const TextStyle(color: rentalMuted)),
@@ -375,16 +452,22 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
                         style: const TextStyle(color: rentalMuted)),
                   ])),
               const SizedBox(height: 20),
-              const Text('Teslim konumu',
-                  style: TextStyle(
+              Text(agreed ? 'Teslim konumu' : 'Konum anlaşmadan sonra açılır',
+                  style: const TextStyle(
                       color: Colors.white,
                       fontSize: 20,
                       fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               Text(
-                  '${b['pickup_address'] ?? (directions != null ? '${b['company_name']} • ${b['city']}\nFirma konumunu haritada açarak yol tarifi alabilirsin.' : 'Firma konum linki bulunmuyor. Mesajlaşarak firmadan konum isteyebilirsin.')}',
+                  !agreed
+                      ? 'Firma ile görüşüp anlaşın. Firma “Anlaştık” dediğinde kayıtlı konum için yol tarifi açılır.'
+                      : '${b['pickup_address'] ?? (directions != null ? '${b['company_name']} • ${b['city']}\nFirma konumunu haritada açarak yol tarifi alabilirsin.' : 'Firma konum linki bulunmuyor. Mesajlaşarak firmadan konum isteyebilirsin.')}',
                   style: const TextStyle(color: rentalMuted, height: 1.5)),
-              if (hasLocation &&
+              if (agreed &&
+                  !widget.company &&
+                  !done &&
+                  !cancelled &&
+                  hasLocation &&
                   rentalMapUri(b['pickup_map_link']) == null) ...[
                 const SizedBox(height: 14),
                 ClipRRect(
@@ -409,7 +492,7 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
                     icon: const Icon(Icons.directions_outlined),
                     label: const Text('Yol tarifi al')),
               const SizedBox(height: 16),
-              if (!widget.admin)
+              if (!widget.admin && !done && !cancelled)
                 FilledButton.icon(
                     onPressed: _busy
                         ? null
@@ -429,20 +512,42 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
                                         '${b[widget.company ? 'customer_name' : 'company_name']}'))),
                     icon: const Icon(Icons.chat_bubble_outline),
                     label: const Text('Mesajlaş')),
+              if (!widget.admin &&
+                  !done &&
+                  !cancelled &&
+                  '${b[widget.company ? 'customer_phone' : 'company_phone'] ?? ''}'
+                      .trim()
+                      .isNotEmpty) ...[
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                    onPressed: _busy
+                        ? null
+                        : () => _call(
+                            '${b[widget.company ? 'customer_phone' : 'company_phone']}'),
+                    icon: const Icon(Icons.call_outlined),
+                    label: const Text('Telefonla görüş')),
+              ],
               if (!widget.admin && widget.company && !done && !cancelled) ...[
                 const SizedBox(height: 10),
-                OutlinedButton(
-                    onPressed: _busy ? null : _complete,
-                    child: const Text('Kiralamayı tamamla'))
+                FilledButton.icon(
+                    onPressed: _busy
+                        ? null
+                        : agreed
+                            ? _complete
+                            : _agree,
+                    icon: Icon(agreed
+                        ? Icons.task_alt_outlined
+                        : Icons.handshake_outlined),
+                    label: Text(agreed ? 'İşi tamamla' : 'Anlaştık'))
               ],
               const SizedBox(height: 10),
-              if (!widget.admin)
+              if (!widget.admin && (done || cancelled))
                 OutlinedButton.icon(
                     onPressed: _busy ? null : _report,
                     icon: const Icon(Icons.flag_outlined),
                     label: const Text('Yöneticiye şikâyet bildir')),
               const SizedBox(height: 10),
-              if (!widget.admin)
+              if (!widget.admin && (done || cancelled))
                 const Text(
                     'Teslim veya rezervasyon sorunu yaşarsan bu kayda bağlı şikâyet oluşturabilirsin. Yönetici inceleyip değerlendirecektir.',
                     style: TextStyle(

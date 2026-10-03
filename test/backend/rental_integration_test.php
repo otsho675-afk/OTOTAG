@@ -64,7 +64,14 @@ check($job['agreed_price']===$accepted['amount'] && $job['city']==='Konya','job 
 $repeat=callApi('accept_rentacar_bid',10,'rentacar',['bid_id'=>$accepted['id'],'offer_version'=>$accepted['offer_version']]);
 check($repeat['job_id']===(int)$job['id'] && (int)$pdo->query('SELECT COUNT(*) FROM jobs')->fetchColumn()===1,'repeat acceptance returns same booking');
 check(callApi('place_rentacar_bid',2,'customer',['listing_id'=>1,'rent_days'=>2,'total_budget'=>'6000'])['http']===409,'reserved vehicle cannot receive new requests');
-check(callApi('complete_rentacar_booking',10,'rentacar',['bid_id'=>$accepted['id'],'offer_version'=>$accepted['offer_version']])['http']===200,'firm completes rental');
+check(callApi('get_rentacar_booking',(int)$accepted['customer_id'],'customer',['job_id'=>$job['id']],true)['booking']['pickup_lat']===null,'pickup remains hidden before agreement');
+check(callApi('report_rentacar_booking',(int)$accepted['customer_id'],'customer',['job_id'=>$job['id'],'subject'=>'Diğer','message'=>'Görüşme sırasında sorun yaşandı'])['http']===409,'complaint waits for completed or cancelled job');
+check(callApi('agree_rentacar_booking',(int)$accepted['customer_id'],'customer',['bid_id'=>$accepted['id'],'offer_version'=>$accepted['offer_version']])['http']===409,'customer cannot self-confirm company agreement');
+check(callApi('complete_rentacar_booking',10,'rentacar',['bid_id'=>$accepted['id'],'offer_version'=>$accepted['offer_version']])['http']===409,'completion requires agreement');
+check(callApi('agree_rentacar_booking',10,'rentacar',['bid_id'=>$accepted['id'],'offer_version'=>$accepted['offer_version']])['http']===200,'company confirms agreement');
+$accepted=$pdo->query('SELECT * FROM rentacar_bids WHERE id='.(int)$accepted['id'])->fetch(PDO::FETCH_ASSOC);
+check(callApi('get_rentacar_booking',(int)$accepted['customer_id'],'customer',['job_id'=>$job['id']],true)['booking']['pickup_lat']!==null,'pickup opens after company agreement');
+check(callApi('complete_rentacar_booking',10,'rentacar',['bid_id'=>$accepted['id'],'offer_version'=>$accepted['offer_version']])['http']===200,'firm completes agreed rental');
 check($pdo->query('SELECT status FROM rentacar_listings WHERE id=1')->fetchColumn()==='active','returned vehicle available again');
 check(callApi('place_rentacar_bid',2,'customer',['listing_id'=>1,'rent_days'=>1,'total_budget'=>'6000'])['http']===201,'new booking allowed after return');
 $pdo->exec("UPDATE users SET city='Ankara' WHERE id=2");
@@ -101,7 +108,8 @@ check($match['http']===200 && $match['amount']==='2850.00','firm confirmation cr
 $edit['listing_version']=3;
 check(callApi('update_rentacar_listing',10,'rentacar',$edit)['http']===409,'rented vehicle cannot be edited');
 check(callApi('delete_rentacar_listing',10,'rentacar',['listing_id'=>$listingId,'listing_version'=>3])['http']===409,'rented vehicle cannot be deleted');
-check(callApi('complete_rentacar_booking',10,'rentacar',['bid_id'=>$offer['bid_id'],'offer_version'=>2])['http']===200,'firm returns edited vehicle');
+check(callApi('agree_rentacar_booking',10,'rentacar',['bid_id'=>$offer['bid_id'],'offer_version'=>2])['http']===200,'firm confirms edited vehicle agreement');
+check(callApi('complete_rentacar_booking',10,'rentacar',['bid_id'=>$offer['bid_id'],'offer_version'=>3])['http']===200,'firm returns edited vehicle');
 $edit['listing_version']=4; $edit['model']='Megane';
 check(callApi('update_rentacar_listing',10,'rentacar',$edit)['http']===200,'returned vehicle becomes editable');
 $history=callApi('get_rentacar_bids',2,'customer',[],true)['bids'];
@@ -159,6 +167,10 @@ $detail=callApi('get_rentacar_booking',$owner,'customer',['job_id'=>$reserved['j
 check($detail['pickup_address']==='Konya teslim merkezi' && (float)$detail['pickup_lat']===37.87,'existing pickup stays immutable after company changes location');
 $report=['job_id'=>$reserved['job_id'],'subject'=>'Rezervasyona uyulmadı','message'=>'Firma rezervasyon saatinde aracı teslim etmedi.','customer_id'=>999,'provider_id'=>999];
 check(callApi('report_rentacar_booking',$stranger,'customer',$report)['http']===403,'unrelated account cannot complain about reservation');
+check(callApi('report_rentacar_booking',$owner,'customer',$report)['http']===409,'active matching cannot be reported before completion');
+check(callApi('complete_rentacar_booking',$owner,'customer',['bid_id'=>$reserved['id'],'offer_version'=>$reserved['offer_version']])['http']===409,'customer cannot silently release reserved vehicle');
+check(callApi('complete_rentacar_booking',10,'rentacar',['bid_id'=>$reserved['id'],'offer_version'=>$reserved['offer_version']])['http']===200,'company completes automatic booking after return');
+check(callApi('get_rentacar_booking',$owner,'customer',['job_id'=>$reserved['job_id']],true)['booking']['job_status']==='completed','completed booking retains detail and pickup');
 $tooShort=$report; $tooShort['message']='Kısa';
 check(callApi('report_rentacar_booking',$owner,'customer',$tooShort)['http']===422,'complaint requires meaningful explanation');
 $ticket=callApi('report_rentacar_booking',$owner,'customer',$report);
@@ -167,9 +179,6 @@ $stored=$pdo->query('SELECT * FROM tickets WHERE id='.(int)$ticket['ticket_id'])
 check((int)$stored['customer_id']===$owner && (int)$stored['provider_id']===10 && (int)$stored['reporter_id']===$owner,'complaint participants are derived from reservation not client');
 check(callApi('report_rentacar_booking',$owner,'customer',$report)['ticket_id']===$ticket['ticket_id'],'repeated open complaint does not duplicate tickets');
 check(callApi('report_rentacar_booking',10,'rentacar',$report)['ticket_id']!==$ticket['ticket_id'],'company can report its own reservation separately');
-check(callApi('complete_rentacar_booking',$owner,'customer',['bid_id'=>$reserved['id'],'offer_version'=>$reserved['offer_version']])['http']===409,'customer cannot silently release reserved vehicle');
-check(callApi('complete_rentacar_booking',10,'rentacar',['bid_id'=>$reserved['id'],'offer_version'=>$reserved['offer_version']])['http']===200,'company completes automatic booking after return');
-check(callApi('get_rentacar_booking',$owner,'customer',['job_id'=>$reserved['job_id']],true)['booking']['job_status']==='completed','completed booking retains detail and pickup');
 $pdo->prepare("UPDATE tickets SET status='closed' WHERE job_id=?")->execute([$reserved['job_id']]);
 $postJobReport=['job_id'=>$reserved['job_id'],'subject'=>'Ödeme anlaşmazlığı','message'=>'Kiralama tamamlandıktan sonra ücret konusunda anlaşmazlık yaşandı.'];
 $postCustomer=callApi('report_rentacar_booking',$owner,'customer',$postJobReport);

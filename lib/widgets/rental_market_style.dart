@@ -230,8 +230,8 @@ class RentalListingCard extends StatelessWidget {
                     pending
                         ? 'Teklifiniz mevcut'
                         : totalBudget == null
-                            ? 'Bütçe belirle'
-                            : 'Rezervasyon oluştur',
+                            ? 'Bütçeyi belirle'
+                            : 'Teklif ver',
                     textAlign: TextAlign.center)),
             if (onNegotiate != null && totalBudget != null && !pending)
               TextButton(
@@ -347,8 +347,8 @@ class RentalListingCard extends StatelessWidget {
                           pending
                               ? 'Teklifiniz mevcut'
                               : totalBudget == null
-                                  ? 'Bütçe belirle'
-                                  : 'Rezervasyon oluştur',
+                                  ? 'Bütçeyi belirle'
+                                  : 'Teklif ver',
                           textAlign: TextAlign.center))),
               if (onNegotiate != null && totalBudget != null && !pending)
                 SizedBox(

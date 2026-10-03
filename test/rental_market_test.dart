@@ -153,7 +153,7 @@ void main() {
       if (size.width == 390) {
         expect(
             tester
-                .getRect(find.widgetWithText(FilledButton, 'Bütçe belirle'))
+                .getRect(find.widgetWithText(FilledButton, 'Bütçeyi belirle'))
                 .bottom,
             lessThanOrEqualTo(size.height));
       }
@@ -190,7 +190,7 @@ void main() {
     expect(find.text('1 gün toplam • 1000,25 ₺ / gün'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
   });
-  testWidgets('budget sheet fits keyboard and applies only after search',
+  testWidgets('budget sheet fits keyboard and immediately applies budget',
       (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(320, 740);
@@ -225,10 +225,9 @@ void main() {
     tester.view.resetViewInsets();
     await tester.pumpAndSettle();
     expect(find.text('Toplam bütçe: 1250,50 ₺ / 3 gün'), findsOneWidget);
+    expect(queries.last.queryParameters['total_budget'], '1250.50');
+    expect(queries.last.queryParameters['rent_days'], '3');
     await tester.pump(const Duration(seconds: 8));
-    await tester.pumpAndSettle();
-    expect(queries.last.queryParameters.containsKey('max_budget'), isFalse);
-    await tester.tap(find.text('Araçları bul'));
     await tester.pumpAndSettle();
     expect(queries.last.queryParameters['total_budget'], '1250.50');
     expect(queries.last.queryParameters['rent_days'], '3');

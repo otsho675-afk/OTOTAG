@@ -24,7 +24,8 @@ function rentalEvent($pdo,$type,$refs=[],$details=[]) {
     $GLOBALS['rental_event_id']=(int)$pdo->lastInsertId();
     $messages=['offer_placed'=>['Yeni kiralama teklifi','Aracınız için yeni teklif geldi. Teklifler panelinden inceleyin.'],
         'counter_offer'=>['Kiralama karşı teklifi','Teklifiniz için yeni bir tutar önerildi. Güncel fiyatı inceleyin.'],
-        'reserved'=>['Kiralama eşleşti','Rezervasyon oluşturuldu. Teslim bilgilerini rezervasyon detayında görebilirsiniz.'],
+        'reserved'=>['Kiralama eşleşti','Teklif kabul edildi. Firma ile mesajlaşabilir veya telefonla görüşebilirsiniz.'],
+        'agreed'=>['Kiralama anlaşması onaylandı','Firma anlaşmayı onayladı. Rezervasyon detayından yol tarifi alabilirsiniz.'],
         'offer_rejected'=>['Kiralama teklifi kapatıldı','Teklifiniz reddedildi. Diğer araç ve teklifleri inceleyebilirsiniz.'],
         'offer_closed'=>['Kiralama teklifi kapatıldı','Araç artık bu teklif için uygun değil. Güncel ilanları inceleyin.'],
         'offer_removed'=>['Teklif geri çekildi','Müşteri kiralama teklifini geri çekti.'],

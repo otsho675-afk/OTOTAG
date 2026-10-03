@@ -9,6 +9,7 @@ import 'rental_history_screen.dart';
 import 'rentacar_company_profile_screen.dart';
 import 'core/constants/app_constants.dart';
 import 'core/constants/car_data.dart';
+import 'core/theme/app_motion.dart';
 import 'services/rental_service.dart';
 import 'widgets/rental_bid_card.dart';
 import 'widgets/rental_market_style.dart';
@@ -183,12 +184,10 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
     }
   }
 
-  Future<void> _request(Map<String, dynamic> car,
-      {bool negotiate = false}) async {
+  Future<void> _request(Map<String, dynamic> car) async {
     if (_busy) return;
     if (_appliedBudget.isEmpty) {
       await _showBudget();
-      if (mounted && _budget.text.isNotEmpty) _applyFilters();
       return;
     }
     final days = int.tryParse(_days.text.trim());
@@ -207,40 +206,32 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
         _message('Süre veya bütçe değişti. Araçları yeniden bul.');
         return;
       }
-      if (!negotiate) {
-        final cents = rentalCents('${car['daily_price']}');
-        if (cents == null) {
-          throw const RentalException('Araç fiyatı geçerli değil.');
-        }
-        final confirmed = await showDialog<bool>(
-            context: context,
-            builder: (ctx) => Theme(
-                data: rentalTheme(),
-                child: AlertDialog(
-                    title: const Text('Rezervasyon oluştur'),
-                    content: Text(
-                        '${car['car_brand_model']}\n$days gün • ${rentalPrice(cents * days)} ₺ toplam\n\nOnayladığında araç sana rezerve edilir ve teslim konumu açılır.'),
-                    actions: [
-                      TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: const Text('Vazgeç')),
-                      FilledButton(
-                          onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text('Rezervasyonu onayla'))
-                    ])));
-        if (confirmed != true || !mounted) return;
-        final result = await _service.reserve(rentalId(car['id']), days,
-            totalBudget: _appliedBudget,
-            listingVersion: rentalId(car['listing_version'] ?? 1));
-        await _refresh();
-        if (mounted) await _booking({...car, 'job_id': result['job_id']});
-      } else {
-        await _service.place(rentalId(car['id']), days,
-            totalBudget: _appliedBudget,
-            listingVersion: rentalId(car['listing_version'] ?? 1));
-        _message(
-            'Teklifin firmaya iletildi. Tekliflerim bölümünden takip edebilirsin.');
+      final cents = rentalCents('${car['daily_price']}');
+      if (cents == null) {
+        throw const RentalException('Araç fiyatı geçerli değil.');
       }
+      final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => Theme(
+              data: rentalTheme(),
+              child: AlertDialog(
+                  title: const Text('Firmaya teklif gönder'),
+                  content: Text(
+                      '${car['car_brand_model']}\n$days gün • ${rentalPrice(cents * days)} ₺ toplam\n\nFirma teklifi kabul ederse mesajlaşabilir ve telefonla görüşebilirsiniz. Uygulama ödeme almaz.'),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Vazgeç')),
+                    FilledButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('Teklif gönder'))
+                  ])));
+      if (confirmed != true || !mounted) return;
+      await _service.place(rentalId(car['id']), days,
+          totalBudget: _appliedBudget,
+          listingVersion: rentalId(car['listing_version'] ?? 1));
+      _message(
+          'Teklif firmaya iletildi. Yanıtını Tekliflerim bölümünden takip edebilirsin.');
       await _refresh();
     } catch (e) {
       _message('$e');
@@ -368,7 +359,10 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                             ]))))));
     await Future<void>.delayed(const Duration(milliseconds: 300));
     controller.dispose();
-    if (mounted && value != null) setState(() => _budget.text = value);
+    if (mounted && value != null) {
+      setState(() => _budget.text = value);
+      _applyFilters();
+    }
   }
 
   void _applyFilters() {
@@ -602,21 +596,21 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
     _refresh();
   }
 
-  Widget _car(Map<String, dynamic> car, double width) => SizedBox(
-      width: width,
-      child: RentalListingCard(
-          key: ValueKey(car['id']),
-          car: car,
-          compact: true,
-          days: int.tryParse(_days.text),
-          totalBudget: rentalCents(_appliedBudget),
-          busy: _busy,
-          pending: _bids.any((bid) =>
-              rentalId(bid['listing_id']) == rentalId(car['id']) &&
-              ['pending', 'accepted'].contains(bid['status'])),
-          onRequest: () => _request(car),
-          onCompanyProfile: () => _company(car),
-          onNegotiate: () => _request(car, negotiate: true)));
+  Widget _car(Map<String, dynamic> car, double width) => AppEntrance(
+      child: SizedBox(
+          width: width,
+          child: RentalListingCard(
+              key: ValueKey(car['id']),
+              car: car,
+              compact: true,
+              days: int.tryParse(_days.text),
+              totalBudget: rentalCents(_appliedBudget),
+              busy: _busy,
+              pending: _bids.any((bid) =>
+                  rentalId(bid['listing_id']) == rentalId(car['id']) &&
+                  ['pending', 'accepted'].contains(bid['status'])),
+              onRequest: () => _request(car),
+              onCompanyProfile: () => _company(car))));
 
   Widget _emptyState({required bool offers}) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
@@ -773,11 +767,12 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                         if (_cars.isEmpty && _error == null)
                           _emptyState(offers: false),
                         LayoutBuilder(builder: (context, constraints) {
-                          return Column(children: [
-                            for (final car in _cars)
-                              Padding(
-                                  padding: const EdgeInsets.only(bottom: 12),
-                                  child: _car(car, constraints.maxWidth))
+                          final twoColumns = constraints.maxWidth >= 760;
+                          final width = twoColumns
+                              ? (constraints.maxWidth - 12) / 2
+                              : constraints.maxWidth;
+                          return Wrap(spacing: 12, runSpacing: 12, children: [
+                            for (final car in _cars) _car(car, width),
                           ]);
                         }),
                         if (_totalPages > 1) _pagination(),
@@ -795,16 +790,12 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                       _page([
                         MatchingStatusCard(
                             title: _bids.any((b) => b['status'] == 'accepted')
-                                ? 'Rezervasyonunuz hazır'
+                                ? 'Firma ile görüşme aşaması'
                                 : 'Kiralama teklifleri',
                             message:
-                                'Güncel tutarı ve süreyi karşılaştırın. Onaylanan rezervasyonun teslim detaylarına buradan ulaşın.',
+                                'Firma kabul edince sohbet ve telefon açılır. Anlaştık onayından sonra eşleşme detayından yol tarifi alabilirsin.',
                             icon: Icons.handshake_outlined,
-                            steps: const [
-                              'Araç seçimi',
-                              'Teklif',
-                              'Rezervasyon'
-                            ],
+                            steps: const ['Araç seçimi', 'Teklif', 'Görüşme'],
                             stage: _bids.any((b) => b['status'] == 'accepted')
                                 ? 2
                                 : _bids.isEmpty

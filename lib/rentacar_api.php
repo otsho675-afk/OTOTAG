@@ -61,6 +61,12 @@ function rentalEnsureSchema($pdo) {
         }
     } finally { $pdo->query("SELECT RELEASE_LOCK('ototag_rental_schema_v1')"); }
     });
+    apiSchemaMigration($pdo,'rental_agreement_v1',function() use($pdo) {
+        $columns=$pdo->query('SHOW COLUMNS FROM rentacar_bids')->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('agreement_at',$columns,true)) $pdo->exec('ALTER TABLE rentacar_bids ADD COLUMN agreement_at DATETIME NULL');
+        // Preserve existing bookings made before the separate agreement step.
+        $pdo->exec("UPDATE rentacar_bids SET agreement_at=COALESCE(reserved_at,UTC_TIMESTAMP()) WHERE status IN ('accepted','completed') AND agreement_at IS NULL");
+    });
     // Storage engines can be changed by an operator after migration. Validate
     // transaction safety on every request without rescanning columns/indexes.
     $engines=$pdo->query("SELECT TABLE_NAME,ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE()
@@ -119,6 +125,13 @@ function rentalQueryBids($pdo, $clause, $params, $limit=null) {
         LEFT JOIN users f ON f.id=l.company_id LEFT JOIN jobs j ON j.id=b.job_id WHERE $clause ORDER BY b.id DESC$limitSql");
     $stmt->execute($params);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+function rentalHideUnagreedPickup(&$bids) {
+    foreach ($bids as &$bid) {
+        if (!empty($bid['agreement_at'])) continue;
+        foreach (['pickup_map_link','pickup_lat','pickup_lng','pickup_address'] as $field) $bid[$field]=null;
+    }
+    unset($bid);
 }
 function rentalClosePending($pdo, $listingId, $message) {
     $stmt=$pdo->prepare("SELECT b.id AS bid_id,b.customer_id,l.company_id,l.city FROM rentacar_bids b JOIN rentacar_listings l ON l.id=b.listing_id WHERE b.listing_id=? AND b.status='pending'");
@@ -188,7 +201,7 @@ function rentalRequireSubscription($pdo,$company) {
 }
 function handleRentalAction($pdo, $action, $method) {
     $actions = ['get_rentacar_listings', 'create_rentacar_listing', 'place_rentacar_bid', 'get_rentacar_bids',
-        'counter_rentacar_bid', 'accept_rentacar_bid', 'reject_rentacar_bid', 'complete_rentacar_booking',
+        'counter_rentacar_bid', 'accept_rentacar_bid', 'reject_rentacar_bid', 'agree_rentacar_booking', 'complete_rentacar_booking',
         'update_rentacar_listing','delete_rentacar_listing','reserve_rentacar_listing','get_rentacar_booking',
         'update_rentacar_location','report_rentacar_booking','admin_cancel_rentacar_booking',
         'get_rentacar_company_profile','add_rentacar_review','admin_get_rental_activity','admin_get_rental_detail','delete_rentacar_bid','get_rentacar_history'];
@@ -253,13 +266,20 @@ function handleRentalAction($pdo, $action, $method) {
             $jobId=filter_var(($read?$_GET:$_POST)['job_id'] ?? null,FILTER_VALIDATE_INT);
             $stmt=$pdo->prepare("SELECT b.*,j.status AS job_status,j.customer_id,j.provider_id AS company_id,j.city,
                 COALESCE(b.vehicle_label,l.car_brand_model) AS car_brand_model,COALESCE(b.quoted_plate,l.plate) AS plate,
-                c.name AS customer_name,f.name AS company_name,f.phone AS company_phone,f.map_link AS company_map_link
+                c.name AS customer_name,c.phone AS customer_phone,f.name AS company_name,f.phone AS company_phone,f.map_link AS company_map_link
                 FROM jobs j JOIN rentacar_bids b ON b.job_id=j.id JOIN rentacar_listings l ON l.id=b.listing_id
                 LEFT JOIN users c ON c.id=j.customer_id LEFT JOIN users f ON f.id=j.provider_id WHERE j.id=? AND j.service_type='rentacar'");
             $stmt->execute([$jobId]); $booking=$stmt->fetch(PDO::FETCH_ASSOC);
             if (!$booking) rentalFail(404,'Rezervasyon bulunamadı.');
             if ($actor!=='admin' && (int)$booking[$actor==='customer'?'customer_id':'company_id']!==$id) rentalFail(403,'Bu rezervasyona erişemezsiniz.');
             if ($read) {
+                if ($actor==='customer' && empty($booking['agreement_at'])) {
+                    $booking['pickup_map_link']=null;
+                    $booking['pickup_lat']=null;
+                    $booking['pickup_lng']=null;
+                    $booking['pickup_address']=null;
+                    $booking['company_map_link']=null;
+                }
                 $stmt=$pdo->prepare('SELECT id,rating,comment,created_at FROM rental_reviews WHERE job_id=?'); $stmt->execute([$jobId]);
                 $booking['review']=$stmt->fetch(PDO::FETCH_ASSOC) ?: null;
                 $booking['can_review']=$actor==='customer' && $booking['job_status']==='completed' && !$booking['review'];
@@ -271,6 +291,7 @@ function handleRentalAction($pdo, $action, $method) {
                 }
                 sendResponse(200,$response);
             }
+            if (!in_array($booking['job_status'],['completed','cancelled'],true)) rentalFail(409,'Şikâyet iş tamamlandıktan veya iptal edildikten sonra açılabilir.');
             $subject=trim($_POST['subject'] ?? ''); $message=trim($_POST['message'] ?? '');
             if (!in_array($subject,['Rezervasyona uyulmadı','Araç teslim edilmedi','Araç iade edilmedi','Hasar / eksik teslim','Ödeme anlaşmazlığı','Diğer'],true) || mb_strlen($message)<10 || mb_strlen($message)>4000) throw new InvalidArgumentException('Şikayet nedenini seçin ve en az 10 karakter açıklayın.');
             $pdo->beginTransaction();
@@ -341,6 +362,7 @@ function handleRentalAction($pdo, $action, $method) {
         }
         if ($action === 'get_rentacar_bids') {
             $bids = rentalQueryBids($pdo, $actor === 'customer' ? 'b.customer_id=? AND b.customer_hidden=0' : 'l.company_id=?', [$id]);
+            if ($actor==='customer') rentalHideUnagreedPickup($bids);
             sendResponse(200, ['status'=>'success', 'city'=>$user['city'], 'bids'=>$bids]);
         }
         if ($action==='get_rentacar_history') {
@@ -350,6 +372,7 @@ function handleRentalAction($pdo, $action, $method) {
             if ($before) { $clause.=' AND b.id<?'; $params[]=$before; }
             // History remains accessible even if a closed offer was removed from the offer list.
             $history=rentalQueryBids($pdo,$clause,$params,51);
+            if ($actor==='customer') rentalHideUnagreedPickup($history);
             $hasMore=count($history)>50; $history=array_slice($history,0,50);
             sendResponse(200,['status'=>'success','history'=>$history,'next_before_id'=>$hasMore?(int)end($history)['id']:null]);
         }
@@ -453,6 +476,8 @@ function handleRentalAction($pdo, $action, $method) {
             $newId=(int)$pdo->lastInsertId();
             if ($action==='reserve_rentacar_listing') {
                 $result=rentalReserve($pdo,$listing,['id'=>$newId,'customer_id'=>$id,'amount'=>$total,'rent_days'=>$days],$company);
+                // Older approved app versions use the direct booking path.
+                $pdo->prepare('UPDATE rentacar_bids SET agreement_at=UTC_TIMESTAMP() WHERE id=?')->execute([$newId]);
                 $pdo->commit(); sendResponse(201,$result);
             }
             $pdo->prepare("INSERT INTO notifications(user_id,title,message) VALUES (?,'Yeni kiralama teklifi',?)")->execute([$listing['company_id'],$listing['car_brand_model'].' / '.$days.' gün / bütçe '.$quote['budget'].' TL']);
@@ -485,8 +510,19 @@ function handleRentalAction($pdo, $action, $method) {
         }
         $version=filter_var($_POST['offer_version'] ?? null,FILTER_VALIDATE_INT);
         if (!$version || (int)$bid['offer_version']!==$version) { $pdo->rollBack(); rentalFail(409, 'Teklif değişti. Güncel teklifi kontrol edin.'); }
+        if ($action === 'agree_rentacar_booking') {
+            if ($actor!=='company' || $bid['status']!=='accepted' || !$bid['job_id']) { $pdo->rollBack(); rentalFail(409,'Anlaşma için önce teklifi kabul edin.'); }
+            $stmt=$pdo->prepare("SELECT status FROM jobs WHERE id=? AND service_type='rentacar' FOR UPDATE"); $stmt->execute([$bid['job_id']]);
+            if ($stmt->fetchColumn()!=='matched') { $pdo->rollBack(); rentalFail(409,'Bu kiralama artık anlaşmaya açık değil.'); }
+            if (empty($bid['agreement_at'])) {
+                $pdo->prepare('UPDATE rentacar_bids SET agreement_at=UTC_TIMESTAMP(),offer_version=offer_version+1 WHERE id=?')->execute([$bidId]);
+                rentalEvent($pdo,'agreed',['company_id'=>$listing['company_id'],'customer_id'=>$bid['customer_id'],'listing_id'=>$listingId,'bid_id'=>$bidId,'job_id'=>$bid['job_id'],'city'=>$listing['city']]);
+            }
+            $pdo->commit(); sendResponse(200,['status'=>'success','job_id'=>(int)$bid['job_id'],'message'=>'Anlaşma kaydedildi. Müşteri yol tarifi alabilir.']);
+        }
         if ($action === 'complete_rentacar_booking') {
             if ($actor!=='company' || $bid['status']!=='accepted' || !$bid['job_id']) { $pdo->rollBack(); rentalFail(409,'Tamamlanabilecek bir kiralama bulunamadı.'); }
+            if (empty($bid['agreement_at'])) { $pdo->rollBack(); rentalFail(409,'Önce Anlaştık adımını onaylayın.'); }
             $pdo->prepare("UPDATE jobs SET status='completed' WHERE id=? AND service_type='rentacar'")->execute([$bid['job_id']]);
             $pdo->prepare("UPDATE rentacar_bids SET status='completed',offer_version=offer_version+1 WHERE id=?")->execute([$bidId]);
             $pdo->prepare("UPDATE rentacar_listings SET status='active',listing_version=listing_version+1 WHERE id=?")->execute([$listingId]);

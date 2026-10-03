@@ -340,6 +340,14 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
               !mounted)) {
         return;
       }
+      if (action == 'agree_rentacar_booking' &&
+          (!await _confirm(
+                  'Anlaşmayı onayla',
+                  'Müşteriyle görüştüğünüz koşullarda anlaştıysanız teslim konumunuz müşteriye açılacak. Uygulama ödeme almaz.',
+                  'Anlaştık') ||
+              !mounted)) {
+        return;
+      }
       final result = await _service.respond(action, bid, amount: amount);
       if (mounted && result['job_id'] != null) {
         await _booking({...bid, 'job_id': result['job_id']});

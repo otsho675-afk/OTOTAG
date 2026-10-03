@@ -25,11 +25,13 @@ class RentalBidCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = bid['status'];
     final ownTurn = bid['last_offer_by'] == (company ? 'customer' : 'company');
+    final agreed =
+        bid['agreement_at'] != null && '${bid['agreement_at']}'.isNotEmpty;
     final name = bid[company ? 'customer_name' : 'company_name'] ?? '';
     final amount = rentalCents('${bid['amount']}');
     final daily = rentalCents('${bid['quoted_daily_price']}');
     final statusLabel = status == 'accepted'
-        ? 'Eşleşti'
+        ? (agreed ? 'Anlaşıldı' : 'Görüşme')
         : status == 'completed'
             ? 'Tamamlandı'
             : status == 'pending'
@@ -135,8 +137,12 @@ class RentalBidCard extends StatelessWidget {
                       foregroundColor: AppConstants.primaryColor),
                   onPressed: busy
                       ? null
-                      : () => onAction('complete_rentacar_booking', bid),
-                  child: const Text('Kiralamayı tamamla')),
+                      : () => onAction(
+                          agreed
+                              ? 'complete_rentacar_booking'
+                              : 'agree_rentacar_booking',
+                          bid),
+                  child: Text(agreed ? 'İşi tamamla' : 'Anlaştık')),
           ])
         else ...[
           if ((status == 'completed' || status == 'cancelled') &&

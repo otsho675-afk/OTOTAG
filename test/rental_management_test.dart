@@ -42,6 +42,7 @@ Map<String, dynamic> bookingData({bool location = true}) => {
       'offer_version': 2,
       'job_id': 30,
       'job_status': 'matched',
+      'agreement_at': '2026-10-03 10:10:00',
       'customer_id': 42,
       'company_id': 10,
       'company_name': 'Konya Rent A Car',
@@ -208,6 +209,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
           find.text('Yöneticiye şikâyet bildir'), 220);
+      await tester.ensureVisible(find.text('Yöneticiye şikâyet bildir'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Yöneticiye şikâyet bildir'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextFormField),
@@ -375,15 +378,15 @@ void main() {
     expect(find.text('Fiat Egea'), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
   });
-  testWidgets('selected car creates reservation after explicit confirmation',
+  testWidgets('selected car sends an offer after budget and confirmation',
       (tester) async {
     phone(tester, 390);
     http.Request? mutation;
     final api = RentalService(client: MockClient((r) async {
       final action = r.url.queryParameters['action'];
-      if (action == 'reserve_rentacar_listing') {
+      if (action == 'place_rentacar_bid') {
         mutation = r;
-        return success({'job_id': 30});
+        return success({'bid_id': 30});
       }
       if (action == 'get_rentacar_booking') {
         return success({'booking': bookingData(location: false)});
@@ -406,12 +409,11 @@ void main() {
     await tester.tap(find.text('Araçları bul'));
     await tester.pumpAndSettle();
     expect(mutation, isNull);
-    await tester.ensureVisible(
-        find.widgetWithText(FilledButton, 'Rezervasyon oluştur'));
-    await tester.tap(find.widgetWithText(FilledButton, 'Rezervasyon oluştur'));
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Teklif ver'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Teklif ver'));
     await tester.pumpAndSettle();
     expect(mutation, isNull);
-    await tester.tap(find.text('Rezervasyonu onayla'));
+    await tester.tap(find.text('Teklif gönder'));
     await tester.pumpAndSettle();
     expect(mutation!.bodyFields, {
       'listing_id': '1',
@@ -419,8 +421,57 @@ void main() {
       'rent_days': '3',
       'total_budget': '4000'
     });
-    expect(find.text('Rezervasyon #30'), findsOneWidget);
-    expect(find.text('Teslim konumu'), findsOneWidget);
+    expect(mutation!.url.queryParameters['action'], 'place_rentacar_bid');
+    expect(find.text('Rezervasyon #30'), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+  testWidgets('pickup stays hidden while the firm and customer are talking',
+      (tester) async {
+    phone(tester, 320);
+    final api = RentalService(
+        client: MockClient((_) async => success({
+              'booking': bookingData()
+                ..['agreement_at'] = null
+                ..['company_phone'] = '05350000000'
+            })));
+    await tester.pumpWidget(MaterialApp(
+        home: RentalBookingScreen(
+            jobId: 30, userId: 42, company: false, service: api)));
+    await tester.pumpAndSettle();
+    expect(find.text('Yol tarifi al'), findsNothing);
+    await tester.scrollUntilVisible(find.text('Telefonla görüş'), 220);
+    expect(find.text('Telefonla görüş'), findsOneWidget);
+    expect(find.text('Yöneticiye şikâyet bildir'), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+  testWidgets('firm agreement unlocks pickup for the customer', (tester) async {
+    phone(tester, 390);
+    var agreed = false;
+    http.Request? mutation;
+    final api = RentalService(client: MockClient((r) async {
+      if (r.method == 'POST') {
+        mutation = r;
+        agreed = true;
+        return success({'job_id': 30});
+      }
+      return success({
+        'booking': bookingData()
+          ..['agreement_at'] = agreed ? '2026-10-03 10:10:00' : null
+      });
+    }));
+    await tester.pumpWidget(MaterialApp(
+        home: RentalBookingScreen(
+            jobId: 30, userId: 10, company: true, service: api)));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Anlaştık'), 220);
+    await tester.tap(find.widgetWithText(FilledButton, 'Anlaştık').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Anlaştık').last);
+    await tester.pumpAndSettle();
+    expect(mutation!.url.queryParameters['action'], 'agree_rentacar_booking');
+    expect(find.text('İşi tamamla'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -428,6 +479,7 @@ void main() {
       'reservation map uses stored coordinates and complaint uses booking id',
       (tester) async {
     phone(tester, 320);
+    var completed = false;
     http.Request? mutation;
     double? lat, lng;
     final key = GlobalKey();
@@ -436,7 +488,10 @@ void main() {
         mutation = r;
         return success({'ticket_id': 70});
       }
-      return success({'booking': bookingData()});
+      return success({
+        'booking': bookingData()
+          ..['job_status'] = completed ? 'completed' : 'matched'
+      });
     }));
     await tester.pumpWidget(MaterialApp(
         home: RepaintBoundary(
@@ -460,6 +515,12 @@ void main() {
     expect(lng, 32.48);
     expect(find.text('3000,75 ₺'), findsOneWidget);
     await screenshot(tester, key, 'rental_booking_320');
+    completed = true;
+    await tester.tap(find.byIcon(Icons.refresh));
+    await tester.pumpAndSettle();
+    expect(find.text('Yol tarifi al'), findsNothing);
+    expect(find.text('Mesajlaş'), findsNothing);
+    expect(find.text('Telefonla görüş'), findsNothing);
     await tester.scrollUntilVisible(
         find.text('Yöneticiye şikâyet bildir'), 220);
     await tester.tap(find.text('Yöneticiye şikâyet bildir'));

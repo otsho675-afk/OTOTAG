@@ -337,10 +337,13 @@ function handleRentalAction($pdo, $action, $method) {
                     $params[]=$model; $params[]=$brand . ' ' . $model;
                 }
                 if (!empty($_GET['max_budget'])) { $sql .= ' AND l.daily_price<=?'; $params[]=rentalMoneyText(rentalMoneyCents($_GET['max_budget'])); }
+                $orderSql = ' ORDER BY l.daily_price ASC,l.id DESC';
+                $orderParams = [];
                 if (isset($_GET['total_budget']) && $_GET['total_budget']!=='') {
-                    $sql.=' AND l.daily_price * ? <= ?';
-                    $params[]=rentalDays($_GET['rent_days'] ?? null);
-                    $params[]=rentalMoneyText(rentalMoneyCents($_GET['total_budget']));
+                    $searchDays = rentalDays($_GET['rent_days'] ?? null);
+                    $searchBudget = rentalMoneyText(rentalMoneyCents($_GET['total_budget']));
+                    $orderSql = ' ORDER BY CASE WHEN l.daily_price * ? <= ? THEN 0 ELSE 1 END, ABS((l.daily_price * ?) - ?) ASC, l.daily_price ASC,l.id DESC';
+                    $orderParams = [$searchDays, $searchBudget, $searchDays, $searchBudget];
                 }
                 $page=filter_var($_GET['page'] ?? 1,FILTER_VALIDATE_INT);
                 $pageSize=filter_var($_GET['page_size'] ?? 12,FILTER_VALIDATE_INT);
@@ -348,8 +351,8 @@ function handleRentalAction($pdo, $action, $method) {
                 $from=substr($sql,strpos($sql,' FROM rentacar_listings'));
                 $count=$pdo->prepare('SELECT COUNT(*)'.$from); $count->execute($params); $total=(int)$count->fetchColumn();
                 $pages=max(1,(int)ceil($total/$pageSize)); $page=min($page,$pages);
-                $stmt = $pdo->prepare($sql . ' ORDER BY l.daily_price ASC,l.id DESC LIMIT '.$pageSize.' OFFSET '.(($page-1)*$pageSize));
-                $stmt->execute($params);
+                $stmt = $pdo->prepare($sql . $orderSql . ' LIMIT '.$pageSize.' OFFSET '.(($page-1)*$pageSize));
+                $stmt->execute(array_merge($params, $orderParams));
                 $listings = array_values(array_filter($stmt->fetchAll(PDO::FETCH_ASSOC), function($listing) use ($user) {
                     return rentalSameCity($listing['company_city'], $user['city']);
                 }));
@@ -454,6 +457,9 @@ function handleRentalAction($pdo, $action, $method) {
             if (!rentalSameCity($customer['city'], $company['city'])) { $pdo->rollBack(); rentalFail(403, 'Yalnızca aynı şehirdeki firmayla eşleşebilirsiniz.'); }
             $quote=rentalQuote($listing['daily_price'],$_POST['rent_days'] ?? null,$_POST['total_budget'] ?? '');
             $days=$quote['days'];
+            if ($action==='reserve_rentacar_listing' && rentalMoneyCents($quote['amount']) > rentalMoneyCents($quote['budget'])) {
+                throw new InvalidArgumentException('Araç bu süre için toplam bütçenizi aşıyor.');
+            }
             if ($action==='reserve_rentacar_listing' && $listing['status']==='rented') {
                 $stmt=$pdo->prepare("SELECT * FROM rentacar_bids WHERE listing_id=? AND customer_id=? AND status='accepted' AND rent_days=? AND customer_budget=? LIMIT 1");
                 $stmt->execute([$listingId,$id,$days,$quote['budget']]); $reserved=$stmt->fetch(PDO::FETCH_ASSOC);
@@ -470,7 +476,8 @@ function handleRentalAction($pdo, $action, $method) {
                 if ($existing['customer_budget']!==null && $existing['customer_budget']!==$quote['budget']) { $pdo->rollBack(); rentalFail(409,'Bütçeyi değiştirmek için önce mevcut teklifinizi iptal edin.'); }
                 $pdo->commit(); sendResponse(200,['status'=>'success','bid'=>$existing,'message'=>'Mevcut teklifiniz görüntülendi.']);
             }
-            $daily=rentalMoneyCents($listing['daily_price']); $total=$quote['amount'];
+            $daily=rentalMoneyCents($listing['daily_price']);
+            $total=$action==='place_rentacar_bid' ? $quote['budget'] : $quote['amount'];
             $stmt=$pdo->prepare("INSERT INTO rentacar_bids (listing_id,customer_id,amount,rent_days,quoted_daily_price,customer_budget,vehicle_label,quoted_plate,last_offer_by) VALUES (?,?,?,?,?,?,?,?,'customer')");
             $stmt->execute([$listingId,$id,$total,$days,rentalMoneyText($daily),$quote['budget'],$listing['car_brand_model'],$listing['plate']]);
             $newId=(int)$pdo->lastInsertId();

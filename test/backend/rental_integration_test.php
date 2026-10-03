@@ -44,7 +44,7 @@ check(callApi('get_rentacar_listings',10,'rentacar',['company_id'=>11],true)['ht
 check(callApi('place_rentacar_bid',3,'customer',['listing_id'=>1,'rent_days'=>3,'total_budget'=>'5000'])['http']===403,'cross-city request denied');
 check(callApi('place_rentacar_bid',1,'customer',['listing_id'=>1,'rent_days'=>0,'total_budget'=>'5000'])['http']===422,'invalid duration denied');
 $first=callApi('place_rentacar_bid',1,'customer',['listing_id'=>1,'rent_days'=>3,'total_budget'=>'5000','amount'=>'1']);
-check($first['amount']==='3000.75','client amount ignored for initial firm-price quote');
+check($first['amount']==='5000.00','client amount ignored and customer budget becomes the initial offer');
 $bid=$first['bid_id'];
 check(callApi('place_rentacar_bid',1,'customer',['listing_id'=>1,'rent_days'=>3,'total_budget'=>'5000'])['bid']['id']===$bid,'duplicate request idempotent');
 check(callApi('accept_rentacar_bid',1,'customer',['bid_id'=>$bid,'offer_version'=>1])['http']===409,'own offer cannot be accepted');
@@ -79,11 +79,14 @@ $pending=$pdo->query("SELECT * FROM rentacar_bids WHERE customer_id=2 AND status
 check(callApi('accept_rentacar_bid',10,'rentacar',['bid_id'=>$pending['id'],'offer_version'=>$pending['offer_version']])['http']===403,'city rechecked at acceptance after profile change');
 
 $pdo->exec("UPDATE users SET city='Konya' WHERE id=2");
-check(count(callApi('get_rentacar_listings',1,'customer',['total_budget'=>'3000','rent_days'=>3],true)['listings'])===0,'total budget excludes daily price that exceeds budget over three days');
-check(count(callApi('get_rentacar_listings',1,'customer',['total_budget'=>'3000.75','rent_days'=>3],true)['listings'])===1,'exact total budget includes matching vehicle');
+$sortedLowBudget=callApi('get_rentacar_listings',1,'customer',['total_budget'=>'3000','rent_days'=>3],true)['listings'];
+check(count($sortedLowBudget)===2 && (int)$sortedLowBudget[0]['id']===1,'total budget sorts but does not hide over-budget vehicles');
+$sortedExactBudget=callApi('get_rentacar_listings',1,'customer',['total_budget'=>'3000.75','rent_days'=>3],true)['listings'];
+check(count($sortedExactBudget)===2 && (int)$sortedExactBudget[0]['id']===1,'exact total budget keeps matching vehicle first');
 check(callApi('get_rentacar_listings',1,'customer',['total_budget'=>'3000'],true)['http']===422,'budget search requires duration');
 check(callApi('place_rentacar_bid',1,'customer',['listing_id'=>1,'rent_days'=>3])['http']===422,'booking requires explicit customer budget');
-check(callApi('place_rentacar_bid',1,'customer',['listing_id'=>1,'rent_days'=>3,'total_budget'=>'3000','city'=>'Konya'])['http']===422,'forged request cannot exceed total budget');
+$lowBudget=callApi('place_rentacar_bid',1,'customer',['listing_id'=>1,'rent_days'=>3,'total_budget'=>'3000','city'=>'Konya']);
+check($lowBudget['http']===201 && $lowBudget['amount']==='3000.00','customer budget becomes the rental offer amount even when the listing total is higher');
 
 $fields=['brand'=>'Renault','model'=>'Clio','plate'=>'42 TAG 403','model_year'=>'2024','daily_price'=>'900.50','description'=>'Otomatik'];
 check(callApi('create_rentacar_listing',1,'customer',$fields)['http']===403,'customer cannot create rental listing');
@@ -95,7 +98,7 @@ $edit=$fields+['listing_id'=>$listingId,'listing_version'=>1];
 check(callApi('update_rentacar_listing',12,'rentacar',$edit)['http']===403,'rival cannot edit listing');
 check(callApi('delete_rentacar_listing',12,'rentacar',['listing_id'=>$listingId,'listing_version'=>1])['http']===403,'rival cannot delete listing');
 $offer=callApi('place_rentacar_bid',2,'customer',['listing_id'=>$listingId,'listing_version'=>1,'rent_days'=>3,'total_budget'=>'3000']);
-check($offer['amount']==='2701.50','quote uses firm price within total budget');
+check($offer['amount']==='3000.00','quote uses the customer budget as the offer amount');
 check(callApi('counter_rentacar_bid',10,'rentacar',['bid_id'=>$offer['bid_id'],'offer_version'=>1,'amount'=>'3000.01'])['http']===422,'company counter cannot exceed customer budget');
 $edit['daily_price']='950';
 check(callApi('update_rentacar_listing',10,'rentacar',$edit)['http']===200,'owner edits vehicle price');
@@ -104,7 +107,7 @@ check(callApi('update_rentacar_listing',10,'rentacar',$edit)['http']===409,'stal
 check(callApi('place_rentacar_bid',2,'customer',['listing_id'=>$listingId,'listing_version'=>1,'rent_days'=>3,'total_budget'=>'3000'])['http']===409,'stale customer card cannot request changed listing');
 $offer=callApi('place_rentacar_bid',2,'customer',['listing_id'=>$listingId,'listing_version'=>2,'rent_days'=>3,'total_budget'=>'3000']);
 $match=callApi('accept_rentacar_bid',10,'rentacar',['bid_id'=>$offer['bid_id'],'offer_version'=>1]);
-check($match['http']===200 && $match['amount']==='2850.00','firm confirmation creates budget-compliant booking');
+check($match['http']===200 && $match['amount']==='3000.00','firm confirmation creates booking from customer offer amount');
 $edit['listing_version']=3;
 check(callApi('update_rentacar_listing',10,'rentacar',$edit)['http']===409,'rented vehicle cannot be edited');
 check(callApi('delete_rentacar_listing',10,'rentacar',['listing_id'=>$listingId,'listing_version'=>3])['http']===409,'rented vehicle cannot be deleted');

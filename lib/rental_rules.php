@@ -57,7 +57,6 @@ function rentalQuote($daily, $days, $budget) {
     $days = rentalDays($days);
     $budget = rentalMoneyCents($budget);
     $total = rentalMoneyCents($daily) * $days;
-    if ($total > $budget) throw new InvalidArgumentException('Araç bu süre için toplam bütçenizi aşıyor.');
     return ['days'=>$days, 'amount'=>rentalMoneyText($total), 'budget'=>rentalMoneyText($budget)];
 }
 function rentalListingFields($input) {

@@ -207,8 +207,12 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
         return;
       }
       final cents = rentalCents('${car['daily_price']}');
+      final budget = rentalCents(_appliedBudget);
       if (cents == null) {
         throw const RentalException('Araç fiyatı geçerli değil.');
+      }
+      if (budget == null) {
+        throw const RentalException('Geçerli bir toplam bütçe girin.');
       }
       final confirmed = await showDialog<bool>(
           context: context,
@@ -217,7 +221,7 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
               child: AlertDialog(
                   title: const Text('Firmaya teklif gönder'),
                   content: Text(
-                      '${car['car_brand_model']}\n$days gün • ${rentalPrice(cents * days)} ₺ toplam\n\nFirma teklifi kabul ederse mesajlaşabilir ve telefonla görüşebilirsiniz. Uygulama ödeme almaz.'),
+                      '${car['car_brand_model']}\nTeklifin: ${rentalPrice(budget)} ₺ / $days gün\nİlan toplamı: ${rentalPrice(cents * days)} ₺\n\nFirma kabul ederse mesajlaşabilir ve telefonla görüşebilirsiniz. Uygulama ödeme almaz.'),
                   actions: [
                     TextButton(
                         onPressed: () => Navigator.pop(ctx, false),

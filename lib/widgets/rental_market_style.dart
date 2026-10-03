@@ -220,12 +220,7 @@ class RentalListingCard extends StatelessWidget {
                     color: rentalMuted, fontSize: 12, height: 1.5)),
             const SizedBox(height: 12),
             FilledButton(
-                onPressed: busy ||
-                        pending ||
-                        total == null ||
-                        (totalBudget != null && total > totalBudget!)
-                    ? null
-                    : onRequest,
+                onPressed: busy || pending || total == null ? null : onRequest,
                 child: Text(
                     pending
                         ? 'Teklifiniz mevcut'
@@ -235,9 +230,7 @@ class RentalListingCard extends StatelessWidget {
                     textAlign: TextAlign.center)),
             if (onNegotiate != null && totalBudget != null && !pending)
               TextButton(
-                  onPressed: busy || total == null || total > totalBudget!
-                      ? null
-                      : onNegotiate,
+                  onPressed: busy || total == null ? null : onNegotiate,
                   child: const Text('Pazarlık için teklif gönder',
                       textAlign: TextAlign.center)),
           ]));
@@ -337,12 +330,8 @@ class RentalListingCard extends StatelessWidget {
               SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                      onPressed: busy ||
-                              pending ||
-                              total == null ||
-                              (totalBudget != null && total > totalBudget!)
-                          ? null
-                          : onRequest,
+                      onPressed:
+                          busy || pending || total == null ? null : onRequest,
                       child: Text(
                           pending
                               ? 'Teklifiniz mevcut'
@@ -354,9 +343,7 @@ class RentalListingCard extends StatelessWidget {
                 SizedBox(
                     width: double.infinity,
                     child: TextButton(
-                        onPressed: busy || total == null || total > totalBudget!
-                            ? null
-                            : onNegotiate,
+                        onPressed: busy || total == null ? null : onNegotiate,
                         child: const Text('Pazarlık için teklif gönder',
                             textAlign: TextAlign.center))),
             ])),

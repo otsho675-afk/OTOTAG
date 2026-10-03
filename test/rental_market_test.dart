@@ -110,6 +110,39 @@ void main() {
         {'bid_id': '1', 'offer_version': '2', 'amount': '2500.50'});
     api.dispose();
   });
+  testWidgets('customer can send an offer below the listing total',
+      (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    http.Request? sent;
+    await tester.pumpWidget(MaterialApp(
+        home: RentalMarketScreen(
+            customerId: 42,
+            initialCity: 'Konya',
+            service: service(onRequest: (request) {
+              if (request.url.queryParameters['action'] ==
+                  'place_rentacar_bid') {
+                sent = request;
+              }
+            }))));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bütçe'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField), '500');
+    await tester.tap(find.text('Bütçeyi seç'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Teklif ver'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Teklif ver'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Teklifin: 500,00 ₺'), findsOneWidget);
+    await tester.tap(find.text('Teklif gönder'));
+    await tester.pumpAndSettle();
+    expect(sent!.bodyFields['total_budget'], '500');
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
   test('stale-offer errors reach the user', () async {
     final api = RentalService(
         client: MockClient((_) async => http.Response(

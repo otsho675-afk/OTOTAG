@@ -12,28 +12,39 @@ import 'services/live_activity_service.dart';
 final NotificationHelper notificationHelper = NotificationHelper();
 
 class NotificationHelper {
-  final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _notificationsPlugin =
+      FlutterLocalNotificationsPlugin();
   final LiveActivityService _liveActivityService = LiveActivityService();
   bool _isInitialized = false;
+  Future<void>? _initializing;
+  bool _legacyCleared = false;
 
-  Future<void> init() async {
+  Future<void> init() {
+    if (_isInitialized || kIsWeb) return Future.value();
+    return _initializing ??=
+        _initialize().whenComplete(() => _initializing = null);
+  }
+
+  Future<void> _initialize() async {
     if (_isInitialized || kIsWeb) return;
-    
-    tz.initializeTimeZones(); 
+
+    tz.initializeTimeZones();
     tz.setLocalLocation(tz.getLocation('Europe/Istanbul'));
-    
-    const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
+
+    const AndroidInitializationSettings androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const DarwinInitializationSettings iosSettings =
+        DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
-    
+
     const InitializationSettings initSettings = InitializationSettings(
-      android: androidSettings, 
+      android: androidSettings,
       iOS: iosSettings,
     );
-    
+
     // Bildirime tıklandığında çalışacak geri çağırım
     await _notificationsPlugin.initialize(
       initSettings,
@@ -41,15 +52,38 @@ class NotificationHelper {
         _handleNotificationTap(response);
       },
     );
-    
-    _notificationsPlugin
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+
+    await _notificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
-    
+
     // Live Activities servisini başlat
     await _liveActivityService.init();
-    
+
     _isInitialized = true;
+  }
+
+  Future<void> clearLegacyVehicleReminders(
+      List<Map<String, dynamic>> vehicles) async {
+    if (kIsWeb || _legacyCleared) return;
+    try {
+      await init();
+      final pending = await _notificationsPlugin.pendingNotificationRequests();
+      for (final item in pending) {
+        if (const [
+          'Araç Muayenesi Hatırlatması',
+          'Trafik Sigortası Hatırlatması',
+          'Yaklaşan Muayene',
+          'Yaklaşan Sigorta'
+        ].contains(item.title)) {
+          await _notificationsPlugin.cancel(item.id);
+        }
+      }
+      _legacyCleared = true;
+    } catch (_) {
+      debugPrint('Eski araç hatırlatmaları temizlenemedi.');
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -64,7 +98,8 @@ class NotificationHelper {
 
       if (activityType == 'job_alert') {
         await _liveActivityService.startJobAlert(
-          jobId: data['jobId'] ?? 'job_${DateTime.now().millisecondsSinceEpoch}',
+          jobId:
+              data['jobId'] ?? 'job_${DateTime.now().millisecondsSinceEpoch}',
           serviceTitle: data['title'] ?? 'Yeni İş Fırsatı!',
           distanceText: data['distanceText'] ?? 'Yakınınızda talep var',
           timeoutSeconds: data['timeoutSeconds'] ?? 60,
@@ -126,12 +161,13 @@ class NotificationHelper {
         android: AndroidNotificationDetails(
           'job_alerts_channel',
           'Yeni İş Bildirimleri',
-          channelDescription: 'Ustalara gelen anlık acil iş fırsatı bildirimleri',
+          channelDescription:
+              'Ustalara gelen anlık acil iş fırsatı bildirimleri',
           importance: Importance.max,
           priority: Priority.high,
           icon: 'ic_notification',
           color: Color(0xFFFF6600),
-          fullScreenIntent: true,
+          fullScreenIntent: false,
         ),
         iOS: DarwinNotificationDetails(
           presentAlert: true,
@@ -174,17 +210,18 @@ class NotificationHelper {
         android: AndroidNotificationDetails(
           'vehicle_reminders_premium',
           'Araç Hatırlatmaları',
-          channelDescription: 'Muayene, sigorta ve periyodik işlemler için sistem hatırlatıcıları',
+          channelDescription:
+              'Muayene, sigorta ve periyodik işlemler için sistem hatırlatıcıları',
           importance: Importance.max,
           priority: Priority.high,
           icon: 'ic_notification',
-          color: Color(0xFF00FFA3), 
-          enableLights: true, 
-          ledColor: Color(0xFF00FFA3), 
+          color: Color(0xFF00FFA3),
+          enableLights: true,
+          ledColor: Color(0xFF00FFA3),
           ledOnMs: 1000,
           ledOffMs: 500,
-          fullScreenIntent: true, 
-          sound: RawResourceAndroidNotificationSound('oto_alert'), 
+          fullScreenIntent: false,
+          sound: RawResourceAndroidNotificationSound('oto_alert'),
         ),
         iOS: DarwinNotificationDetails(
           presentAlert: true,
@@ -193,7 +230,8 @@ class NotificationHelper {
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 }

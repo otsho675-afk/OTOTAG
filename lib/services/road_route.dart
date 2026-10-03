@@ -31,15 +31,18 @@ class RoadRoute {
             !meters.isFinite ||
             seconds < 0 ||
             meters < 0 ||
-            points.length < 2) continue;
+            points.length < 2) {
+          continue;
+        }
         final result = RoadRoute(
             points: points,
             durationSeconds: seconds.ceil(),
             distanceMeters: meters.ceil(),
             source: data['source']?.toString() ?? 'road',
             trafficAware: data['traffic_aware'] == true);
-        if (best == null || result.durationSeconds < best.durationSeconds)
+        if (best == null || result.durationSeconds < best.durationSeconds) {
           best = result;
+        }
       } catch (_) {
         continue;
       }
@@ -55,8 +58,9 @@ List<LatLng> decodeRoadPolyline(String encoded) {
   int coordinate() {
     var result = 0, shift = 0;
     while (true) {
-      if (index >= encoded.length || shift > 30)
+      if (index >= encoded.length || shift > 30) {
         throw const FormatException('Incomplete route');
+      }
       final byte = encoded.codeUnitAt(index++) - 63;
       if (byte < 0 || byte > 63) throw const FormatException('Invalid route');
       result |= (byte & 31) << shift;
@@ -69,8 +73,9 @@ List<LatLng> decodeRoadPolyline(String encoded) {
     while (index < encoded.length) {
       latitude += coordinate();
       longitude += coordinate();
-      if (latitude.abs() > 9000000 || longitude.abs() > 18000000)
+      if (latitude.abs() > 9000000 || longitude.abs() > 18000000) {
         return const [];
+      }
       points.add(LatLng(latitude / 1e5, longitude / 1e5));
     }
   } catch (_) {
@@ -88,7 +93,7 @@ class RouteProjection {
 
 RouteProjection? projectOntoRoad(LatLng position, List<LatLng> route) {
   if (route.length < 2) return null;
-  final latitudeScale = 111195.0;
+  const latitudeScale = 111195.0;
   final longitudeScale =
       latitudeScale * math.cos(position.latitude * math.pi / 180);
   RouteProjection? closest;
@@ -103,12 +108,13 @@ RouteProjection? projectOntoRoad(LatLng position, List<LatLng> route) {
         length == 0 ? 0.0 : ((-ax * dx - ay * dy) / length).clamp(0.0, 1.0);
     final distance = math.sqrt(
         math.pow(ax + fraction * dx, 2) + math.pow(ay + fraction * dy, 2));
-    if (closest == null || distance < closest.distanceMeters)
+    if (closest == null || distance < closest.distanceMeters) {
       closest = RouteProjection(
           i,
           LatLng(a.latitude + fraction * (b.latitude - a.latitude),
               a.longitude + fraction * (b.longitude - a.longitude)),
           distance);
+    }
   }
   return closest;
 }

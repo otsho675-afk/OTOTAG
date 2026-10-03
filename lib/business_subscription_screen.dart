@@ -55,19 +55,21 @@ class _BusinessSubscriptionScreenState
     super.initState();
     _listener = _store.purchases.listen((purchases) {
       _queue = _queue.then((_) => _purchases(purchases)).catchError((Object _) {
-        if (mounted)
+        if (mounted) {
           setState(() {
             _busy = false;
             _error =
                 'Ödeme işlemi tamamlanamadı. Satın alımları geri yükleyin.';
           });
+        }
       });
     }, onError: (Object _) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _busy = false;
           _error = 'Mağaza bağlantısı kesildi. Tekrar deneyin.';
         });
+      }
     });
     _load();
   }
@@ -80,11 +82,12 @@ class _BusinessSubscriptionScreenState
   }
 
   Future<void> _load() async {
-    if (mounted)
+    if (mounted) {
       setState(() {
         _loading = true;
         _error = null;
       });
+    }
     try {
       final status = widget.premium
           ? await _service.premiumSubscription(widget.userId)
@@ -93,19 +96,22 @@ class _BusinessSubscriptionScreenState
               : await _service.diagnosticSubscription(widget.userId);
       if (mounted) setState(() => _status = status);
       final product = await _store.product(_productId);
-      if (mounted)
+      if (mounted) {
         setState(() {
           _product = product;
-          if (_store.supported && product == null)
+          if (_store.supported && product == null) {
             _error =
                 'Abonelik mağazada bulunamadı. Mağaza hesabınızı kontrol edip tekrar deneyin.';
+          }
         });
+      }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _product = null;
           _error = 'Abonelik veya mağaza bilgisi alınamadı. Tekrar deneyin.';
         });
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -115,34 +121,37 @@ class _BusinessSubscriptionScreenState
     for (final purchase in purchases) {
       if (purchase.productID != _productId) continue;
       if (purchase.status == PurchaseStatus.pending) {
-        if (mounted)
+        if (mounted) {
           setState(() {
             _busy = true;
             _notice = 'Ödeme mağazada bekleniyor…';
           });
+        }
         continue;
       }
       if (purchase.status == PurchaseStatus.error ||
           purchase.status == PurchaseStatus.canceled) {
-        if (mounted)
+        if (mounted) {
           setState(() {
             _busy = false;
             _notice = null;
             _error =
                 'Ödeme iptal edildi veya tamamlanamadı. Tekrar deneyebilirsiniz.';
           });
+        }
         continue;
       }
       final key =
           '${purchase.productID}:${purchase.purchaseID}:${purchase.verificationData.serverVerificationData}';
       if (_processed.contains(key)) continue;
       try {
-        if (mounted)
+        if (mounted) {
           setState(() {
             _busy = true;
             _error = null;
             _notice = 'Ödeme sunucuda doğrulanıyor…';
           });
+        }
         await _service.verifySubscription(
             userId: widget.userId,
             userType: widget.userType,
@@ -156,17 +165,19 @@ class _BusinessSubscriptionScreenState
         if (purchase.pendingCompletePurchase) await _store.complete(purchase);
         _processed.add(key);
         await _load();
-        if (mounted)
+        if (mounted) {
           setState(() => _notice = _active
               ? 'Aboneliğiniz doğrulandı ve aktif.'
               : 'Ödeme doğrulandı. Abonelik durumunu yenileyin.');
+        }
       } catch (e) {
-        if (mounted)
+        if (mounted) {
           setState(() {
             _notice = null;
             _error =
                 '$e\nBağlantınızı kontrol edip satın alımları geri yükleyin.';
           });
+        }
       } finally {
         if (mounted) setState(() => _busy = false);
       }
@@ -177,23 +188,27 @@ class _BusinessSubscriptionScreenState
     if (_busy ||
         _product == null ||
         _status == null ||
-        _active && _status?['is_trial'] != true) return;
+        _active && _status?['is_trial'] != true) {
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;
       _notice = 'Mağaza ödeme ekranı açılıyor…';
     });
     try {
-      if (!await _store.buy(_product!))
+      if (!await _store.buy(_product!)) {
         throw StateError('Ödeme ekranı açılamadı.');
+      }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _busy = false;
           _notice = null;
           _error =
               'Mağaza ödeme ekranı açılamadı. Zaten aboneyseniz satın alımları geri yükleyin.';
         });
+      }
     }
   }
 
@@ -207,13 +222,15 @@ class _BusinessSubscriptionScreenState
       await _store.restore();
       await _queue;
       await _load();
-      if (mounted)
+      if (mounted) {
         setState(() => _notice =
             'Mağazanın gönderdiği makbuzlar doğrulanır. Aboneliğiniz görünmüyorsa aynı mağaza hesabını kullandığınızı kontrol edin.');
+      }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(
             () => _error = 'Satın alımlar geri yüklenemedi. Tekrar deneyin.');
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -221,12 +238,14 @@ class _BusinessSubscriptionScreenState
 
   Future<void> _link(String url) async {
     try {
-      if (await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication))
+      if (await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication)) {
         return;
+      }
     } catch (_) {}
-    if (mounted)
+    if (mounted) {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Bağlantı açılamadı.')));
+    }
   }
 
   String get _title => widget.premium

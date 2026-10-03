@@ -139,7 +139,7 @@ class RentalListingCard extends StatelessWidget {
     final total = daily != null && validDays ? daily * days! : null;
     final description = '${car['description'] ?? ''}'.trim();
     final year = '${car['model_year'] ?? ''}'.trim();
-    if (compact)
+    if (compact) {
       return Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
@@ -241,6 +241,7 @@ class RentalListingCard extends StatelessWidget {
                   child: const Text('Pazarlık için teklif gönder',
                       textAlign: TextAlign.center)),
           ]));
+    }
     return Container(
       decoration: BoxDecoration(
           color: AppConstants.cardColor,

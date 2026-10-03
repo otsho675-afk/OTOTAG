@@ -1,7 +1,9 @@
 <?php
 require_once __DIR__.'/rental_rules.php';
+require_once __DIR__.'/notification_delivery.php';
 
 function rentalReputationSchema($pdo) {
+    notificationEnsureSchema($pdo);
     $pdo->exec("CREATE TABLE IF NOT EXISTS rental_reviews (
         id BIGINT AUTO_INCREMENT PRIMARY KEY,job_id INT NOT NULL,company_id INT NOT NULL,customer_id INT NOT NULL,
         rating TINYINT NOT NULL,comment TEXT NOT NULL,created_at DATETIME NOT NULL,
@@ -20,6 +22,21 @@ function rentalEvent($pdo,$type,$refs=[],$details=[]) {
     $stmt->execute([$type,$auth['user_id'],$auth['user_type'],$refs['company_id'] ?? null,$refs['customer_id'] ?? null,
         $refs['listing_id'] ?? null,$refs['bid_id'] ?? null,$refs['job_id'] ?? null,$refs['city'] ?? null,json_encode($details,JSON_UNESCAPED_UNICODE)]);
     $GLOBALS['rental_event_id']=(int)$pdo->lastInsertId();
+    $messages=['offer_placed'=>['Yeni kiralama teklifi','Aracınız için yeni teklif geldi. Teklifler panelinden inceleyin.'],
+        'counter_offer'=>['Kiralama karşı teklifi','Teklifiniz için yeni bir tutar önerildi. Güncel fiyatı inceleyin.'],
+        'reserved'=>['Kiralama eşleşti','Rezervasyon oluşturuldu. Teslim bilgilerini rezervasyon detayında görebilirsiniz.'],
+        'offer_rejected'=>['Kiralama teklifi kapatıldı','Teklifiniz reddedildi. Diğer araç ve teklifleri inceleyebilirsiniz.'],
+        'offer_closed'=>['Kiralama teklifi kapatıldı','Araç artık bu teklif için uygun değil. Güncel ilanları inceleyin.'],
+        'offer_removed'=>['Teklif geri çekildi','Müşteri kiralama teklifini geri çekti.'],
+        'admin_cancelled'=>['Rezervasyon iptal edildi','Rezervasyon yönetici tarafından iptal edildi. Detayları inceleyin.'],
+        'completed'=>['Kiralama tamamlandı','Kiralamanız tamamlandı. Firmayı rezervasyon detayından değerlendirebilirsiniz.']];
+    if (isset($messages[$type])) {
+        $targets=array_filter([$refs['company_id'] ?? null,$refs['customer_id'] ?? null],function($id)use($auth){ return $id && (int)$id!==(int)$auth['user_id']; });
+        notificationQueue($pdo,$targets,$messages[$type][0],$messages[$type][1],
+            ['type'=>'rental_update','job_id'=>(string)($refs['job_id'] ?? ''),'bid_id'=>(string)($refs['bid_id'] ?? '')],
+            'rental:'.$GLOBALS['rental_event_id']);
+    }
+
     if (!empty($GLOBALS['rental_event_shutdown'])) return;
     $GLOBALS['rental_event_shutdown']=true;
     // Publish only committed audit entries. A rolled-back mutation sends no signal.

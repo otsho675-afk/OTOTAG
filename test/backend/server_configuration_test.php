@@ -18,4 +18,9 @@ expectConfig(!apiOriginAllowed('http://localhost:99999',['http://localhost:*']),
 expectConfig(!apiOriginAllowed('https://evil.test',['*']),'arbitrary wildcard denied');
 try { parseServerEnvironment('JWT_SECRET="broken'); expectConfig(false,'malformed env'); }
 catch (RuntimeException $e) { expectConfig(strpos($e->getMessage(),'satır 1')!==false,'malformed env identifies line without secret'); }
+$copied=parseServerEnvironment('ALLOWED_ORIGINS="[https://eliteagency.sbs,http://localhost:\\*](https://eliteagency.sbs,http://localhost:*)"');
+expectConfig(apiOriginAllowed('https://eliteagency.sbs',explode(',',$copied['ALLOWED_ORIGINS'])),'matching Markdown origin link safely normalized');
+expectConfig(apiOriginAllowed('http://localhost:53021',explode(',',$copied['ALLOWED_ORIGINS'])),'escaped local wildcard normalized');
+$mismatch=parseServerEnvironment('ALLOWED_ORIGINS="[https://eliteagency.sbs](https://evil.test)"');
+expectConfig(!apiOriginAllowed('https://evil.test',explode(',',$mismatch['ALLOWED_ORIGINS'])),'mismatched Markdown target cannot widen origin permissions');
 echo "\n$count configuration checks passed.\n";

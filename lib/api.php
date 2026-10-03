@@ -851,59 +851,10 @@ function verifyGooglePurchase($packageName, $productId, $token, $isSubscription 
 }
 
 function sendOneSignalPush($targetUsers, $title, $message, $data = []) {
-    if (empty($targetUsers)) return false;
-    $onesignal_app_id = serverConfig('ONESIGNAL_APP_ID');
-    $onesignal_rest_api_key = serverConfig('ONESIGNAL_REST_API_KEY');
-    if ($onesignal_app_id === '' || $onesignal_rest_api_key === '') return false;
-
-    if (!is_array($targetUsers)) {
-        $targetUsers = [(string)$targetUsers];
-    } else {
-        $targetUsers = array_values(array_unique(array_filter(array_map('strval', $targetUsers))));
-    }
-    if (empty($targetUsers)) return false;
-
-    $fields = [
-        'app_id' => $onesignal_app_id,
-        'contents' => [
-            'en' => (string)$message,
-            'tr' => (string)$message
-        ],
-        'headings' => [
-            'en' => (string)$title,
-            'tr' => (string)$title
-        ],
-        'target_channel' => 'push',
-        'include_aliases' => [
-            'external_id' => $targetUsers
-        ],
-        'ios_sound' => 'oto_alert.wav',
-        'android_sound' => 'oto_alert',
-        'priority' => 10,
-        'android_accent_color' => 'FF00FFA3',
-        'large_icon' => 'https://eliteagency.sbs/web/assets/images/logo.png',
-        'data' => !empty($data) ? $data : ['type' => 'general']
-    ];
-
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Content-Type: application/json; charset=utf-8',
-        'Authorization: Basic ' . $onesignal_rest_api_key
-    ]);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-    curl_setopt($ch, CURLOPT_POST, TRUE);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fields));
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
-    // Push bildirimlerinin kesilmeden iletilmesi için süreler artırıldı
-    curl_setopt($ch, CURLOPT_TIMEOUT, 6); 
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
-    curl_setopt($ch, CURLOPT_NOSIGNAL, 1);
-    $response = curl_exec($ch);
-    curl_close($ch);
-
-    return $response;
+    global $pdo;
+    try {
+        return notificationQueue($pdo,$targetUsers,$title,$message,$data);
+    } catch (Throwable $e) { error_log('Notification could not be queued.'); return false; }
 }
 
 $input_data = json_decode(file_get_contents("php://input"), true);
@@ -920,42 +871,28 @@ require_once __DIR__.'/map_routing.php';
 require_once __DIR__ . '/oauth_verification.php';
 require_once __DIR__ . '/api_authorization.php';
 authorizeApiAction($pdo, $action, $method);
+require_once __DIR__ . '/app_updates.php';
+require_once __DIR__.'/notification_delivery.php';
+notificationEnsureSchema($pdo);
+register_shutdown_function(function() use($pdo) {
+    if ($pdo->inTransaction() || empty($GLOBALS['notification_queued']) || !function_exists('fastcgi_finish_request')) return;
+    fastcgi_finish_request();
+    try { notificationDrain($pdo,5); } catch (Throwable $e) { error_log('Notification queue will retry via worker.'); }
+});
+handleAppUpdateAction($pdo, $action, $method);
 require_once __DIR__ . '/rentacar_api.php';
 handleRentalAction($pdo, $action, $method);
 
 switch ($action) {
-    case 'get_app_config':
-        if ($method !== 'GET') sendResponse(405, ["status" => "error", "message" => "Geçersiz metod."]);
-        try {
-            $cacheKey = "app_config_cache";
-            if ($redis) {
-                $cached = $redis->get($cacheKey);
-                if ($cached) {
-                    sendResponse(200, json_decode($cached, true));
-                }
-            }
-
-            $stmt = $pdo->query("SELECT setting_key, setting_value FROM app_settings");
-            $settings = [];
-            while ($row = $stmt->fetch()) {
-                $settings[$row['setting_key']] = $row['setting_value'];
-            }
-            $configData = [
-                "status" => "success",
-                "android_version" => $settings['android_version'] ?? "1.0.31",
-                "ios_version" => $settings['ios_version'] ?? "1.0.31",
-                "force_update" => ($settings['force_update'] ?? "1") == "1",
-                "update_message" => $settings['update_message'] ?? "Yeni bir güncelleme mevcut."
-            ];
-            if ($redis) {
-                $redis->setex($cacheKey, 600, json_encode($configData));
-            }
-            sendResponse(200, $configData);
-        } catch (Exception $e) {
-            sendResponse(500, ["status" => "error", "message" => "Ayarlar alınamadı."]);
-        }
+    case 'get_my_subscriptions':
+        if ($method!=='GET') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
+        require_once __DIR__.'/subscription_summary.php';
+        ensureBusinessSubscriptionSchema($pdo);
+        $stmt=$pdo->prepare('SELECT * FROM users WHERE id=?'); $stmt->execute([$_GET['user_id']]);
+        $user=$stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$user) sendResponse(404,['status'=>'error','message'=>'Hesap bulunamadı.']);
+        sendResponse(200,subscriptionSummary($user));
         break;
-
     case 'get_ads':
         if ($method !== 'GET') sendResponse(405, ["status" => "error", "message" => "Geçersiz metod."]);
         try {
@@ -1156,6 +1093,11 @@ switch ($action) {
 
     case 'get_part_listings':
         if ($method !== 'GET') sendResponse(405, ["status" => "error", "message" => "Geçersiz metod."]);
+        if (authenticateRequest()['user_type']==='admin') {
+            require_once __DIR__.'/admin_management.php';
+            try { sendResponse(200,adminPartListings($pdo,$_GET)); }
+            catch (InvalidArgumentException $e) { sendResponse(422,['status'=>'error','message'=>$e->getMessage()]); }
+        }
         $user_id = isset($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
         $city = $_GET['city'] ?? null;
         
@@ -1247,34 +1189,9 @@ switch ($action) {
                             "amount" => $amount,
                             "message" => "İlanınıza ".$amount." ₺ teklif geldi!"
                         ]);
-    $onesignal_app_id = serverConfig('ONESIGNAL_APP_ID');
-    $onesignal_rest_api_key = serverConfig('ONESIGNAL_REST_API_KEY');
-                        
-                        $fields = [
-                            'app_id' => $onesignal_app_id,
-                            'contents' => ["en" => "Yedek parça ilanınıza " . $amount . " ₺ tutarında yeni bir teklif geldi!", "tr" => "Yedek parça ilanınıza " . $amount . " ₺ tutarında yeni bir teklif geldi!"],
-                            'headings' => ["en" => "Pazarda Yeni Teklif", "tr" => "Pazarda Yeni Teklif"],
-                            'include_aliases' => ['external_id' => [(string)$target_user]],
-                            'target_channel' => "push",
-                            'android_sound' => 'oto_alert',
-                            'ios_sound' => 'oto_alert.wav', 
-                            'content_available' => true, 
-                            'ios_badgeType' => 'Increase', 
-                            'ios_badgeCount' => 1,
-                            'android_accent_color' => 'FF00FFA3',
-                            'data' => ['type' => 'new_part_bid', 'listing_id' => (string)$listing_id]
-                        ];
-                        
-                        $ch = curl_init();
-                        curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
-                        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json; charset=utf-8', 'Authorization: Basic ' . $onesignal_rest_api_key]);
-                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-                        curl_setopt($ch, CURLOPT_POST, TRUE);
-                        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fields));
-                        curl_setopt($ch, CURLOPT_TIMEOUT_MS, 500); 
-                        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-                        curl_exec($ch);
-                        curl_close($ch);
+                        sendOneSignalPush($target_user,'Pazarda Yeni Teklif',
+                            'Yedek parça ilanınıza '.$amount.' ₺ tutarında yeni bir teklif geldi!',
+                            ['type'=>'new_part_bid','listing_id'=>(string)$listing_id]);
                     }
                 }
             } catch (Exception $e) {}
@@ -1746,6 +1663,7 @@ switch ($action) {
                 $stmt->execute([$job_id, $provider_id, $amount, $estimated_time, $provider_note]);
             }
 
+            $bid_id = $existingBid ? $existingBid['id'] : $pdo->lastInsertId();
             $pdo->commit();
 
             try {
@@ -1772,7 +1690,6 @@ switch ($action) {
             $provQuery = $pdo->prepare("SELECT name, IFNULL((SELECT ROUND(AVG(rating), 1) FROM ratings WHERE provider_id = u.id), 0) as average_rating FROM users u WHERE id = ?");
             $provQuery->execute([$provider_id]);
             $provInfo = $provQuery->fetch();
-            $bid_id = $existingBid ? $existingBid['id'] : $pdo->lastInsertId();
 
             $payload = [
                 "status" => "new_bid",
@@ -1807,59 +1724,11 @@ switch ($action) {
         if (!$job_id || !$provider_id) sendResponse(400, ["status" => "error", "message" => "Eksik parametre."]);
         
         try {
-            $pdo->beginTransaction();
-
-            // SATIR KİLİDİ (FOR UPDATE): Çifte eşleşmeyi ve Race Condition'ı kesin olarak önler
-            $checkJob = $pdo->prepare("SELECT * FROM jobs WHERE id = ? FOR UPDATE");
-            $checkJob->execute([$job_id]);
-            $currentJob = $checkJob->fetch();
-
-            if (!$currentJob || $currentJob['status'] !== 'searching') {
-                $pdo->rollBack();
-                sendResponse(400, ["status" => "error", "message" => "Bu talep başka bir usta ile eşleşmiş veya iptal edilmiş."]);
-            }
-
-            $candidate=$pdo->prepare('SELECT * FROM users WHERE id=? FOR UPDATE'); $candidate->execute([$provider_id]);
-            try { serviceCandidate($pdo,$candidate->fetch(),$currentJob); }
-            catch (DomainException $e) { $pdo->rollBack(); sendResponse(403,['status'=>'error','message'=>$e->getMessage()]); }
-            $lockedBid=$pdo->prepare('SELECT * FROM bids WHERE id=? AND job_id=? AND provider_id=? FOR UPDATE');
-            $lockedBid->execute([$bid_id,$job_id,$provider_id]); $currentBid=$lockedBid->fetch();
-            $actor=authenticateRequest();
-            if (!$currentBid || !in_array($currentBid['status'],['pending','negotiating'],true) || $currentBid['last_bidder']===$actor['user_type'] || (string)$currentBid['amount']!==(string)$amount) {
-                $pdo->rollBack(); sendResponse(409,['status'=>'error','message'=>'Teklif değişti veya kapandı. Güncel teklifi yeniden açın.']);
-            }
-            $amount=$currentBid['amount'];
-            if (!$bid_id) {
-                $findBid = $pdo->prepare("SELECT id, amount FROM bids WHERE job_id = ? AND provider_id = ? ORDER BY id DESC LIMIT 1");
-                $findBid->execute([$job_id, $provider_id]);
-                $bidRow = $findBid->fetch();
-                if ($bidRow) {
-                    $bid_id = $bidRow['id'];
-                    if (!$amount) $amount = $bidRow['amount'];
-                }
-            }
-
-            $matchCode = (!empty($currentJob['match_code'])) ? $currentJob['match_code'] : rand(1000, 9999);
-
-            $stmtUpdateJob = $pdo->prepare("UPDATE jobs SET provider_id = ?, agreed_price = ?, status = 'matched', match_code = ? WHERE id = ? AND status = 'searching'");
-            $stmtUpdateJob->execute([$provider_id, $amount, $matchCode, $job_id]);
-            
-            if ($stmtUpdateJob->rowCount() === 0) {
-                $pdo->rollBack();
-                sendResponse(400, ["status" => "error", "message" => "İşlem daha önce başka bir usta tarafından onaylanmış."]);
-            }
-
-            if ($bid_id) {
-                $pdo->prepare("UPDATE bids SET status = 'accepted' WHERE id = ?")->execute([$bid_id]);
-                $pdo->prepare("UPDATE bids SET status = 'rejected' WHERE job_id = ? AND id != ?")->execute([$job_id, $bid_id]);
-            } else {
-                $pdo->prepare("UPDATE bids SET status = 'accepted' WHERE job_id = ? AND provider_id = ?")->execute([$job_id, $provider_id]);
-                $pdo->prepare("UPDATE bids SET status = 'rejected' WHERE job_id = ? AND provider_id != ?")->execute([$job_id, $provider_id]);
-            }
-
-            $pdo->prepare("UPDATE bids SET status = 'cancelled' WHERE provider_id = ? AND job_id != ? AND status IN ('pending', 'negotiating')")->execute([$provider_id, $job_id]);
-
-            $pdo->commit();
+            $accepted=serviceAcceptOffer($pdo,authenticateRequest(),$_POST);
+            $currentJob=$accepted['job'];
+            $amount=$accepted['bid']['amount'];
+            $matchCode=$currentJob['match_code'];
+            if ($accepted['repeated']) sendResponse(200,['status'=>'success','job_status'=>$currentJob['status'],'match_code'=>(string)$matchCode]);
 
             try {
                 if ($caller_user_type === 'provider') {
@@ -1898,8 +1767,9 @@ switch ($action) {
                 "job_status" => "matched",
                 "match_code" => (string)$matchCode
             ]);
+        } catch (DomainException $e) {
+            sendResponse(409,['status'=>'error','message'=>$e->getMessage()]);
         } catch (Exception $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
             if ($pdo->inTransaction()) $pdo->rollBack();
             sendResponse(500, ["status" => "error", "message" => "İşlem başarısız oldu: " . $e->getMessage()]);
         }
@@ -2819,22 +2689,6 @@ switch ($action) {
         $message = $_POST['message'] ?? null;
         
         if (!$title || !$message) sendResponse(400, ["status" => "error", "message" => "Başlık ve mesaj zorunludur."]);
-    $onesignal_app_id = serverConfig('ONESIGNAL_APP_ID');
-    $onesignal_rest_api_key = serverConfig('ONESIGNAL_REST_API_KEY');
-
-        $content = array("en" => $message);
-        $headings = array("en" => $title);
-        
-        $fields = array(
-            'app_id' => $onesignal_app_id,
-            'contents' => $content,
-            'headings' => $headings,
-            'android_sound' => 'oto_alert',
-            'ios_sound' => 'oto_alert.wav', 
-            'android_accent_color' => 'FF00FFA3',
-            'large_icon' => 'https://eliteagency.sbs/web/assets/images/logo.png',
-        );
-
         try {
             $pdo->beginTransaction();
             $insert = $pdo->prepare("INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)");
@@ -2842,20 +2696,11 @@ switch ($action) {
             if ($target === 'all') {
                 // 350K Optimizasyonu: PHP RAM limitini korumak için 350 binlik döngüyü tek satır DB işlemine çevirdik.
                 $pdo->prepare("INSERT INTO notifications (user_id, title, message) SELECT id, ?, ? FROM users")->execute([$title, $message]);
-                $fields['included_segments'] = array('Total Subscriptions'); 
+
                 
             } elseif ($target === 'customer' || $target === 'provider') {
                 // 350K Optimizasyonu: Yüz binlerce döngü yerine Mass Insert.
                 $pdo->prepare("INSERT INTO notifications (user_id, title, message) SELECT id, ?, ? FROM users WHERE user_type = ?")->execute([$title, $message, $target]);
-                
-                $stmt = $pdo->prepare("SELECT id FROM users WHERE user_type = ? ORDER BY id DESC LIMIT 2000");
-                $stmt->execute([$target]);
-                $users = $stmt->fetchAll(PDO::FETCH_COLUMN);
-                
-                $string_users = array_map('strval', $users); 
-                // OneSignal Payload Too Large (413) hatasını önlemek için son 2000 aktif kullanıcıya Push atılır.
-                $fields['include_aliases'] = array('external_id' => $string_users);
-                $fields['target_channel'] = "push";
                 
             } elseif (is_numeric($target) || (!empty($_POST['job_id']) && (empty($target) || $target == '0'))) {
                 if (empty($target) || $target == '0') {
@@ -2870,9 +2715,19 @@ switch ($action) {
                 }
             }
 
+            if (in_array($target,['all','customer','provider'],true)) {
+                $cursor=0; $campaign=appUpdateUuid();
+                do {
+                    $stmt=$pdo->prepare('SELECT id FROM users WHERE id>?'.($target==='all'?'':' AND user_type=?').' ORDER BY id LIMIT 2000');
+                    $stmt->execute($target==='all'?[$cursor]:[$cursor,$target]); $users=$stmt->fetchAll(PDO::FETCH_COLUMN);
+                    if ($users) {
+                        notificationQueue($pdo,$users,$title,$message,['type'=>'general'],$campaign.':'.$cursor);
+                        $cursor=(int)end($users);
+                    }
+                } while (count($users)===2000);
+            }
             $pdo->commit();
-
-            sendResponse(200, ["status" => "success", "message" => "Bildirim başarıyla kaydedildi ve iletildi."]);
+            sendResponse(200, ['status'=>'success','message'=>'Bildirim kaydedildi ve gönderim kuyruğuna alındı.','push_status'=>'queued']);
         } catch (Exception $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             if ($pdo->inTransaction()) $pdo->rollBack();
@@ -3195,7 +3050,7 @@ switch ($action) {
     case 'get_all_users':
         if ($method !== 'GET') sendResponse(405, ["status" => "error", "message" => "Geçersiz metod."]);
         authenticateRequest(null, true);
-        $stmt = $pdo->query("SELECT id, user_type, name, phone, service_category, iban, status, is_premium, tax_plate, driver_license, vehicle_photo, equipment_photo, created_at, rating, reviews_count FROM users ORDER BY created_at DESC LIMIT 1500");
+        $stmt = $pdo->query("SELECT id, user_type, name, phone, service_category, iban, status, is_premium, is_suspended, suspension_end_date, tax_plate, driver_license, vehicle_photo, equipment_photo, created_at, rating, reviews_count FROM users ORDER BY created_at DESC LIMIT 1500");
         sendResponse(200, ["status" => "success", "users" => $stmt->fetchAll()]);
         break;
 
@@ -3979,6 +3834,10 @@ switch ($action) {
             $lockedStatus=$lockJob->fetchColumn();
             $lockBid=$pdo->prepare('SELECT * FROM bids WHERE id=? FOR UPDATE'); $lockBid->execute([$bid_id]); $bid=$lockBid->fetch();
             if ($lockedStatus!=='searching' || !$bid || !in_array($bid['status'],['pending','negotiating'],true)) { $pdo->rollBack(); sendResponse(409,['status'=>'error','message'=>'Bu teklif artık pazarlığa açık değil.']); }
+            if ($bid['last_bidder']===$user_type || (isset($_POST['offer_version']) &&
+                (filter_var($_POST['offer_version'],FILTER_VALIDATE_INT)===false || (int)$_POST['offer_version']!==(int)$bid['negotiation_count']))) {
+                $pdo->rollBack(); sendResponse(409,['status'=>'error','message'=>'Teklif değişti veya yanıt sırası karşı tarafta. Listeyi yenileyin.']);
+            }
             if ($bid['negotiation_count']>=2) { $pdo->rollBack(); sendResponse(403,['status'=>'error','message'=>'Maksimum karşı teklif sınırına ulaştınız.']); }
             $stmt=$pdo->prepare("UPDATE bids SET amount=?,negotiation_count=negotiation_count+1,last_bidder=?,status='negotiating' WHERE id=?");
             $stmt->execute([$amount,$user_type,$bid_id]); $pdo->commit();
@@ -4037,91 +3896,29 @@ switch ($action) {
         sendResponse(200, ["status" => "success", "amount" => $amount]);
         break;
 
-    case 'reject_bid': 
-        if ($method !== 'POST') sendResponse(405, ["status" => "error", "message" => "Geçersiz metod."]);
-        $bid_id = $_POST['bid_id'] ?? null;
-        if (!$bid_id) sendResponse(400, ["status" => "error", "message" => "Eksik parametre."]);
-        $stmt = $pdo->prepare("UPDATE bids SET status = 'rejected' WHERE id = ?");
-        $stmt->execute([$bid_id]);
-
+    case 'reject_bid':
+        if ($method !== 'POST') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
         try {
-            $provInfo = $pdo->prepare("SELECT provider_id, job_id FROM bids WHERE id = ?");
-            $provInfo->execute([$bid_id]);
-            $provData = $provInfo->fetch();
-            if ($provData) {
-                // Reddedilen teklifi anında karşı tarafa yansıt
-                triggerPusherEvent("job_".$provData['job_id'], "bid_update", ["status" => "rejected"]);
-    $onesignal_app_id = serverConfig('ONESIGNAL_APP_ID');
-    $onesignal_rest_api_key = serverConfig('ONESIGNAL_REST_API_KEY');
-                
-                $fields = [
-                    'app_id' => $onesignal_app_id,
-                    'contents' => ["en" => "Müşteri teklifinizi reddetti. Başka çağrılara odaklanabilirsiniz."],
-                    'headings' => ["en" => "Teklif Reddedildi"],
-                    'include_aliases' => ['external_id' => [(string)$provData['provider_id']]],
-                    'target_channel' => "push"
-                ];
-                
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
-                curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json; charset=utf-8', 'Authorization: Basic ' . $onesignal_rest_api_key]);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-                curl_setopt($ch, CURLOPT_POST, TRUE);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fields));
-                curl_setopt($ch, CURLOPT_TIMEOUT, 8);
-                curl_exec($ch);
-                curl_close($ch);
-            }
-        } catch (Exception $e) {}
-
-        sendResponse(200, ["status" => "success"]);
+            $bid=serviceRejectOffer($pdo,(int)($_POST['bid_id'] ?? 0));
+            triggerPusherEvent('job_'.$bid['job_id'],'bid_update',['status'=>'rejected']);
+            sendOneSignalPush((string)$bid['provider_id'],'Teklif reddedildi','Teklif kapatıldı. Diğer talepleri inceleyebilirsiniz.',['type'=>'bid_update','job_id'=>(string)$bid['job_id']]);
+            sendResponse(200,['status'=>'success']);
+        } catch (DomainException $e) { sendResponse(409,['status'=>'error','message'=>$e->getMessage()]); }
         break;
 
     case 'cancel_job':
-        if ($method !== 'POST') sendResponse(405, ["status" => "error", "message" => "Geçersiz metod."]);
-        $job_id = $_POST['job_id'] ?? null;
-        if (!$job_id) sendResponse(400, ["status" => "error", "message" => "Eksik parametre."]);
-        $stmt = $pdo->prepare("SELECT status FROM jobs WHERE id = ?");
-        $stmt->execute([$job_id]);
-        $job = $stmt->fetch();
-        if ($job) {
-            $currentStatus = strtolower($job['status']);
-            if ($currentStatus === 'cancelled') {
-                sendResponse(200, ["status" => "success", "message" => "Talep zaten iptal edilmiş."]);
-            } elseif (in_array($currentStatus, ['searching', 'matched', 'accepted', 'approved', 'in_progress'])) {
-                $pdo->prepare("UPDATE jobs SET status = 'cancelled' WHERE id = ?")->execute([$job_id]);
-
-                try {
-                    $jobInfo = $pdo->prepare("SELECT customer_id, provider_id FROM jobs WHERE id = ?");
-                    $jobInfo->execute([$job_id]);
-                    $jobData = $jobInfo->fetch();
-                    if ($jobData) {
-                        $targets = [];
-                        if (!empty($jobData['provider_id'])) $targets[] = (string)$jobData['provider_id'];
-                        if (!empty($jobData['customer_id'])) $targets[] = (string)$jobData['customer_id'];
-
-                        if (!empty($targets)) {
-                            sendOneSignalPush(
-                                $targets,
-                                "İşlem İptal Edildi!",
-                                "Mevcut iş talebi iptal edilmiştir. İşlem sonlandırıldı.",
-                                ['type' => 'job_cancelled', 'job_id' => (string)$job_id]
-                            );
-                        }
-                    }
-                } catch (Exception $e) {}
-
-                // İptal durumunda ustaların ekranından işi anında düşür
-                triggerPusherEvent("job_".$job_id, "status_update", ["job_status" => "cancelled"]);
-                triggerPusherEvent("global_jobs", "job_cancelled", ["job_id" => $job_id]);
-
-                sendResponse(200, ["status" => "success", "message" => "Talep iptal edildi."]);
-            } else {
-                sendResponse(400, ["status" => "error", "message" => "İşlem ilerlediği için iptal edilemez."]);
+        if ($method !== 'POST') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
+        try {
+            $jobId=(int)($_POST['job_id'] ?? 0);
+            $job=serviceCancelJob($pdo,$jobId,$_POST['expected_status'] ?? null);
+            if ($job['status']!=='cancelled') {
+                $targets=array_values(array_filter([(string)$job['customer_id'],(string)($job['provider_id'] ?? '')]));
+                sendOneSignalPush($targets,'İşlem iptal edildi','Servis talebi iptal edilmiştir.',['type'=>'job_cancelled','job_id'=>(string)$jobId]);
+                triggerPusherEvent('job_'.$jobId,'status_update',['job_status'=>'cancelled','job_id'=>$jobId]);
+                triggerPusherEvent('global_jobs','job_cancelled',['job_id'=>$jobId]);
             }
-        } else {
-            sendResponse(404, ["status" => "error", "message" => "Talep bulunamadı."]);
-        }
+            sendResponse(200,['status'=>'success','message'=>'Talep iptal edildi.']);
+        } catch (DomainException $e) { sendResponse(409,['status'=>'error','message'=>$e->getMessage()]); }
         break;
 
     case 'customer_payment':

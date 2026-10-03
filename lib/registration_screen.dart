@@ -115,9 +115,10 @@ class SmartPhoneFormatter extends TextInputFormatter {
   TextEditingValue formatEditUpdate(
       TextEditingValue oldValue, TextEditingValue newValue) {
     var text = newValue.text.replaceAll(RegExp(r'\D'), '');
-    if (text.isEmpty)
+    if (text.isEmpty) {
       return newValue.copyWith(
           text: '', selection: const TextSelection.collapsed(offset: 0));
+    }
     if (text.length > 11) text = text.substring(0, 11);
 
     var buffer = StringBuffer();
@@ -486,43 +487,52 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     ));
   }
 
+  bool _socialBusy = false;
+
   Future<void> _signUpWithGoogle() async {
-    if (!kIsWeb) HapticFeedback.selectionClick();
+    if (_socialBusy) return;
+    setState(() => _socialBusy = true);
     try {
-      final GoogleSignIn googleSignIn = GoogleSignIn(
-        clientId: kIsWeb
-            ? AppConstants.googleWebClientId
-            : Platform.isIOS
-                ? _iosGoogleClientId
-                : null,
-        serverClientId: kIsWeb ? null : AppConstants.googleWebClientId,
-        scopes: const ['email', 'profile'],
-      );
-
+      if (!kIsWeb) HapticFeedback.selectionClick();
       try {
-        if (await googleSignIn.isSignedIn()) {
-          await googleSignIn.signOut();
+        final GoogleSignIn googleSignIn = GoogleSignIn(
+          clientId: kIsWeb
+              ? AppConstants.googleWebClientId
+              : Platform.isIOS
+                  ? _iosGoogleClientId
+                  : null,
+          serverClientId: kIsWeb ? null : AppConstants.googleWebClientId,
+          scopes: const ['email', 'profile'],
+        );
+
+        try {
+          if (await googleSignIn.isSignedIn()) {
+            await googleSignIn.signOut();
+          }
+        } catch (_) {}
+
+        final GoogleSignInAccount? account = await googleSignIn.signIn();
+
+        if (!mounted) return;
+
+        if (account != null) {
+          await _googleRegistrationAccount(account);
         }
-      } catch (_) {}
-
-      final GoogleSignInAccount? account = await googleSignIn.signIn();
-
-      if (!mounted) return;
-
-      if (account != null) {
-        await _googleRegistrationAccount(account);
+      } on PlatformException catch (e) {
+        debugPrint(
+            "Google Sign Up Platform Exception: ${e.code} - ${e.message}");
+        if (!mounted) return;
+        if (e.code != 'sign_in_canceled' && e.code != 'canceled') {
+          _showCustomSnackBar("Google bağlantısı tamamlanamadı (${e.code}).",
+              isError: true);
+        }
+      } catch (e) {
+        debugPrint("Google Sign Up Error: $e");
+        if (!mounted) return;
+        _showCustomSnackBar("Google bağlantı hatası: $e", isError: true);
       }
-    } on PlatformException catch (e) {
-      debugPrint("Google Sign Up Platform Exception: ${e.code} - ${e.message}");
-      if (!mounted) return;
-      if (e.code != 'sign_in_canceled' && e.code != 'canceled') {
-        _showCustomSnackBar("Google bağlantısı tamamlanamadı (${e.code}).",
-            isError: true);
-      }
-    } catch (e) {
-      debugPrint("Google Sign Up Error: $e");
-      if (!mounted) return;
-      _showCustomSnackBar("Google bağlantı hatası: $e", isError: true);
+    } finally {
+      if (mounted) setState(() => _socialBusy = false);
     }
   }
 
@@ -539,8 +549,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       _currentOauthId = account.id;
       _currentOauthToken = proof;
       _currentOauthEmail = account.email;
-      if ((account.displayName ?? '').isNotEmpty)
+      if ((account.displayName ?? '').isNotEmpty) {
         _nameController.text = account.displayName!;
+      }
     });
     _showCustomSnackBar(
         'Google bağlandı. Telefon, şehir ve hesabına gerekli bilgileri tamamla.',
@@ -553,48 +564,60 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       : defaultTargetPlatform == TargetPlatform.iOS;
 
   Future<void> _signUpWithApple() async {
-    if (!_appleAvailable) {
-      _showCustomSnackBar('Apple girişi için iPhone uygulamasını kullanın.',
-          isError: true);
-      return;
-    }
-
+    if (_socialBusy) return;
+    setState(() => _socialBusy = true);
     try {
-      final credential = await SignInWithApple.getAppleIDCredential(
-        webAuthenticationOptions: kIsWeb
-            ? WebAuthenticationOptions(
-                clientId: AppConstants.appleServiceId,
-                redirectUri: Uri.parse(AppConstants.appleRedirectUri))
-            : null,
-        scopes: [
-          AppleIDAuthorizationScopes.email,
-          AppleIDAuthorizationScopes.fullName,
-        ],
-      );
+      if (!_appleAvailable) {
+        _showCustomSnackBar('Apple girişi için iPhone uygulamasını kullanın.',
+            isError: true);
+        return;
+      }
 
-      if (!mounted) return;
+      try {
+        final credential = await SignInWithApple.getAppleIDCredential(
+          webAuthenticationOptions: kIsWeb
+              ? WebAuthenticationOptions(
+                  clientId: AppConstants.appleServiceId,
+                  redirectUri: Uri.parse(AppConstants.appleRedirectUri))
+              : null,
+          scopes: [
+            AppleIDAuthorizationScopes.email,
+            AppleIDAuthorizationScopes.fullName,
+          ],
+        );
 
-      String fullName = [
-        credential.givenName ?? '',
-        credential.familyName ?? ''
-      ].join(' ').trim();
+        if (!mounted) return;
 
-      setState(() {
-        _currentOauthProvider = 'apple';
-        _currentOauthId = credential.userIdentifier ?? '';
-        _currentOauthToken = credential.identityToken;
-        _currentOauthEmail = credential.email ?? '';
-        if (fullName.isNotEmpty) {
-          _nameController.text = fullName;
+        String fullName = [
+          credential.givenName ?? '',
+          credential.familyName ?? ''
+        ].join(' ').trim();
+
+        if ((credential.identityToken ?? '').isEmpty ||
+            (credential.userIdentifier ?? '').isEmpty) {
+          _showCustomSnackBar('Apple kimliği doğrulanamadı. Yeniden bağlanın.',
+              isError: true);
+          return;
         }
-      });
-      _showCustomSnackBar(
-          "Apple bağlandı! Şimdi zorunlu telefon ve şehir alanlarını doldurunuz.",
-          isError: false);
-    } catch (e) {
-      if (!mounted) return;
-      _showCustomSnackBar("Apple bağlantısı başarısız veya iptal edildi.",
-          isError: true);
+        setState(() {
+          _currentOauthProvider = 'apple';
+          _currentOauthId = credential.userIdentifier ?? '';
+          _currentOauthToken = credential.identityToken;
+          _currentOauthEmail = credential.email ?? '';
+          if (fullName.isNotEmpty) {
+            _nameController.text = fullName;
+          }
+        });
+        _showCustomSnackBar(
+            "Apple bağlandı! Şimdi zorunlu telefon ve şehir alanlarını doldurunuz.",
+            isError: false);
+      } catch (e) {
+        if (!mounted) return;
+        _showCustomSnackBar("Apple bağlantısı başarısız veya iptal edildi.",
+            isError: true);
+      }
+    } finally {
+      if (mounted) setState(() => _socialBusy = false);
     }
   }
 
@@ -1417,22 +1440,22 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   Widget _buildCurrentStepContent(bool isCustomer) {
     if (widget.userType == 'provider') {
-      if (_currentStep == 0) return _buildProviderStep0_Service();
-      if (_currentStep == 1) return _buildCommonStep_BasicInfo();
-      if (_currentStep == 2) return _buildProviderStep2_LocationAndVehicle();
-      if (_currentStep == 3) return _buildProviderStep3_Documents();
+      if (_currentStep == 0) return _buildProviderServiceStep();
+      if (_currentStep == 1) return _buildBasicInfoStep();
+      if (_currentStep == 2) return _buildProviderLocationAndVehicleStep();
+      if (_currentStep == 3) return _buildProviderDocumentsStep();
     } else if (widget.userType == 'rentacar') {
-      if (_currentStep == 0) return _buildCommonStep_BasicInfo();
-      if (_currentStep == 1) return _buildProviderStep2_LocationAndVehicle();
-      if (_currentStep == 2) return _buildProviderStep3_Documents();
+      if (_currentStep == 0) return _buildBasicInfoStep();
+      if (_currentStep == 1) return _buildProviderLocationAndVehicleStep();
+      if (_currentStep == 2) return _buildProviderDocumentsStep();
     } else {
-      if (_currentStep == 0) return _buildCommonStep_BasicInfo();
-      if (_currentStep == 1) return _buildCustomerStep1_Location();
+      if (_currentStep == 0) return _buildBasicInfoStep();
+      if (_currentStep == 1) return _buildCustomerLocationStep();
     }
     return const SizedBox();
   }
 
-  Widget _buildProviderStep0_Service() {
+  Widget _buildProviderServiceStep() {
     return KeyedSubtree(
       key: const ValueKey('step0_service'),
       child: Column(
@@ -1499,7 +1522,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  Widget _buildCommonStep_BasicInfo() {
+  Widget _buildBasicInfoStep() {
     return KeyedSubtree(
       key: const ValueKey('step_basic'),
       child: Column(
@@ -1515,7 +1538,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         onError: (message) =>
                             _showCustomSnackBar(message, isError: true))
                     : InkWell(
-                        onTap: _signUpWithGoogle,
+                        onTap: _socialBusy ? null : _signUpWithGoogle,
                         borderRadius: BorderRadius.circular(16),
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 14),
@@ -1544,7 +1567,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: InkWell(
-                  onTap: _appleAvailable ? _signUpWithApple : null,
+                  onTap:
+                      _appleAvailable && !_socialBusy ? _signUpWithApple : null,
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -1650,7 +1674,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  Widget _buildCustomerStep1_Location() {
+  Widget _buildCustomerLocationStep() {
     return KeyedSubtree(
       key: const ValueKey('step_customer_loc'),
       child: Column(
@@ -1663,7 +1687,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  Widget _buildProviderStep2_LocationAndVehicle() {
+  Widget _buildProviderLocationAndVehicleStep() {
     return KeyedSubtree(
       key: const ValueKey('step_provider_loc'),
       child: Column(
@@ -1727,7 +1751,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  Widget _buildProviderStep3_Documents() {
+  Widget _buildProviderDocumentsStep() {
     return KeyedSubtree(
       key: const ValueKey('step_provider_docs'),
       child: Column(

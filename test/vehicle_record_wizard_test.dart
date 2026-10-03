@@ -65,13 +65,15 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Adım 1 / 3 • Kategori'), findsOneWidget);
       expect(recordField('Güncel KM'), findsNothing);
-      if (width == 390)
+      if (width == 390) {
         await screenshot(tester, shot, 'record_wizard_category_390');
+      }
       await tester.tap(find.text('Yakıt Alımı'));
       await tester.pumpAndSettle();
       expect(find.text('Adım 2 / 3 • Tarih ve detaylar'), findsOneWidget);
-      if (width == 390)
+      if (width == 390) {
         await screenshot(tester, shot, 'record_wizard_details_390');
+      }
       final costLabel = width >= 768 ? 'Tutar (₺)' : 'Maliyet / Tutar (₺)';
       await tester.ensureVisible(recordField(costLabel));
       await tester.enterText(recordField(costLabel), '120,50');
@@ -85,8 +87,9 @@ void main() {
       expect(find.text('Adım 3 / 3 • Belge ve onay'), findsOneWidget);
       expect(find.text('Tutar: 120,50 ₺'), findsOneWidget);
       expect(saves, 0);
-      if (width == 390)
+      if (width == 390) {
         await screenshot(tester, shot, 'record_wizard_confirm_390');
+      }
       await tester.tap(find.text('Geri'));
       await tester.pumpAndSettle();
       expect(tester.widget<TextField>(recordField(costLabel)).controller!.text,

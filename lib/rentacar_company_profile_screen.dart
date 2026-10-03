@@ -42,7 +42,7 @@ class _RentacarCompanyProfileScreenState
     try {
       final response = await _service.companyProfile(widget.companyId,
           beforeId: more ? _cursor : null);
-      if (mounted)
+      if (mounted) {
         setState(() {
           _data = response;
           final reviews = [
@@ -54,6 +54,7 @@ class _RentacarCompanyProfileScreenState
               ? null
               : rentalId(response['next_cursor']);
         });
+      }
     } catch (e) {
       if (mounted) setState(() => _error = '$e');
     } finally {
@@ -81,7 +82,7 @@ class _RentacarCompanyProfileScreenState
                               padding: const EdgeInsets.all(20),
                               itemCount: _reviews.length + 2,
                               itemBuilder: (context, index) {
-                                if (index == 0)
+                                if (index == 0) {
                                   return Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.stretch,
@@ -143,9 +144,11 @@ class _RentacarCompanyProfileScreenState
                                               child:
                                                   CircularProgressIndicator()),
                                       ]);
-                                if (index <= _reviews.length)
+                                }
+                                if (index <= _reviews.length) {
                                   return RentalReviewCard(
                                       review: _reviews[index - 1]);
+                                }
                                 return Column(children: [
                                   if (_error != null) ...[
                                     const SizedBox(height: 16),

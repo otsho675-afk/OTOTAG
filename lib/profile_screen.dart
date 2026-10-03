@@ -1,4 +1,5 @@
 import 'widgets/google_login_button.dart';
+import 'subscriptions_screen.dart';
 // profile_screen.dart
 import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
@@ -232,8 +233,9 @@ class _ProfileScreenState extends State<ProfileScreen>
             responses.length > 2 &&
             responses[2].statusCode == 200) {
           final eData = json.decode(responses[2].body);
-          if (eData['status'] == 'success')
+          if (eData['status'] == 'success') {
             earnings = eData['earnings'] ?? earnings;
+          }
         }
 
         setState(() {
@@ -319,8 +321,9 @@ class _ProfileScreenState extends State<ProfileScreen>
       final account = await google.signIn();
       if (account != null && mounted) await _linkGoogleIdentity(account);
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         _showCustomSnackBar('Google bağlantısı tamamlanamadı.', isError: true);
+      }
     }
   }
 
@@ -329,8 +332,9 @@ class _ProfileScreenState extends State<ProfileScreen>
     setState(() => isLinkingOAuth = true);
     try {
       final proof = (await account.authentication).idToken;
-      if (proof == null || proof.isEmpty)
+      if (proof == null || proof.isEmpty) {
         throw StateError('Kimlik doğrulanamadı');
+      }
       final response = await _httpClient
           .post(Uri.parse('$baseUrl?action=link_oauth'), body: {
         'user_id': '${widget.userId}',
@@ -352,9 +356,10 @@ class _ProfileScreenState extends State<ProfileScreen>
             isError: true);
       }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         _showCustomSnackBar('Google kimliği bağlanamadı. Tekrar deneyin.',
             isError: true);
+      }
     } finally {
       if (mounted) setState(() => isLinkingOAuth = false);
     }
@@ -421,10 +426,11 @@ class _ProfileScreenState extends State<ProfileScreen>
             isError: true);
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         _showCustomSnackBar(
             "Apple bağlantısı iptal edildi veya başarısız oldu.",
             isError: true);
+      }
     } finally {
       if (mounted) setState(() => isLinkingOAuth = false);
     }
@@ -456,8 +462,9 @@ class _ProfileScreenState extends State<ProfileScreen>
             isError: true);
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         _showCustomSnackBar("Bağlantı hatası oluştu.", isError: true);
+      }
     } finally {
       if (mounted) setState(() => isLinkingOAuth = false);
     }
@@ -518,8 +525,9 @@ class _ProfileScreenState extends State<ProfileScreen>
             isError: true);
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         _showCustomSnackBar("Bağlantı zaman aşımına uğradı.", isError: true);
+      }
     }
   }
 
@@ -565,8 +573,9 @@ class _ProfileScreenState extends State<ProfileScreen>
         if (data['status'] == 'success') {
           setState(() {
             profile['name'] = _nameController.text.trim();
-            if (_isRentacar)
+            if (_isRentacar) {
               profile['map_link'] = _mapLinkController.text.trim();
+            }
             if (widget.userType == 'provider') {
               profile['iban'] = _ibanController.text.trim();
             }
@@ -588,8 +597,9 @@ class _ProfileScreenState extends State<ProfileScreen>
         }
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         _showCustomSnackBar("Bağlantı koptu, tekrar deneyin.", isError: true);
+      }
     } finally {
       if (mounted) setState(() => isSaving = false);
     }
@@ -722,7 +732,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                               child: CircularProgressIndicator(
                                   color: Colors.black, strokeWidth: 3))
                           : const Text("Bilgileri Kaydet",
-                              textScaler: const TextScaler.linear(1.0),
+                              textScaler: TextScaler.linear(1.0),
                               style: TextStyle(
                                   fontWeight: FontWeight.w900,
                                   fontSize: 16,
@@ -792,7 +802,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         const SizedBox(width: 12),
                         const Expanded(
                           child: Text("Şifre Değiştir",
-                              textScaler: const TextScaler.linear(1.0),
+                              textScaler: TextScaler.linear(1.0),
                               style: TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.w900,
@@ -852,8 +862,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 _showCustomSnackBar("Bağlantı hatası.",
                                     isError: true);
                               } finally {
-                                if (mounted)
+                                if (mounted) {
                                   setModalState(() => isUpdating = false);
+                                }
                               }
                             },
                       style: ElevatedButton.styleFrom(
@@ -870,7 +881,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                               child: CircularProgressIndicator(
                                   color: Colors.black, strokeWidth: 3))
                           : const Text("Şifreyi Güncelle",
-                              textScaler: const TextScaler.linear(1.0),
+                              textScaler: TextScaler.linear(1.0),
                               style: TextStyle(
                                   fontWeight: FontWeight.w900,
                                   fontSize: 16,
@@ -953,7 +964,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                             const SizedBox(width: 12),
                             const Expanded(
                               child: Text("Geri Bildirim Gönder",
-                                  textScaler: const TextScaler.linear(1.0),
+                                  textScaler: TextScaler.linear(1.0),
                                   style: TextStyle(
                                       fontSize: 22,
                                       fontWeight: FontWeight.w900,
@@ -1019,8 +1030,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     _showCustomSnackBar("Bağlantı hatası.",
                                         isError: true);
                                   } finally {
-                                    if (mounted)
+                                    if (mounted) {
                                       setModalState(() => isSending = false);
+                                    }
                                   }
                                 },
                           style: ElevatedButton.styleFrom(
@@ -1037,7 +1049,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   child: CircularProgressIndicator(
                                       color: Colors.black, strokeWidth: 3))
                               : const Text("Gönder",
-                                  textScaler: const TextScaler.linear(1.0),
+                                  textScaler: TextScaler.linear(1.0),
                                   style: TextStyle(
                                       fontWeight: FontWeight.w900,
                                       fontSize: 16,
@@ -1209,13 +1221,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                                       }
                                     }
                                   } catch (e) {
-                                    if (mounted)
+                                    if (mounted) {
                                       _showCustomSnackBar(
                                           "Bağlantı hatası: İşlem başarısız.",
                                           isError: true);
+                                    }
                                   } finally {
-                                    if (mounted)
+                                    if (mounted) {
                                       setModalState(() => isSending = false);
+                                    }
                                   }
                                 },
                           style: ElevatedButton.styleFrom(
@@ -1233,7 +1247,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   child: CircularProgressIndicator(
                                       color: Colors.white, strokeWidth: 2.5))
                               : const Text("Şikayeti Gönder",
-                                  textScaler: const TextScaler.linear(1.0),
+                                  textScaler: TextScaler.linear(1.0),
                                   style: TextStyle(
                                       fontWeight: FontWeight.w900,
                                       fontSize: 16,
@@ -1344,7 +1358,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               const SizedBox(width: 12),
               const Expanded(
                 child: Text("Hizmeti Tekrarla",
-                    textScaler: const TextScaler.linear(1.0),
+                    textScaler: TextScaler.linear(1.0),
                     style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
@@ -1367,7 +1381,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14)),
                     child: const Text("Vazgeç",
-                        textScaler: const TextScaler.linear(1.0),
+                        textScaler: TextScaler.linear(1.0),
                         style: TextStyle(
                             color: Colors.white60,
                             fontWeight: FontWeight.bold,
@@ -1391,7 +1405,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                           "$serviceName talebiniz hazırlanıyor...");
                     },
                     child: const Text("Tekrarla",
-                        textScaler: const TextScaler.linear(1.0),
+                        textScaler: TextScaler.linear(1.0),
                         style: TextStyle(
                             fontWeight: FontWeight.w900, fontSize: 15)),
                   ),
@@ -1432,7 +1446,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     const SizedBox(width: 12),
                     const Expanded(
                       child: Text("Çıkış Yap",
-                          textScaler: const TextScaler.linear(1.0),
+                          textScaler: TextScaler.linear(1.0),
                           style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w900,
@@ -1444,7 +1458,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
                 content: const Text(
                     "Hesabınızdan güvenli bir şekilde çıkış yapmak istediğinize emin misiniz?",
-                    textScaler: const TextScaler.linear(1.0),
+                    textScaler: TextScaler.linear(1.0),
                     style: TextStyle(
                         color: _subtitleColor,
                         fontSize: 16,
@@ -1463,7 +1477,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12))),
                           child: const Text("İptal",
-                              textScaler: const TextScaler.linear(1.0),
+                              textScaler: TextScaler.linear(1.0),
                               style: TextStyle(
                                   fontWeight: FontWeight.w800,
                                   color: Colors.white54,
@@ -1504,7 +1518,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                           },
                           child: const FittedBox(
                               child: Text("Çıkış Yap",
-                                  textScaler: const TextScaler.linear(1.0),
+                                  textScaler: TextScaler.linear(1.0),
                                   style: TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.w900,
@@ -1546,7 +1560,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       const SizedBox(width: 12),
                       const Expanded(
                         child: Text("Hesabı Sil",
-                            textScaler: const TextScaler.linear(1.0),
+                            textScaler: TextScaler.linear(1.0),
                             style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w900,
@@ -1558,7 +1572,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ),
                   content: const Text(
                       "Hesabınız ve tüm verileriniz kalıcı olarak silinecektir. Bu işlem geri alınamaz. Emin misiniz?",
-                      textScaler: const TextScaler.linear(1.0),
+                      textScaler: TextScaler.linear(1.0),
                       style: TextStyle(
                           color: _subtitleColor,
                           fontSize: 16,
@@ -1579,7 +1593,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12))),
                             child: const Text("İptal",
-                                textScaler: const TextScaler.linear(1.0),
+                                textScaler: TextScaler.linear(1.0),
                                 style: TextStyle(
                                     fontWeight: FontWeight.w800,
                                     color: Colors.white54,
@@ -1620,7 +1634,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                                       await AppSession.clear();
                                       if (!mounted ||
                                           !dialogContext.mounted ||
-                                          !context.mounted) return;
+                                          !context.mounted) {
+                                        return;
+                                      }
                                       Navigator.pop(dialogContext);
                                       Navigator.of(context).pushAndRemoveUntil(
                                           MaterialPageRoute(
@@ -1628,13 +1644,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                                                   const RoleSelectionScreen()),
                                           (_) => false);
                                     } catch (_) {
-                                      if (dialogContext.mounted)
+                                      if (dialogContext.mounted) {
                                         setDialogState(
                                             () => isDeletingAccount = false);
-                                      if (mounted)
+                                      }
+                                      if (mounted) {
                                         _showCustomSnackBar(
                                             'Hesap silinemedi. Bağlantınızı kontrol edip tekrar deneyin.',
                                             isError: true);
+                                      }
                                     }
                                   },
                             child: isDeletingAccount
@@ -1646,7 +1664,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 : const FittedBox(
                                     child: Text("Kalıcı Sil",
                                         textScaler:
-                                            const TextScaler.linear(1.0),
+                                            TextScaler.linear(1.0),
                                         style: TextStyle(
                                             color: Colors.white,
                                             fontWeight: FontWeight.w900,
@@ -2063,7 +2081,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   borderRadius: BorderRadius.circular(12)),
                             ),
                             child: const Text("Kaldır",
-                                textScaler: const TextScaler.linear(1.0),
+                                textScaler: TextScaler.linear(1.0),
                                 style: TextStyle(
                                     fontWeight: FontWeight.w800, fontSize: 12)),
                           )
@@ -2073,7 +2091,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 isLinkingOAuth ? null : _linkGoogleAccount,
                             icon: const Icon(Icons.link_rounded, size: 16),
                             label: const Text("Bağla",
-                                textScaler: const TextScaler.linear(1.0),
+                                textScaler: TextScaler.linear(1.0),
                                 style: TextStyle(
                                     fontWeight: FontWeight.w900, fontSize: 13)),
                             style: ElevatedButton.styleFrom(
@@ -2145,7 +2163,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   borderRadius: BorderRadius.circular(12)),
                             ),
                             child: const Text("Kaldır",
-                                textScaler: const TextScaler.linear(1.0),
+                                textScaler: TextScaler.linear(1.0),
                                 style: TextStyle(
                                     fontWeight: FontWeight.w800, fontSize: 12)),
                           )
@@ -2155,7 +2173,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 isLinkingOAuth ? null : _linkAppleAccount,
                             icon: const Icon(Icons.link_rounded, size: 16),
                             label: const Text("Bağla",
-                                textScaler: const TextScaler.linear(1.0),
+                                textScaler: TextScaler.linear(1.0),
                                 style: TextStyle(
                                     fontWeight: FontWeight.w900, fontSize: 13)),
                             style: ElevatedButton.styleFrom(
@@ -2209,6 +2227,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                 crossAxisSpacing: 14,
                 mainAxisSpacing: 14,
                 children: [
+                  _buildSweetActionButton(
+                    icon: Icons.workspace_premium_outlined,
+                    title: 'Aboneliklerim',
+                    subtitle: 'Paketler & kalan süre',
+                    accentColor: _primaryColor,
+                    gradientColors: const [Color(0xFF00FFA3), Color(0xFF00B074)],
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => SubscriptionsScreen(userId: widget.userId, userType: widget.userType))),
+                  ),
                   _buildSweetActionButton(
                     icon: Icons.manage_accounts_rounded,
                     title: "Profili Düzenle",
@@ -2675,18 +2702,20 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
 
     Set<gmaps.Marker> googleMarkers = {};
-    if (cLat != 0.0)
+    if (cLat != 0.0) {
       googleMarkers.add(gmaps.Marker(
           markerId: const gmaps.MarkerId('customer'),
           position: gmaps.LatLng(cLat, cLng),
           icon: gmaps.BitmapDescriptor.defaultMarkerWithHue(
               gmaps.BitmapDescriptor.hueRed)));
-    if (pLat != 0.0)
+    }
+    if (pLat != 0.0) {
       googleMarkers.add(gmaps.Marker(
           markerId: const gmaps.MarkerId('provider'),
           position: gmaps.LatLng(pLat, pLng),
           icon: gmaps.BitmapDescriptor.defaultMarkerWithHue(
               gmaps.BitmapDescriptor.hueGreen)));
+    }
 
     Set<gmaps.Polyline> googlePolylines = {};
     if (cLat != 0.0 && pLat != 0.0) {
@@ -2743,7 +2772,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text("OTOTAG",
-                                  textScaler: const TextScaler.linear(1.0),
+                                  textScaler: TextScaler.linear(1.0),
                                   style: TextStyle(
                                       fontSize: 22,
                                       fontWeight: FontWeight.w900,
@@ -2817,7 +2846,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                         borderRadius: BorderRadius.circular(8)),
                                     child: const Text("ÖNCESİ",
                                         textScaler:
-                                            const TextScaler.linear(1.0),
+                                            TextScaler.linear(1.0),
                                         style: TextStyle(
                                             color: Colors.white,
                                             fontSize: 10,
@@ -2855,7 +2884,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                         borderRadius: BorderRadius.circular(8)),
                                     child: const Text("SONRASI",
                                         textScaler:
-                                            const TextScaler.linear(1.0),
+                                            TextScaler.linear(1.0),
                                         style: TextStyle(
                                             color: Colors.black,
                                             fontSize: 10,
@@ -2908,7 +2937,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                     const SizedBox(height: 24),
                     const Text("Rota Bilgilerim",
-                        textScaler: const TextScaler.linear(1.0),
+                        textScaler: TextScaler.linear(1.0),
                         style: TextStyle(
                             color: Colors.white,
                             fontSize: 16,
@@ -2939,7 +2968,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   const Expanded(
                                       child: Text("Usta Başlangıç",
                                           textScaler:
-                                              const TextScaler.linear(1.0),
+                                              TextScaler.linear(1.0),
                                           style: TextStyle(
                                               color: Colors.white,
                                               fontSize: 15))),
@@ -2981,7 +3010,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text("Değerlendirme",
-                            textScaler: const TextScaler.linear(1.0),
+                            textScaler: TextScaler.linear(1.0),
                             style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
@@ -3011,7 +3040,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       child: Divider(color: Colors.white10, thickness: 1.5),
                     ),
                     const Text("Ödeme Bilgileri",
-                        textScaler: const TextScaler.linear(1.0),
+                        textScaler: TextScaler.linear(1.0),
                         style: TextStyle(
                             color: Colors.white,
                             fontSize: 16,
@@ -3031,7 +3060,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         const SizedBox(width: 12),
                         const Expanded(
                             child: Text("Nakit / Banka Havalesi",
-                                textScaler: const TextScaler.linear(1.0),
+                                textScaler: TextScaler.linear(1.0),
                                 style: TextStyle(
                                     color: Colors.white, fontSize: 15),
                                 overflow: TextOverflow.ellipsis)),
@@ -3066,7 +3095,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                           SizedBox(width: 8),
                           Expanded(
                               child: Text("Sorun mu var? Destek al",
-                                  textScaler: const TextScaler.linear(1.0),
+                                  textScaler: TextScaler.linear(1.0),
                                   style: TextStyle(
                                       color: Colors.white54, fontSize: 14))),
                         ],
@@ -3134,7 +3163,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     borderRadius: BorderRadius.circular(10)))),
                         const SizedBox(height: 24),
                         const Text("Hizmeti Değerlendirin",
-                            textScaler: const TextScaler.linear(1.0),
+                            textScaler: TextScaler.linear(1.0),
                             style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w900,
@@ -3251,9 +3280,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                                       _showCustomSnackBar("Bağlantı hatası.",
                                           isError: true);
                                     } finally {
-                                      if (mounted)
+                                      if (mounted) {
                                         setModalState(
                                             () => isSubmitting = false);
+                                      }
                                     }
                                   },
                             style: ElevatedButton.styleFrom(
@@ -3271,7 +3301,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     child: CircularProgressIndicator(
                                         color: Colors.black, strokeWidth: 3))
                                 : const Text("Gönder",
-                                    textScaler: const TextScaler.linear(1.0),
+                                    textScaler: TextScaler.linear(1.0),
                                     style: TextStyle(
                                         fontWeight: FontWeight.w900,
                                         fontSize: 16,
@@ -3458,7 +3488,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         icon: const Icon(Icons.delete_forever_rounded,
                             color: Colors.white, size: 16),
                         label: const Text("Sil",
-                            textScaler: const TextScaler.linear(1.0),
+                            textScaler: TextScaler.linear(1.0),
                             style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w900,
@@ -3711,7 +3741,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   const SizedBox(width: 12),
                   const Expanded(
                       child: Text("Kazanç & İstatistik",
-                          textScaler: const TextScaler.linear(1.0),
+                          textScaler: TextScaler.linear(1.0),
                           style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.w900,

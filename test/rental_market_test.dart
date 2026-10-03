@@ -204,7 +204,9 @@ void main() {
             initialCity: 'Konya',
             service: service(onRequest: (request) {
               if (request.url.queryParameters['action'] ==
-                  'get_rentacar_listings') queries.add(request.url);
+                  'get_rentacar_listings') {
+                queries.add(request.url);
+              }
             }))));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Bütçe'));

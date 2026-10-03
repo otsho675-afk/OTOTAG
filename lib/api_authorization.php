@@ -20,7 +20,8 @@ function authorizeApiAction($pdo,$action,$method) {
     if ($auth['user_type']==='admin' && in_array($action,['get_rentacar_booking','get_rentacar_company_profile','pusher_auth'],true)) return;
     if ($action==='send_notification' && $auth['user_type']==='admin') return;
     if ($action==='delete_part_record' && $auth['user_type']==='admin') return;
-    $admin=['admin_get_purchases','admin_change_password','admin_backup_db','admin_optimize_system','admin_dashboard',
+    if ($action==='get_part_listings' && $auth['user_type']==='admin') return;
+    $admin=['admin_get_app_updates','admin_publish_app_update','admin_withdraw_app_update','admin_retry_app_update_push','admin_get_purchases','admin_change_password','admin_backup_db','admin_optimize_system','admin_dashboard',
         'suspend_provider','ban_user','ban_ip','get_all_users','admin_delete_user','admin_delete_job','approve_provider','reject_provider',
         'get_tickets','update_ticket_status','admin_delete_ticket','admin_cancel_rentacar_booking','admin_get_rental_activity','admin_get_rental_detail','get_feedbacks','admin_get_telemetry_stats','add_ad','edit_ad','delete_ad'];
     if (in_array($action,$admin,true)) { if ($auth['user_type']!=='admin') apiDeny('Yönetici yetkisi gereklidir.'); return; }
@@ -39,7 +40,7 @@ function authorizeApiAction($pdo,$action,$method) {
         $column=$action==='activate_premium' ? 'premium_end_date' : ($action==='activate_obd_subscription' ? 'obd_subscription_end_date':'subscription_end_date');
         if (!$pdo->query("SHOW COLUMNS FROM users LIKE '$column'")->fetch()) $pdo->exec("ALTER TABLE users ADD COLUMN `$column` DATETIME NULL");
     }
-    $ownUser=['check_active_job','update_location','check_unread_messages','mark_read','check_obd_subscription','activate_obd_subscription','activate_premium',
+    $ownUser=['get_my_subscriptions','check_active_job','update_location','check_unread_messages','mark_read','check_obd_subscription','activate_obd_subscription','activate_premium',
         'get_user_purchases','get_notifications','mark_notif_read','delete_notification','clear_all_notifications','get_profile','link_oauth',
         'unlink_oauth','update_profile','delete_account','get_history','delete_history','change_password','send_feedback','trigger_sos'];
     if (in_array($action,$ownUser,true)) apiOwn($input['user_id'] ?? null,$auth);
@@ -95,7 +96,8 @@ function authorizeApiAction($pdo,$action,$method) {
         if ($action==='accept_bid') {
             if ((int)$bid['job_id']!==(int)($input['job_id'] ?? 0) || (int)$bid['provider_id']!==(int)($input['provider_id'] ?? 0)) apiDeny();
             if (($bid['last_bidder'] ?? 'provider')===$actor) apiDeny('Kendi teklifinizi kabul edemezsiniz.');
-            $_POST['amount']=$bid['amount']; $_POST['bid_id']=$bid['id'];
+            // Preserve the displayed price: replacing it could accept a changed offer.
+            $_POST['bid_id']=$bid['id'];
         }
     }
     if ($action==='get_bids') {

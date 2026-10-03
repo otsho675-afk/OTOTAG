@@ -1,9 +1,11 @@
+import 'services/vehicle_deadline.dart';
 import 'rental_market_screen.dart';
 import 'rental_booking_screen.dart';
 import 'widgets/dashboard_service_grid.dart';
 // customer_dashboard_screen.dart
 import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
+import 'core/theme/app_motion.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -17,7 +19,7 @@ import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'customer_map_screen.dart';
 import 'customer_bids_screen.dart';
 import 'profile_screen.dart';
-import 'vehicle_panel_screen.dart' hide notificationHelper;
+import 'vehicle_panel_screen.dart';
 import 'job_tracking_screen.dart';
 import 'spare_parts_market.dart';
 import 'dart:async';
@@ -98,7 +100,7 @@ class CustomerDashboardScreen extends StatefulWidget {
   const CustomerDashboardScreen({super.key, required this.customerId});
 
   @override
-  _CustomerDashboardScreenState createState() =>
+  State<CustomerDashboardScreen> createState() =>
       _CustomerDashboardScreenState();
 }
 
@@ -131,6 +133,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
   int unreadCount = 0;
 
   Timer? _adScrollTimer;
+  late final CalendarDayTicker _dayTicker;
   bool _isNotifModalOpen = false;
   bool _isVehicleModalOpen = false;
 
@@ -143,7 +146,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
   static const Color _bgColor = Color(0xFF030305);
   static const Color _cardColor = Color(0xFF111115);
   static const Color _primaryColor = Color(0xFF00FFA3);
-  static const Color _dangerColor = Color(0xFF00FFA3);
+  static const Color _dangerColor = Color(0xFFFF586B);
   static const Color _textColor = Colors.white;
   static const Color _subtitleColor = Colors.white54;
 
@@ -539,12 +542,13 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
   @override
   void initState() {
     super.initState();
+    _dayTicker = CalendarDayTicker(() { if (mounted) setState(() {}); });
     _vehiclePageController =
         PageController(viewportFraction: _lastViewportFraction);
     WidgetsBinding.instance.addObserver(this);
-    _fadeController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1000))
-      ..forward();
+    _fadeController =
+        AnimationController(vsync: this, duration: AppMotion.entrance)
+          ..forward();
 
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) _fetchAllDataConcurrently();
@@ -552,8 +556,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
     _startTimers();
 
     if (!kIsWeb) {
-      OneSignal.login(widget.customerId.toString());
-      OneSignal.Notifications.requestPermission(true);
     }
   }
 
@@ -579,7 +581,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
       context: context,
       barrierDismissible: false,
       barrierLabel: 'Öğretici',
-      barrierColor: Colors.black.withOpacity(0.8),
+      barrierColor: Colors.black.withValues(alpha: 0.8),
       transitionDuration: const Duration(milliseconds: 500),
       pageBuilder: (context, anim1, anim2) {
         return const SizedBox();
@@ -598,7 +600,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                 border: Border.all(color: const Color(0xFF00FFA3), width: 1.5),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF00FFA3).withOpacity(0.2),
+                    color: const Color(0xFF00FFA3).withValues(alpha: 0.2),
                     blurRadius: 40,
                     spreadRadius: 10,
                   ),
@@ -615,7 +617,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF00FFA3).withOpacity(0.15),
+                        color: const Color(0xFF00FFA3).withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(Icons.directions_car_rounded,
@@ -707,6 +709,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (AppMotion.reduced(context)) _fadeController.value = 1;
     final double screenWidth = MediaQuery.sizeOf(context).width;
     final double newFraction = screenWidth > 600 ? 0.6 : 0.88;
 
@@ -928,6 +931,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _dayTicker.dispose();
     _adScrollTimer?.cancel();
     _httpClient.close();
     _fadeController.dispose();
@@ -1805,123 +1809,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
               });
             }
 
+            // Deadlines are delivered by the server worker, even when the app is closed.
             if (!kIsWeb) {
-              Future.microtask(() async {
-                if (!mounted) return;
-                try {
-                  DateTime now = DateTime.now();
-                  for (var v in fetchedVehicles) {
-                    final plate =
-                        v['plate']?.toString().toUpperCase() ?? 'ARAÇ';
-                    final int vId =
-                        int.tryParse(v['id']?.toString() ?? '0') ?? 0;
-
-                    final insDate = DateTime.tryParse(
-                        v['insurance_date']?.toString() ?? '');
-                    final inspDate = DateTime.tryParse(
-                        v['inspection_date']?.toString() ?? '');
-
-                    if (insDate != null) {
-                      final effectiveInsDate = getInsuranceExpiryDate(insDate);
-                      final int daysLeft = effectiveInsDate
-                          .difference(DateTime(now.year, now.month, now.day))
-                          .inDays;
-                      if (daysLeft < 0) {
-                        try {
-                          await notificationHelper.cancelNotification(
-                              vId.hashCode ^ "sigorta_gecmis".hashCode);
-                          await notificationHelper.cancelNotification(
-                              vId.hashCode ^ "sigorta_yaklasan".hashCode);
-                          await notificationHelper.cancelNotification(
-                              vId.hashCode ^ "sigorta".hashCode);
-                        } catch (_) {}
-                      } else if (daysLeft <= 15) {
-                        try {
-                          await notificationHelper.cancelNotification(
-                              vId.hashCode ^ "sigorta_gecmis".hashCode);
-                          await notificationHelper.cancelNotification(
-                              vId.hashCode ^ "sigorta".hashCode);
-                        } catch (_) {}
-                        await notificationHelper.scheduleNotification(
-                            id: vId.hashCode ^ "sigorta_yaklasan".hashCode,
-                            title: "Trafik Sigortası Hatırlatması",
-                            body:
-                                "$plate plakalı aracınızın trafik sigortası bitişine $daysLeft gün kaldı.",
-                            scheduledDate: now.add(const Duration(seconds: 4)));
-                      } else {
-                        try {
-                          await notificationHelper.cancelNotification(
-                              vId.hashCode ^ "sigorta_gecmis".hashCode);
-                          await notificationHelper.cancelNotification(
-                              vId.hashCode ^ "sigorta_yaklasan".hashCode);
-                        } catch (_) {}
-                        DateTime notifyDate = effectiveInsDate
-                            .subtract(const Duration(days: 3))
-                            .copyWith(hour: 9, minute: 0);
-                        if (notifyDate.isAfter(now)) {
-                          await notificationHelper.scheduleNotification(
-                              id: vId.hashCode ^ "sigorta".hashCode,
-                              title: "Trafik Sigortası Hatırlatması",
-                              body:
-                                  "$plate plakalı aracınızın trafik sigortası bitişine 3 gün kaldı.",
-                              scheduledDate: notifyDate);
-                        }
-                      }
-                    }
-
-                    if (inspDate != null) {
-                      final int daysLeft = inspDate
-                          .difference(DateTime(now.year, now.month, now.day))
-                          .inDays;
-                      final int notifBaseId = (vId.hashCode & 0x7FFFFFFF);
-
-                      if (daysLeft < 0) {
-                        try {
-                          await notificationHelper
-                              .cancelNotification(notifBaseId ^ 100);
-                          await notificationHelper
-                              .cancelNotification(notifBaseId ^ 101);
-                          await notificationHelper
-                              .cancelNotification(notifBaseId ^ 102);
-                        } catch (_) {}
-                      } else if (daysLeft <= 15) {
-                        try {
-                          await notificationHelper
-                              .cancelNotification(notifBaseId ^ 100);
-                          await notificationHelper
-                              .cancelNotification(notifBaseId ^ 102);
-                        } catch (_) {}
-                        await notificationHelper.scheduleNotification(
-                            id: notifBaseId ^ 101,
-                            title: "Araç Muayenesi Hatırlatması",
-                            body:
-                                "$plate plakalı aracınızın muayene süresinin dolmasına $daysLeft gün kaldı.",
-                            scheduledDate: now.add(const Duration(seconds: 3)));
-                      } else {
-                        try {
-                          await notificationHelper
-                              .cancelNotification(notifBaseId ^ 100);
-                          await notificationHelper
-                              .cancelNotification(notifBaseId ^ 101);
-                        } catch (_) {}
-                        DateTime notifyDate = inspDate
-                            .subtract(const Duration(days: 3))
-                            .copyWith(hour: 9, minute: 0);
-                        if (notifyDate.isAfter(now)) {
-                          await notificationHelper.scheduleNotification(
-                              id: notifBaseId ^ 102,
-                              title: "Araç Muayenesi Hatırlatması",
-                              body:
-                                  "$plate plakalı aracınızın muayene süresinin dolmasına 3 gün kaldı.",
-                              scheduledDate: notifyDate);
-                        }
-                      }
-                    }
-                  }
-                } catch (notifErr) {
-                  debugPrint("Bildirim ayarlanırken hata oluştu: $notifErr");
-                }
-              });
+              unawaited(notificationHelper.clearLegacyVehicleReminders(fetchedVehicles));
             }
             return; // Başarılı, döngüyü sonlandır
           }
@@ -1965,14 +1855,18 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
     };
 
     // YENİ VERİLER
-    if (engineType != null && engineType.isNotEmpty)
+    if (engineType != null && engineType.isNotEmpty) {
       body["engine_type"] = engineType;
-    if (modelYear != null && modelYear.isNotEmpty)
+    }
+    if (modelYear != null && modelYear.isNotEmpty) {
       body["model_year"] = modelYear;
-    if (insDate != null)
+    }
+    if (insDate != null) {
       body["insurance_date"] = DateFormat('yyyy-MM-dd').format(insDate);
-    if (inspDate != null)
+    }
+    if (inspDate != null) {
       body["inspection_date"] = DateFormat('yyyy-MM-dd').format(inspDate);
+    }
     if (isEditing) body["vehicle_id"] = vehicleId.toString();
 
     try {
@@ -1997,22 +1891,24 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
             debugPrint('Kilometre güncelleme zamanı kaydedilemedi: $e');
           }
         }
-        if (mounted)
+        if (mounted) {
           _showTopSnackBar(isEditing
               ? "Araç başarıyla güncellendi!"
               : "Araç başarıyla eklendi!");
+        }
         try {
           if (!isEditing) {
-            FirebaseAnalytics.instance.logEvent(
+            await FirebaseAnalytics.instance.logEvent(
                 name: 'vehicle_added', parameters: {'brand_model': brandModel});
           }
-        } catch (e) {}
+        } catch (e) { debugPrint("İsteğe bağlı analiz kaydı gönderilemedi."); }
 
         await _fetchVehicles();
       } else {
-        if (mounted)
+        if (mounted) {
           _showTopSnackBar(data['message'] ?? "İşlem başarısız.",
               isError: true);
+        }
       }
     } catch (e) {
       if (mounted) _showTopSnackBar("Bağlantı hatası.", isError: true);
@@ -3069,7 +2965,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                 children: List.generate(
                   totalItems,
                   (index) => AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
+                    duration:
+                        AppMotion.duration(context, AppMotion.interaction),
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     width: selectedIdx == index ? 24 : 8,
                     height: 6,
@@ -3275,7 +3172,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.keyH, control: true): () {
-          if (vehicles.length >= 1 && !isPremium) {
+          if (vehicles.isNotEmpty && !isPremium) {
             _showPremiumModal();
           } else {
             _showVehicleDialog();
@@ -3583,7 +3480,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                                             alpha: 0.1))),
                                             child: ElevatedButton.icon(
                                               onPressed: () {
-                                                if (vehicles.length >= 1 &&
+                                                if (vehicles.isNotEmpty &&
                                                     !isPremium) {
                                                   _showPremiumModal();
                                                 } else {
@@ -3624,11 +3521,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                       else ...[
                                         SlideTransition(
                                           position: Tween<Offset>(
-                                                  begin: const Offset(0, 0.2),
+                                                  begin: const Offset(0, 0.025),
                                                   end: Offset.zero)
                                               .animate(CurvedAnimation(
                                                   parent: _fadeController,
-                                                  curve: Curves.easeOutBack)),
+                                                  curve: AppMotion.curve)),
                                           child: _buildVehicleCarousel(
                                               context,
                                               _cardColor,
@@ -3682,15 +3579,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
             } else {
               Navigator.push(
                   context,
-                  PageRouteBuilder(
-                      pageBuilder: (context, animation, secondaryAnimation) =>
-                          CustomerMapScreen(
-                              customerId: widget.customerId,
-                              initialService: service['id']),
-                      transitionsBuilder:
-                          (context, animation, secondaryAnimation, child) {
-                        return FadeTransition(opacity: animation, child: child);
-                      }));
+                  MaterialPageRoute(
+                      builder: (context) => CustomerMapScreen(
+                          customerId: widget.customerId,
+                          initialService: service['id'])));
             }
           }
         });
@@ -3750,9 +3642,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
             builder: (context, selectedIdx, child) {
               final isSelected = index == selectedIdx;
               return AnimatedScale(
-                duration: const Duration(milliseconds: 400),
-                curve: Curves.easeOutQuart,
-                scale: isSelected ? 1.0 : 0.94,
+                duration: AppMotion.duration(context, AppMotion.interaction),
+                curve: AppMotion.curve,
+                scale: AppMotion.reduced(context) || isSelected ? 1.0 : 0.97,
                 child: Container(
                   margin: const EdgeInsets.only(right: 12),
                   child: _buildModernVehicleCard(
@@ -3769,11 +3661,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
   Widget _buildModernVehicleCard(Map<String, dynamic> vehicle, Color cardColor,
       Color textColor, Color subtitleColor, bool isSelected) {
     final rawInsDate =
-        DateTime.tryParse(vehicle['insurance_date']?.toString() ?? '');
+        VehicleDeadline.parse(vehicle['insurance_date']);
     final insDate =
         rawInsDate != null ? getInsuranceExpiryDate(rawInsDate) : null;
     final rawInspDate =
-        DateTime.tryParse(vehicle['inspection_date']?.toString() ?? '');
+        VehicleDeadline.parse(vehicle['inspection_date']);
     final inspDate = rawInspDate != null
         ? getInspectionExpiryDate(
             rawInspDate, vehicle['brand_model']?.toString())
@@ -4145,14 +4037,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
         statusColor = Colors.white38;
         valueText = "Yok";
       } else {
-        int daysLeft = date
-            .difference(DateTime(
-                DateTime.now().year, DateTime.now().month, DateTime.now().day))
-            .inDays;
-        statusColor = daysLeft <= 15
-            ? _dangerColor
-            : (daysLeft <= 30 ? _primaryColor : _primaryColor);
-        valueText = daysLeft < 0 ? "${daysLeft.abs()}G Geçti" : "${daysLeft}G";
+        final deadline = VehicleDeadline(date);
+        statusColor = deadline.color;
+        valueText = deadline.label;
       }
     } else {
       int remainingKm = targetKm - currentKm;
@@ -4215,7 +4102,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
             children: List.generate(
               vehicles.length,
               (index) => AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
+                duration: AppMotion.duration(context, AppMotion.interaction),
                 margin: const EdgeInsets.symmetric(horizontal: 4),
                 width: selectedIdx == index ? 24 : 8,
                 height: 8,
@@ -4326,8 +4213,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
         if (status.contains("GEÇTİ")) return dangerColor;
         if (status.contains("Veri Yok")) return greyColor;
         if (status.contains("BUGÜN") ||
-            (int.tryParse(status.split(' ').first) ?? 99) <= 15)
+            (int.tryParse(status.split(' ').first) ?? 99) <= 15) {
           return warningColor;
+        }
         return primaryColor;
       }
 
@@ -4895,9 +4783,13 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
       final file = File("${output.path}/${plate}_Arac_Karnesi.pdf");
       await file.writeAsBytes(await pdf.save());
 
-      await Share.shareXFiles([XFile(file.path)],
+      if (!mounted) return;
+      final shareBox = context.findRenderObject() as RenderBox?;
+      await SharePlus.instance.share(ShareParams(files: [XFile(file.path)],
+          sharePositionOrigin: shareBox != null && shareBox.hasSize
+              ? shareBox.localToGlobal(Offset.zero) & shareBox.size : const Rect.fromLTWH(1, 1, 1, 1),
           text:
-              '🚗 $plate Araç Karnesi ektedir. Ototag ile aracımı kolayca takip ediyorum!');
+              '🚗 $plate Araç Karnesi ektedir. Ototag ile aracımı kolayca takip ediyorum!'));
       _showTopSnackBar("Araç Karnesi başarıyla oluşturuldu.");
     } catch (e) {
       debugPrint("PDF Hatası: $e");

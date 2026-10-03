@@ -38,7 +38,9 @@ class _RentalLocationEditorState extends State<RentalLocationEditor> {
         !lng.isFinite ||
         lat.abs() > 90 ||
         lng.abs() > 180 ||
-        (lat == 0 && lng == 0)) return null;
+        (lat == 0 && lng == 0)) {
+      return null;
+    }
     return LatLng(lat, lng);
   }
 
@@ -64,15 +66,18 @@ class _RentalLocationEditorState extends State<RentalLocationEditor> {
       _error = null;
     });
     try {
-      if (!await Geolocator.isLocationServiceEnabled())
+      if (!await Geolocator.isLocationServiceEnabled()) {
         throw const RentalException('Cihazın konum hizmetini açın.');
+      }
       var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied)
+      if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
+      }
       if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever)
+          permission == LocationPermission.deniedForever) {
         throw const RentalException(
             'Konum izni verilmedi. Haritadan teslim yerini seçebilirsiniz.');
+      }
       final position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high,
           timeLimit: const Duration(seconds: 15));

@@ -117,6 +117,32 @@ void main() {
       poller.dispose();
     });
   });
+  testWidgets(
+      'changing reduced motion during splash still opens role selection',
+      (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    FlutterSecureStorage.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({});
+    final reduced = ValueNotifier<bool>(false);
+    addTearDown(reduced.dispose);
+    await tester.pumpWidget(MaterialApp(
+        theme: appTheme(),
+        builder: (context, child) => ValueListenableBuilder<bool>(
+            valueListenable: reduced,
+            builder: (context, value, _) => MediaQuery(
+                data: MediaQuery.of(context).copyWith(disableAnimations: value),
+                child: child!)),
+        home: const SplashScreen()));
+    await tester.pump(const Duration(milliseconds: 50));
+    reduced.value = true;
+    await tester.pumpAndSettle();
+    expect(find.text('Hoş Geldiniz'), findsOneWidget);
+    expect(tester.binding.hasScheduledFrame, isFalse);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    debugDefaultTargetPlatformOverride = null;
+  });
   for (final width in [320.0, 390.0, 768.0]) {
     testWidgets(
         'stale preference cannot open dashboard at $width with large text',

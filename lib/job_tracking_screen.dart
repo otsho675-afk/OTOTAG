@@ -37,7 +37,7 @@ class JobTrackingScreen extends StatefulWidget {
       {super.key, required this.jobId, required this.userType, this.userId});
 
   @override
-  _JobTrackingScreenState createState() => _JobTrackingScreenState();
+  State<JobTrackingScreen> createState() => _JobTrackingScreenState();
 }
 
 class _JobTrackingScreenState extends State<JobTrackingScreen>
@@ -96,7 +96,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
   final DraggableScrollableController _sheetController =
       DraggableScrollableController();
 
-  bool _isMapSdkLoaded = !kIsWeb;
+  final bool _isMapSdkLoaded = !kIsWeb;
   bool _isMapReady = false;
   bool _isInChat = false;
 
@@ -142,7 +142,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
       final Uint8List? carBytes =
           await _getBytesFromAsset('assets/images/car_top_view.png', 100);
       if (carBytes != null) {
-        _providerCarIconGmaps = gmaps.BitmapDescriptor.fromBytes(carBytes);
+        _providerCarIconGmaps = gmaps.BitmapDescriptor.bytes(carBytes);
         _providerCarIconAmaps = amaps.BitmapDescriptor.fromBytes(carBytes);
       }
     } catch (_) {}
@@ -417,7 +417,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
           double diff = (_targetHeading - _oldHeading) % 360.0;
           if (diff > 180.0) {
             diff -= 360.0;
-          } else if (diff < -180.0) diff += 360.0;
+          } else if (diff < -180.0) { diff += 360.0; }
           _animatedHeading.value = _oldHeading + diff * _slideController.value;
         }
       });
@@ -446,11 +446,15 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
         !mounted ||
         !destLocation.latitude.isFinite ||
         !destLocation.longitude.isFinite ||
-        !destZoom.isFinite) return;
+        !destZoom.isFinite) {
+      return;
+    }
     if (destLocation.latitude < -90 ||
         destLocation.latitude > 90 ||
         destLocation.longitude < -180 ||
-        destLocation.longitude > 180) return;
+        destLocation.longitude > 180) {
+      return;
+    }
 
     try {
       if (!kIsWeb &&
@@ -524,7 +528,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
       if (mounted &&
           jobStatus != 'completed' &&
           jobStatus != 'cancelled' &&
-          !_isFetchingRoute) _fetchRoute();
+          !_isFetchingRoute) {
+        _fetchRoute();
+      }
     });
   }
 
@@ -582,7 +588,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                 position.longitude,
                 _lastProcessedPosForRoute!.latitude,
                 _lastProcessedPosForRoute!.longitude) <
-            15) return;
+            15) {
+      return;
+    }
     _lastProcessedPosForRoute = position;
     final projection = projectOntoRoad(position, _routePoints);
     if (projection == null) return;
@@ -591,11 +599,12 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
       if (!_isFetchingRoute) _fetchRoute();
       return;
     }
-    if (mounted)
+    if (mounted) {
       setState(() => _routePoints = [
             projection.point,
             ..._routePoints.skip(projection.segment + 1)
           ]);
+    }
   }
 
   void _showRouteUnavailable() {
@@ -616,9 +625,13 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
         !providerLat.isFinite ||
         !providerLng.isFinite ||
         (providerLat == 0 && providerLng == 0) ||
-        (customerLat == 0 && customerLng == 0)) return;
+        (customerLat == 0 && customerLng == 0)) {
+      return;
+    }
     if (_lastRouteFetch != null &&
-        DateTime.now().difference(_lastRouteFetch!).inSeconds < 15) return;
+        DateTime.now().difference(_lastRouteFetch!).inSeconds < 15) {
+      return;
+    }
     final target = LatLng(customerLat, customerLng);
     final origin = LatLng(providerLat, providerLng);
     setState(() => _isFetchingRoute = true);
@@ -626,8 +639,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
     try {
       final data = await _getRouteData(
           origin.latitude, origin.longitude, target.latitude, target.longitude);
-      if (!mounted || jobStatus == 'completed' || jobStatus == 'cancelled')
+      if (!mounted || jobStatus == 'completed' || jobStatus == 'cancelled') {
         return;
+      }
       // A late response must not draw an old route after the target moves.
       if (Geolocator.distanceBetween(
                   target.latitude, target.longitude, customerLat, customerLng) >
@@ -899,7 +913,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
         refresh: () async {
           if (mounted &&
               jobStatus != 'cancelled' &&
-              !(jobStatus == 'completed' && isRated)) await _fetchJobStatus();
+              !(jobStatus == 'completed' && isRated)) {
+            await _fetchJobStatus();
+          }
         });
     _statusPollingTimer!.start();
   }
@@ -965,8 +981,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
       bool serviceEnabled =
           await Geolocator.isLocationServiceEnabled().catchError((_) => false);
       if (!serviceEnabled) {
-        if (!kIsWeb)
+        if (!kIsWeb) {
           _showTopSnackBar("Konum servisi (GPS) kapalı.", isError: true);
+        }
         return;
       }
 
@@ -1108,7 +1125,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
         if (!position.latitude.isFinite ||
             !position.longitude.isFinite ||
             !position.accuracy.isFinite ||
-            position.accuracy > 100) return;
+            position.accuracy > 100) {
+          return;
+        }
 
         if (!mounted) return;
         _processNewPosition(position);
@@ -1169,8 +1188,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
     WidgetsBinding.instance.removeObserver(this);
     if (_isPusherInitialized) {
       pusher.unsubscribe(channelName: "job_${widget.jobId}");
-      if (providerId != null)
+      if (providerId != null) {
         pusher.unsubscribe(channelName: "user_location_$providerId");
+      }
       pusher.dispose();
     }
     _statusPollingTimer?.dispose();
@@ -1205,7 +1225,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
     if (!customerLat.isFinite ||
         !customerLng.isFinite ||
         !providerLat.isFinite ||
-        !providerLng.isFinite) return;
+        !providerLng.isFinite) {
+      return;
+    }
 
     double south = math.min(customerLat, providerLat);
     double north = math.max(customerLat, providerLat);
@@ -1342,9 +1364,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
               (route) => false);
         }
       } else {
-        if (mounted)
+        if (mounted) {
           _showTopSnackBar(data['message'] ?? "İptal işlemi başarısız.",
               isError: true);
+        }
       }
     } catch (e) {
       if (mounted) _showTopSnackBar("Bağlantı hatası oluştu.", isError: true);
@@ -1687,9 +1710,11 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
               providerId != 0 &&
               !_isProviderLocationSubscribed) {
             try {
-              pusher.subscribe(channelName: "user_location_$providerId");
+              unawaited(pusher.subscribe(channelName: "user_location_$providerId").catchError((Object error) {
+                _isProviderLocationSubscribed = false;
+              }));
               _isProviderLocationSubscribed = true;
-            } catch (e) {}
+            } catch (e) { debugPrint("Konum kanalı bağlanamadı; HTTP takibi sürüyor."); }
           }
 
           bool apiIsRated = data['is_rated'] == true ||
@@ -1849,7 +1874,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                 if (!mounted) return;
                 final verifyData = json.decode(verifyRes.body);
                 if (verifyData['status']?.toString().toLowerCase() !=
-                    'searching') return;
+                    'searching') {
+                  return;
+                }
 
                 _positionStream?.cancel();
                 if (!_isNavigating) {
@@ -2231,14 +2258,21 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
     });
   }
 
-  void _shareLiveTracking() {
+  Future<void> _shareLiveTracking() async {
     HapticFeedback.mediumImpact();
     final int authId = customerId ?? widget.userId ?? 0;
     final String trackUrl =
         "https://eliteagency.sbs/track.php?job_id=${widget.jobId}&auth=$authId";
     final String shareText =
         "🚨 Güvenli Yol Yardımı Canlı Takibi:\nAracım şu an yolda tamir/kurtarma sürecinde. Ustanın konumunu ve aracımı canlı takip etmek için bağlantı:\n$trackUrl";
-    Share.share(shareText, subject: "OtoTAG Canlı Yol Yardımı Takibi");
+    final shareBox = context.findRenderObject() as RenderBox?;
+    try {
+      await SharePlus.instance.share(ShareParams(text: shareText, subject: 'OtoTAG Canlı Yol Yardımı Takibi',
+          sharePositionOrigin: shareBox != null && shareBox.hasSize
+              ? shareBox.localToGlobal(Offset.zero) & shareBox.size : const Rect.fromLTWH(1, 1, 1, 1)));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Paylaşım açılamadı. Tekrar deneyin.')));
+    }
   }
 
   Future<void> _takeEvidencePhoto(String evidenceType) async {
@@ -2642,8 +2676,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                   ).timeout(_apiTimeout);
                                   if (mounted) {
                                     if (response.statusCode == 200) {
-                                      if (modalCtx.mounted)
+                                      if (modalCtx.mounted) {
                                         Navigator.pop(modalCtx);
+                                      }
                                       _showTopSnackBar(
                                           "Şikayetiniz yetkili birime iletildi.");
                                     } else {
@@ -2652,9 +2687,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                     }
                                   }
                                 } catch (e) {
-                                  if (mounted)
+                                  if (mounted) {
                                     _showTopSnackBar("Bağlantı hatası.",
                                         isError: true);
+                                  }
                                 } finally {
                                   if (mounted && _isComplaintModalOpen) {
                                     setModalState(() => isSending = false);
@@ -2978,10 +3014,11 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
   }
 
   IconData _getStatusIcon() {
-    if (jobStatus == 'searching')
+    if (jobStatus == 'searching') {
       return widget.userType == 'customer'
           ? Icons.radar_rounded
           : Icons.hourglass_top_rounded;
+    }
     switch (jobStatus) {
       case 'in_progress':
         return Icons.build_circle_rounded;
@@ -2997,8 +3034,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
   }
 
   Widget _buildDistanceWarningBanner() {
-    if (distanceInKm <= 0 || jobStatus == 'completed')
+    if (distanceInKm <= 0 || jobStatus == 'completed') {
       return const SizedBox.shrink();
+    }
 
     String title;
     Color alertColor;
@@ -3047,8 +3085,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
 
     if (_etaString.isNotEmpty && distanceInKm > 0.1 && !isOffline) {
       title += " • $_etaString";
-      if (_roadDistanceKm != null)
+      if (_roadDistanceKm != null) {
         title += " • ${_roadDistanceKm!.toStringAsFixed(1)} km yol";
+      }
     }
 
     return Container(
@@ -3471,8 +3510,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                             ValueListenableBuilder<double>(
                               valueListenable: _mapRotation,
                               builder: (context, rotation, child) {
-                                if (rotation.abs() < 1.0)
+                                if (rotation.abs() < 1.0) {
                                   return const SizedBox.shrink();
+                                }
                                 return Column(
                                   children: [
                                     Container(
@@ -3792,8 +3832,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
 
   Widget _buildContactCard(
       Color cardColor, Color textColor, Color subtitleColor) {
-    if (jobStatus == 'searching' || jobStatus == 'completed')
+    if (jobStatus == 'searching' || jobStatus == 'completed') {
       return const SizedBox.shrink();
+    }
     final String displayName = contactName.isNotEmpty
         ? contactName
         : (widget.userType == 'customer'

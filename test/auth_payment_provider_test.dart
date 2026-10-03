@@ -91,7 +91,7 @@ void main() {
           theme: appTheme(),
           home: MediaQuery(
               data: MediaQueryData(
-                  size: Size(width, 844), textScaler: TextScaler.linear(1.5)),
+                  size: Size(width, 844), textScaler: const TextScaler.linear(1.5)),
               child: RepaintBoundary(
                   key: key,
                   child: Scaffold(
@@ -201,7 +201,7 @@ void main() {
       final store = TestStore(platform: platform);
       final service = RentalService(client: MockClient((request) async {
         final action = request.url.queryParameters['action'];
-        if (action == 'get_profile')
+        if (action == 'get_profile') {
           return http.Response(
               jsonEncode({
                 'status': 'success',
@@ -211,6 +211,7 @@ void main() {
                 }
               }),
               200);
+        }
         expect(action, 'activate_premium');
         expect(request.bodyFields['user_id'], '1');
         expect(request.bodyFields['user_type'], 'customer');

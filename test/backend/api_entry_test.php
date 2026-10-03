@@ -46,6 +46,10 @@ $pdo->exec('CREATE TABLE IF NOT EXISTS admins (id INT AUTO_INCREMENT PRIMARY KEY
 $pdo->exec('DELETE FROM admins');
 $pdo->exec('CREATE TABLE IF NOT EXISTS vehicles (id INT PRIMARY KEY,customer_id INT,plate VARCHAR(50))');
 $pdo->exec('CREATE TABLE IF NOT EXISTS vehicle_records (id INT PRIMARY KEY,vehicle_id INT,description TEXT)');
+$pdo->exec('CREATE TABLE IF NOT EXISTS ratings (id INT AUTO_INCREMENT PRIMARY KEY,job_id INT,provider_id INT,customer_id INT,rating INT,rater_type VARCHAR(20)) ENGINE=InnoDB');
+$pdo->exec('CREATE TABLE IF NOT EXISTS banned_ips (id INT AUTO_INCREMENT PRIMARY KEY,ip_address VARCHAR(100))');
+// A previous test run's file marker must not suppress a fresh fixture's schema.
+if (is_file($serverRoot.'/.db_schema_v3_perf.lock')) unlink($serverRoot.'/.db_schema_v3_perf.lock');
 $pdo->exec("REPLACE INTO vehicles VALUES (1,1,'42 TAG 403')");
 $pdo->exec("REPLACE INTO vehicle_records VALUES (1,1,'Test')");
 $pdo->exec("REPLACE INTO users (id,name,city,user_type,status,is_suspended) VALUES (20,'Usta','Konya','provider','active',0)");
@@ -188,6 +192,10 @@ try {
     $cancelledHistory=array_filter($history['history'],function($row)use($reservation){return (int)$row['job_id']===$reservation['job_id'];});
     assertApi(count($cancelledHistory)===1 && array_values($cancelledHistory)[0]['rental_car_model']==='Fiat Egea','customer history includes cancelled reservation with immutable vehicle details');
     $adminToken=jwtToken(99,'admin');
+    $health=requestApi('admin_get_app_updates',$adminToken,[],true);
+    assertApi($health['http']===200 && isset($health['notification_health']['worker_recent']),'administrator can inspect delivery worker health');
+    $broadcast=requestApi('send_notification',$adminToken,['target'=>'customer','title'=>'Fixture notification','message'=>'Local regression only']);
+    assertApi($broadcast['http']===200 && $broadcast['push_status']==='queued','administrator broadcast is queued without claiming phone delivery');
     assertApi(requestApi('admin_get_rental_activity',$customer,[],true)['http']===403,'real dispatcher blocks customer live audit');
     assertApi(requestApi('admin_get_rental_detail',$firm,['bid_id'=>1],true)['http']===403,'real dispatcher blocks firm private audit');
     assertApi(requestApi('admin_get_rental_activity',$adminToken,[],true)['http']===200,'real dispatcher permits administrator activity');
@@ -234,7 +242,13 @@ try {
     assertApi(requestApi('place_bid',jwtToken(802,'provider'),['provider_id'=>802,'job_id'=>9501,'amount'=>500])['http']===201,'correct eligible nearby provider places bid');
     $providerBid=$pdo->query('SELECT * FROM bids WHERE job_id=9501 AND provider_id=802')->fetch();
     assertApi(requestApi('accept_bid',jwtToken(802,'provider'),['job_id'=>9501,'provider_id'=>802,'bid_id'=>$providerBid['id'],'amount'=>1,'user_type'=>'provider'])['http']===403,'provider cannot accept its own offer');
-    assertApi(requestApi('accept_bid',$customer,['job_id'=>9501,'provider_id'=>802,'bid_id'=>$providerBid['id'],'amount'=>1,'user_type'=>'customer'])['http']===200,'customer accepts server-priced eligible offer');
+    assertApi(requestApi('accept_bid',$customer,['job_id'=>9501,'provider_id'=>802,'bid_id'=>$providerBid['id'],'amount'=>1,'user_type'=>'customer'])['http']===409,'a different displayed amount requires a fresh customer confirmation');
+    assertApi(requestApi('accept_bid',$customer,['job_id'=>9501,'provider_id'=>802,'bid_id'=>$providerBid['id'],'amount'=>'500.0','offer_version'=>9,'user_type'=>'customer'])['http']===409,'stale service offer version cannot be accepted');
+    $acceptInput=['job_id'=>9501,'provider_id'=>802,'bid_id'=>$providerBid['id'],'amount'=>'500.0','offer_version'=>0,'user_type'=>'customer'];
+    assertApi(requestApi('accept_bid',$customer,$acceptInput)['http']===200,'customer accepts the displayed eligible offer with equivalent decimal formatting');
+    assertApi(requestApi('accept_bid',$customer,$acceptInput)['http']===200,'retry after a lost acceptance response is idempotent');
+    assertApi(requestApi('reject_bid',$customer,['bid_id'=>$providerBid['id']])['http']===409,'an accepted offer cannot be rejected');
+    assertApi(requestApi('cancel_job',$customer,['job_id'=>9501,'expected_status'=>'searching'])['http']===409,'a stale search cancellation cannot cancel an already matched job');
     assertApi($pdo->query('SELECT agreed_price FROM jobs WHERE id=9501')->fetchColumn()==='500.00','caller cannot lower accepted price');
     assertApi(requestApi('place_bid',jwtToken(802,'provider'),['provider_id'=>802,'job_id'=>9502,'amount'=>500])['http']===403,'busy provider cannot bid on a second job');
     assertApi(requestApi('counter_bid',$customer,['bid_id'=>$providerBid['id'],'amount'=>600,'user_type'=>'customer'])['http']===409,'counteroffer cannot change an accepted job');
@@ -269,5 +283,9 @@ try {
     assertApi(requestApi('login',null,['phone'=>'05465551213','password'=>'testpass','user_type'=>'provider'])['user_type']==='rentacar','approved firm login preserves correct rentacar role');
     $pdo->exec("UPDATE users SET status='banned' WHERE id=2");
     assertApi(requestApi('place_bid',jwtToken(804,'provider'),['provider_id'=>804,'job_id'=>9502,'amount'=>500])['http']===403,'direct provider bid cannot match a banned customer');
+    $overview=requestApi('get_my_subscriptions',$customer,['user_id'=>1],true);
+    assertApi($overview['http']===200 && count($overview['plans'])===2,'customer subscription overview returns premium and diagnostic access');
+    assertApi(requestApi('get_my_subscriptions',$customer,['user_id'=>10],true)['http']===403,'subscription overview rejects another account');
+    assertApi(requestApi('get_my_subscriptions',null,['user_id'=>1],true)['http']===401,'subscription overview requires authentication');
     echo "\n$count API entry checks passed.\n";
 } finally { proc_terminate($process); proc_close($process); }

@@ -15,7 +15,7 @@ class ProviderBidsScreen extends StatefulWidget {
   final http.Client? client;
 
   @override
-  _ProviderBidsScreenState createState() => _ProviderBidsScreenState();
+  State<ProviderBidsScreen> createState() => _ProviderBidsScreenState();
 }
 
 class _ProviderBidsScreenState extends State<ProviderBidsScreen>
@@ -523,8 +523,8 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
                               child: ListView(
                                   padding: const EdgeInsets.all(20),
                                   children: [
-                                    Text('Tamamlanan ve iptal edilen işler',
-                                        style: const TextStyle(
+                                    const Text('Tamamlanan ve iptal edilen işler',
+                                        style: TextStyle(
                                             color: Colors.white,
                                             fontSize: 21,
                                             fontWeight: FontWeight.w700)),

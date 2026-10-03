@@ -83,16 +83,18 @@ class _RentalListingEditorState extends State<RentalListingEditor> {
       final file = await ImagePicker()
           .pickImage(source: ImageSource.gallery, imageQuality: 85);
       if (file == null) return;
-      if (await file.length() > 5 * 1024 * 1024)
+      if (await file.length() > 5 * 1024 * 1024) {
         throw const RentalException('Her fotoğraf en fazla 5 MB olabilir.');
+      }
       final bytes = await file.readAsBytes();
-      if (mounted)
+      if (mounted) {
         setState(() {
           _bytes[index] = bytes;
           _names[index] = file.name;
           _removed.remove(index);
           _error = null;
         });
+      }
     } catch (e) {
       if (mounted) setState(() => _error = '$e');
     } finally {

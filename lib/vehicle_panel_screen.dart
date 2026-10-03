@@ -1,3 +1,5 @@
+import 'notification_helper.dart';
+import 'services/vehicle_deadline.dart';
 // vehicle_panel_screen.dart
 import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
@@ -12,9 +14,6 @@ import 'dart:ui';
 import 'dart:io';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
 import 'diagnostic_screen.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -23,7 +22,7 @@ import 'package:share_plus/share_plus.dart';
 import 'services/vehicle_kilometer_reminder.dart';
 import 'widgets/vehicle_kilometer_update_dialog.dart';
 
-final NotificationHelper notificationHelper = NotificationHelper();
+
 
 class VehiclePanelScreen extends StatefulWidget {
   final Map<String, dynamic> vehicle;
@@ -45,6 +44,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
   List<dynamic> records = [];
   List<dynamic> _filteredRecordsList = [];
 
+  late final CalendarDayTicker _dayTicker;
   bool isLoading = true;
   bool isSaving = false;
   late Map<String, dynamic> currentVehicleData;
@@ -140,7 +140,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
   @override
   void initState() {
     super.initState();
-    notificationHelper.init();
+    _dayTicker = CalendarDayTicker(() { if (mounted) setState(() {}); });
     currentVehicleData = Map<String, dynamic>.from(widget.vehicle);
     _updateDateCaches();
     _fadeController = AnimationController(
@@ -151,6 +151,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
 
   @override
   void dispose() {
+    _dayTicker.dispose();
     _httpClient.close();
     _fadeController.dispose();
     _searchController.dispose();
@@ -158,100 +159,12 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
   }
 
   void _updateDateCaches() {
-    final insStr = currentVehicleData['insurance_date']?.toString();
-    final inspStr = currentVehicleData['inspection_date']?.toString();
-    _insuranceDateCache = (insStr != null && insStr.isNotEmpty)
-        ? DateTime.tryParse(insStr)
-        : null;
-    _inspectionDateCache = (inspStr != null && inspStr.isNotEmpty)
-        ? DateTime.tryParse(inspStr)
-        : null;
+    _insuranceDateCache = VehicleDeadline.parse(currentVehicleData['insurance_date']);
+    _inspectionDateCache = VehicleDeadline.parse(currentVehicleData['inspection_date']);
   }
 
   Future<void> _scheduleVehicleGlobalNotifications() async {
-    if (kIsWeb) return;
-    final String plate = currentVehicleData['plate']?.toString() ?? 'Aracınız';
-    final DateTime nowNormalized =
-        DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-    final int vId =
-        int.tryParse(currentVehicleData['id']?.toString() ?? '0') ?? 0;
-
-    // Sigorta Bildirimi
-    if (_effectiveInsuranceDate != null) {
-      final int daysLeft =
-          _effectiveInsuranceDate!.difference(nowNormalized).inDays;
-      if (daysLeft < 0) {
-        await notificationHelper
-            .cancelNotification(vId ^ "sigorta_gecmis".hashCode);
-        await notificationHelper
-            .cancelNotification(vId ^ "sigorta_yaklasan".hashCode);
-        await notificationHelper.cancelNotification(vId ^ "sigorta".hashCode);
-      } else if (daysLeft <= 15) {
-        await notificationHelper
-            .cancelNotification(vId ^ "sigorta_gecmis".hashCode);
-        await notificationHelper.cancelNotification(vId ^ "sigorta".hashCode);
-        await notificationHelper.scheduleNotification(
-            id: vId ^ "sigorta_yaklasan".hashCode,
-            title: "Trafik Sigortası Hatırlatması",
-            body:
-                "$plate plakalı aracınızın trafik sigortası bitişine $daysLeft gün kaldı.",
-            scheduledDate: DateTime.now().add(const Duration(seconds: 4)));
-      } else {
-        await notificationHelper
-            .cancelNotification(vId ^ "sigorta_gecmis".hashCode);
-        await notificationHelper
-            .cancelNotification(vId ^ "sigorta_yaklasan".hashCode);
-
-        DateTime notifyDate = _effectiveInsuranceDate!
-            .subtract(const Duration(days: 3))
-            .copyWith(hour: 9, minute: 0);
-        if (notifyDate.isAfter(DateTime.now())) {
-          await notificationHelper.scheduleNotification(
-              id: vId ^ "sigorta".hashCode,
-              title: "Trafik Sigortası Hatırlatması",
-              body:
-                  "$plate plakalı aracınızın trafik sigortası bitişine 3 gün kaldı.",
-              scheduledDate: notifyDate);
-        }
-      }
-    }
-
-    // Muayene Bildirimi
-    if (_effectiveInspectionDate != null) {
-      final int daysLeft =
-          _effectiveInspectionDate!.difference(nowNormalized).inDays;
-      final int notifBaseId = (vId.hashCode & 0x7FFFFFFF);
-
-      if (daysLeft < 0) {
-        await notificationHelper.cancelNotification(notifBaseId ^ 100);
-        await notificationHelper.cancelNotification(notifBaseId ^ 101);
-        await notificationHelper.cancelNotification(notifBaseId ^ 102);
-      } else if (daysLeft <= 15) {
-        await notificationHelper.cancelNotification(notifBaseId ^ 100);
-        await notificationHelper.cancelNotification(notifBaseId ^ 102);
-        await notificationHelper.scheduleNotification(
-            id: notifBaseId ^ 101,
-            title: "Araç Muayenesi Hatırlatması",
-            body:
-                "$plate plakalı aracınızın muayene süresinin dolmasına $daysLeft gün kaldı.",
-            scheduledDate: DateTime.now().add(const Duration(seconds: 3)));
-      } else {
-        await notificationHelper.cancelNotification(notifBaseId ^ 100);
-        await notificationHelper.cancelNotification(notifBaseId ^ 101);
-
-        DateTime notifyDate = _effectiveInspectionDate!
-            .subtract(const Duration(days: 3))
-            .copyWith(hour: 9, minute: 0);
-        if (notifyDate.isAfter(DateTime.now())) {
-          await notificationHelper.scheduleNotification(
-              id: notifBaseId ^ 102,
-              title: "Araç Muayenesi Hatırlatması",
-              body:
-                  "$plate plakalı aracınızın muayene süresinin dolmasına 3 gün kaldı.",
-              scheduledDate: notifyDate);
-        }
-      }
-    }
+    await notificationHelper.clearLegacyVehicleReminders([currentVehicleData]);
   }
 
   void _applyFilters() {
@@ -359,13 +272,13 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                         fontWeight: pw.FontWeight.bold)),
                 pw.SizedBox(height: 10),
                 pw.Text("Plaka: ${currentVehicleData['plate']}",
-                    style: pw.TextStyle(fontSize: 16)),
+                    style: const pw.TextStyle(fontSize: 16)),
                 pw.Text(
                     "Zaman Filtresi: $selectedDateFilter | Kategori: $selectedFilter",
-                    style: pw.TextStyle(fontSize: 14)),
+                    style: const pw.TextStyle(fontSize: 14)),
                 pw.Text(
                     "Toplam Gider: ${totalFilteredExpense.toStringAsFixed(2)} TL",
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                         fontSize: 16, fontWeight: pw.FontWeight.bold)),
                 pw.SizedBox(height: 20),
                 pw.TableHelper.fromTextArray(
@@ -708,13 +621,11 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
   Future<void> _checkRemindersAndAlert() async {
     _hasShownAlert = true;
     final insDate = _effectiveInsuranceDate;
-    final DateTime nowNormalized =
-        DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
 
     final List<String> alerts = [];
 
     if (insDate != null) {
-      final int days = insDate.difference(nowNormalized).inDays;
+      final int days = VehicleDeadline(insDate).days!;
       if (days < 0) {
         alerts.add("Trafik Sigortanızın süresi ${days.abs()} gün geçmiş!");
       } else if (days <= 15) {
@@ -723,7 +634,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
     }
     if (_effectiveInspectionDate != null) {
       final int days =
-          _effectiveInspectionDate!.difference(nowNormalized).inDays;
+          VehicleDeadline(_effectiveInspectionDate).days!;
       if (days < 0) {
         alerts.add("Araç Muayene süreniz ${days.abs()} gün geçmiş!");
       } else if (days <= 15) {
@@ -1426,14 +1337,9 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
 
   Widget _buildInfoRow(
       String title, DateTime? date, IconData icon, int totalDays) {
-    final DateTime nowNormalized =
-        DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-    final int daysLeft =
-        date != null ? date.difference(nowNormalized).inDays : 0;
-    final double progress =
-        date != null ? (daysLeft / totalDays).clamp(0.0, 1.0) : 0.0;
-    final Color statusColor =
-        date == null ? const Color(0xFF64748B) : const Color(0xFF00FFA3);
+    final deadline = VehicleDeadline(date);
+    final double progress = date == null ? 0 : ((deadline.days ?? 0) / totalDays).clamp(0.0, 1.0);
+    final Color statusColor = deadline.color;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1478,11 +1384,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                   border:
                       Border.all(color: statusColor.withValues(alpha: 0.3))),
               child: Text(
-                  date == null
-                      ? "Belirsiz"
-                      : (daysLeft < 0
-                          ? "${daysLeft.abs()} Gün Geçti"
-                          : "$daysLeft Gün"),
+                  deadline.label,
                   style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
@@ -1508,7 +1410,9 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
   Widget _buildMaintenanceRow(int cKm, int mKm) {
     final int remainingKm = mKm - cKm;
     final double progress = mKm > 0 ? (cKm / mKm).clamp(0.0, 1.0) : 0.0;
-    final Color statusColor = const Color(0xFF00FFA3);
+    final Color statusColor = remainingKm <= 0
+        ? const Color(0xFFFF586B)
+        : remainingKm <= 1000 ? const Color(0xFFFFB547) : const Color(0xFF00FFA3);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -3133,7 +3037,8 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
       if (mounted) {
         if (response.statusCode == 200 || response.statusCode == 201) {
           HapticFeedback.mediumImpact();
-          if (!kIsWeb && enableNotification && selectedNextDate != null) {
+          if (!kIsWeb && enableNotification && selectedNextDate != null &&
+              !const ['Muayene', 'Sigorta'].contains(selectedType)) {
             DateTime notifyTarget = selectedNextDate!
                 .subtract(const Duration(days: 3))
                 .copyWith(hour: 9, minute: 0);
@@ -3141,12 +3046,18 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                 ? notifyTarget
                 : DateTime.now().add(const Duration(seconds: 10));
 
-            await notificationHelper.scheduleNotification(
+            try {
+              await notificationHelper.scheduleNotification(
                 id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
                 title: "Yaklaşan $selectedType",
                 body:
                     "${widget.vehiclePlate} plakalı aracınızın $selectedType süresi ${DateFormat('dd.MM.yyyy').format(selectedNextDate!)} tarihinde doluyor.",
                 scheduledDate: notificationDate);
+            } catch (_) {
+              // The record is already saved; a denied notification permission
+              // must not report a failed save or encourage duplicate records.
+              debugPrint('Kayıt kaydedildi; yerel hatırlatma ayarlanamadı.');
+            }
           }
           _showCustomSnackBar(isEditing
               ? "İşlem başarıyla güncellendi!"
@@ -3868,8 +3779,9 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                         child: InkWell(
                             borderRadius: BorderRadius.circular(14),
                             onTap: () {
-                              if (selectedType != type['id'])
+                              if (selectedType != type['id']) {
                                 selectedNextDate = null;
+                              }
                               selectedType = '${type['id']}';
                               _setStep(1);
                             },
@@ -3979,8 +3891,9 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                         : () {
                             if (_step == 1) {
                               if (_validateDetails()) _setStep(2);
-                            } else
+                            } else {
                               _saveRecord();
+                            }
                           },
                     child: isSaving
                         ? const SizedBox(
@@ -4162,86 +4075,6 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                 ],
               ),
       ),
-    );
-  }
-}
-
-class NotificationHelper {
-  final FlutterLocalNotificationsPlugin _notificationsPlugin =
-      FlutterLocalNotificationsPlugin();
-  bool _isInitialized = false;
-
-  Future<void> init() async {
-    if (_isInitialized || kIsWeb) return;
-
-    tz.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation('Europe/Istanbul'));
-
-    const AndroidInitializationSettings androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-    const DarwinInitializationSettings iosSettings =
-        DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-
-    const InitializationSettings initSettings =
-        InitializationSettings(android: androidSettings, iOS: iosSettings);
-
-    await _notificationsPlugin.initialize(initSettings);
-
-    _notificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission();
-
-    _isInitialized = true;
-  }
-
-  Future<void> cancelNotification(int id) async {
-    if (kIsWeb) return;
-    if (!_isInitialized) await init();
-    try {
-      await _notificationsPlugin.cancel(id);
-    } catch (_) {}
-  }
-
-  Future<void> scheduleNotification({
-    required int id,
-    required String title,
-    required String body,
-    required DateTime scheduledDate,
-  }) async {
-    if (kIsWeb) return;
-    if (!_isInitialized) await init();
-    await _notificationsPlugin.zonedSchedule(
-      id,
-      title,
-      body,
-      tz.TZDateTime.from(scheduledDate, tz.local),
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'vehicle_reminders_premium',
-          'Araç Hatırlatmaları',
-          channelDescription:
-              'Muayene, sigorta ve periyodik işlemler için sistem hatırlatıcıları',
-          importance: Importance.max,
-          priority: Priority.high,
-          icon: 'ic_notification',
-          color: Color(0xFF00FFA3),
-          enableLights: true,
-          ledColor: Color(0xFF00FFA3),
-          ledOnMs: 1000,
-          ledOffMs: 500,
-          fullScreenIntent: true,
-          sound: RawResourceAndroidNotificationSound('oto_alert'),
-        ),
-        iOS: DarwinNotificationDetails(),
-      ),
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 }

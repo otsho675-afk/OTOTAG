@@ -1,3 +1,4 @@
+import 'services/push_session.dart';
 import 'admin_dashboard_screen.dart';
 // main.dart
 
@@ -26,6 +27,8 @@ import 'services/authenticated_http_client.dart';
 import 'services/platform_http_client.dart';
 import 'rent_a_car_panel_screen.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/app_motion.dart';
+import 'widgets/app_update_gate.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -96,6 +99,7 @@ Future<void> _startApp() async {
 
         // 2. Uygulama ID'sini tanımlayın
         OneSignal.initialize(oneSignalAppId);
+        PushSession.start();
 
         // 3. Kullanıcı iznini isteyin
         unawaited(OneSignal.Notifications.requestPermission(true)
@@ -103,12 +107,21 @@ Future<void> _startApp() async {
 
         // 4. Gelen bildirime tıklandığında ne olacağını belirler
         OneSignal.Notifications.addClickListener((event) {
+          if (event.notification.additionalData?['type'] == 'app_update') {
+            requestAppUpdateCheck();
+            return;
+          }
           debugPrint('BİLDİRİME TIKLANDI: ${event.notification.title}');
           // Yönlendirme mantığını buraya ekleyebilirsiniz
         });
 
         // Arka plan bildirim yetkisi - Extension dosyalarınız tam ise OS bu hook'u kullanır.
         OneSignal.Notifications.addForegroundWillDisplayListener((event) {
+          if (event.notification.additionalData?['type'] == 'app_update') {
+            event.preventDefault();
+            requestAppUpdateCheck();
+            return;
+          }
           event
               .preventDefault(); // Varsayılan ve UI engelleyebilen sistem bildirimini durdur
 
@@ -182,7 +195,8 @@ class MyApp extends StatelessWidget {
             textScaler:
                 MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.4),
           ),
-          child: child!,
+          child: AppUpdateGate(
+              navigatorKey: navigatorKey, waitForStartup: true, child: child!),
         );
       },
       navigatorKey: navigatorKey,
@@ -217,67 +231,70 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _scaleAnimation;
   late Animation<double> _opacityAnimation;
   Widget? _nextScreen;
+  late Future<void> _loginStatus;
+  bool _animationStarted = false;
   final QuickActions quickActions = const QuickActions();
 
   @override
   void initState() {
     super.initState();
     _setupQuickActions();
-    final loginStatus = _checkLoginStatus();
+    _loginStatus = _checkLoginStatus();
 
-    // Toplam animasyon süresi
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
+      duration: AppMotion.entrance,
     );
 
-    // BÜYÜME (SCALE) ANİMASYONU: Bekle -> Hafifçe Küçül -> Hızla Devasa Boyuta Büyü
-    _scaleAnimation = TweenSequence<double>([
-      // Başlangıçta sabit bekle
-      TweenSequenceItem(tween: ConstantTween<double>(1.0), weight: 60.0),
-      // Esneme payı için hafifçe küçül
-      TweenSequenceItem(
-          tween: Tween<double>(begin: 1.0, end: 0.85)
-              .chain(CurveTween(curve: Curves.easeInOutCubic)),
-          weight: 15.0),
-      // Ekrana doğru hızla yaklaş ve patla (zoom in)
-      TweenSequenceItem(
-          tween: Tween<double>(begin: 0.85, end: 40.0)
-              .chain(CurveTween(curve: Curves.easeInExpo)),
-          weight: 25.0),
-    ]).animate(_animationController);
+    final curved =
+        _animationController.drive(CurveTween(curve: AppMotion.curve));
+    _scaleAnimation = curved.drive(Tween<double>(begin: .97, end: 1));
+    _opacityAnimation = curved;
+  }
 
-    // GÖRÜNÜRLÜK (OPACITY) ANİMASYONU: Büyüme bitene kadar tam görünür kal, sonunda kaybol
-    _opacityAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: ConstantTween<double>(1.0), weight: 85.0),
-      TweenSequenceItem(
-          tween: Tween<double>(begin: 1.0, end: 0.0)
-              .chain(CurveTween(curve: Curves.easeOut)),
-          weight: 15.0),
-    ]).animate(_animationController);
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (AppMotion.reduced(context)) {
+      _animationController.duration = Duration.zero;
+      if (_animationStarted) _animationController.value = 1;
+    }
+    if (_animationStarted) return;
+    _animationStarted = true;
 
-    // Animasyonu başlat ve bitince diğer ekrana geç
-    _animationController.forward().then((_) async {
-      await loginStatus;
-      if (mounted) {
-        if (!kIsWeb) HapticFeedback.lightImpact();
-        Navigator.pushReplacement(
-          context,
-          PageRouteBuilder(
-            pageBuilder: (_, __, ___) =>
-                _nextScreen ?? const RoleSelectionScreen(),
-            // Logo zaten ekranı kapladığı için ekran geçiş süresini sıfırlıyoruz
-            transitionDuration: const Duration(milliseconds: 0),
-          ),
-        );
-      }
+    unawaited(_finishEntrance());
+  }
+
+  Future<void> _finishEntrance() async {
+    try {
+      await _animationController.forward().orCancel;
+    } on TickerCanceled {
+      // A motion preference change completes the logo immediately.
+      if (!mounted) return;
+    }
+    await _loginStatus;
+    if (!mounted) return;
+    if (!kIsWeb) HapticFeedback.lightImpact();
+    Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => _nextScreen ?? const RoleSelectionScreen(),
+        // The logo entrance has finished; do not animate a second time.
+        transitionDuration: Duration.zero,
+      ),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      appUpdateReady.value = true;
+      requestAppUpdateCheck();
     });
   }
 
   void _setupQuickActions() {
     if (kIsWeb ||
         ![TargetPlatform.android, TargetPlatform.iOS]
-            .contains(defaultTargetPlatform)) return;
+            .contains(defaultTargetPlatform)) {
+      return;
+    }
 
     quickActions.initialize((String shortcutType) async {
       final int? userId = AppSession.userId;
@@ -322,13 +339,6 @@ class _SplashScreenState extends State<SplashScreen>
       final String? userType = AppSession.userType;
 
       if (userId != null && userType != null) {
-        if (!kIsWeb &&
-            [TargetPlatform.android, TargetPlatform.iOS]
-                .contains(defaultTargetPlatform)) {
-          try {
-            await OneSignal.login(userId.toString());
-          } catch (_) {}
-        }
         await Future.delayed(const Duration(milliseconds: 300));
 
         if (userType == 'customer') {
@@ -361,35 +371,28 @@ class _SplashScreenState extends State<SplashScreen>
       backgroundColor: const Color(
           0xFF030305), // veya yeşil arkaplan istiyorsanız: Color(0xFF00B050)
       body: Center(
-        child: AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            return Transform.scale(
-              scale: _scaleAnimation.value,
-              child: Opacity(
-                opacity: _opacityAnimation.value,
-                child: Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [
-                    BoxShadow(
-                        color: const Color(0xFF00FFA3).withValues(alpha: 0.25),
-                        blurRadius: 50,
-                        spreadRadius: 10)
-                  ]),
-                  child: Image.asset('assets/images/logo.png',
-                      // YENİ EKLENEN KOD: Asset resminin boyutunu kısıtladık
-                      cacheWidth:
-                          (logoSize * MediaQuery.of(context).devicePixelRatio)
-                              .round(),
-                      height: logoSize,
-                      errorBuilder: (context, error, stackTrace) => Icon(
-                          Icons.directions_car_rounded,
-                          color: const Color(0xFF00FFA3),
-                          size: logoSize)),
-                ),
+        child: FadeTransition(
+          opacity: _opacityAnimation,
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF00FFA3).withValues(alpha: .04),
               ),
-            );
-          },
+              child: Image.asset('assets/images/logo.png',
+                  // YENİ EKLENEN KOD: Asset resminin boyutunu kısıtladık
+                  cacheWidth:
+                      (logoSize * MediaQuery.of(context).devicePixelRatio)
+                          .round(),
+                  height: logoSize,
+                  errorBuilder: (context, error, stackTrace) => Icon(
+                      Icons.directions_car_rounded,
+                      color: const Color(0xFF00FFA3),
+                      size: logoSize)),
+            ),
+          ),
         ),
       ),
     );
@@ -428,19 +431,7 @@ class RoleSelectionScreen extends StatelessWidget {
               return Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 500),
-                  child: TweenAnimationBuilder<double>(
-                    tween: Tween<double>(begin: 0.0, end: 1.0),
-                    duration: const Duration(milliseconds: 800),
-                    curve: Curves.easeOutCubic,
-                    builder: (context, value, child) {
-                      return Opacity(
-                        opacity: value,
-                        child: Transform.translate(
-                          offset: Offset(0, 30 * (1 - value)),
-                          child: child,
-                        ),
-                      );
-                    },
+                  child: AppEntrance(
                     child: SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
                       child: Padding(
@@ -523,22 +514,18 @@ class RoleSelectionScreen extends StatelessWidget {
     required String userType,
     bool isOutline = false,
   }) {
-    return InkWell(
+    return AppInteractiveSurface(
       onTap: () {
         if (!kIsWeb) HapticFeedback.selectionClick();
         Navigator.push(
           context,
-          PageRouteBuilder(
-            pageBuilder: (_, __, ___) => LoginScreen(userType: userType),
-            transitionsBuilder: (_, anim, __, child) =>
-                FadeTransition(opacity: anim, child: child),
+          MaterialPageRoute(
+            builder: (_) => LoginScreen(userType: userType),
           ),
         );
       },
       borderRadius: BorderRadius.circular(28),
-      splashColor: const Color(0xFF00FFA3).withValues(alpha: 0.2),
-      highlightColor: Colors.transparent,
-      child: Container(
+      child: Ink(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         decoration: BoxDecoration(
@@ -633,9 +620,10 @@ class SmartNotificationHelper {
           child: Material(
             color: Colors.transparent,
             child: TweenAnimationBuilder<double>(
-              tween: Tween<double>(begin: -100, end: 0),
-              duration: const Duration(milliseconds: 500),
-              curve: Curves.elasticOut,
+              tween: Tween<double>(
+                  begin: AppMotion.reduced(context) ? 0 : -8, end: 0),
+              duration: AppMotion.duration(context, AppMotion.entrance),
+              curve: AppMotion.curve,
               builder: (context, value, child) {
                 return Transform.translate(
                   offset: Offset(0, value),

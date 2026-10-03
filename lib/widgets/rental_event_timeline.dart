@@ -30,7 +30,7 @@ class _RentalEventHistoryState extends State<RentalEventHistory> {
     });
     try {
       final data = await widget.load(_cursor!);
-      if (mounted)
+      if (mounted) {
         setState(() {
           _events.addAll([
             for (final row in data['events'] as List? ?? [])
@@ -40,6 +40,7 @@ class _RentalEventHistoryState extends State<RentalEventHistory> {
               ? null
               : rentalId(data['next_cursor']);
         });
+      }
     } catch (e) {
       if (mounted) setState(() => _error = '$e');
     } finally {

@@ -1,12 +1,12 @@
 // Dosya: login_screen.dart
 import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
+import 'core/theme/app_motion.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:ui';
 import 'dart:io';
-import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -135,6 +135,12 @@ class _LoginScreenState extends State<LoginScreen> {
     required String name,
   }) async {
     if (isLoggingIn) return;
+    if (oauthToken.isEmpty || oauthId.isEmpty) {
+      _showCustomSnackBar(
+          'Kimlik doğrulaması tamamlanamadı. Yeniden giriş yapın.',
+          isError: true);
+      return;
+    }
     setState(() => isLoggingIn = true);
 
     try {
@@ -162,7 +168,7 @@ class _LoginScreenState extends State<LoginScreen> {
       try {
         data = json.decode(response.body);
       } catch (e) {
-        debugPrint("JSON Parse Hatası. Sunucu yanıtı: ${response.body}");
+        debugPrint("Giriş yanıtı JSON olarak okunamadı.");
         _showCustomSnackBar(
             "Sunucuyla bağlantı kurulamadı (${response.statusCode}). Lütfen tekrar deneyin.",
             isError: true);
@@ -171,7 +177,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (response.statusCode == 200 && data['status'] == 'success') {
         int userId = int.parse(data['user_id'].toString());
-        if (!kIsWeb) OneSignal.login(userId.toString());
 
         await AppSession.save(Map<String, dynamic>.from(data));
 
@@ -226,49 +231,58 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  bool _socialBusy = false;
+
   Future<void> _signInWithGoogle() async {
-    if (!kIsWeb) HapticFeedback.selectionClick();
+    if (_socialBusy) return;
+    setState(() => _socialBusy = true);
     try {
-      final GoogleSignIn googleSignIn = GoogleSignIn(
-        clientId: kIsWeb
-            ? AppConstants.googleWebClientId
-            : Platform.isIOS
-                ? _iosGoogleClientId
-                : null,
-        serverClientId: kIsWeb ? null : AppConstants.googleWebClientId,
-        scopes: const ['email', 'profile'],
-      );
-
+      if (!kIsWeb) HapticFeedback.selectionClick();
       try {
-        if (await googleSignIn.isSignedIn()) {
-          await googleSignIn.signOut();
-        }
-      } catch (_) {}
-
-      final GoogleSignInAccount? account = await googleSignIn.signIn();
-
-      if (!mounted) return;
-
-      if (account != null) {
-        await _handleOAuthLogin(
-          provider: 'google',
-          oauthId: account.id,
-          oauthToken: (await account.authentication).idToken ?? '',
-          email: account.email,
-          name: account.displayName ?? '',
+        final GoogleSignIn googleSignIn = GoogleSignIn(
+          clientId: kIsWeb
+              ? AppConstants.googleWebClientId
+              : Platform.isIOS
+                  ? _iosGoogleClientId
+                  : null,
+          serverClientId: kIsWeb ? null : AppConstants.googleWebClientId,
+          scopes: const ['email', 'profile'],
         );
+
+        try {
+          if (await googleSignIn.isSignedIn()) {
+            await googleSignIn.signOut();
+          }
+        } catch (_) {}
+
+        final GoogleSignInAccount? account = await googleSignIn.signIn();
+
+        if (!mounted) return;
+
+        if (account != null) {
+          await _handleOAuthLogin(
+            provider: 'google',
+            oauthId: account.id,
+            oauthToken: (await account.authentication).idToken ?? '',
+            email: account.email,
+            name: account.displayName ?? '',
+          );
+        }
+      } on PlatformException catch (e) {
+        debugPrint(
+            "Google Sign In Platform Exception: ${e.code} - ${e.message}");
+        if (!mounted) return;
+        if (e.code != 'sign_in_canceled' && e.code != 'canceled') {
+          _showCustomSnackBar("Google ile oturum açılamadı (${e.code}).",
+              isError: true);
+        }
+      } catch (e) {
+        debugPrint("Google Sign In Error: $e");
+        if (!mounted) return;
+        _showCustomSnackBar("Google ile giriş yapılamadı: $e", isError: true);
       }
-    } on PlatformException catch (e) {
-      debugPrint("Google Sign In Platform Exception: ${e.code} - ${e.message}");
-      if (!mounted) return;
-      if (e.code != 'sign_in_canceled' && e.code != 'canceled') {
-        _showCustomSnackBar("Google ile oturum açılamadı (${e.code}).",
-            isError: true);
-      }
-    } catch (e) {
-      debugPrint("Google Sign In Error: $e");
-      if (!mounted) return;
-      _showCustomSnackBar("Google ile giriş yapılamadı: $e", isError: true);
+    } finally {
+      if (mounted) setState(() => _socialBusy = false);
     }
   }
 
@@ -295,43 +309,49 @@ class _LoginScreenState extends State<LoginScreen> {
       : defaultTargetPlatform == TargetPlatform.iOS;
 
   Future<void> _signInWithApple() async {
-    if (!_appleAvailable) {
-      _showCustomSnackBar('Apple girişi için iPhone uygulamasını kullanın.',
-          isError: true);
-      return;
-    }
-
+    if (_socialBusy) return;
+    setState(() => _socialBusy = true);
     try {
-      final credential = await SignInWithApple.getAppleIDCredential(
-        webAuthenticationOptions: kIsWeb
-            ? WebAuthenticationOptions(
-                clientId: AppConstants.appleServiceId,
-                redirectUri: Uri.parse(AppConstants.appleRedirectUri))
-            : null,
-        scopes: [
-          AppleIDAuthorizationScopes.email,
-          AppleIDAuthorizationScopes.fullName,
-        ],
-      );
+      if (!_appleAvailable) {
+        _showCustomSnackBar('Apple girişi için iPhone uygulamasını kullanın.',
+            isError: true);
+        return;
+      }
 
-      if (!mounted) return;
+      try {
+        final credential = await SignInWithApple.getAppleIDCredential(
+          webAuthenticationOptions: kIsWeb
+              ? WebAuthenticationOptions(
+                  clientId: AppConstants.appleServiceId,
+                  redirectUri: Uri.parse(AppConstants.appleRedirectUri))
+              : null,
+          scopes: [
+            AppleIDAuthorizationScopes.email,
+            AppleIDAuthorizationScopes.fullName,
+          ],
+        );
 
-      String fullName = [
-        credential.givenName ?? '',
-        credential.familyName ?? ''
-      ].join(' ').trim();
+        if (!mounted) return;
 
-      await _handleOAuthLogin(
-        provider: 'apple',
-        oauthId: credential.userIdentifier ?? '',
-        oauthToken: credential.identityToken ?? '',
-        email: credential.email ?? '',
-        name: fullName,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      _showCustomSnackBar("Apple ile giriş yapılamadı veya iptal edildi.",
-          isError: true);
+        String fullName = [
+          credential.givenName ?? '',
+          credential.familyName ?? ''
+        ].join(' ').trim();
+
+        await _handleOAuthLogin(
+          provider: 'apple',
+          oauthId: credential.userIdentifier ?? '',
+          oauthToken: credential.identityToken ?? '',
+          email: credential.email ?? '',
+          name: fullName,
+        );
+      } catch (e) {
+        if (!mounted) return;
+        _showCustomSnackBar("Apple ile giriş yapılamadı veya iptal edildi.",
+            isError: true);
+      }
+    } finally {
+      if (mounted) setState(() => _socialBusy = false);
     }
   }
 
@@ -451,10 +471,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   builder: (context) => const AdminDashboardScreen()));
         } else {
           int userId = int.parse(data['user_id'].toString());
-
-          if (!kIsWeb) {
-            OneSignal.login(userId.toString());
-          }
 
           if (!mounted) return;
 
@@ -635,12 +651,13 @@ class _LoginScreenState extends State<LoginScreen> {
           elevation: 0,
           child: TweenAnimationBuilder<double>(
             tween: Tween<double>(begin: 0.0, end: 1.0),
-            duration: const Duration(milliseconds: 600),
-            curve: Curves.elasticOut,
+            duration: AppMotion.duration(context, AppMotion.entrance),
+            curve: AppMotion.curve,
             builder: (context, value, child) {
               return Transform.translate(
-                offset: Offset(0, -60 * (1 - value)),
-                child: Opacity(opacity: value.clamp(0.0, 1.0), child: child),
+                offset: Offset(
+                    0, AppMotion.reduced(context) ? 0 : -8 * (1 - value)),
+                child: child,
               );
             },
             child: Container(
@@ -787,8 +804,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             onPressed: isChecking
                                 ? null
                                 : () {
-                                    if (!kIsWeb)
+                                    if (!kIsWeb) {
                                       HapticFeedback.selectionClick();
+                                    }
                                     Navigator.pop(dialogContext);
                                   },
                             style: TextButton.styleFrom(
@@ -907,7 +925,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   fontSize: 13,
                   fontWeight: FontWeight.w600))),
       AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
+        duration: AppMotion.duration(context, AppMotion.interaction),
         decoration: BoxDecoration(
           color: focusNode.hasFocus
               ? Colors.white.withValues(alpha: 0.08)
@@ -934,7 +952,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: TextField(
               controller: controller,
               focusNode: focusNode,
-              enabled: !isLoggingIn,
+              enabled: !isLoggingIn && !_socialBusy,
               obscureText: isPasswordField ? _obscurePassword : false,
               textInputAction:
                   isPasswordField ? TextInputAction.done : TextInputAction.next,
@@ -1081,7 +1099,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                       onEditingComplete: _login),
                                   const SizedBox(height: 22),
                                   FilledButton(
-                                      onPressed: isLoggingIn ? null : _login,
+                                      onPressed: isLoggingIn || _socialBusy
+                                          ? null
+                                          : _login,
                                       style: FilledButton.styleFrom(
                                           backgroundColor:
                                               AppConstants.primaryColor,
@@ -1125,15 +1145,17 @@ class _LoginScreenState extends State<LoginScreen> {
                                             ? GoogleLoginButton(
                                                 clientId: AppConstants
                                                     .googleWebClientId,
-                                                enabled: !isLoggingIn,
+                                                enabled: !isLoggingIn &&
+                                                    !_socialBusy,
                                                 onSignedIn: _googleWebAccount,
                                                 onError: (message) =>
                                                     _showCustomSnackBar(message,
                                                         isError: true))
                                             : OutlinedButton.icon(
-                                                onPressed: isLoggingIn
-                                                    ? null
-                                                    : _signInWithGoogle,
+                                                onPressed:
+                                                    isLoggingIn || _socialBusy
+                                                        ? null
+                                                        : _signInWithGoogle,
                                                 icon: const Icon(
                                                     Icons.g_mobiledata_rounded),
                                                 label: const Text('Google'),
@@ -1141,9 +1163,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                     const SizedBox(width: 12),
                                     Expanded(
                                         child: OutlinedButton.icon(
-                                            onPressed: isLoggingIn
-                                                ? null
-                                                : _signInWithApple,
+                                            onPressed:
+                                                isLoggingIn || _socialBusy
+                                                    ? null
+                                                    : _signInWithApple,
                                             icon: const Icon(Icons.apple,
                                                 size: 22),
                                             label: const Text('Apple'),
@@ -1151,7 +1174,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ]),
                                   if (!customer)
                                     TextButton(
-                                        onPressed: isLoggingIn
+                                        onPressed: isLoggingIn || _socialBusy
                                             ? null
                                             : _showTrackingDialog,
                                         child: const Text(
@@ -1167,7 +1190,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                                 color:
                                                     AppConstants.mutedColor)),
                                         TextButton(
-                                            onPressed: isLoggingIn
+                                            onPressed: isLoggingIn ||
+                                                    _socialBusy
                                                 ? null
                                                 : () => Navigator.push(
                                                     context,
@@ -1179,7 +1203,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                             child: const Text('Kayıt ol'))
                                       ]),
                                   OutlinedButton.icon(
-                                      onPressed: isLoggingIn
+                                      onPressed: isLoggingIn || _socialBusy
                                           ? null
                                           : () => Navigator.pushReplacement(
                                               context,

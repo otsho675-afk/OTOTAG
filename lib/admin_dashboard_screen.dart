@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'core/constants/app_constants.dart';
 import 'services/rental_service.dart';
 import 'admin_rental_monitor_screen.dart';
@@ -12,6 +13,11 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'login_screen.dart';
+import 'widgets/admin_workspace_shell.dart';
+import 'widgets/admin_update_panel.dart';
+import 'services/app_session.dart';
+import 'widgets/admin_command_palette.dart';
+import 'widgets/admin_overview_panel.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -24,6 +30,7 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool isLoading = true;
   int _selectedIndex = 0;
+  final _updatesKey = GlobalKey<AdminUpdatePanelState>();
   
   String userSearchQuery = "";
   String jobSearchQuery = ""; 
@@ -35,7 +42,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final TextEditingController _ticketSearchCtrl = TextEditingController();
   final TextEditingController _partSearchCtrl = TextEditingController();
 
-  String userFilter = "all"; 
+  String userFilter = "all";
+  String _userSort = "newest";
   String historyFilter = "all"; 
   String ticketFilter = "open";
   
@@ -43,6 +51,29 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   double totalRevenue = 0.0;
   int totalCustomers = 0;
   int totalProviders = 0;
+  int totalCompanies = 0;
+  bool _refreshing = false;
+  bool _openingTool = false;
+  bool _bulkDeleting = false;
+  final _loadedActions = <String>{};
+  final _loadErrors = <String, String>{};
+  final _updatedAt = <String, DateTime>{};
+  final _pendingReads = <String, Future<Map<String, dynamic>>>{};
+  final _loadingSections = <int>{};
+  static const _sectionRequests = <int, List<String>>{
+    0: ['admin_dashboard', 'get_tickets'],
+    1: ['admin_dashboard'],
+    2: ['get_all_users'],
+    3: ['admin_dashboard', 'get_part_listings'],
+    4: ['get_tickets'],
+    6: [],
+  };
+  static const _requestLabels = <String, String>{
+    'admin_dashboard': 'Sistem özeti', 'get_all_users': 'Üyeler',
+    'get_tickets': 'Destek talepleri', 'get_ads': 'Reklamlar',
+    'admin_get_purchases': 'Satın alımlar',
+    'admin_get_telemetry_stats': 'Analiz', 'get_part_listings': 'Parça ilanları',
+  };
   
   List recentJobs = [];
   List pendingProviders = [];
@@ -51,6 +82,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   List allTickets = [];
   List<Map<String, dynamic>> allAds = [];
   List<dynamic> allPartListings = [];
+  int? _partsNextCursor;
+  bool _partsLoading = false;
+  int _partsGeneration = 0;
+  Timer? _partSearchDebounce;
+  String? _partsError;
 
   List<dynamic> allPurchases = [];
   Map<String, dynamic> purchaseStats = {};
@@ -77,10 +113,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Set<int> selectedTickets = {};
   Set<int> hiddenTickets = {}; 
 
-  final PageController _adPageController = PageController();
-  final ValueNotifier<int> currentAdIndex = ValueNotifier<int>(0);
-  Timer? _adScrollTimer;
-
   final String baseUrl = AppConstants.baseUrl;
   final String baseMediaUrl = "https://eliteagency.sbs/";
 
@@ -90,103 +122,148 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _fetchAllData();
   }
 
-  Future<void> _fetchAllData() async {
-    if (!mounted) return;
-    setState(() => isLoading = true);
+  Future<Map<String, dynamic>> _readAdminData(String action) =>
+      _pendingReads.putIfAbsent(action, () => _performAdminRead(action));
+
+  Future<Map<String, dynamic>> _performAdminRead(String action) async {
     try {
-      await Future.wait([
-        _fetchDashboardData(),
-        _fetchAllUsers(),
-        _fetchTickets(),
-        _fetchAds(),
-        _fetchPartListings(),
-        _fetchPurchases(),
-        _fetchTelemetryStats(),
-      ]);
-    } catch (e) {
-      debugPrint("Veri yükleme hatası: $e");
-    } finally {
+      final response = await http.get(Uri.parse(baseUrl).replace(
+          queryParameters: {'action': action})).timeout(const Duration(seconds: 15));
+      final data = json.decode(response.body);
+      if (response.statusCode != 200 || data is! Map || data['status'] != 'success') {
+        throw const FormatException('Veri alınamadı.');
+      }
       if (mounted) {
-        setState(() => isLoading = false);
+        setState(() {
+          _loadedActions.add(action);
+          _loadErrors.remove(action);
+          _updatedAt[action] = DateTime.now();
+        });
       }
+      return Map<String, dynamic>.from(data);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _loadErrors[action] =
+            '${_requestLabels[action] ?? 'Veriler'} alınamadı. Bağlantınızı kontrol edip tekrar deneyin.');
+      }
+      rethrow;
+    } finally {
+      _pendingReads.remove(action);
     }
   }
 
-  Future<void> _fetchTelemetryStats() async {
+  Future<void> _loadData(String action, void Function(Map<String, dynamic>) apply) async {
     try {
-      final response = await http.get(Uri.parse("$baseUrl?action=admin_get_telemetry_stats"));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data is Map && data['status'] == 'success' && mounted) {
-          setState(() {
-            telemetrySummary = (data['summary'] is Map) ? Map<String, dynamic>.from(data['summary']) : {};
-            topClickedButtons = (data['top_buttons'] is List) ? List.from(data['top_buttons']) : [];
-            longestUserWaits = (data['longest_waits'] is List) ? List.from(data['longest_waits']) : [];
-            userDrops = (data['user_drops'] is List) ? List.from(data['user_drops']) : [];
-            topAppErrors = (data['top_errors'] is List) ? List.from(data['top_errors']) : [];
-            recentStream = (data['recent_stream'] is List) ? List.from(data['recent_stream']) : [];
-          });
-        }
-      }
-    } catch (e) {
-      debugPrint("Telemetri verisi çekilirken hata: $e");
+      final data = await _readAdminData(action);
+      if (mounted) setState(() => apply(data));
+    } catch (_) {
+      // Display errors in the current section without discarding cached records.
     }
   }
 
-  Future<void> _fetchPurchases() async {
+  Future<void> _fetchAction(String action) => switch (action) {
+    'admin_dashboard' => _fetchDashboardData(),
+    'get_all_users' => _fetchAllUsers(),
+    'get_tickets' => _fetchTickets(),
+    'get_ads' => _fetchAds(),
+    'get_part_listings' => _fetchPartListings(),
+    'admin_get_purchases' => _fetchPurchases(),
+    'admin_get_telemetry_stats' => _fetchTelemetryStats(),
+    _ => Future<void>.value(),
+  };
+
+  Future<void> _fetchAllData() async {
+    if (!mounted || _refreshing) return;
+    setState(() => _refreshing = true);
     try {
-      final response = await http.get(Uri.parse("$baseUrl?action=admin_get_purchases"));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data is Map && data['status'] == 'success' && mounted) {
-          setState(() {
-            allPurchases = (data['purchases'] is List) ? List.from(data['purchases']) : [];
-            purchaseStats = (data['stats'] is Map) ? Map<String, dynamic>.from(data['stats']) : {};
-          });
-        }
-      }
-    } catch (e) {
-      debugPrint("Satın alımlar çekilirken hata: $e");
+      // Initially request only the dashboard and support queue. Refresh previously
+      // opened datasets after mutations, so a hidden section is never loaded early.
+      final actions = {'admin_dashboard', 'get_tickets', ..._loadedActions};
+      await Future.wait(actions.map(_fetchAction));
+    } finally {
+      if (mounted) setState(() { _refreshing = false; isLoading = false; });
     }
   }
 
-  Future<void> _fetchPartListings() async {
+  Future<void> _loadSection(int index, {bool force = false}) async {
+    if (!mounted || _loadingSections.contains(index)) return;
+    final actions = (_sectionRequests[index] ?? const <String>[])
+        .where((action) => force || !_loadedActions.contains(action)).toList();
+    if (actions.isEmpty) return;
+    setState(() => _loadingSections.add(index));
     try {
-      final res = await http.get(Uri.parse("$baseUrl?action=get_part_listings"));
-      if (res.statusCode == 200) {
-        final data = json.decode(res.body);
-        if (data['status'] == 'success' && mounted) {
-          setState(() {
-            allPartListings = (data['market'] is List) ? List.from(data['market']) : [];
-          });
-        }
-      }
-    } catch (e) {
-      debugPrint("Parça ilanları çekilirken hata: $e");
+      await Future.wait(actions.map(_fetchAction));
+    } finally {
+      if (mounted) setState(() => _loadingSections.remove(index));
     }
   }
 
-  void _startAdTimer() {
-    _adScrollTimer?.cancel();
-    if (allAds.isNotEmpty) {
-      _adScrollTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
-        if (_adPageController.hasClients && mounted) {
-          int nextPage = currentAdIndex.value + 1;
-          if (nextPage >= allAds.length + 1) nextPage = 0;
-          _adPageController.animateToPage(
-            nextPage,
-            duration: const Duration(milliseconds: 700),
-            curve: Curves.easeInOutCubic,
-          );
-        }
+  Future<void> _fetchTelemetryStats() => _loadData('admin_get_telemetry_stats', (data) {
+    telemetrySummary = data['summary'] is Map ? Map<String, dynamic>.from(data['summary']) : {};
+    topClickedButtons = data['top_buttons'] is List ? List.from(data['top_buttons']) : [];
+    longestUserWaits = data['longest_waits'] is List ? List.from(data['longest_waits']) : [];
+    userDrops = data['user_drops'] is List ? List.from(data['user_drops']) : [];
+    topAppErrors = data['top_errors'] is List ? List.from(data['top_errors']) : [];
+    recentStream = data['recent_stream'] is List ? List.from(data['recent_stream']) : [];
+  });
+
+  Future<void> _fetchPurchases() => _loadData('admin_get_purchases', (data) {
+    allPurchases = data['purchases'] is List ? List.from(data['purchases']) : [];
+    purchaseStats = data['stats'] is Map ? Map<String, dynamic>.from(data['stats']) : {};
+  });
+
+  void _searchParts(String query) {
+    setState(() => partSearchQuery = query);
+    _partSearchDebounce?.cancel();
+    _partsGeneration++;
+    _partSearchDebounce = Timer(const Duration(milliseconds: 300), () => unawaited(_fetchPartListings()));
+  }
+
+  Future<void> _fetchPartListings({bool append = false}) async {
+    if (!mounted || (append && (_partsLoading || _partsNextCursor == null))) return;
+    final generation = append ? _partsGeneration : ++_partsGeneration;
+    setState(() { _partsLoading = true; _partsError = null; });
+    try {
+      final uri = Uri.parse(baseUrl).replace(queryParameters: {
+        'action': 'get_part_listings', 'q': partSearchQuery.trim(),
+        if (append) 'before_id': '${_partsNextCursor!}',
       });
+      final res = await http.get(uri).timeout(const Duration(seconds: 15));
+      final data = json.decode(res.body);
+      if (res.statusCode == 200) {
+        if (data['status'] != 'success') {
+          throw const FormatException('İlanlar alınamadı.');
+        }
+        if (mounted && generation == _partsGeneration) {
+          setState(() {
+            _loadedActions.add('get_part_listings');
+            _loadErrors.remove('get_part_listings');
+            _updatedAt['get_part_listings'] = DateTime.now();
+            final rows = (data['market'] is List) ? List.from(data['market']) : [];
+            allPartListings = append ? [...allPartListings, ...rows] : rows;
+            _partsNextCursor = int.tryParse('${data['next_cursor']}');
+          });
+        }
+      } else {
+        throw const FormatException('İlanlar alınamadı.');
+      }
+    } catch (e) {
+      if (mounted && generation == _partsGeneration) {
+        setState(() {
+        _partsError = 'İlanlar alınamadı. Tekrar deneyin.';
+        _loadErrors['get_part_listings'] = _partsError!;
+      });
+      }
+    } finally {
+      if (mounted && generation == _partsGeneration) setState(() => _partsLoading = false);
     }
   }
+
+
 
   @override
   void dispose() {
-    _adScrollTimer?.cancel();
-    _adPageController.dispose();
+    _partSearchDebounce?.cancel();
     _userSearchCtrl.dispose();
     _jobSearchCtrl.dispose();
     _ticketSearchCtrl.dispose();
@@ -255,195 +332,123 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Future<void> _fetchAds() async {
-    try {
-      final response = await http.get(Uri.parse("$baseUrl?action=get_ads"));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data is Map && data['status'] == 'success' && mounted) {
-          setState(() {
-            if (data['ads'] is List) {
-              allAds = (data['ads'] as List)
-                  .whereType<Map>()
-                  .map((e) => Map<String, dynamic>.from(e))
-                  .toList();
-              allAds.sort((a, b) => (int.tryParse(a['priority']?.toString() ?? '99') ?? 99)
-                  .compareTo(int.tryParse(b['priority']?.toString() ?? '99') ?? 99));
-            } else {
-              allAds = [];
-            }
-          });
-          _startAdTimer();
-        }
-      }
-    } catch (e) {
-      debugPrint("Reklamlar çekilirken hata: $e");
-    }
-  }
+  Future<void> _fetchAds() => _loadData('get_ads', (data) {
+    allAds = data['ads'] is List
+        ? (data['ads'] as List).whereType<Map>().map((ad) => Map<String, dynamic>.from(ad)).toList()
+        : [];
+    allAds.sort((a, b) => (int.tryParse('${a['priority'] ?? 99}') ?? 99)
+        .compareTo(int.tryParse('${b['priority'] ?? 99}') ?? 99));
+  });
 
-  Future<void> _fetchDashboardData() async {
-    try {
-      final response = await http.get(Uri.parse("$baseUrl?action=admin_dashboard"));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data is Map && data['status'] == 'success' && mounted) {
-          setState(() {
-            final jobsData = data['jobs_data'];
-            if (jobsData is Map) {
-              totalJobs = int.tryParse(jobsData['total_jobs']?.toString() ?? '0') ?? 0;
-              totalRevenue = double.tryParse(jobsData['total_revenue']?.toString() ?? '0.0') ?? 0.0;
-            } else {
-              totalJobs = 0;
-              totalRevenue = 0.0;
-            }
-
-            recentJobs = (data['recent_jobs'] is List) ? List.from(data['recent_jobs']) : []; 
-            pendingProviders = (data['pending_providers'] is List) ? List.from(data['pending_providers']) : [];
-            lowPerformingProviders = (data['low_performing_providers'] is List) ? List.from(data['low_performing_providers']) : [];
-            
-            totalCustomers = 0;
-            totalProviders = 0;
-            if (data['users_data'] is List) {
-              for (var u in data['users_data']) {
-                if (u is Map) {
-                  if (u['user_type'] == 'customer') {
-                    totalCustomers = int.tryParse(u['count']?.toString() ?? '0') ?? 0;
-                  }
-                  if (u['user_type'] == 'provider') {
-                    totalProviders = int.tryParse(u['count']?.toString() ?? '0') ?? 0;
-                  }
-                }
-              }
-            }
-          });
-        }
+  Future<void> _fetchDashboardData() => _loadData('admin_dashboard', (data) {
+    final jobsData = data['jobs_data'];
+    totalJobs = jobsData is Map ? int.tryParse('${jobsData['total_jobs']}') ?? 0 : 0;
+    totalRevenue = jobsData is Map ? double.tryParse('${jobsData['total_revenue']}') ?? 0 : 0;
+    recentJobs = data['recent_jobs'] is List ? List.from(data['recent_jobs']) : [];
+    pendingProviders = data['pending_providers'] is List ? List.from(data['pending_providers']) : [];
+    lowPerformingProviders = data['low_performing_providers'] is List ? List.from(data['low_performing_providers']) : [];
+    totalCustomers = 0; totalProviders = 0; totalCompanies = 0;
+    if (data['users_data'] is List) {
+      for (final user in data['users_data']) {
+        if (user is! Map) continue;
+        final count = int.tryParse('${user['count']}') ?? 0;
+        if (user['user_type'] == 'customer') totalCustomers = count;
+        if (user['user_type'] == 'provider') totalProviders = count;
+        if (user['user_type'] == 'rentacar') totalCompanies = count;
       }
-    } catch (e) {
-      debugPrint("Dashboard verisi çekilirken hata: $e");
     }
-  }
+  });
 
-  Future<void> _fetchAllUsers() async {
-    try {
-      final response = await http.get(Uri.parse("$baseUrl?action=get_all_users"));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data is Map && data['status'] == 'success' && mounted) {
-          setState(() {
-            allUsers = (data['users'] is List) ? List.from(data['users']) : [];
-          });
-        }
-      }
-    } catch (e) {
-      debugPrint("Kullanıcılar çekilirken hata: $e");
-    }
-  }
+  Future<void> _fetchAllUsers() => _loadData('get_all_users', (data) {
+    allUsers = data['users'] is List ? List.from(data['users']) : [];
+  });
 
-  Future<void> _fetchTickets() async {
-    try {
-      final response = await http.get(Uri.parse("$baseUrl?action=get_tickets"));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data is Map && data['status'] == 'success' && mounted) {
-          setState(() {
-            allTickets = (data['tickets'] is List) ? List.from(data['tickets']) : [];
-          });
-        }
-      }
-    } catch (e) {
-      debugPrint("Biletler çekilirken hata: $e");
-    }
-  }
+  Future<void> _fetchTickets() => _loadData('get_tickets', (data) {
+    allTickets = data['tickets'] is List ? List.from(data['tickets']) : [];
+  });
 
   void _hideSelectedItems(String type) {
+    final selected = type == 'jobs' ? selectedJobs : type == 'users' ? selectedUsers : selectedTickets;
+    final hidden = type == 'jobs' ? hiddenJobs : type == 'users' ? hiddenUsers : hiddenTickets;
+    final newlyHidden = selected.difference(hidden);
     setState(() {
-      if (type == 'jobs') {
-        hiddenJobs.addAll(selectedJobs);
-        selectedJobs.clear();
-        isJobSelectionMode = false;
-      } else if (type == 'users') {
-        hiddenUsers.addAll(selectedUsers);
-        selectedUsers.clear();
-        isUserSelectionMode = false;
-      } else if (type == 'tickets') {
-        hiddenTickets.addAll(selectedTickets);
-        selectedTickets.clear();
-        isTicketSelectionMode = false;
-      }
+      hidden.addAll(selected); selected.clear();
+      if (type == 'jobs') isJobSelectionMode = false;
+      if (type == 'users') isUserSelectionMode = false;
+      if (type == 'tickets') isTicketSelectionMode = false;
     });
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: const Text("Seçilen öğeler panonuzdan gizlendi."),
-      backgroundColor: AppConstants.cardColor,
+      content: Text('${newlyHidden.length} kayıt bu oturumdaki görünümden gizlendi.'),
+      action: SnackBarAction(label: 'Geri al', onPressed: () {
+        if (mounted) setState(() => hidden.removeAll(newlyHidden));
+      }),
       behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ));
   }
 
   Future<void> _bulkDeleteItems(String type) async {
-    Set<int> targetSet = type == 'jobs' ? selectedJobs : (type == 'users' ? selectedUsers : selectedTickets);
-    if (targetSet.isEmpty) return;
-
-    bool confirm = await showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        title: const Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.red),
-            SizedBox(width: 8),
-            Text("Kalıcı Toplu Silme", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 18)),
+    if (_bulkDeleting) return;
+    final selection = type == 'jobs' ? selectedJobs : type == 'users' ? selectedUsers : selectedTickets;
+    final targets = selection.where((id) => id > 0).toList();
+    if (targets.isEmpty) return;
+    _bulkDeleting = true;
+    try {
+      final confirm = await showDialog<bool>(context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Kalıcı toplu silme'),
+          content: Text('${targets.length} kaydı kalıcı olarak silmek istiyor musunuz? Bu işlem geri alınamaz.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('İptal')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true),
+                style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                child: const Text('Evet, kalıcı sil')),
           ],
-        ),
-        content: Text("${targetSet.length} öğeyi veritabanından KALICI olarak silmek istiyor musunuz? Bu işlem geri alınamaz."),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("İptal")),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text("Evet, Kalıcı Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          )
-        ],
-      )
-    ) ?? false;
-
-    if (!confirm || !mounted) return;
-
-    setState(() => isLoading = true);
-    
-    for (int id in targetSet) {
-      try {
-        if (type == 'jobs') {
-          await http.post(Uri.parse("$baseUrl?action=admin_delete_job"), headers: {"Content-Type": "application/x-www-form-urlencoded"}, body: {"job_id": id.toString()});
-        } else if (type == 'users') {
-          await http.post(Uri.parse("$baseUrl?action=admin_delete_user"), headers: {"Content-Type": "application/x-www-form-urlencoded"}, body: {"user_id": id.toString()});
-        } else if (type == 'tickets') {
-          await http.post(Uri.parse("$baseUrl?action=admin_delete_ticket"), headers: {"Content-Type": "application/x-www-form-urlencoded"}, body: {"ticket_id": id.toString()});
-        }
-      } catch (e) {
-        debugPrint("Silme hatası: $e");
+        )) ?? false;
+      if (!confirm || !mounted) return;
+      setState(() => isLoading = true);
+      final succeeded = <int>{};
+      final action = type == 'jobs' ? 'admin_delete_job'
+          : type == 'users' ? 'admin_delete_user' : 'admin_delete_ticket';
+      final field = type == 'jobs' ? 'job_id' : type == 'users' ? 'user_id' : 'ticket_id';
+      // Keep the batch bounded; every response is checked before reporting success.
+      for (var offset = 0; offset < targets.length && mounted; offset += 4) {
+        await Future.wait(targets.skip(offset).take(4).map((id) async {
+          try {
+            final response = await http.post(Uri.parse(baseUrl).replace(queryParameters: {'action': action}),
+                body: {field: '$id'}).timeout(const Duration(seconds: 20));
+            final data = json.decode(response.body);
+            if (response.statusCode == 200 && data is Map && data['status'] == 'success') succeeded.add(id);
+          } catch (_) {
+            // Retain failed/uncertain records in the selection for a later retry.
+          }
+        }));
       }
-    }
-
-    setState(() {
-      if (type == 'jobs') { selectedJobs.clear(); isJobSelectionMode = false; }
-      else if (type == 'users') { selectedUsers.clear(); isUserSelectionMode = false; }
-      else if (type == 'tickets') { selectedTickets.clear(); isTicketSelectionMode = false; }
-    });
-
-    await _fetchAllData();
-    if (mounted) {
-      // ignore: use_build_context_synchronously
+      if (!mounted) return;
+      setState(() {
+        selection.removeAll(succeeded);
+        if (type == 'jobs') {
+          recentJobs.removeWhere((row) => row is Map && succeeded.contains(int.tryParse('${row['id']}')));
+          hiddenJobs.removeAll(succeeded); isJobSelectionMode = selection.isNotEmpty;
+        }
+        if (type == 'users') {
+          allUsers.removeWhere((row) => row is Map && succeeded.contains(int.tryParse('${row['id']}')));
+          hiddenUsers.removeAll(succeeded); isUserSelectionMode = selection.isNotEmpty;
+        }
+        if (type == 'tickets') {
+          allTickets.removeWhere((row) => row is Map && succeeded.contains(int.tryParse('${row['id']}')));
+          hiddenTickets.removeAll(succeeded); isTicketSelectionMode = selection.isNotEmpty;
+        }
+      });
+      await _fetchAllData();
+      if (!mounted) return;
+      final failed = targets.length - succeeded.length;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text("Seçilen öğeler kalıcı olarak silindi."), 
-        backgroundColor: Colors.redAccent,
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ));
+          content: Text(failed == 0 ? '${succeeded.length} kayıt silindi.'
+              : '${succeeded.length} kayıt silindi; $failed kayıt için silme doğrulanamadı. Bu kayıtlar seçili bırakıldı.'),
+          behavior: SnackBarBehavior.floating));
+    } finally {
+      _bulkDeleting = false;
+      if (mounted && isLoading) setState(() => isLoading = false);
     }
   }
 
@@ -497,8 +502,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         if (mounted) {
           // ignore: use_build_context_synchronously
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: const Text("Bildirim başarıyla gönderildi!"), 
-            backgroundColor: Colors.green,
+            content: Text('${data['message'] ?? "Bildirim kaydedildi."}'),
+            backgroundColor: ['failed', 'not_configured'].contains(data['push_status']) ? Colors.orange : Colors.green,
             behavior: SnackBarBehavior.floating,
             margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -610,12 +615,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                   initialValue: selectedTarget,
                                   dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
                                   style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold, fontSize: 14),
-                                  decoration: InputDecoration(
+                                  decoration: const InputDecoration(
                                     labelText: "Hedef Kitle",
-                                    labelStyle: const TextStyle(color: Colors.grey, fontSize: 13),
-                                    prefixIcon: const Icon(Icons.groups_rounded, color: Colors.orange, size: 20),
+                                    labelStyle: TextStyle(color: Colors.grey, fontSize: 13),
+                                    prefixIcon: Icon(Icons.groups_rounded, color: Colors.orange, size: 20),
                                     border: InputBorder.none,
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                   ),
                                   items: const [
                                     DropdownMenuItem(value: 'all', child: Text("Tüm Kullanıcılar")),
@@ -794,12 +799,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           )
         );
       } else {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: const Text("Yorumlar yüklenemedi."),
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ));
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -862,13 +869,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ));
         }
       } catch (e) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: const Text("Şifre güncellenemedi."), 
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ));
+        }
       }
     }
   }
@@ -893,13 +902,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: const Text("Yedekleme hatası."), 
         backgroundColor: Colors.red, 
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ));
+      }
     }
   }
 
@@ -987,22 +998,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           )
         );
       } else {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(data?['message']?.toString() ?? "Optimizasyon başarısız oldu."), 
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ));
+        }
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: const Text("Optimizasyon sırasında hata oluştu."), 
         backgroundColor: Colors.red,
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ));
+      }
     }
   }
 
@@ -1982,7 +1997,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  void _logout() {
+  Future<void> _logout() async {
+    await AppSession.clear();
+    if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => const LoginScreen(userType: 'admin')),
       (Route<dynamic> route) => false,
@@ -2156,7 +2173,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   void _showTelemetryModal(BuildContext context, bool isDark) {
-    _fetchTelemetryStats();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -3008,20 +3024,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             onSuccess();
                             if (!context.mounted) return; Navigator.pop(context);
                           } else {
-                            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                               content: const Text("Reklam eklenemedi."),
                               behavior: SnackBarBehavior.floating,
                               margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ));
+                            }
                           }
                         } catch (e) {
-                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                             content: Text("Bağlantı hatası: $e"),
                             behavior: SnackBarBehavior.floating,
                             margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ));
+                          }
                         } finally {
                           setSheetState(() => isSavingAd = false);
                         }
@@ -3187,20 +3207,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             onSuccess();
                             if (!context.mounted) return; Navigator.pop(context);
                           } else {
-                            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                               content: const Text("Reklam güncellenemedi."),
                               behavior: SnackBarBehavior.floating,
                               margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ));
+                            }
                           }
                         } catch (e) {
-                          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                             content: Text("Bağlantı hatası: $e"),
                             behavior: SnackBarBehavior.floating,
                             margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ));
+                          }
                         } finally {
                           setSheetState(() => isSavingAd = false);
                         }
@@ -3248,352 +3272,182 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         await _fetchAds();
         onSuccess();
       } catch (e) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: const Text("Hata oluştu."),
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ));
+        }
       }
     }
   }
 
-  void _showAdDetailsModal(BuildContext context, Map<String, dynamic> ad) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E293B) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            border: Border.all(color: Colors.orange.withValues(alpha:0.3), width: 1.2),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha:0.4), blurRadius: 30, offset: const Offset(0, -8))
-            ]
-          ),
-          child: SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: Container(
-                    width: 44,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.white24 : Colors.black26,
-                      borderRadius: BorderRadius.circular(10)
-                    )
-                  )
-                ),
-                const SizedBox(height: 20),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(18),
-                  child: Container(
-                    height: 160,
-                    color: isDark ? Colors.black12 : Colors.grey.shade200,
-                    child: _buildSafeNetworkImage(ad['image_url'], height: 160, width: double.infinity),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  ad['title'] ?? 'Kampanya', 
-                  textAlign: TextAlign.center, 
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: isDark ? Colors.white : Colors.black87)
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  ad['description'] ?? 'Detaylı bilgi için iletişim kurun.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, color: isDark ? Colors.white70 : Colors.black54, height: 1.4)
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: const Text("Fırsatı Değerlendir", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
-                )
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+
+
+  Future<void> _refreshSelected() async {
+    if (_selectedIndex == 5) {
+      await _updatesKey.currentState?.refresh();
+    } else {
+      await _loadSection(_selectedIndex, force: true);
+    }
   }
 
-  Widget _buildTopSection(Color cardColor, bool isDark) {
-    final int totalItems = allAds.length + 1;
+  static const _quickCommands = [
+    AdminCommand('section:5', 'Sürüm güncelle', 'Android ve iPhone duyuruları', Icons.system_update_outlined,
+        keywords: 'güncelleme modal versiyon'),
+    AdminCommand('rental', 'Kiralama takip', 'Rezervasyonlar ve firma hareketleri', Icons.car_rental_outlined),
+    AdminCommand('notification', 'Duyuru gönder', 'Kullanıcılara genel bildirim', Icons.notifications_active_outlined),
+    AdminCommand('ads', 'Reklam yönetimi', 'Banner ve kampanyaları düzenle', Icons.campaign_outlined),
+    AdminCommand('purchases', 'Satın alım takibi', 'Premium ve abonelik kayıtları', Icons.workspace_premium_outlined,
+        keywords: 'ödeme gelir'),
+    AdminCommand('analytics', 'Kullanım analizi', 'Bekleme süreleri ve hata kayıtları', Icons.insights_outlined,
+        keywords: 'telemetri davranış performans'),
+  ];
 
-    return Column(
-      children: [
-        SizedBox(
-          height: 130,
-          child: PageView.builder(
-            controller: _adPageController,
-            physics: const BouncingScrollPhysics(),
-            onPageChanged: (index) => currentAdIndex.value = index,
-            itemCount: totalItems,
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: _buildHeaderCard(cardColor, isDark),
-                );
-              } else {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: _buildAdCard(allAds[index - 1], cardColor, isDark),
-                );
-              }
-            },
-          ),
-        ),
-        if (totalItems > 1) ...[
-          const SizedBox(height: 12),
-          ValueListenableBuilder<int>(
-            valueListenable: currentAdIndex,
-            builder: (context, selectedIdx, child) {
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  totalItems,
-                  (index) => AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    width: selectedIdx == index ? 20 : 6,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: selectedIdx == index ? Colors.blueAccent : Colors.grey.withValues(alpha:0.3),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ]
-      ],
-    );
+  Future<void> _searchManagement() async {
+    if (_bulkDeleting) return;
+    final id = await showDialog<String>(context: context,
+        builder: (_) => AdminCommandPalette(commands: [
+          for (var i = 0; i < AdminWorkspaceShell.labels.length; i++)
+            AdminCommand('section:$i', AdminWorkspaceShell.labels[i],
+                AdminWorkspaceShell.descriptions[i], AdminWorkspaceShell.icons[i]),
+          ..._quickCommands,
+        ]));
+    if (id != null && mounted) await _runCommand(id);
   }
 
-  Widget _buildHeaderCard(Color cardColor, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.blueAccent.withValues(alpha:0.2), width: 1.2),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.04), blurRadius: 15, offset: const Offset(0, 5))],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [Colors.blueAccent, Colors.lightBlue], begin: Alignment.topLeft, end: Alignment.bottomRight),
-              shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: Colors.blueAccent.withValues(alpha:0.35), blurRadius: 10, offset: const Offset(0, 4))]
-            ),
-            child: const Icon(Icons.bolt_rounded, color: Colors.white, size: 28),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text("Oto Yardım Yanınızda", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: isDark ? Colors.white : Colors.black87, letterSpacing: -0.3)),
-                const SizedBox(height: 4),
-                Text("Müşteriler bu alanı varsayılan olarak bu şekilde görür.", style: TextStyle(fontSize: 11, color: isDark ? Colors.white70 : Colors.black54, height: 1.3, fontWeight: FontWeight.w600)),
-              ],
-            ),
-          )
-        ],
-      ),
-    );
+  Future<void> _runCommand(String id) async {
+    if (!mounted) return;
+    if (id.startsWith('section:')) {
+      final index = int.tryParse(id.substring(8));
+      if (index != null && index >= 0 && index < AdminWorkspaceShell.labels.length) {
+        if (index == 4) setState(() => ticketFilter = 'open');
+        _selectSection(index);
+      }
+      return;
+    }
+    if (['customers', 'providers', 'companies'].contains(id)) {
+      _selectSection(2);
+      setState(() => userFilter = switch (id) {
+        'customers' => 'customer', 'providers' => 'provider', _ => 'rentacar',
+      });
+      return;
+    }
+    if (id == 'notification') { _showNotificationDialog(); return; }
+    if (id == 'rental') {
+      await Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminRentalMonitorScreen()));
+      return;
+    }
+    final action = switch (id) {
+      'ads' => 'get_ads', 'purchases' => 'admin_get_purchases',
+      'analytics' => 'admin_get_telemetry_stats', _ => null,
+    };
+    if (action == null || _openingTool) return;
+    setState(() => _openingTool = true);
+    try {
+      await _fetchAction(action);
+      if (!mounted) return;
+      if (_loadErrors.containsKey(action)) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_loadErrors[action]!)));
+        return;
+      }
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      if (id == 'ads') _showAdManagementModal(context, isDark);
+      if (id == 'purchases') _showPurchasesModal(context, isDark);
+      if (id == 'analytics') _showTelemetryModal(context, isDark);
+    } finally {
+      if (mounted) setState(() => _openingTool = false);
+    }
   }
 
-  Widget _buildAdCard(Map<String, dynamic> ad, Color cardColor, bool isDark) {
-    final String cleanImgUrl = _resolveImageUrl(ad['image_url']);
-    final bool hasImage = cleanImgUrl.isNotEmpty;
-    
-    return GestureDetector(
-      onTap: () => _showAdDetailsModal(context, ad),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E293B) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.orange.withValues(alpha:0.35), width: 1.2),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.04), blurRadius: 15, offset: const Offset(0, 5))],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          children: [
-            if (hasImage)
-              Positioned.fill(
-                child: ColorFiltered(
-                  colorFilter: ColorFilter.mode(Colors.black.withValues(alpha:0.3), BlendMode.darken),
-                  child: _buildSafeNetworkImage(cleanImgUrl, fit: BoxFit.cover),
-                ),
-              ),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [Colors.orange, Colors.deepOrange], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                    shape: BoxShape.circle,
-                    boxShadow: [BoxShadow(color: Colors.orange.withValues(alpha:0.35), blurRadius: 10, offset: const Offset(0, 4))]
-                  ),
-                  child: const Icon(Icons.campaign_rounded, color: Colors.white, size: 28),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                            decoration: BoxDecoration(color: Colors.orange, borderRadius: BorderRadius.circular(4)),
-                            child: const Text("SPONSORLU", style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(ad['title'] ?? 'Kampanya', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: hasImage || isDark ? Colors.white : Colors.black87, letterSpacing: -0.3), maxLines: 1, overflow: TextOverflow.ellipsis),
-                      const SizedBox(height: 2),
-                      Text(ad['description'] ?? 'Detaylı bilgi için dokunun', style: TextStyle(fontSize: 11, color: hasImage || isDark ? Colors.white70 : Colors.black54, height: 1.3, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    ],
-                  ),
-                ),
-                Icon(Icons.arrow_forward_ios_rounded, color: hasImage || isDark ? Colors.white54 : Colors.black26, size: 14),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+  Widget _buildDataFeedback() {
+    final actions = _sectionRequests[_selectedIndex] ?? const <String>[];
+    final errors = actions.where(_loadErrors.containsKey).map((a) => _loadErrors[a]!).toList();
+    final dates = actions.map((a) => _updatedAt[a]).whereType<DateTime>().toList()..sort();
+    final busy = _refreshing || _openingTool || _loadingSections.contains(_selectedIndex);
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      if (busy) const LinearProgressIndicator(minHeight: 2),
+      if (errors.isNotEmpty)
+        Material(color: Theme.of(context).colorScheme.errorContainer,
+          child: Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(children: [
+              const Icon(Icons.cloud_off_outlined, size: 20),
+              const SizedBox(width: 12),
+              Expanded(child: Text(errors.join('\n'))),
+              TextButton(onPressed: busy ? null : () => unawaited(_refreshSelected()),
+                  child: const Text('Tekrar dene')),
+            ]))),
+      if (dates.isNotEmpty)
+        Padding(padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
+          child: Row(children: [
+            const Icon(Icons.schedule_outlined, size: 13),
+            const SizedBox(width: 6),
+            Expanded(child: Text('Veri güncelleme: ${DateFormat('HH:mm').format(dates.first)}',
+                style: Theme.of(context).textTheme.bodySmall)),
+            if (errors.isNotEmpty) Text('Son alınan veriler', style: Theme.of(context).textTheme.bodySmall),
+          ])),
+    ]);
+  }
+
+  void _selectSection(int index) {
+    if (_selectedIndex == index) return;
+    setState(() {
+      _selectedIndex = index;
+      isJobSelectionMode = false;
+      isUserSelectionMode = false;
+      isTicketSelectionMode = false;
+      selectedJobs.clear();
+      selectedUsers.clear();
+      selectedTickets.clear();
+    });
+    unawaited(_loadSection(index));
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
     final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
-
-    return MediaQuery(
-      data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.0)),
-      child: Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        title: const Text("Yönetim Paneli", style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: -0.5, fontSize: 18)),
-        backgroundColor: cardColor,
-        elevation: 0,
-        centerTitle: true,
-        surfaceTintColor: Colors.transparent,
-        actions: [IconButton(tooltip: 'Kiralama canlı takip', icon: const Icon(Icons.directions_car_outlined), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminRentalMonitorScreen())))],
-      ),
-      body: SafeArea(
-        bottom: false,
-        child: isLoading 
-            ? const Center(child: CircularProgressIndicator(color: Colors.blueAccent))
-            : RefreshIndicator(
-                onRefresh: _fetchAllData,
-                color: Colors.blueAccent,
-                backgroundColor: cardColor,
-                child: IndexedStack(
-                  index: _selectedIndex,
-                  children: [
-                    _buildOverviewTab(cardColor, isDark),
-                    _buildPendingTab(cardColor),
-                    _buildUsersTab(cardColor, isDark),
-                    _buildHistoryAndListingsTab(cardColor, isDark),
-                    _buildTicketsTab(cardColor, isDark),
-                    _buildSettingsTab(cardColor, isDark),
-                  ],
-                ),
-              ),
-      ),
-      extendBody: true,
-      bottomNavigationBar: Container(
-        margin: const EdgeInsets.only(left: 14, right: 14, bottom: 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha:0.12), blurRadius: 20, offset: const Offset(0, 6))
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(28),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-            child: NavigationBar(
-              height: 60,
-              selectedIndex: _selectedIndex,
-              onDestinationSelected: (index) {
-                setState(() {
-                  _selectedIndex = index;
-                  isJobSelectionMode = false;
-                  isUserSelectionMode = false;
-                  isTicketSelectionMode = false;
-                  selectedJobs.clear();
-                  selectedUsers.clear();
-                  selectedTickets.clear();
-                  userSearchQuery = "";
-                  jobSearchQuery = ""; 
-                  ticketSearchQuery = "";
-                  partSearchQuery = "";
-                  _userSearchCtrl.clear();
-                  _jobSearchCtrl.clear();
-                  _ticketSearchCtrl.clear();
-                  _partSearchCtrl.clear();
-                });
-              },
-              backgroundColor: cardColor.withValues(alpha:isDark ? 0.75 : 0.90),
-              indicatorColor: Colors.blueAccent.withValues(alpha:0.18),
-              labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
-              animationDuration: const Duration(milliseconds: 350),
-              destinations: [
-                const NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard_rounded, color: Colors.blueAccent), label: "Genel"),
-                NavigationDestination(
-                  icon: pendingProviders.isNotEmpty 
-                    ? Badge(label: Text('${pendingProviders.length}'), child: const Icon(Icons.how_to_reg_outlined))
-                    : const Icon(Icons.how_to_reg_outlined),
-                  selectedIcon: pendingProviders.isNotEmpty 
-                    ? Badge(label: Text('${pendingProviders.length}'), child: const Icon(Icons.how_to_reg_rounded, color: Colors.blueAccent))
-                    : const Icon(Icons.how_to_reg_rounded, color: Colors.blueAccent),
-                  label: "Onaylar",
-                ),
-                const NavigationDestination(icon: Icon(Icons.people_outline), selectedIcon: Icon(Icons.people_rounded, color: Colors.blueAccent), label: "Üyeler"),
-                const NavigationDestination(icon: Icon(Icons.history_outlined), selectedIcon: Icon(Icons.history_rounded, color: Colors.blueAccent), label: "İşlemler"),
-                NavigationDestination(
-                  icon: allTickets.where((t) => t is Map && t['status'] == 'open').isNotEmpty
-                    ? Badge(label: Text('${allTickets.where((t) => t is Map && t['status'] == 'open').length}'), child: const Icon(Icons.support_agent_outlined))
-                    : const Icon(Icons.support_agent_outlined),
-                  selectedIcon: const Icon(Icons.support_agent_rounded, color: Colors.blueAccent), 
-                  label: "Şikayet"
-                ),
-                const NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings_rounded, color: Colors.blueAccent), label: "Ayarlar"),
-              ],
-            ),
-          ),
-        ),
-      ),
-    ));
+    final actions = _sectionRequests[_selectedIndex] ?? const <String>[];
+    final firstLoad = actions.isNotEmpty && !actions.any(_loadedActions.contains);
+    final hasErrors = actions.any(_loadErrors.containsKey);
+    return CallbackShortcuts(bindings: {
+      const SingleActivator(LogicalKeyboardKey.keyK, control: true): () => unawaited(_searchManagement()),
+      const SingleActivator(LogicalKeyboardKey.keyK, meta: true): () => unawaited(_searchManagement()),
+    }, child: Focus(autofocus: true, child: AdminWorkspaceShell(
+      selected: _selectedIndex,
+      onSelect: (index) { if (!_bulkDeleting) _selectSection(index); },
+      pendingCount: pendingProviders.length,
+      ticketCount:
+          allTickets.where((t) => t is Map && t['status'] == 'open').length,
+      loading: isLoading || _refreshing || _openingTool || _loadingSections.contains(_selectedIndex),
+      onSearch: _bulkDeleting ? null : () => unawaited(_searchManagement()),
+      onRefresh: () => unawaited(_refreshSelected()),
+      child: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(children: [
+            _buildDataFeedback(),
+            Expanded(child: firstLoad && (_loadingSections.contains(_selectedIndex) || hasErrors)
+                ? Center(child: hasErrors
+                    ? const Padding(padding: EdgeInsets.all(24), child: Text('Bu bölümün verileri yüklenemedi. Yukarıdan tekrar deneyebilirsiniz.'))
+                    : const CircularProgressIndicator())
+                : RefreshIndicator(
+              onRefresh: _refreshSelected,
+              child: KeyedSubtree(
+                key: ValueKey(_selectedIndex),
+                child: switch (_selectedIndex) {
+                  0 => _buildOverviewTab(cardColor, isDark),
+                  1 => _buildPendingTab(cardColor),
+                  2 => _buildUsersTab(cardColor, isDark),
+                  3 => _buildHistoryAndListingsTab(cardColor, isDark),
+                  4 => _buildTicketsTab(cardColor, isDark),
+                  5 => AdminUpdatePanel(key: _updatesKey),
+                  _ => _buildSettingsTab(cardColor, isDark),
+                },
+              ))),
+          ]),
+    )));
   }
 
   Widget _buildLowPerformanceAlerts(Color cardColor) {
@@ -3666,94 +3520,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildOverviewTab(Color cardColor, bool isDark) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final screenWidth = constraints.maxWidth;
-        final crossAxisCount = screenWidth >= 1200 ? 4 : (screenWidth >= 800 ? 3 : (screenWidth >= 600 ? 2 : 2));
-        final childRatio = screenWidth >= 600 ? 1.5 : 1.15;
-
-        return SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildTopSection(cardColor, isDark),
-              const SizedBox(height: 20),
-              const Text("Sistem Özeti", style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900)),
-              const SizedBox(height: 12),
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: crossAxisCount,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: childRatio,
-                children: [
-                  _buildGradientCard("Ciro", "${totalRevenue.toStringAsFixed(2)} ₺", Icons.account_balance_wallet_rounded, const [Color(0xFF11998e), Color(0xFF38ef7d)]),
-                  _buildGradientCard("Toplam İşlem", totalJobs.toString(), Icons.handshake_rounded, const [Color(0xFF2193b0), Color(0xFF6dd5ed)], onTap: () => setState(() => _selectedIndex = 3)),
-                  _buildGradientCard("Müşteriler", totalCustomers.toString(), Icons.person_rounded, const [Color(0xFFf12711), Color(0xFFf5af19)], onTap: () => setState(() { _selectedIndex = 2; userFilter = 'customer'; })),
-                  _buildGradientCard("Kayıtlı Ustalar", totalProviders.toString(), Icons.engineering_rounded, const [Color(0xFF8E2DE2), Color(0xFF4A00E0)], onTap: () => setState(() { _selectedIndex = 2; userFilter = 'provider'; })),
-                ],
-              ),
-              _buildLowPerformanceAlerts(cardColor), 
-              const SizedBox(height: 20),
-              const Text("Hızlı İşlemler", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildQuickActionButton(
-                      icon: Icons.refresh_rounded, 
-                      title: "Yenile", 
-                      color: Colors.blueAccent, 
-                      onTap: _fetchAllData
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildQuickActionButton(
-                      icon: Icons.notifications_active_rounded, 
-                      title: "Bildirim", 
-                      color: Colors.orange, 
-                      onTap: () => _showNotificationDialog()
-                    ),
-                  ),
-                ],
-              )
-            ],
-          ),
-        );
-      }
-    );
-  }
-
-  Widget _buildQuickActionButton({required IconData icon, required String title, required Color color, required VoidCallback onTap}) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha:0.08),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withValues(alpha:0.25))
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(height: 6),
-            Text(title, textAlign: TextAlign.center, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget _buildOverviewTab(Color cardColor, bool isDark) => AdminOverviewPanel(
+    revenue: totalRevenue, completedJobs: totalJobs,
+    customers: totalCustomers, providers: totalProviders, companies: totalCompanies,
+    pending: pendingProviders.whereType<Map>().map((p) => Map<String, dynamic>.from(p)).toList(),
+    tickets: allTickets.whereType<Map>().map((t) => Map<String, dynamic>.from(t)).toList(),
+    jobs: recentJobs.whereType<Map>().map((j) => Map<String, dynamic>.from(j)).toList(),
+    dashboardReady: _loadedActions.contains('admin_dashboard'),
+    ticketsReady: _loadedActions.contains('get_tickets'),
+    commands: _quickCommands,
+    onCommand: (id) => unawaited(_runCommand(id)),
+    onJob: (job) => _showJobDetailsDialog(job, cardColor),
+    onTicket: (ticket) => _showTicketDetailsDialog(ticket, cardColor),
+    serviceLabel: _translateServiceType, statusLabel: _translateStatus,
+    footer: _buildLowPerformanceAlerts(cardColor),
+  );
 
   Widget _buildPendingTab(Color cardColor) {
     if (pendingProviders.isEmpty) {
-      return _buildEmptyState("Onay bekleyen usta kaydı bulunmuyor.", Icons.verified_user_outlined);
+      return _buildEmptyState("Onay bekleyen usta veya firma başvurusu bulunmuyor.", Icons.verified_user_outlined);
     }
     
     return ListView.separated(
@@ -3857,16 +3642,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildUsersTab(Color cardColor, bool isDark) {
-    final String searchLower = userSearchQuery.toLowerCase();
+    final String searchLower = adminSearchText(userSearchQuery);
     List filteredUsers = allUsers.where((user) {
       if (user is! Map) return false;
       final int userId = int.tryParse(user['id']?.toString() ?? '0') ?? 0;
       if (hiddenUsers.contains(userId)) return false; 
 
       if (searchLower.isNotEmpty) {
-        final name = (user['name'] ?? '').toString().toLowerCase();
-        final phone = (user['phone'] ?? '').toString().toLowerCase();
-        if (!name.contains(searchLower) && !phone.contains(searchLower)) return false;
+        final name = adminSearchText('${user['name'] ?? ''}');
+        final phone = adminSearchText('${user['phone'] ?? ''}').replaceAll(RegExp(r'\s+'), '');
+        if (!name.contains(searchLower) && !phone.contains(searchLower.replaceAll(RegExp(r'\s+'), '')) && '$userId' != searchLower.replaceFirst('#', '')) return false;
       }
       
       bool matchesType = false;
@@ -3885,6 +3670,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       return matchesType;
     }).toList();
 
+    filteredUsers.sort((a, b) {
+      if (_userSort == 'name') return adminSearchText('${a['name'] ?? ''}').compareTo(adminSearchText('${b['name'] ?? ''}'));
+      final left = int.tryParse('${a['id']}') ?? 0;
+      final right = int.tryParse('${b['id']}') ?? 0;
+      return _userSort == 'oldest' ? left.compareTo(right) : right.compareTo(left);
+    });
+
     return Column(
       children: [
         Padding(
@@ -3897,7 +3689,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   onChanged: (value) => setState(() => userSearchQuery = value),
                   style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 13),
                   decoration: InputDecoration(
-                    hintText: "İsim veya Telefon Ara...",
+                    hintText: "İsim, telefon veya üye no ara…",
                     hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
                     prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
                     suffixIcon: userSearchQuery.isNotEmpty 
@@ -3982,6 +3774,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               const SizedBox(width: 8),
               _buildFilterChip("Ustalar", "provider", userFilter, (val) => setState(() => userFilter = val)),
               const SizedBox(width: 8),
+              _buildFilterChip("Firmalar", "rentacar", userFilter, (val) => setState(() => userFilter = val)),
+              const SizedBox(width: 8),
               _buildFilterChip("Premium", "premium", userFilter, (val) => setState(() => userFilter = val)),
               const SizedBox(width: 8),
               _buildFilterChip("Askıdakiler", "suspended", userFilter, (val) => setState(() => userFilter = val)),
@@ -3990,13 +3784,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ],
           ),
         ),
+        _buildListTools(filteredUsers.length, allUsers.length, hiddenUsers, showSort: true, limit: 1500),
         Expanded(
           child: filteredUsers.isEmpty
             ? _buildEmptyState("Arama kriterlerine uygun kullanıcı bulunamadı.", Icons.search_off_rounded)
             : ListView.separated(
-                physics: const AlwaysScrollableScrollPhysics(),
+                scrollCacheExtent: const ScrollCacheExtent.pixels(2000), physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(16, 6, 16, 100),
-                cacheExtent: 2000,
                 itemCount: filteredUsers.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
@@ -4194,13 +3988,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         children: [
           Container(
             color: isDark ? const Color(0xFF1E293B) : Colors.white,
-            child: TabBar(
+            child: const TabBar(
               indicatorColor: Colors.blueAccent,
               indicatorWeight: 3,
               labelColor: Colors.blueAccent,
               unselectedLabelColor: Colors.grey,
-              labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-              tabs: const [
+              labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              tabs: [
                 Tab(text: "Servis Talepleri"),
                 Tab(text: "Parça İlanları"),
               ],
@@ -4234,7 +4028,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           padding: const EdgeInsets.all(14),
           child: TextField(
             controller: _partSearchCtrl,
-            onChanged: (val) => setState(() => partSearchQuery = val),
+            onChanged: _searchParts,
             style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 13),
             decoration: InputDecoration(
               hintText: "Parça adı, araç modeli veya ilan no...",
@@ -4247,15 +4041,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
           ),
         ),
+        if (_partsLoading) const LinearProgressIndicator(),
+        if (_partsError != null) Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [
+          Expanded(child: Text(_partsError!)), TextButton(onPressed: _fetchPartListings, child: const Text('Tekrar dene')),
+        ])),
         Expanded(
           child: filteredParts.isEmpty
               ? _buildEmptyState("Arama kriterine uygun ilan bulunamadı.", Icons.inventory_2_rounded)
               : ListView.separated(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-                  itemCount: filteredParts.length,
+                  itemCount: filteredParts.length + (_partsNextCursor == null ? 0 : 1),
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
+                    if (index == filteredParts.length) {
+                      return OutlinedButton(
+                      onPressed: _partsLoading ? null : () => _fetchPartListings(append: true),
+                      child: Text(_partsLoading ? 'Yükleniyor…' : 'Daha fazla ilan yükle'),
+                    );
+                    }
                     final item = filteredParts[index];
                     final int listingId = int.tryParse(item['id']?.toString() ?? '0') ?? 0;
                     String rawPartName = item['part_name'] ?? '';
@@ -4319,11 +4123,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (hiddenJobs.contains(jobId)) return false;
 
       final status = job['status']?.toString() ?? 'unknown';
-      final customerName = (job['customer_name'] ?? '').toString().toLowerCase();
-      final providerName = (job['provider_name'] ?? '').toString().toLowerCase();
-      final search = jobSearchQuery.toLowerCase();
+      final customerName = adminSearchText('${job['customer_name'] ?? ''}');
+      final providerName = adminSearchText('${job['provider_name'] ?? ''}');
+      final search = adminSearchText(jobSearchQuery);
       
-      final matchesSearch = customerName.contains(search) || providerName.contains(search) || jobId.toString().contains(search);
+      final matchesSearch = customerName.contains(search) || providerName.contains(search) || jobId.toString().contains(search.replaceFirst('#', '')) || adminSearchText(_translateServiceType(job['service_type']?.toString())).contains(search);
       
       bool matchesType = false;
       if (historyFilter == 'all') {
@@ -4439,13 +4243,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ],
           ),
         ),
+        _buildListTools(filteredJobs.length, recentJobs.length, hiddenJobs, limit: 100),
         Expanded(
           child: filteredJobs.isEmpty
             ? _buildEmptyState("Arama kriterine uygun işlem bulunamadı.", Icons.history_rounded)
             : ListView.separated(
-                physics: const AlwaysScrollableScrollPhysics(),
+                scrollCacheExtent: const ScrollCacheExtent.pixels(2000), physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(16, 6, 16, 100),
-                cacheExtent: 2000,
                 itemCount: filteredJobs.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
@@ -4555,12 +4359,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       final int ticketId = int.tryParse(ticket['id']?.toString() ?? '0') ?? 0;
       if (hiddenTickets.contains(ticketId)) return false;
 
-      final subject = (ticket['subject'] ?? '').toString().toLowerCase();
-      final customerName = (ticket['customer_name'] ?? '').toString().toLowerCase();
-      final providerName = (ticket['provider_name'] ?? '').toString().toLowerCase();
-      final search = ticketSearchQuery.toLowerCase();
+      final subject = adminSearchText('${ticket['subject'] ?? ''}');
+      final customerName = adminSearchText('${ticket['customer_name'] ?? ''}');
+      final providerName = adminSearchText('${ticket['provider_name'] ?? ''}');
+      final search = adminSearchText(ticketSearchQuery);
       
-      final matchesSearch = subject.contains(search) || customerName.contains(search) || providerName.contains(search);
+      final matchesSearch = subject.contains(search) || customerName.contains(search) || providerName.contains(search) || '$ticketId' == search.replaceFirst('#', '');
       
       bool matchesFilter = false;
       if (ticketFilter == 'all') {
@@ -4591,7 +4395,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   onChanged: (value) => setState(() => ticketSearchQuery = value),
                   style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 13),
                   decoration: InputDecoration(
-                    hintText: "Müşteri, Usta veya Konu Ara...",
+                    hintText: "Konu, kişi veya talep no ara…",
                     hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
                     prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
                     suffixIcon: ticketSearchQuery.isNotEmpty 
@@ -4684,13 +4488,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ],
           ),
         ),
+        _buildListTools(filteredTickets.length, allTickets.length, hiddenTickets,),
         Expanded(
           child: filteredTickets.isEmpty
             ? _buildEmptyState("Arama kriterine uygun şikayet bulunamadı.", Icons.support_agent_rounded)
             : ListView.separated(
-                physics: const AlwaysScrollableScrollPhysics(),
+                scrollCacheExtent: const ScrollCacheExtent.pixels(2000), physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(16, 6, 16, 100),
-                cacheExtent: 2000,
                 itemCount: filteredTickets.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
@@ -4799,42 +4603,39 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Sistem Bilgileri", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 12),
+          const Text("Yönetim merkezi",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          const Text(
+              "Hesapları, işlemleri ve destek taleplerini bölüm menüsünden yönetin. Sistem araçları aşağıda."),
+          const SizedBox(height: 16),
           Material(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(20),
-            clipBehavior: Clip.antiAlias,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Column(
-                children: [
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.api_rounded, color: Colors.blueAccent),
-                    title: Text("API Durumu", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    trailing: Text("Aktif", style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
-                  ),
-                  Divider(height: 1),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.storage_rounded, color: Colors.blueGrey),
-                    title: Text("Veritabanı", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    trailing: Text("Bağlı", style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
-                  ),
-                  Divider(height: 1),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.update_rounded, color: Colors.orange),
-                    title: Text("Sistem Sürümü", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    trailing: Text("v1.2.0", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-            ),
-          ),
+              color: cardColor,
+              borderRadius: BorderRadius.circular(20),
+              clipBehavior: Clip.antiAlias,
+              child: Column(children: [
+                ListTile(
+                    leading: const Icon(Icons.system_update_rounded),
+                    title: const Text('Android ve iPhone güncellemeleri'),
+                    subtitle: const Text(
+                        'Sürüm yayımla, bildirim gönder, duyuruyu geri çek'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _selectSection(5)),
+                const Divider(height: 1),
+                ListTile(
+                    leading: const Icon(Icons.car_rental_rounded),
+                    title: const Text('Kiralama canlı takip'),
+                    subtitle: const Text(
+                        'Firmalar, rezervasyonlar, ödemeler ve olay geçmişi'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const AdminRentalMonitorScreen()))),
+              ])),
           const SizedBox(height: 24),
-          const Text("Yönetim İşlemleri", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+          const Text("Yönetim İşlemleri",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
           const SizedBox(height: 12),
           Material(
             color: cardColor,
@@ -4843,59 +4644,92 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             child: Column(
               children: [
                 ListTile(
-                  onTap: () => _showAdManagementModal(context, isDark),
-                  leading: const Icon(Icons.campaign_rounded, color: Colors.purple),
-                  title: const Text("Reklam (Banner) Yönetimi", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                  onTap: () => unawaited(_runCommand('ads')),
+                  leading:
+                      const Icon(Icons.campaign_rounded, color: Colors.purple),
+                  title: const Text("Reklam (Banner) Yönetimi",
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  trailing:
+                      const Icon(Icons.arrow_forward_ios_rounded, size: 14),
                 ),
                 const Divider(height: 1),
                 ListTile(
-                  onTap: () => _showPurchasesModal(context, isDark),
-                  leading: const Icon(Icons.workspace_premium_rounded, color: Colors.orange),
-                  title: const Text("Premium ve Satın Alım Takibi", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                  onTap: () => unawaited(_runCommand('purchases')),
+                  leading: const Icon(Icons.workspace_premium_rounded,
+                      color: Colors.orange),
+                  title: const Text("Premium ve Satın Alım Takibi",
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  trailing:
+                      const Icon(Icons.arrow_forward_ios_rounded, size: 14),
                 ),
                 const Divider(height: 1),
                 ListTile(
                   onTap: () => _showFeedbacksModal(context, isDark),
-                  leading: const Icon(Icons.feedback_rounded, color: Colors.amber),
-                  title: const Text("Kullanıcı Geri Bildirimleri", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                  leading:
+                      const Icon(Icons.feedback_rounded, color: Colors.amber),
+                  title: const Text("Kullanıcı Geri Bildirimleri",
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  trailing:
+                      const Icon(Icons.arrow_forward_ios_rounded, size: 14),
                 ),
                 const Divider(height: 1),
                 ListTile(
-                  onTap: () => _showTelemetryModal(context, isDark),
-                  leading: const Icon(Icons.analytics_rounded, color: Colors.teal),
-                  title: const Text("Kullanıcı Davranış & Darboğaz Analizi", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  subtitle: const Text("En çok basılan butonlar, bekleme süreleri ve sorunlar", style: TextStyle(fontSize: 11, color: Colors.grey)),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                  onTap: () => unawaited(_runCommand('analytics')),
+                  leading:
+                      const Icon(Icons.analytics_rounded, color: Colors.teal),
+                  title: const Text("Kullanıcı Davranış & Darboğaz Analizi",
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  subtitle: const Text(
+                      "En çok basılan butonlar, bekleme süreleri ve sorunlar",
+                      style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  trailing:
+                      const Icon(Icons.arrow_forward_ios_rounded, size: 14),
                 ),
                 const Divider(height: 1),
                 ListTile(
                   onTap: _changeAdminPassword,
                   leading: const Icon(Icons.lock_reset_rounded),
-                  title: const Text("Admin Şifresi Değiştir", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                  title: const Text("Admin Şifresi Değiştir",
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  trailing:
+                      const Icon(Icons.arrow_forward_ios_rounded, size: 14),
                 ),
                 const Divider(height: 1),
                 ListTile(
                   onTap: _backupDatabase,
                   leading: const Icon(Icons.backup_rounded),
-                  title: const Text("Veritabanı Yedeği Al", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                  title: const Text("Veritabanı Yedeği Al",
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  trailing:
+                      const Icon(Icons.arrow_forward_ios_rounded, size: 14),
                 ),
                 const Divider(height: 1),
                 ListTile(
                   onTap: _optimizeSystem,
-                  leading: const Icon(Icons.cleaning_services_rounded, color: Colors.green),
-                  title: const Text("Sistemi ve Dosyaları Optimize Et", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                  leading: const Icon(Icons.cleaning_services_rounded,
+                      color: Colors.green),
+                  title: const Text("Sistemi ve Dosyaları Optimize Et",
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  trailing:
+                      const Icon(Icons.arrow_forward_ios_rounded, size: 14),
                 ),
                 const Divider(height: 1),
                 ListTile(
                   onTap: _logout,
-                  leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
-                  title: const Text("Güvenli Çıkış Yap", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 14)),
+                  leading:
+                      const Icon(Icons.logout_rounded, color: Colors.redAccent),
+                  title: const Text("Güvenli Çıkış Yap",
+                      style: TextStyle(
+                          color: Colors.redAccent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14)),
                 ),
               ],
             ),
@@ -4903,6 +4737,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildListTools(int visible, int total, Set<int> hidden, {bool showSort = false, int? limit}) {
+    return Padding(padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: Wrap(spacing: 12, runSpacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
+          Text('$visible sonuç · $total kayıt yüklendi', style: Theme.of(context).textTheme.bodySmall),
+          if (limit != null && total >= limit)
+            Tooltip(message: 'Arama sunucunun getirdiği son $limit kayıt içinde yapılır.',
+                child: const Icon(Icons.info_outline, size: 17)),
+          if (hidden.isNotEmpty)
+            TextButton.icon(onPressed: () => setState(hidden.clear),
+                icon: const Icon(Icons.visibility_outlined, size: 17),
+                label: Text('${hidden.length} gizlenen kaydı göster')),
+          if (showSort) DropdownButton<String>(
+            value: _userSort,
+            underline: const SizedBox.shrink(),
+            items: const [
+              DropdownMenuItem(value: 'newest', child: Text('En yeni üyeler')),
+              DropdownMenuItem(value: 'oldest', child: Text('En eski üyeler')),
+              DropdownMenuItem(value: 'name', child: Text('İsme göre sırala')),
+            ],
+            onChanged: (value) { if (value != null) setState(() => _userSort = value); },
+          ),
+        ]));
   }
 
   Widget _buildFilterChip(String label, String value, String currentValue, Function(String) onSelected) {

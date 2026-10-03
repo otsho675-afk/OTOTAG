@@ -529,8 +529,9 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
     final socket = _elmSocket;
     _elmSocket = null;
     if (_activeCommandCompleter != null &&
-        !_activeCommandCompleter!.isCompleted)
+        !_activeCommandCompleter!.isCompleted) {
       _activeCommandCompleter!.complete('');
+    }
     socket?.destroy();
 
     if (mounted && !_disposing) {
@@ -569,8 +570,9 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
   Future<String> _sendElmCommand(String cmd) {
     final socket = _elmSocket;
     final result = _commandQueue.then((_) async {
-      if (!mounted || socket == null || !identical(socket, _elmSocket))
+      if (!mounted || socket == null || !identical(socket, _elmSocket)) {
         return '';
+      }
       final completer = Completer<String>();
       _activeCommandCompleter = completer;
       _incomingBuffer.clear();
@@ -583,8 +585,9 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
         await _disconnectSocket();
         return 'TIMEOUT';
       } finally {
-        if (identical(_activeCommandCompleter, completer))
+        if (identical(_activeCommandCompleter, completer)) {
           _activeCommandCompleter = null;
+        }
       }
     });
     _commandQueue = result.then<void>((_) {}, onError: (Object _) {});
@@ -2788,7 +2791,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                 child: _buildTelemetryGauge(
                     "HARARET",
                     _isConnectedToSocket
-                        ? "${_liveCoolantTemp.toStringAsFixed(1)}"
+                        ? _liveCoolantTemp.toStringAsFixed(1)
                         : "--",
                     "°C",
                     Icons.thermostat_rounded,
@@ -2799,7 +2802,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                 child: _buildTelemetryGauge(
                     "AKÜ VOLTAJI",
                     _isConnectedToSocket
-                        ? "${_liveBatteryVoltage.toStringAsFixed(1)}"
+                        ? _liveBatteryVoltage.toStringAsFixed(1)
                         : "--",
                     "Volt",
                     Icons.battery_charging_full_rounded,
@@ -2825,7 +2828,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                 child: _buildTelemetryGauge(
                     "TURBO BASINCI",
                     _isConnectedToSocket
-                        ? "${_liveBoostPressure.toStringAsFixed(2)}"
+                        ? _liveBoostPressure.toStringAsFixed(2)
                         : "--",
                     "Bar",
                     Icons.air_rounded,

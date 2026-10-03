@@ -11,7 +11,7 @@ class ProviderProfileScreen extends StatefulWidget {
   const ProviderProfileScreen({super.key, required this.providerId});
 
   @override
-  _ProviderProfileScreenState createState() => _ProviderProfileScreenState();
+  State<ProviderProfileScreen> createState() => _ProviderProfileScreenState();
 }
 
 class _ProviderProfileScreenState extends State<ProviderProfileScreen> with TickerProviderStateMixin {

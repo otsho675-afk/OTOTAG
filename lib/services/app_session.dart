@@ -12,6 +12,8 @@ class AppSession {
   static String? _userType;
   static Future<void> _operations = Future.value();
   static final _expired = StreamController<void>.broadcast();
+  static final _changes = StreamController<void>.broadcast();
+  static Stream<void> get changes => _changes.stream;
   static Stream<void> get invalidations => _expired.stream;
 
   static Future<void> _serialize(Future<void> Function() operation) {
@@ -52,6 +54,7 @@ class AppSession {
       await prefs.setInt('logged_in_user_id', userId);
       await prefs.setString('logged_in_user_type', userType!);
       await prefs.setBool('session_logged_out', false);
+      _changes.add(null);
     });
   }
 
@@ -108,6 +111,7 @@ class AppSession {
     _token = null;
     _userId = null;
     _userType = null;
+    _changes.add(null);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('session_logged_out', true);
     try {

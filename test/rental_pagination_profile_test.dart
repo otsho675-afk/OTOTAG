@@ -28,8 +28,9 @@ void main() {
       (tester) async {
     final queries = <Uri>[];
     final service = RentalService(client: MockClient((request) async {
-      if (request.url.queryParameters['action'] == 'get_rentacar_bids')
+      if (request.url.queryParameters['action'] == 'get_rentacar_bids') {
         return success({'bids': []});
+      }
       queries.add(request.url);
       final page = int.parse(request.url.queryParameters['page']!);
       return success({
@@ -93,7 +94,7 @@ void main() {
       final service = RentalService(client: MockClient((request) async {
         final action = request.url.queryParameters['action']!;
         actions.add(action);
-        if (action == 'get_profile')
+        if (action == 'get_profile') {
           return success({
             'profile': {
               'name': 'Firma hesabı',
@@ -102,8 +103,10 @@ void main() {
               'map_link': 'https://maps.app.goo.gl/test'
             }
           });
-        if (action == 'check_provider_subscription')
+        }
+        if (action == 'check_provider_subscription') {
           return success({'can_work': true, 'is_trial': true});
+        }
         return success({
           'company': {
             'id': 10,

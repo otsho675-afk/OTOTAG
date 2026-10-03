@@ -46,11 +46,15 @@ Uri? rentalMapUri(dynamic value) {
       uri.scheme != 'https' ||
       !hosts.contains(uri.host.toLowerCase()) ||
       uri.userInfo.isNotEmpty ||
-      (uri.hasPort && uri.port != 443)) return null;
+      (uri.hasPort && uri.port != 443)) {
+    return null;
+  }
   if (uri.host == 'goo.gl' && !uri.path.startsWith('/maps/')) return null;
   if (uri.host.contains('google.com') &&
       !uri.host.startsWith('maps.') &&
-      !RegExp(r'^/maps(?:/|$)').hasMatch(uri.path)) return null;
+      !RegExp(r'^/maps(?:/|$)').hasMatch(uri.path)) {
+    return null;
+  }
   return uri;
 }
 
@@ -110,6 +114,8 @@ class RentalService {
 
   Future<Map<String, dynamic>> businessSubscription(int id) => _read(
       _client.get(_uri('check_provider_subscription', {'provider_id': '$id'})));
+  Future<Map<String, dynamic>> subscriptions(int id) =>
+      _read(_client.get(_uri('get_my_subscriptions', {'user_id': '$id'})));
   Future<Map<String, dynamic>> privateProfile(int id) =>
       _read(_client.get(_uri('get_profile', {'user_id': '$id'})));
 
@@ -230,15 +236,17 @@ class RentalService {
     final data = jsonDecode(utf8.decode(response.bodyBytes));
     if (response.statusCode != 200 ||
         data is! Map<String, dynamic> ||
-        data['auth'] == null)
+        data['auth'] == null) {
       throw const RentalException('Canlı takip bağlantısı açılamadı.');
+    }
     return data;
   }
 
   Future<Map<String, dynamic>> place(int listingId, int days,
       {required String totalBudget, int? listingVersion}) {
-    if (days < 1 || days > 365)
+    if (days < 1 || days > 365) {
       throw const RentalException('Süre 1–365 gün olmalıdır.');
+    }
     // Initial amount is calculated from the firm's price by the server.
     return _read(_client.post(_uri('place_rentacar_bid', {}), body: {
       'listing_id': '$listingId',

@@ -29,6 +29,12 @@ function parseServerEnvironment($source) {
         } else {
             $value = preg_replace('/\s+[#;].*$/', '', $value);
         }
+        if ($match[1]==='ALLOWED_ORIGINS') {
+            // A copied Markdown link is not an origin. Accept only matching
+            // link text/target and preserve the existing strict origin checks.
+            $value=str_replace('\\*','*',$value);
+            if (preg_match('/^\[([^\]]+)\]\(([^)]+)\)$/D',$value,$link) && $link[1]===$link[2]) $value=$link[1];
+        }
         $values[$match[1]] = $value;
     }
     return $values;

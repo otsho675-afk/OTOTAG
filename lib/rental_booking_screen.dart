@@ -10,6 +10,7 @@ import 'chat_screen.dart';
 import 'core/constants/app_constants.dart';
 import 'services/rental_service.dart';
 import 'widgets/rental_market_style.dart';
+import 'widgets/matching_status_card.dart';
 
 class RentalBookingScreen extends StatefulWidget {
   const RentalBookingScreen(
@@ -37,6 +38,7 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
   String? _error;
   bool _busy = false;
   bool _fetching = false, _queued = false;
+  bool _foreground = true;
   Timer? _poller;
   RentalLiveUpdates? _live;
   List<Map<String, dynamic>> _events = [];
@@ -56,6 +58,7 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
 
   void _startPolling() {
     _poller?.cancel();
+    if (!mounted || !_foreground) return;
     _poller = Timer.periodic(const Duration(seconds: 5), (_) {
       if (!_busy) _load();
     });
@@ -63,6 +66,7 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    _foreground = state == AppLifecycleState.resumed;
     if (state == AppLifecycleState.resumed) {
       _startPolling();
       _load();
@@ -83,6 +87,7 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
   }
 
   Future<void> _load() async {
+    if (!mounted || !_foreground) return;
     if (_fetching) {
       _queued = true;
       return;
@@ -90,7 +95,7 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
     _fetching = true;
     try {
       final response = await _service.booking(widget.jobId);
-      if (mounted)
+      if (mounted) {
         setState(() {
           _booking = Map<String, dynamic>.from(response['booking']);
           _events = [
@@ -106,11 +111,12 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
           ];
           _error = null;
         });
+      }
     } catch (e) {
       if (mounted) setState(() => _error = '$e');
     } finally {
       _fetching = false;
-      if (_queued && mounted) {
+      if (_queued && mounted && _foreground) {
         _queued = false;
         unawaited(_load());
       }
@@ -180,8 +186,9 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
   }
 
   void _message(String text) {
-    if (mounted)
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+    }
   }
 
   String _date(dynamic value) {
@@ -284,6 +291,15 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
         child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 900),
             child: ListView(padding: const EdgeInsets.all(20), children: [
+              MatchingStatusCard(
+                title: cancelled ? 'Rezervasyon iptal edildi' : done ? 'Kiralama tamamlandı' : 'Eşleşmeniz tamamlandı',
+                message: cancelled ? 'Güncel durumu aşağıdan inceleyebilirsiniz.' : done
+                    ? 'Kiralama kaydınız ve işlem geçmişiniz burada.'
+                    : 'Araç size ayrıldı. Teslim konumunu ve anlaşma detaylarını aşağıdan inceleyebilirsiniz.',
+                icon: cancelled ? Icons.event_busy_outlined : done ? Icons.task_alt : Icons.handshake_outlined,
+                steps: const ['Araç seçimi', 'Rezervasyon', 'Tamamlandı'],
+                stage: done ? 2 : 1, active: !cancelled),
+              const SizedBox(height: 20),
               Wrap(spacing: 8, runSpacing: 8, children: [
                 RentalTag('Rezervasyon #${widget.jobId}', accent: true),
                 RentalTag(cancelled
@@ -383,8 +399,9 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
                     onPressed: () async {
                       try {
                         if (!await launchUrl(directions,
-                            mode: LaunchMode.externalApplication))
+                            mode: LaunchMode.externalApplication)) {
                           _message('Harita açılamadı.');
+                        }
                       } catch (_) {
                         _message('Harita açılamadı.');
                       }

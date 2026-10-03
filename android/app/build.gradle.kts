@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -5,6 +7,38 @@ plugins {
     id("com.google.firebase.crashlytics")
     // END: FlutterFire Configuration
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+
+// Signing material is local/CI configuration, never committed source code.
+val signingProperties = Properties().apply {
+    val propertiesFile = rootProject.file("key.properties")
+    if (propertiesFile.exists()) propertiesFile.inputStream().use { load(it.reader(Charsets.UTF_8)) }
+}
+fun releaseSigningValue(name: String): String? {
+    val environmentName = when (name) {
+        "storeFile" -> "OTOTAG_KEYSTORE_PATH"
+        "storePassword" -> "OTOTAG_STORE_PASSWORD"
+        "keyAlias" -> "OTOTAG_KEY_ALIAS"
+        else -> "OTOTAG_KEY_PASSWORD"
+    }
+    return providers.environmentVariable(environmentName).orNull
+        ?: signingProperties.getProperty(name)
+}
+val signingNames = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+val releaseRequested = gradle.startParameter.taskNames.any {
+    val name = it.substringAfterLast(':')
+    name.contains("Release", ignoreCase = true) &&
+        (name.startsWith("bundle") || name.startsWith("assemble") || name.startsWith("package"))
+}
+if (releaseRequested) {
+    val missing = signingNames.filter { releaseSigningValue(it).isNullOrBlank() }
+    if (missing.isNotEmpty()) throw GradleException(
+        "Release imza ayarları eksik: ${missing.joinToString()}. Proje kökünde configure-android-signing.ps1 çalıştırın."
+    )
+    if (!file(releaseSigningValue("storeFile")!!).isFile) throw GradleException(
+        "Release keystore dosyası bulunamadı. Proje kökünde configure-android-signing.ps1 ile mevcut yükleme anahtarını seçin."
+    )
 }
 
 // Use the same app configuration as Flutter; a source-code key is unnecessary.
@@ -44,10 +78,10 @@ android {
 
     signingConfigs {
         create("release") {
-            keyAlias = "upload"
-            keyPassword = "troo4556"
-            storeFile = file("new-upload-keystore.jks")
-            storePassword = "troo4556"
+            keyAlias = releaseSigningValue("keyAlias")
+            keyPassword = releaseSigningValue("keyPassword")
+            storeFile = releaseSigningValue("storeFile")?.takeIf { it.isNotBlank() }?.let { file(it) }
+            storePassword = releaseSigningValue("storePassword")
         }
     }
 

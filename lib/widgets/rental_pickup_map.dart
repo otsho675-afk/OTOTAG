@@ -27,9 +27,10 @@ class _RentalPickupMapState extends State<RentalPickupMap> {
     if (widget.latitude != oldWidget.latitude ||
         widget.longitude != oldWidget.longitude) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted)
+        if (mounted) {
           _controller.move(LatLng(widget.latitude, widget.longitude),
               _controller.camera.zoom < 10 ? 15 : _controller.camera.zoom);
+        }
       });
     }
   }

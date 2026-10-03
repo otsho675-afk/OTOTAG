@@ -141,7 +141,7 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
     _fetching = true;
     try {
       final data = await _service.listings(companyId: widget.companyId);
-      if (mounted)
+      if (mounted) {
         setState(() {
           _cars = [
             for (final car in data['listings'] as List? ?? [])
@@ -154,6 +154,7 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
 
           _error = null;
         });
+      }
     } catch (e) {
       if (mounted) setState(() => _error = '$e');
     } finally {
@@ -167,8 +168,9 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
   }
 
   void _message(String text) {
-    if (mounted)
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+    }
   }
 
   Future<void> _logout() async {
@@ -240,10 +242,11 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
               service: _service,
               listing: car,
               plateFormatter: TurkishPlateFormatter()));
-      if (saved == true)
+      if (saved == true) {
         _message(car == null
             ? 'Araç ilana eklendi.'
             : 'Araç bilgileri güncellendi.');
+      }
     } finally {
       if (mounted) {
         setState(() => _busy = false);
@@ -291,7 +294,9 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
               'Aracı ilandan kaldır',
               '${car['car_brand_model']} (${car['plate'] ?? ''}) kaldırılacak. Bekleyen teklifler kapanır; geçmiş kiralamalar korunur.',
               'Aracı kaldır') ||
-          !mounted) return;
+          !mounted) {
+        return;
+      }
       await _service.deleteListing(car);
       _message('Araç ilanı kaldırıldı.');
     } catch (e) {
@@ -332,10 +337,13 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                   'Kiralamayı tamamla',
                   'Araç teslim alındı mı? Onayladığında yeniden kiralamaya açılacak.',
                   'Tamamla') ||
-              !mounted)) return;
+              !mounted)) {
+        return;
+      }
       final result = await _service.respond(action, bid, amount: amount);
-      if (mounted && result['job_id'] != null)
+      if (mounted && result['job_id'] != null) {
         await _booking({...bid, 'job_id': result['job_id']});
+      }
     } catch (e) {
       _message('$e');
     } finally {
@@ -537,9 +545,10 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
       child: PopScope(
           canPop: false,
           onPopInvokedWithResult: (didPop, result) {
-            if (!didPop)
+            if (!didPop) {
               _message(
                   'Oturumu kapatmak için Çıkış düğmesini kullanabilirsin.');
+            }
           },
           child: DefaultTabController(
               length: 2,
@@ -565,7 +574,7 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                               : () async {
                                   final value =
                                       await showRentalAccountMenu(context);
-                                  if (!mounted || value == null) return;
+                                  if (!mounted || !context.mounted || value == null) return;
                                   if (value == 'profile') {
                                     await Navigator.push(
                                         context,

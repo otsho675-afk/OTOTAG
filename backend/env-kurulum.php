@@ -20,7 +20,7 @@ try {
         'APPLE_OAUTH_CLIENT_IDS'=>'com.oto.tag',
         'APPLE_BUNDLE_ID'=>'com.oto.tag',
         'ANDROID_PACKAGE_NAME'=>'com.oto.tag',
-        'PUSHER_APP_ID'=>'2197577',
+        'PUSHER_APP_ID'=>'2048564',
         'PUSHER_KEY'=>'7197ebfa7d2e68b962dd',
         'PUSHER_CLUSTER'=>'eu',
         'ONESIGNAL_APP_ID'=>'c12cca1e-ad0b-4d18-8746-661dc4cbdad9',

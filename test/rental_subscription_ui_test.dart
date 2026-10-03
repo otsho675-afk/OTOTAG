@@ -142,12 +142,13 @@ void main() {
       if (request.url.queryParameters['action'] ==
           'renew_provider_subscription') {
         verified++;
-        if (reject)
+        if (reject) {
           return http.Response(
               jsonEncode(
                   {'status': 'error', 'message': 'Makbuz başka hesaba ait.'}),
               409,
               headers: {'content-type': 'application/json; charset=utf-8'});
+        }
         active = true;
       }
       return http.Response(

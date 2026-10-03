@@ -12,7 +12,6 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'business_subscription_screen.dart';
 import 'widgets/provider_workspace.dart';
-import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'services/realtime_client.dart';
 import 'dart:convert';
@@ -100,8 +99,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
   final double _targetHeading = 0.0;
 
   late AnimationController _slideController;
-  late AnimationController _pulseController;
-  late AnimationController _buttonPulseController;
   AnimationController? _mapMoveController;
   bool _isUserPanning = false;
 
@@ -153,20 +150,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
     WidgetsBinding.instance.addObserver(this);
     _checkActiveJob();
     if (!kIsWeb) {
-      OneSignal.login(widget.providerId.toString());
-      OneSignal.Notifications.requestPermission(true);
 
       flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
       _initNotifications();
     }
 
     _pageController = PageController(viewportFraction: 0.92);
-    _pulseController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1500))
-      ..repeat(reverse: true);
-    _buttonPulseController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1500))
-      ..repeat(reverse: true);
 
     _slideController = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 2500))
@@ -184,7 +173,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
           double diff = (_targetHeading - _oldHeading) % 360.0;
           if (diff > 180.0) {
             diff -= 360.0;
-          } else if (diff < -180.0) diff += 360.0;
+          } else if (diff < -180.0) { diff += 360.0; }
 
           if (currentPosition != null && currentPosition!.speed >= 1.5) {
             _animatedHeading.value =
@@ -310,7 +299,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
       if (mounted) {
         setState(() {
           _customerMarkerIconGmaps =
-              gmaps.BitmapDescriptor.fromBytes(markerBytes);
+              gmaps.BitmapDescriptor.bytes(markerBytes);
           _customerMarkerIconAmaps =
               amaps.BitmapDescriptor.fromBytes(markerBytes);
         });
@@ -516,7 +505,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
         barrierColor: pureBlack.withValues(alpha: 0.65),
         backgroundColor: Colors.transparent,
         builder: (context) =>
-            StatefulBuilder(builder: (context, setDialogState) {
+            StatefulBuilder(builder: (context, updateDialog) {
+              void setDialogState(VoidCallback update) {
+                if (mounted && context.mounted && _isModalOpen) updateDialog(update);
+              }
               void onTimeout() {
                 if (mounted && _isModalOpen) {
                   _suspendedJobs.remove(jobId);
@@ -577,6 +569,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                           parsedHistory.add({
                             "bid_id": (b['bid_id'] ?? b['id'] ?? '').toString(),
                             "price": b['amount'].toString(),
+                            "offer_version": b['negotiation_count']?.toString() ?? '0',
                             "time": b['estimated_time']?.toString() ?? "30",
                             "is_mine": isMine,
                             "status": isMine
@@ -1364,12 +1357,14 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                             "amount": bidHistory
                                                                 .last["price"]
                                                                 .toString(),
+                                                            "offer_version": bidHistory.last["offer_version"].toString(),
                                                             "user_type":
                                                                 "provider"
                                                           }).timeout(
                                                               _apiTimeout);
-                                                      if (!context.mounted)
+                                                      if (!context.mounted) {
                                                         return;
+                                                      }
                                                       final data = json.decode(
                                                           response.body);
                                                       if (data['status'] ==
@@ -1687,7 +1682,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                             },
                                                           ).timeout(
                                                                   _apiTimeout);
-                                                        } catch (e) {}
+                                                        } catch (e) { debugPrint("İşlem bildirimi tamamlanamadı."); }
                                                       }
 
                                                       if (context.mounted) {
@@ -1804,6 +1799,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
 
                                                       if (bidHistory
                                                           .isNotEmpty) {
+                                                        requestBody["offer_version"] = bidHistory.last["offer_version"].toString();
                                                         requestBody["bid_id"] =
                                                             bidHistory
                                                                 .last["bid_id"]
@@ -1826,8 +1822,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                                 .timeout(
                                                                     _apiTimeout);
 
-                                                        if (!context.mounted)
+                                                        if (!context.mounted) {
                                                           return;
+                                                        }
                                                         final data =
                                                             json.decode(
                                                                 response.body);
@@ -1864,7 +1861,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                                 "Teklifiniz başarıyla iletildi, müşteriden yanıt bekleniyor.");
 
                                                             try {
-                                                              FirebaseAnalytics
+                                                              await FirebaseAnalytics
                                                                   .instance
                                                                   .logEvent(
                                                                 name:
@@ -1876,7 +1873,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                                           .trim()
                                                                 },
                                                               );
-                                                            } catch (e) {}
+                                                            } catch (e) { debugPrint("İşlem bildirimi tamamlanamadı."); }
 
                                                             _lastBidPrice =
                                                                 priceController
@@ -1945,10 +1942,11 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                             resetAndStartTimer();
                                                           });
                                                         }
-                                                        if (mounted)
+                                                        if (mounted) {
                                                           _showTopSnackBar(
                                                               "Bağlantı hatası oluştu.",
                                                               isError: true);
+                                                        }
                                                       }
                                                     },
                                               style: ElevatedButton.styleFrom(
@@ -2058,8 +2056,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
           if (event.eventName == "new_job_created") {
             if (isOnline && !isSuspended && currentPosition != null) {
               Future.microtask(() {
-                if (mounted)
+                if (mounted) {
                   _fetchNearbyJobs(isAuto: true, radius: _searchRadius.toInt());
+                }
               });
             }
           } else if (event.eventName == "job_matched" ||
@@ -2121,8 +2120,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
         _positionStream?.pause();
       }
       _compassStream?.pause();
-      _buttonPulseController.stop();
-      _pulseController.stop();
       _slideController.stop();
       _mapMoveController?.stop();
     } else if (state == AppLifecycleState.resumed) {
@@ -2132,10 +2129,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
         _startJobRefreshTimer();
       }
       pusher.connect();
-      if (mounted) {
-        _buttonPulseController.repeat(reverse: true);
-        _pulseController.repeat(reverse: true);
-      }
     }
   }
 
@@ -2145,11 +2138,15 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
         !mounted ||
         !destLocation.latitude.isFinite ||
         !destLocation.longitude.isFinite ||
-        !destZoom.isFinite) return;
+        !destZoom.isFinite) {
+      return;
+    }
     if (destLocation.latitude < -90 ||
         destLocation.latitude > 90 ||
         destLocation.longitude < -180 ||
-        destLocation.longitude > 180) return;
+        destLocation.longitude > 180) {
+      return;
+    }
 
     double targetLat = destLocation.latitude;
     if (avoidBottomSheet) {
@@ -2184,7 +2181,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
     if (_suspendedJobs.isEmpty ||
         !mounted ||
         _isNavigating ||
-        _isCheckingSuspended) return;
+        _isCheckingSuspended) {
+      return;
+    }
     _isCheckingSuspended = true;
 
     try {
@@ -2337,8 +2336,6 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
     _slideController.dispose();
     _positionStream?.cancel();
     _compassStream?.cancel();
-    _pulseController.dispose();
-    _buttonPulseController.dispose();
     _mapMoveController?.dispose();
     _pageController.dispose();
 
@@ -2415,10 +2412,11 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
         }
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           isEarningsLoading = false;
         });
+      }
     }
   }
 
@@ -2445,8 +2443,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
 
     if (isFirst || isLoading) {
       isLoading = false;
-      if (isOnline && !isSuspended)
+      if (isOnline && !isSuspended) {
         _fetchNearbyJobs(radius: _searchRadius.toInt());
+      }
       setState(() {});
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _isMapReady) {
@@ -2546,7 +2545,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
         if (!position.latitude.isFinite ||
             !position.longitude.isFinite ||
             !position.accuracy.isFinite ||
-            position.accuracy > 100) return;
+            position.accuracy > 100) {
+          return;
+        }
 
         if (!mounted) return;
         _updatePositionInternal(position, isFirst: currentPosition == null);
@@ -2698,11 +2699,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
         duration: const Duration(seconds: 3),
       ),
     );
-    if (mounted)
+    if (mounted) {
       setState(() {
         isLoading = false;
         isRefreshing = false;
       });
+    }
   }
 
   void _playAlertSound() {
@@ -2729,10 +2731,11 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
     if (_isFetchingJobs || !mounted) return;
     _isFetchingJobs = true;
 
-    if (!isAuto && mounted)
+    if (!isAuto && mounted) {
       setState(() {
         isRefreshing = true;
       });
+    }
 
     double targetLat = currentPosition!.latitude;
     double targetLng = currentPosition!.longitude;
@@ -2821,8 +2824,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
         }
       }
     } catch (e) {
-      if (!isAuto && mounted)
+      if (!isAuto && mounted) {
         _showTopSnackBar("İşler yüklenirken hata oluştu.", isError: true);
+      }
     } finally {
       _isFetchingJobs = false;
       if (mounted) setState(() => isRefreshing = false);
@@ -3376,7 +3380,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                       alpha: 0.7),
                                                   fontSize: 9,
                                                   fontWeight: FontWeight.w700)),
-                                          Text("5.0 Zirve",
+                                          const Text("5.0 Zirve",
                                               style: TextStyle(
                                                   color: neonGreen,
                                                   fontSize: 9,
@@ -3878,9 +3882,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                 HapticFeedback.selectionClick();
                                 setModalState(() => _isScheduleActive = val);
                                 setState(() => _isScheduleActive = val);
-                                if (val)
+                                if (val) {
                                   _showTopSnackBar(
                                       "Otomatik mesai planlaması aktifleştirildi.");
+                                }
                               },
                             ),
                           ],
@@ -4087,11 +4092,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
             ])));
     if (!mounted) return;
     if (action == 3) _showSchedulePanel();
-    if (action == 5)
+    if (action == 5) {
       Navigator.push(
           context,
           MaterialPageRoute(
               builder: (_) => const DiagnosticScreen(userType: 'provider')));
+    }
     if (action == 7) _showSubscriptionRequiredSheet();
   }
 
@@ -4243,9 +4249,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                   },
                                   onTap: (_) {
                                     FocusScope.of(context).unfocus();
-                                    if (_isJobCardExpanded)
+                                    if (_isJobCardExpanded) {
                                       setState(
                                           () => _isJobCardExpanded = false);
+                                    }
                                   },
                                 )
                               : gmaps.GoogleMap(
@@ -4297,7 +4304,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                         rotation: _animatedHeading.value,
                                         flat: true,
                                         anchor: const Offset(0.5, 0.5),
-                                        zIndex: 10,
+                                        zIndexInt: 10,
                                         infoWindow: const gmaps.InfoWindow(
                                           title: "Konumunuz (Aktif Usta)",
                                           snippet:
@@ -4317,7 +4324,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                 .defaultMarkerWithHue(gmaps
                                                     .BitmapDescriptor.hueAzure),
                                         anchor: const Offset(0.5, 0.92),
-                                        zIndex: 20,
+                                        zIndexInt: 20,
                                         onTap: () {
                                           HapticFeedback.selectionClick();
                                           final job = jobList[i];
@@ -4388,8 +4395,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                   },
                                   onTap: (_) {
                                     FocusScope.of(context).unfocus();
-                                    if (_showJobCard)
+                                    if (_showJobCard) {
                                       setState(() => _showJobCard = false);
+                                    }
                                   },
                                 );
                         },
@@ -4532,8 +4540,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                     ValueListenableBuilder<double>(
                                         valueListenable: _mapRotationNotifier,
                                         builder: (context, rotation, child) {
-                                          if (rotation == 0.0)
+                                          if (rotation == 0.0) {
                                             return const SizedBox.shrink();
+                                          }
                                           return Column(
                                             children: [
                                               IconButton(
@@ -4674,8 +4683,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                         });
                                       },
                                       itemBuilder: (context, index) {
-                                        if (jobList.isEmpty)
+                                        if (jobList.isEmpty) {
                                           return const SizedBox.shrink();
+                                        }
                                         final job = jobList[index];
                                         final String serviceType =
                                             job['service_type']?.toString() ??

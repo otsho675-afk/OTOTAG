@@ -10,7 +10,9 @@ class LocationAddressService {
         !latitude.isFinite ||
         !longitude.isFinite ||
         latitude.abs() > 90 ||
-        longitude.abs() > 180) return null;
+        longitude.abs() > 180) {
+      return null;
+    }
     try {
       final response = await client
           .get(Uri.https('maps.googleapis.com', '/maps/api/geocode/json', {
@@ -24,7 +26,9 @@ class LocationAddressService {
       if (data is! Map ||
           data['status'] != 'OK' ||
           data['results'] is! List ||
-          data['results'].isEmpty) return null;
+          data['results'].isEmpty) {
+        return null;
+      }
       final first = data['results'].first;
       if (first is! Map) return null;
       var road = '', district = '', city = '';
@@ -33,14 +37,18 @@ class LocationAddressService {
           : const []) {
         if (component is! Map ||
             component['types'] is! List ||
-            component['long_name'] is! String) continue;
+            component['long_name'] is! String) {
+          continue;
+        }
         final types = component['types'] as List;
         if (types.contains('route')) road = component['long_name'];
         if (types.contains('sublocality') ||
-            types.contains('sublocality_level_1'))
+            types.contains('sublocality_level_1')) {
           district = component['long_name'];
-        if (types.contains('administrative_area_level_1'))
+        }
+        if (types.contains('administrative_area_level_1')) {
           city = component['long_name'];
+        }
       }
       final local = road.isNotEmpty ? road : district;
       final address = local.isNotEmpty

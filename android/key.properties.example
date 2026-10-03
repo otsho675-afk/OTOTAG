@@ -1,0 +1,7 @@
+# Local configuration only. The real key.properties is ignored by Git.
+# Use the existing Google Play upload key; this example creates no new key.
+# Relative paths are resolved from android/app; absolute paths use forward slashes.
+storeFile=C:/path/to/your-existing-upload-keystore.jks
+storePassword=
+keyAlias=upload
+keyPassword=

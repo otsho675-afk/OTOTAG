@@ -43,3 +43,90 @@ function serviceDistanceKm($aLat,$aLng,$bLat,$bLng) {
     $value=sin($deltaLat/2)**2+cos($aLat)*cos($bLat)*sin($deltaLng/2)**2;
     return 6371*2*atan2(sqrt(max(0,min(1,$value))),sqrt(max(0,1-$value)));
 }
+
+// Compare money as cents, never as a float or a formatted string.
+function serviceOfferIsCurrent($bid, $input) {
+    try {
+        if (!array_key_exists('amount', $input) ||
+            rentalMoneyCents((string)$input['amount']) !== rentalMoneyCents((string)$bid['amount'])) return false;
+    } catch (InvalidArgumentException $e) { return false; }
+    return !isset($input['offer_version']) ||
+        (filter_var($input['offer_version'], FILTER_VALIDATE_INT) !== false &&
+         (int)$input['offer_version'] === (int)$bid['negotiation_count']);
+}
+
+function serviceAcceptOffer($pdo, $actor, $input) {
+    $jobId=(int)($input['job_id'] ?? 0); $bidId=(int)($input['bid_id'] ?? 0);
+    $providerId=(int)($input['provider_id'] ?? 0);
+    if ($jobId<=0 || $bidId<=0 || $providerId<=0) throw new DomainException('Geçerli bir teklif seçin.');
+    try {
+        $pdo->beginTransaction();
+        $stmt=$pdo->prepare('SELECT * FROM jobs WHERE id=? FOR UPDATE'); $stmt->execute([$jobId]); $job=$stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt=$pdo->prepare('SELECT * FROM users WHERE id=? FOR UPDATE'); $stmt->execute([$providerId]); $provider=$stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt=$pdo->prepare('SELECT * FROM bids WHERE id=? AND job_id=? AND provider_id=? FOR UPDATE');
+        $stmt->execute([$bidId,$jobId,$providerId]); $bid=$stmt->fetch(PDO::FETCH_ASSOC);
+        $role=$actor['user_type'] ?? '';
+        if (!$job || !$bid || !in_array($role,['customer','provider'],true) ||
+            (int)$actor['user_id'] !== (int)($role==='customer' ? $job['customer_id'] : $providerId)) {
+            throw new DomainException('Bu teklif üzerinde işlem yapamazsınız.');
+        }
+        if (!serviceOfferIsCurrent($bid,$input) || $bid['last_bidder']===$role) {
+            throw new DomainException('Teklif değişti. Güncel tutarı inceleyip yeniden onaylayın.');
+        }
+        // A lost HTTP response can safely be retried without matching twice.
+        if ($bid['status']==='accepted' && (int)$job['provider_id']===$providerId &&
+            in_array($job['status'],['matched','accepted','approved','in_progress','customer_paid','completed'],true)) {
+            $pdo->commit(); return ['job'=>$job,'bid'=>$bid,'repeated'=>true];
+        }
+        if ($job['status']!=='searching' || !in_array($bid['status'],['pending','negotiating'],true)) {
+            throw new DomainException('Bu talep eşleşmiş veya kapanmış. Güncel durumu kontrol edin.');
+        }
+        serviceCandidate($pdo,$provider,$job);
+        $code=!empty($job['match_code']) ? $job['match_code'] : random_int(1000,9999);
+        $pdo->prepare("UPDATE jobs SET provider_id=?,agreed_price=?,status='matched',match_code=? WHERE id=?")
+            ->execute([$providerId,$bid['amount'],$code,$jobId]);
+        $pdo->prepare("UPDATE bids SET status=CASE WHEN id=? THEN 'accepted' ELSE 'rejected' END WHERE job_id=?")
+            ->execute([$bidId,$jobId]);
+        $pdo->commit();
+        // Close other offers after releasing job/provider locks to avoid an
+        // inverted lock order when the same provider is selected concurrently.
+        try {
+            $pdo->prepare("UPDATE bids SET status='cancelled' WHERE provider_id=? AND job_id<>? AND status IN ('pending','negotiating')")
+                ->execute([$providerId,$jobId]);
+        } catch (Throwable $e) { error_log('Deferred competing offer cleanup failed.'); }
+        return ['job'=>array_merge($job,['provider_id'=>$providerId,'agreed_price'=>$bid['amount'],'match_code'=>$code,'status'=>'matched']),
+            'bid'=>$bid,'repeated'=>false];
+    } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
+}
+
+function serviceRejectOffer($pdo, $bidId) {
+    $lookup=$pdo->prepare('SELECT job_id FROM bids WHERE id=?'); $lookup->execute([$bidId]); $jobId=$lookup->fetchColumn();
+    if (!$jobId) throw new DomainException('Teklif bulunamadı.');
+    try {
+        $pdo->beginTransaction();
+        $stmt=$pdo->prepare('SELECT status FROM jobs WHERE id=? FOR UPDATE'); $stmt->execute([$jobId]); $status=$stmt->fetchColumn();
+        $stmt=$pdo->prepare('SELECT * FROM bids WHERE id=? FOR UPDATE'); $stmt->execute([$bidId]); $bid=$stmt->fetch(PDO::FETCH_ASSOC);
+        if ($status!=='searching' || !$bid || !in_array($bid['status'],['pending','negotiating','rejected'],true)) {
+            throw new DomainException('Eşleşmiş veya kapanmış teklif reddedilemez.');
+        }
+        $pdo->prepare("UPDATE bids SET status='rejected' WHERE id=?")->execute([$bidId]);
+        $pdo->commit();
+        return $bid;
+    } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
+}
+
+function serviceCancelJob($pdo, $jobId, $expectedStatus=null) {
+    try {
+        $pdo->beginTransaction();
+        $stmt=$pdo->prepare('SELECT * FROM jobs WHERE id=? FOR UPDATE'); $stmt->execute([$jobId]); $job=$stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$job || $job['service_type']==='rentacar') throw new DomainException('İptal edilebilecek servis talebi bulunamadı.');
+        if ($job['status']==='cancelled') { $pdo->commit(); return $job; }
+        if (($expectedStatus!==null && $job['status']!==$expectedStatus) ||
+            !in_array($job['status'],['searching','matched','accepted','approved','in_progress'],true)) {
+            throw new DomainException('Talebin durumu değişti. Güncel durumu inceleyip tekrar deneyin.');
+        }
+        $pdo->prepare("UPDATE jobs SET status='cancelled' WHERE id=?")->execute([$jobId]);
+        $pdo->prepare("UPDATE bids SET status='cancelled' WHERE job_id=? AND status IN ('pending','negotiating','accepted')")->execute([$jobId]);
+        $pdo->commit(); return $job;
+    } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
+}

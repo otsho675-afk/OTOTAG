@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../core/constants/app_constants.dart';
+import '../core/theme/app_motion.dart';
 
 class ProviderStatusHeader extends StatelessWidget {
   const ProviderStatusHeader(
@@ -102,7 +103,7 @@ class ProviderNavigationBar extends StatelessWidget {
       child: Semantics(
           selected: selected == id,
           button: true,
-          child: InkWell(
+          child: AppInteractiveSurface(
               onTap: () => onSelect(id),
               child: Padding(
                   padding:

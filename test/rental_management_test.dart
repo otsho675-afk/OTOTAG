@@ -188,11 +188,12 @@ void main() {
           report = r;
           return success({'ticket_id': 99});
         }
-        if (r.url.queryParameters['action'] == 'get_rentacar_booking')
+        if (r.url.queryParameters['action'] == 'get_rentacar_booking') {
           return success({
             'booking': bookingData(location: false)
               ..['job_status'] = 'completed'
           });
+        }
         return success({
           'history': [row],
           'next_before_id': null
@@ -384,8 +385,9 @@ void main() {
         mutation = r;
         return success({'job_id': 30});
       }
-      if (action == 'get_rentacar_booking')
+      if (action == 'get_rentacar_booking') {
         return success({'booking': bookingData(location: false)});
+      }
       return success({
         'city': 'Konya',
         'listings': [fleetCar()],
@@ -492,7 +494,7 @@ void main() {
             body: RentalLocationEditor(
                 service: api,
                 city: 'Konya',
-                pickup: {
+                pickup: const {
                   'latitude': 37.87,
                   'longitude': 32.48,
                   'address': 'Konya teslim merkezi'

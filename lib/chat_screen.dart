@@ -9,7 +9,6 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 import 'package:image_picker/image_picker.dart';
-import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'services/realtime_client.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -52,8 +51,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
     // Chat ekranındayken arka plana atıldığında push bildirimlerin gelmesi için OneSignal kaydını garantile
     if (!kIsWeb) {
-      OneSignal.login(widget.currentUserId.toString());
-      OneSignal.Notifications.requestPermission(true);
     }
 
     _fetchMessages();

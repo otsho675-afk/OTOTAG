@@ -81,12 +81,13 @@ class _AdminRentalMonitorScreenState extends State<AdminRentalMonitorScreen>
     setState(() => _loading = true);
     try {
       final data = await _service.activity(stage: _stage, city: _city);
-      if (mounted && generation == _generation)
+      if (mounted && generation == _generation) {
         setState(() {
           _data = data;
           _error = null;
           _updated = DateTime.now();
         });
+      }
     } catch (e) {
       if (mounted && generation == _generation) setState(() => _error = '$e');
     } finally {
@@ -411,14 +412,16 @@ class _RentalOfferDetail extends StatelessWidget {
           child: FutureBuilder<Map<String, dynamic>>(
               future: service.activityDetail(bidId),
               builder: (context, snapshot) {
-                if (snapshot.hasError)
+                if (snapshot.hasError) {
                   return Padding(
                       padding: const EdgeInsets.all(24),
                       child: Text('${snapshot.error}'));
-                if (!snapshot.hasData)
+                }
+                if (!snapshot.hasData) {
                   return const SizedBox(
                       height: 100,
                       child: Center(child: CircularProgressIndicator()));
+                }
                 final data = snapshot.data!, bid = data['bid'] as Map;
                 return SingleChildScrollView(
                     padding: const EdgeInsets.all(20),
@@ -495,7 +498,7 @@ class _RentalHistoryState extends State<_RentalHistory> {
           city: widget.city,
           beforeBidId: widget.events ? null : _cursor,
           beforeEventId: widget.events ? _cursor : null);
-      if (mounted)
+      if (mounted) {
         setState(() {
           _rows.addAll([
             for (final row in data[widget.events ? 'events' : 'bids'])
@@ -505,6 +508,7 @@ class _RentalHistoryState extends State<_RentalHistory> {
               data[widget.events ? 'next_cursor' : 'next_bid_cursor'];
           _cursor = cursor == null ? null : rentalId(cursor);
         });
+      }
     } catch (e) {
       if (mounted) setState(() => _error = '$e');
     } finally {

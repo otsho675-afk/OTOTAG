@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
 import '../constants/app_constants.dart';
+import 'app_motion.dart';
 
 ThemeData appTheme() => ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       fontFamily: 'Roboto',
       fontFamilyFallback: const ['sans-serif', 'Arial'],
+      pageTransitionsTheme: const PageTransitionsTheme(builders: {
+        TargetPlatform.android: AppPageTransitionsBuilder(),
+        TargetPlatform.iOS: AppPageTransitionsBuilder(native: true),
+        TargetPlatform.macOS: AppPageTransitionsBuilder(native: true),
+        TargetPlatform.windows: AppPageTransitionsBuilder(),
+        TargetPlatform.linux: AppPageTransitionsBuilder(),
+        TargetPlatform.fuchsia: AppPageTransitionsBuilder(),
+      }),
       scaffoldBackgroundColor: AppConstants.bgColor,
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppConstants.primaryColor,
@@ -46,6 +55,7 @@ ThemeData appTheme() => ThemeData(
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
+            animationDuration: AppMotion.interaction,
             backgroundColor: AppConstants.primaryColor,
             foregroundColor: const Color(0xFF05251A),
             disabledBackgroundColor: const Color(0xFF202D28),
@@ -59,8 +69,9 @@ ThemeData appTheme() => ThemeData(
                 borderRadius: BorderRadius.circular(12))),
       ),
       textButtonTheme: TextButtonThemeData(
-          style:
-              TextButton.styleFrom(foregroundColor: AppConstants.primaryColor)),
+          style: TextButton.styleFrom(
+              animationDuration: AppMotion.interaction,
+              foregroundColor: AppConstants.primaryColor)),
       progressIndicatorTheme:
           const ProgressIndicatorThemeData(color: AppConstants.primaryColor),
       appBarTheme: const AppBarTheme(
@@ -80,6 +91,7 @@ ThemeData appTheme() => ThemeData(
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
       outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
+              animationDuration: AppMotion.interaction,
               foregroundColor: AppConstants.primaryColor,
               minimumSize: const Size(48, 46),
               side: const BorderSide(color: AppConstants.borderColor),
@@ -87,6 +99,7 @@ ThemeData appTheme() => ThemeData(
                   borderRadius: BorderRadius.circular(12)))),
       elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
+              animationDuration: AppMotion.interaction,
               backgroundColor: AppConstants.primaryColor,
               foregroundColor: const Color(0xFF05251A),
               elevation: 0,

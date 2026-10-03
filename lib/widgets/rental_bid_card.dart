@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/constants/app_constants.dart';
 import '../services/rental_service.dart';
 import 'rental_market_style.dart';
+import '../core/theme/app_motion.dart';
 
 class RentalBidCard extends StatelessWidget {
   const RentalBidCard(
@@ -34,7 +35,9 @@ class RentalBidCard extends StatelessWidget {
             : status == 'pending'
                 ? (ownTurn ? 'Yanıtın bekleniyor' : 'Yanıt bekleniyor')
                 : 'Kapandı';
-    return Container(
+    return AnimatedContainer(
+      duration: AppMotion.duration(context, AppMotion.entrance),
+      curve: AppMotion.curve,
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -111,7 +114,7 @@ class RentalBidCard extends StatelessWidget {
                   onPressed:
                       busy ? null : () => onAction('reject_rentacar_bid', bid),
                   child: const Text('Reddet',
-                      style: const TextStyle(color: Colors.white70))),
+                      style: TextStyle(color: Colors.white70))),
           ]),
         ] else if (status == 'accepted')
           Wrap(spacing: 8, runSpacing: 8, children: [
@@ -203,8 +206,9 @@ Future<String?> showRentalCounterDialog(
                       backgroundColor: AppConstants.primaryColor,
                       foregroundColor: Colors.black),
                   onPressed: () {
-                    if (form.currentState!.validate())
+                    if (form.currentState!.validate()) {
                       Navigator.pop(ctx, controller.text.trim());
+                    }
                   },
                   child: const Text('Teklif gönder'))
             ],

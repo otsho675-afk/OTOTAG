@@ -25,7 +25,7 @@ void main() {
         greaterThan(120));
   });
   test('duplicate segments and outside endpoints are safe', () {
-    final point = const LatLng(37, 32);
+    const point = LatLng(37, 32);
     expect(projectOntoRoad(point, [point, point])!.distanceMeters, 0);
     expect(projectOntoRoad(point, [point]), isNull);
     expect(

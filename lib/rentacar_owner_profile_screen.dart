@@ -47,12 +47,13 @@ class _RentacarOwnerProfileScreenState
         _service.companyProfile(widget.companyId),
         _service.businessSubscription(widget.companyId),
       ]);
-      if (mounted)
+      if (mounted) {
         setState(() {
           _profile = Map<String, dynamic>.from(result[0]['profile']);
           _public = result[1];
           _subscription = result[2];
         });
+      }
     } catch (e) {
       if (mounted) setState(() => _error = '$e');
     } finally {

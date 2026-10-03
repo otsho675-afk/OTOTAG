@@ -28,8 +28,9 @@ class MobileSubscriptionStore implements SubscriptionStore {
   Future<ProductDetails?> product(String id) async {
     if (!supported || !await _iap.isAvailable()) return null;
     final response = await _iap.queryProductDetails({id});
-    if (response.error != null)
+    if (response.error != null) {
       throw StateError('Mağazaya bağlanılamadı. Tekrar deneyin.');
+    }
     for (final product in response.productDetails) {
       if (product.id == id) return product;
     }

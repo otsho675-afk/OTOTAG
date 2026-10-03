@@ -1,3 +1,4 @@
+import 'services/vehicle_deadline.dart';
 import 'services/location_address.dart';
 import 'package:geocoding/geocoding.dart' as geocoding;
 // Dosya: customer_map_screen.dart
@@ -41,7 +42,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
   amaps.AppleMapController? _appleMapController;
   final ValueNotifier<Set<gmaps.Marker>> _googleMarkersNotifier =
       ValueNotifier<Set<gmaps.Marker>>({});
-  Set<amaps.Annotation> _appleAnnotations = {};
+  final Set<amaps.Annotation> _appleAnnotations = {};
   final TextEditingController problemController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -134,11 +135,15 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
         !mounted ||
         !destLocation.latitude.isFinite ||
         !destLocation.longitude.isFinite ||
-        !destZoom.isFinite) return;
+        !destZoom.isFinite) {
+      return;
+    }
     if (destLocation.latitude < -90 ||
         destLocation.latitude > 90 ||
         destLocation.longitude < -180 ||
-        destLocation.longitude > 180) return;
+        destLocation.longitude > 180) {
+      return;
+    }
 
     _currentZoom = destZoom;
     final double targetBearing = bearing ?? _mapRotationNotifier.value;
@@ -257,7 +262,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
         !pos.latitude.isFinite ||
         !pos.longitude.isFinite ||
         pos.latitude.abs() > 90 ||
-        pos.longitude.abs() > 180) return;
+        pos.longitude.abs() > 180) {
+      return;
+    }
     final revision = ++_addressRevision;
     if (_lastGeocodedLocation != null &&
         Geolocator.distanceBetween(_lastGeocodedLocation!.latitude,
@@ -311,15 +318,14 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
         if (data['status'] == 'success') {
           List vehicles = data['vehicles'] ?? [];
           List<String> tempAlerts = [];
-          DateTime now = DateTime.now();
 
           for (var v in vehicles) {
-            final insDate = DateTime.tryParse(v['insurance_date'] ?? '');
-            final inspDate = DateTime.tryParse(v['inspection_date'] ?? '');
+            final insDate = VehicleDeadline.parse(v['insurance_date']);
+            final inspDate = VehicleDeadline.parse(v['inspection_date']);
             final plate = v['plate'] ?? 'Araç';
 
             if (insDate != null) {
-              int days = insDate.difference(now).inDays;
+              int days = VehicleDeadline(insDate).days!;
               if (days < 0) {
                 tempAlerts
                     .add("$plate: Trafik Sigortası ${days.abs()} gün GECİKTİ!");
@@ -329,7 +335,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
             }
 
             if (inspDate != null) {
-              int days = inspDate.difference(now).inDays;
+              int days = VehicleDeadline(inspDate).days!;
               if (days < 0) {
                 tempAlerts
                     .add("$plate: Muayene süresi ${days.abs()} gün GECİKTİ!");
@@ -339,10 +345,10 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
             }
           }
 
-          if (tempAlerts.isNotEmpty && mounted) {
+          if (mounted) {
             setState(() {
               reminderAlerts = tempAlerts;
-              hasReminders = true;
+              hasReminders = tempAlerts.isNotEmpty;
             });
           }
         }
@@ -527,7 +533,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
         !position.accuracy.isFinite ||
         position.latitude.abs() > 90 ||
         position.longitude.abs() > 180 ||
-        (!isInitial && position.accuracy > 200)) return;
+        (!isInitial && position.accuracy > 200)) {
+      return;
+    }
 
     currentPositionNotifier.value = position;
     final loc = LatLng(position.latitude, position.longitude);
@@ -576,7 +584,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
         Position current = await Geolocator.getCurrentPosition(
           desiredAccuracy:
               kIsWeb ? LocationAccuracy.low : LocationAccuracy.high,
-          timeLimit: Duration(seconds: kIsWeb ? 10 : 3),
+          timeLimit: const Duration(seconds: kIsWeb ? 10 : 3),
         );
         if (mounted) {
           _applyInitialPosition(current, isInitial: true);

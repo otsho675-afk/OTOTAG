@@ -18,7 +18,7 @@ $pdo->exec('CREATE DATABASE IF NOT EXISTS ototag_rental_upload_regression CHARAC
 $pdo->exec('USE ototag_rental_upload_regression');
 $pdo->exec('DROP TABLE IF EXISTS ototag_schema_migrations');
 uploadCheck($pdo->query('SELECT DATABASE()')->fetchColumn()==='ototag_rental_upload_regression','destructive fixtures restricted to upload regression database');
-foreach (['rental_reviews','rental_events','tickets','notifications','jobs','rentacar_bids','rentacar_listings','users'] as $table) {
+foreach (['rental_reviews','rental_events','tickets','notifications','jobs','rentacar_bids','rentacar_listings','users','ratings','banned_ips'] as $table) {
     $pdo->exec("DROP TABLE IF EXISTS `$table`");
     $pdo->exec("CREATE TABLE `$table` LIKE ototag_rental_regression.`$table`");
 }
@@ -30,6 +30,7 @@ $columns=$pdo->query('SHOW COLUMNS FROM rentacar_listings')->fetchAll(PDO::FETCH
 uploadCheck(!array_diff(['photo','plate','model_year'], $columns),'migration restores missing legacy listing fields independently');
 $root=realpath(__DIR__.'/../..'); $serverRoot=$root.'/.dart_tool/rental_upload_http';
 if (!is_dir($serverRoot)) mkdir($serverRoot,0755,true);
+if (is_file($serverRoot.'/.db_schema_v3_perf.lock')) unlink($serverRoot.'/.db_schema_v3_perf.lock');
 foreach (glob($root.'/lib/*.php') as $file) copy($file,$serverRoot.'/'.basename($file));
 function uploadCopy($from,$to) { if (!is_dir($to)) mkdir($to,0755,true); foreach(new DirectoryIterator($from) as $entry) {
     if ($entry->isDot()) continue; if ($entry->isDir()) uploadCopy($entry->getPathname(),$to.'/'.$entry->getFilename()); else copy($entry->getPathname(),$to.'/'.$entry->getFilename());

@@ -3,5 +3,5 @@
 location ~ /\.(?!well-known/) { deny all; }
 location ~* \.(?:bak|sql|log|p8|pem|key)$ { deny all; }
 location ^~ /php_jwt/ { deny all; }
-location ~ ^/(?:env-kurulum|server_configuration|api_runtime|api_authorization|oauth_verification|purchase_verification|rentacar_api|rental_rules|rental_reputation|registration_rules|turkish_cities|service_matching|map_routing)\.php$ { deny all; }
+location ~ ^/(?:env-kurulum|notification-worker|notification_delivery|subscription_summary|app-update-worker|app_updates|admin_management|server_configuration|api_runtime|api_authorization|oauth_verification|purchase_verification|rentacar_api|rental_rules|rental_reputation|registration_rules|turkish_cities|service_matching|map_routing)\.php$ { deny all; }
 # PHP require_once dosyaları kullanmaya devam eder; HTTP erişimi engellenir.

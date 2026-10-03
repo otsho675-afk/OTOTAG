@@ -111,8 +111,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(find.text('Altın Memnuniyet'), findsOneWidget);
-      if (width == 390 || width == 1280)
+      if (width == 390 || width == 1280) {
         await screenshot(tester, key, 'rental_reputation_${width.toInt()}');
+      }
       await tester.scrollUntilVisible(find.text('Ahmet Y.'), 180,
           scrollable: find.byType(Scrollable).first);
       expect(tester.takeException(), isNull);
@@ -153,9 +154,10 @@ void main() {
     final posts = <Map<String, String>>[];
     final api = RentalService(client: MockClient((r) async {
       posts.add(r.bodyFields);
-      if (posts.length == 1)
+      if (posts.length == 1) {
         return success({'status': 'error', 'message': 'Bağlantı gecikti.'},
             code: 503);
+      }
       return success({});
     }));
     await tester.pumpWidget(app(Scaffold(
@@ -246,8 +248,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(find.text('5 saniyede bir yenilenir'), findsOneWidget);
-      if (size.width == 1280)
+      if (size.width == 1280) {
         await screenshot(tester, key, 'rental_admin_1280');
+      }
       if (size.width == 320) await screenshot(tester, key, 'rental_admin_320');
       await tester.pump(const Duration(seconds: 5));
       await tester.pumpAndSettle();
@@ -269,10 +272,11 @@ void main() {
     final queries = <Map<String, String>>[];
     final api = RentalService(client: MockClient((r) async {
       queries.add(r.url.queryParameters);
-      if (queries.length == 3)
+      if (queries.length == 3) {
         return success(
             {'status': 'error', 'message': 'Yönetici yetkisi gereklidir.'},
             code: 403);
+      }
       return success(activity());
     }));
     await tester.pumpWidget(
@@ -322,8 +326,9 @@ void main() {
     final api = RentalService(client: MockClient((r) async {
       final action = r.url.queryParameters['action'];
       actions.add(action);
-      if (action == 'get_rentacar_company_profile')
+      if (action == 'get_rentacar_company_profile') {
         return success(firmProfile());
+      }
       return success({
         'city': 'Konya',
         'listings': [fleetCar()],

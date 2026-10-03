@@ -12,6 +12,7 @@ import 'core/constants/car_data.dart';
 import 'services/rental_service.dart';
 import 'widgets/rental_bid_card.dart';
 import 'widgets/rental_market_style.dart';
+import 'widgets/matching_status_card.dart';
 
 class RentalMarketScreen extends StatefulWidget {
   const RentalMarketScreen(
@@ -75,7 +76,7 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _poller?.cancel();
-    _service.dispose();
+    if (widget.service == null) _service.dispose();
     _days.dispose();
     _budget.dispose();
     super.dispose();
@@ -89,11 +90,12 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
     }
     _fetching = true;
     final revision = _filterRevision;
-    if (!silent && mounted)
+    if (!silent && mounted) {
       setState(() {
         _loading = true;
         _error = null;
       });
+    }
     try {
       final result = await Future.wait([
         _service.listings(
@@ -136,9 +138,10 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
   }
 
   void _message(String message) {
-    if (mounted)
+    if (mounted) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 
   void _chat(Map<String, dynamic> bid) => Navigator.push(
@@ -194,6 +197,7 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
       return;
     }
     setState(() => _busy = true);
+    _filterRevision++;
     try {
       if (_appliedBudget.isEmpty) {
         _message('Önce toplam bütçeni belirle ve uygun araçları bul.');
@@ -205,8 +209,9 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
       }
       if (!negotiate) {
         final cents = rentalCents('${car['daily_price']}');
-        if (cents == null)
+        if (cents == null) {
           throw const RentalException('Araç fiyatı geçerli değil.');
+        }
         final confirmed = await showDialog<bool>(
             context: context,
             builder: (ctx) => Theme(
@@ -239,6 +244,7 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
       await _refresh();
     } catch (e) {
       _message('$e');
+      await _refresh(silent: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -273,8 +279,9 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
       }
       final result = await _service.respond(action, bid, amount: amount);
       await _refresh();
-      if (mounted && result['job_id'] != null)
+      if (mounted && result['job_id'] != null) {
         await _booking({...bid, 'job_id': result['job_id']});
+      }
     } catch (e) {
       _message('$e');
       await _refresh(silent: true);
@@ -328,7 +335,7 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                               const SizedBox(height: 8),
                               Text(
                                   '${_days.text} günlük kiralamanın toplamı bu tutarı aşmasın.',
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                       color: rentalMuted, height: 1.5)),
                               const SizedBox(height: 20),
                               TextFormField(
@@ -349,9 +356,10 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                               const SizedBox(height: 20),
                               FilledButton(
                                   onPressed: () {
-                                    if (form.currentState!.validate())
+                                    if (form.currentState!.validate()) {
                                       Navigator.pop(
                                           sheetContext, controller.text.trim());
+                                    }
                                   },
                                   child: const Text('Bütçeyi seç')),
                               TextButton(
@@ -597,6 +605,7 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
   Widget _car(Map<String, dynamic> car, double width) => SizedBox(
       width: width,
       child: RentalListingCard(
+          key: ValueKey(car['id']),
           car: car,
           compact: true,
           days: int.tryParse(_days.text),
@@ -784,6 +793,24 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                                       height: 1.5))),
                       ]),
                       _page([
+                        MatchingStatusCard(
+                            title: _bids.any((b) => b['status'] == 'accepted')
+                                ? 'Rezervasyonunuz hazır'
+                                : 'Kiralama teklifleri',
+                            message:
+                                'Güncel tutarı ve süreyi karşılaştırın. Onaylanan rezervasyonun teslim detaylarına buradan ulaşın.',
+                            icon: Icons.handshake_outlined,
+                            steps: const [
+                              'Araç seçimi',
+                              'Teklif',
+                              'Rezervasyon'
+                            ],
+                            stage: _bids.any((b) => b['status'] == 'accepted')
+                                ? 2
+                                : _bids.isEmpty
+                                    ? 0
+                                    : 1),
+                        const SizedBox(height: 18),
                         const Text('Tekliflerini takip et',
                             style: TextStyle(
                                 color: Colors.white,
@@ -798,6 +825,7 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                         if (_bids.isEmpty && _error == null)
                           _emptyState(offers: true),
                         ..._bids.map((bid) => RentalBidCard(
+                            key: ValueKey(bid['id']),
                             bid: bid,
                             company: false,
                             busy: _busy,

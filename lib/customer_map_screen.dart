@@ -61,6 +61,12 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
   final ValueNotifier<bool> _isMapMovingNotifier = ValueNotifier<bool>(false);
   bool _isNavigating = false;
   bool _isUserPanning = false;
+  bool _locationPermissionGranted = false;
+  bool _locationPermanentlyDenied = false;
+  bool _locationServiceOff = false;
+  bool _isInitializingLocation = false;
+  bool _openingLocationSettings = false;
+  String? _locationIssue;
 
   late String selectedService;
 
@@ -221,7 +227,11 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
       _buttonPulseController.stop();
       _resumeTrackingTimer?.cancel();
     } else if (state == AppLifecycleState.resumed) {
-      _positionStream?.resume();
+      if (_locationIssue != null || !_locationPermissionGranted) {
+        unawaited(_initLocationStream(requestPermission: false));
+      } else {
+        _positionStream?.resume();
+      }
       if (mounted) {
         _radarPulseController.repeat();
         _radarScanController.repeat();
@@ -554,22 +564,46 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
     }
   }
 
-  Future<void> _initLocationStream() async {
+  Future<void> _initLocationStream({bool requestPermission = true}) async {
+    if (!mounted || _isInitializingLocation) return;
+    _isInitializingLocation = true;
     try {
+      await _positionStream?.cancel();
+      _positionStream = null;
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!mounted) return;
       if (!serviceEnabled) {
-        _showTopSnackBar("Lütfen GPS / Konum servisini açınız.", isError: true);
+        setState(() {
+          _locationPermissionGranted = false;
+          _locationServiceOff = true;
+          _locationPermanentlyDenied = false;
+          _locationIssue =
+              'Konum servisi kapalı. Konumunu bulmak için GPS’i aç.';
+        });
         return;
       }
       LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
+      if (!mounted) return;
+      if (permission == LocationPermission.denied && requestPermission) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied ||
-            permission == LocationPermission.deniedForever) {
-          _showTopSnackBar("Konum izni verilmedi.", isError: true);
-          return;
-        }
       }
+      if (!mounted) return;
+      final allowed = permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always;
+      setState(() {
+        _locationPermissionGranted = allowed;
+        _locationServiceOff = false;
+        _locationPermanentlyDenied =
+            permission == LocationPermission.deniedForever;
+        _locationIssue = allowed
+            ? null
+            : kIsWeb
+                ? 'Tarayıcının site ayarlarından konum iznini aç, ardından yeniden dene.'
+                : _locationPermanentlyDenied
+                    ? 'Konum izni kapalı. Telefon ayarlarında OTOTAG için konum iznini aç.'
+                    : 'Konumunu bulmak için konum izni gerekiyor.';
+      });
+      if (!allowed) return;
 
       if (!kIsWeb) {
         try {
@@ -601,6 +635,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
         } catch (_) {}
       }
 
+      if (!mounted) return;
       late LocationSettings locationSettings;
       if (kIsWeb) {
         locationSettings = const LocationSettings(
@@ -642,6 +677,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
 
         bool isFirstLoad = currentPositionNotifier.value == null;
         if (!isFirstLoad && position.accuracy > 200.0) return;
+        if (_locationIssue != null) {
+          setState(() => _locationIssue = null);
+        }
 
         if (position.heading >= 0 && position.speed > 0.3) {
           _mapRotationNotifier.value = position.heading;
@@ -676,14 +714,48 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
         if (isFirstLoad) {
           _applyInitialPosition(position, isInitial: true);
         }
+      }, onError: (Object error) {
+        if (mounted) {
+          setState(() => _locationIssue =
+              'Konum güncellenemedi. İzin ve GPS ayarlarını kontrol edip yeniden dene.');
+        }
       });
     } catch (e, stack) {
+      if (mounted) {
+        setState(() => _locationIssue =
+            'Konum alınamadı. İzin ve GPS ayarlarını kontrol edip yeniden dene.');
+      }
       if (!kIsWeb) {
         try {
           FirebaseCrashlytics.instance.recordError(e, stack,
               reason: 'Müşteri harita GPS/Konum başlatma hatası');
         } catch (_) {}
       }
+    } finally {
+      _isInitializingLocation = false;
+    }
+  }
+
+  Future<void> _openLocationSettings() async {
+    if (_openingLocationSettings || kIsWeb) return;
+    setState(() => _openingLocationSettings = true);
+    try {
+      final opened = _locationServiceOff
+          ? await Geolocator.openLocationSettings()
+          : await Geolocator.openAppSettings();
+      if (!opened && mounted) {
+        _showTopSnackBar(
+            'Ayarlar açılamadı. Telefon ayarlarından OTOTAG konum iznini aç.',
+            isError: true);
+      }
+    } catch (_) {
+      if (mounted) {
+        _showTopSnackBar(
+            'Ayarlar açılamadı. Telefon ayarlarından konum iznini kontrol et.',
+            isError: true);
+      }
+    } finally {
+      if (mounted) setState(() => _openingLocationSettings = false);
     }
   }
 
@@ -1006,7 +1078,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                   ),
                                   zoom: _currentZoom,
                                 ),
-                                myLocationEnabled: true,
+                                myLocationEnabled: _locationPermissionGranted,
                                 myLocationButtonEnabled: false,
                                 compassEnabled: true,
                                 trafficEnabled: true,
@@ -1058,7 +1130,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                   Factory<OneSequenceGestureRecognizer>(
                                       () => EagerGestureRecognizer()),
                                 },
-                                myLocationEnabled: true,
+                                myLocationEnabled: _locationPermissionGranted,
                                 myLocationButtonEnabled: false,
                                 compassEnabled: true,
                                 trafficEnabled: true,
@@ -1163,15 +1235,15 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                           children: [
                                             Image.asset(
                                               'assets/images/car_top_view.png',
-                                              width: 65,
-                                              height: 130,
+                                              width: 32,
+                                              height: 64,
                                               fit: BoxFit.contain,
                                               errorBuilder: (_, __, ___) =>
                                                   const Icon(
                                                       Icons
                                                           .directions_car_rounded,
                                                       color: neonGreen,
-                                                      size: 50),
+                                                      size: 28),
                                             ),
                                             Align(
                                               alignment: Alignment.center,
@@ -1231,6 +1303,42 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                         constraints: const BoxConstraints(maxWidth: 800),
                         child: Column(
                           children: [
+                            if (_locationIssue != null)
+                              Card(
+                                color: panelBlack,
+                                margin: const EdgeInsets.only(bottom: 8),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      Text(_locationIssue!,
+                                          style: const TextStyle(
+                                              color: Colors.white,
+                                              height: 1.4)),
+                                      Wrap(spacing: 8, children: [
+                                        if (!kIsWeb &&
+                                            (_locationPermanentlyDenied ||
+                                                _locationServiceOff))
+                                          TextButton.icon(
+                                            onPressed: _openingLocationSettings
+                                                ? null
+                                                : _openLocationSettings,
+                                            icon: const Icon(
+                                                Icons.settings_outlined),
+                                            label: const Text('Ayarları aç'),
+                                          ),
+                                        TextButton(
+                                          onPressed: () =>
+                                              _initLocationStream(),
+                                          child: const Text('Yeniden dene'),
+                                        ),
+                                      ]),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ClipRRect(
                               borderRadius: BorderRadius.circular(30),
                               child: BackdropFilter(

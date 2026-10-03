@@ -144,7 +144,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
       final Uint8List? carBytes =
           await _getBytesFromAsset('assets/images/car_top_view.png', 100);
       if (carBytes != null) {
-        _providerCarIconGmaps = gmaps.BitmapDescriptor.bytes(carBytes);
+        // Keep the marker compact in logical pixels on every screen density.
+        // The higher-resolution PNG retains sharpness without enlarging it.
+        _providerCarIconGmaps =
+            gmaps.BitmapDescriptor.bytes(carBytes, width: 32);
         _providerCarIconAmaps = amaps.BitmapDescriptor.fromBytes(carBytes);
       }
     } catch (_) {}
@@ -3098,7 +3101,13 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
       alertIcon = Icons.route_rounded;
     }
 
-    if (_etaString.isNotEmpty && distanceInKm > 0.1 && !isOffline) {
+    if (_routePoints.length < 2 && !isOffline) {
+      title = _isFetchingRoute
+          ? 'Rota aranıyor • Kesikli çizgi kuş uçuşu'
+          : 'Yol rotası yok • Kesikli çizgi kuş uçuşu';
+      alertColor = Colors.grey;
+      alertIcon = Icons.info_outline_rounded;
+    } else if (_etaString.isNotEmpty && distanceInKm > 0.1 && !isOffline) {
       title += " • $_etaString";
       if (_roadDistanceKm != null) {
         title += " • ${_roadDistanceKm!.toStringAsFixed(1)} km yol";
@@ -3134,7 +3143,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                   fontSize: 13,
                   letterSpacing: 0.3),
               overflow: TextOverflow.ellipsis,
-              maxLines: 1,
+              maxLines: 2,
             ),
           ),
         ],
@@ -3165,6 +3174,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
 
     final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
+    final hasRoadRoute = _routePoints.length >= 2;
     final List<LatLng> activePoints = [];
     if (_routePoints.length >= 2) {
       activePoints.addAll(_routePoints);
@@ -3192,21 +3202,25 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
             .map((p) => amaps.LatLng(p.latitude, p.longitude))
             .toList();
 
-        applePolylines.add(
-          amaps.Polyline(
-            polylineId: amaps.PolylineId('tracking_route_glow'),
-            points: amapsPoints,
-            color: _polylineColor.withValues(alpha: 0.25),
-            width: 14,
-          ),
-        );
-
+        if (hasRoadRoute) {
+          applePolylines.add(
+            amaps.Polyline(
+              polylineId: amaps.PolylineId('tracking_route_glow'),
+              points: amapsPoints,
+              color: _polylineColor.withValues(alpha: 0.25),
+              width: 14,
+            ),
+          );
+        }
         applePolylines.add(
           amaps.Polyline(
             polylineId: amaps.PolylineId('tracking_route_main'),
             points: amapsPoints,
-            color: _polylineColor,
-            width: 5,
+            color: hasRoadRoute ? _polylineColor : Colors.grey,
+            width: hasRoadRoute ? 5 : 2,
+            patterns: hasRoadRoute
+                ? const []
+                : [amaps.PatternItem.dash(10), amaps.PatternItem.gap(8)],
           ),
         );
       }
@@ -3270,25 +3284,29 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
             .map((p) => gmaps.LatLng(p.latitude, p.longitude))
             .toList();
 
-        googlePolylines.add(
-          gmaps.Polyline(
-            polylineId: const gmaps.PolylineId('tracking_route_glow'),
-            points: gmapsPoints,
-            color: _polylineColor.withValues(alpha: 0.3),
-            width: 12,
-            startCap: gmaps.Cap.roundCap,
-            endCap: gmaps.Cap.roundCap,
-            jointType: gmaps.JointType.round,
-            zIndex: 1,
-          ),
-        );
-
+        if (hasRoadRoute) {
+          googlePolylines.add(
+            gmaps.Polyline(
+              polylineId: const gmaps.PolylineId('tracking_route_glow'),
+              points: gmapsPoints,
+              color: _polylineColor.withValues(alpha: 0.3),
+              width: 12,
+              startCap: gmaps.Cap.roundCap,
+              endCap: gmaps.Cap.roundCap,
+              jointType: gmaps.JointType.round,
+              zIndex: 1,
+            ),
+          );
+        }
         googlePolylines.add(
           gmaps.Polyline(
             polylineId: const gmaps.PolylineId('tracking_route_main'),
             points: gmapsPoints,
-            color: _polylineColor,
-            width: 5,
+            color: hasRoadRoute ? _polylineColor : Colors.grey,
+            width: hasRoadRoute ? 5 : 2,
+            patterns: hasRoadRoute
+                ? const []
+                : [gmaps.PatternItem.dash(10), gmaps.PatternItem.gap(8)],
             startCap: gmaps.Cap.roundCap,
             endCap: gmaps.Cap.roundCap,
             jointType: gmaps.JointType.round,

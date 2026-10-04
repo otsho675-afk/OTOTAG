@@ -17,11 +17,29 @@ function result($handle) {
     return $data;
 }
 function callApi($action,$id,$role,$params=[],$get=false) { return result(worker($action,$id,$role,$params,$get)); }
+function outboxPayloads() {
+    global $pdo;
+    try {
+        $rows=$pdo->query('SELECT payload FROM notification_outbox ORDER BY id')->fetchAll(PDO::FETCH_COLUMN);
+    } catch (Throwable $e) { return []; }
+    return array_values(array_filter(array_map(function($payload){ return json_decode($payload,true); },$rows)));
+}
+function outboxTargets($title=null,$bidId=null,$jobId=null,$after=0) {
+    $targets=[];
+    $payloads=array_slice(outboxPayloads(),$after);
+    foreach ($payloads as $payload) {
+        if ($title!==null && ($payload['headings']['tr'] ?? '')!==$title) continue;
+        if ($bidId!==null && (string)($payload['data']['bid_id'] ?? '')!==(string)$bidId) continue;
+        if ($jobId!==null && (string)($payload['data']['job_id'] ?? '')!==(string)$jobId) continue;
+        $targets=array_merge($targets,$payload['include_aliases']['external_id'] ?? []);
+    }
+    return array_values(array_unique(array_map('strval',$targets)));
+}
 $pdo=new PDO('mysql:host=127.0.0.1;port=33307;charset=utf8mb4','root','',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
 // Destructive fixtures are confined to this explicitly named temporary database.
 $pdo->exec('CREATE DATABASE IF NOT EXISTS ototag_rental_regression CHARACTER SET utf8mb4 COLLATE utf8mb4_turkish_ci');
 $pdo->exec('USE ototag_rental_regression');
-foreach (['ototag_schema_migrations','rental_reviews','rental_events','tickets','notifications','jobs','rentacar_bids','rentacar_listings','users'] as $table) $pdo->exec("DROP TABLE IF EXISTS `$table`");
+foreach (['ototag_schema_migrations','vehicle_reminder_deliveries','notification_outbox','rental_reviews','rental_events','tickets','notifications','jobs','rentacar_bids','rentacar_listings','users'] as $table) $pdo->exec("DROP TABLE IF EXISTS `$table`");
 $pdo->exec("CREATE TABLE users (id INT PRIMARY KEY,name VARCHAR(100),phone VARCHAR(30) DEFAULT '',city VARCHAR(100),user_type VARCHAR(30),status VARCHAR(30) DEFAULT 'active',is_suspended INT DEFAULT 0,created_at DATETIME DEFAULT CURRENT_TIMESTAMP,rental_lat DECIMAL(10,7) DEFAULT 37.8700000,rental_lng DECIMAL(10,7) DEFAULT 32.4800000,rental_address VARCHAR(500) DEFAULT 'Konya teslim adresi') ENGINE=InnoDB");
 $pdo->exec("CREATE TABLE tickets (id INT AUTO_INCREMENT PRIMARY KEY,job_id INT,customer_id INT,provider_id INT,subject VARCHAR(255),message TEXT,status VARCHAR(30) DEFAULT 'open',created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB");
 $pdo->exec("CREATE TABLE rentacar_listings (id INT AUTO_INCREMENT PRIMARY KEY,company_id INT,city VARCHAR(100),car_brand_model VARCHAR(255),daily_price DECIMAL(10,2),description TEXT,photo VARCHAR(255),status VARCHAR(50) DEFAULT 'active',created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB");
@@ -46,12 +64,17 @@ check(callApi('place_rentacar_bid',1,'customer',['listing_id'=>1,'rent_days'=>0,
 $first=callApi('place_rentacar_bid',1,'customer',['listing_id'=>1,'rent_days'=>3,'total_budget'=>'5000','amount'=>'1']);
 check($first['amount']==='5000.00','client amount ignored and customer budget becomes the initial offer');
 $bid=$first['bid_id'];
+check(outboxTargets(null,$bid)===['10'],'customer offer queues OneSignal push to rental company');
 check(callApi('place_rentacar_bid',1,'customer',['listing_id'=>1,'rent_days'=>3,'total_budget'=>'5000'])['bid']['id']===$bid,'duplicate request idempotent');
 check(callApi('accept_rentacar_bid',1,'customer',['bid_id'=>$bid,'offer_version'=>1])['http']===409,'own offer cannot be accepted');
 check(callApi('counter_rentacar_bid',12,'rentacar',['bid_id'=>$bid,'offer_version'=>1,'amount'=>2500])['http']===403,'unrelated firm cannot counter');
+$before=count(outboxPayloads());
 check(callApi('counter_rentacar_bid',10,'rentacar',['bid_id'=>$bid,'offer_version'=>1,'amount'=>'2800.50'])['http']===200,'firm counter offer');
+check(outboxTargets(null,$bid,null,$before)===['1'],'rental company counteroffer queues OneSignal push to customer');
 check(callApi('accept_rentacar_bid',1,'customer',['bid_id'=>$bid,'offer_version'=>1])['http']===409,'stale offer cannot be accepted');
+$before=count(outboxPayloads());
 check(callApi('counter_rentacar_bid',1,'customer',['bid_id'=>$bid,'offer_version'=>2,'amount'=>'2700'])['http']===200,'customer counter offer');
+check(outboxTargets(null,$bid,null,$before)===['10'],'customer counteroffer queues OneSignal push to rental company');
 $second=callApi('place_rentacar_bid',2,'customer',['listing_id'=>1,'rent_days'=>4,'total_budget'=>'6000']);
 $parallelA=worker('accept_rentacar_bid',10,'rentacar',['bid_id'=>$bid,'offer_version'=>3]);
 $parallelB=worker('accept_rentacar_bid',10,'rentacar',['bid_id'=>$second['bid_id'],'offer_version'=>1]);
@@ -61,6 +84,7 @@ check((int)$pdo->query('SELECT COUNT(*) FROM jobs')->fetchColumn()===1,'one matc
 $accepted=$pdo->query("SELECT * FROM rentacar_bids WHERE status='accepted'")->fetch(PDO::FETCH_ASSOC);
 $job=$pdo->query('SELECT * FROM jobs')->fetch(PDO::FETCH_ASSOC);
 check($job['agreed_price']===$accepted['amount'] && $job['city']==='Konya','job uses final accepted price and verified city');
+check(outboxTargets(null,$accepted['id'],$job['id'])===[(string)$accepted['customer_id']],'accepted rental queues OneSignal push to customer');
 $repeat=callApi('accept_rentacar_bid',10,'rentacar',['bid_id'=>$accepted['id'],'offer_version'=>$accepted['offer_version']]);
 check($repeat['job_id']===(int)$job['id'] && (int)$pdo->query('SELECT COUNT(*) FROM jobs')->fetchColumn()===1,'repeat acceptance returns same booking');
 check(callApi('place_rentacar_bid',2,'customer',['listing_id'=>1,'rent_days'=>2,'total_budget'=>'6000'])['http']===409,'reserved vehicle cannot receive new requests');
@@ -142,8 +166,8 @@ $pdo->exec("UPDATE users SET map_link='https://maps.app.goo.gl/newLocation' WHER
 check(callApi('get_rentacar_booking',1,'customer',['job_id'=>$mapOnly['job_id']],true)['booking']['pickup_map_link']==='https://maps.app.goo.gl/testLocation','profile location change preserves agreed reservation location');
 $mapBid=$pdo->query('SELECT id,offer_version FROM rentacar_bids WHERE job_id='.(int)$mapOnly['job_id'])->fetch(PDO::FETCH_ASSOC);
 check(callApi('complete_rentacar_booking',12,'rentacar',['bid_id'=>$mapBid['id'],'offer_version'=>$mapBid['offer_version']])['http']===200,'map-link-only reservation completes normally');
-foreach (['https://maps.app.goo.gl/a','https://goo.gl/maps/a','https://www.google.com/maps/place/Konya','https://maps.apple.com/?q=Konya'] as $url) check(rentalMapLink($url)===$url,'valid shared map link accepted '.$url);
-foreach (['javascript:alert(1)','https://www.google.com.evil.test/maps','https://evil.test','https://user@maps.app.goo.gl/a','http://maps.app.goo.gl/a','https://www.google.com/search?q=Konya','https://maps.app.goo.gl:8080/a','https://goo.gl/other'] as $url) { try { rentalMapLink($url); check(false,'unsafe link accepted'); } catch (InvalidArgumentException $e) { check(true,'unsafe map link rejected'); } }
+foreach (['https://maps.app.goo.gl/a','https://share.google/qyjEIveuWA0VTv9xS','https://goo.gl/maps/a','https://www.google.com/maps/place/Konya','https://maps.apple.com/?q=Konya'] as $url) check(rentalMapLink($url)===$url,'valid shared map link accepted '.$url);
+foreach (['javascript:alert(1)','https://www.google.com.evil.test/maps','https://evil.test','https://user@maps.app.goo.gl/a','http://maps.app.goo.gl/a','https://www.google.com/search?q=Konya','https://maps.app.goo.gl:8080/a','https://share.google/konya/maps','https://goo.gl/other'] as $url) { try { rentalMapLink($url); check(false,'unsafe link accepted'); } catch (InvalidArgumentException $e) { check(true,'unsafe map link rejected'); } }
 check(callApi('reserve_rentacar_listing',3,'customer',['listing_id'=>1,'listing_version'=>3,'rent_days'=>3,'total_budget'=>'4000'])['http']===403,'automatic reservation cannot cross cities');
 $pdo->exec("UPDATE rentacar_bids SET status='rejected' WHERE status='pending'");
 $version=(int)$pdo->query('SELECT listing_version FROM rentacar_listings WHERE id=1')->fetchColumn();

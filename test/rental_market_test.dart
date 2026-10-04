@@ -76,6 +76,7 @@ void main() {
   test('shared map links are safe and shortened links remain intact', () {
     for (final link in [
       'https://maps.app.goo.gl/konya',
+      'https://share.google/qyjEIveuWA0VTv9xS',
       'https://goo.gl/maps/konya',
       'https://www.google.com/maps/place/Konya',
       'https://maps.apple.com/?q=Konya'
@@ -89,7 +90,8 @@ void main() {
       'http://maps.app.goo.gl/a',
       'https://www.google.com/search?q=konya',
       'https://goo.gl/other',
-      'https://maps.app.goo.gl:8080/a'
+      'https://maps.app.goo.gl:8080/a',
+      'https://share.google/konya/maps'
     ]) {
       expect(rentalMapUri(link), isNull);
     }

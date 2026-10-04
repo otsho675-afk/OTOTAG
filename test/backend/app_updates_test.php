@@ -15,6 +15,7 @@ updateCheck(appUpdatePushResult(200,['id'=>'','errors'=>['All included players a
 updateCheck(appUpdatePushResult(200,['id'=>'accepted-id','errors'=>['invalid_aliases'=>['external_id'=>['missing-user']]]])['status']==='sent','accepted notification with partial targeting errors retains service acceptance');
 updateCheck(appUpdatePushResult(429,['errors'=>['Rate limited']],120)['retry_after']===120,'rate limited notification preserves retry delay');
 updateCheck(appUpdatePushResult(401,['id'=>'','errors'=>['Unauthorized']])['status']==='failed','unauthorized notification never appears as no subscribers');
+updateCheck(appUpdateVersionCode('1.0.10')>appUpdateVersionCode('1.0.9'),'update targeting compares semantic versions numerically');
 $pdo=new PDO('mysql:host=127.0.0.1;port=33307;charset=utf8mb4','root','',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_EMULATE_PREPARES=>false]);
 // Every destructive fixture operation is confined to this named test database.
 $pdo->exec('CREATE DATABASE IF NOT EXISTS ototag_admin_update_regression CHARACTER SET utf8mb4');
@@ -39,7 +40,8 @@ updateCheck(!isset($config['updates']['android']['push_key']) && !isset($config[
 $calls=[];
 $transport=function($payload)use(&$calls){$calls[]=$payload;return ['status'=>'sent','id'=>'mock-push-id','detail'=>'Accepted'];};
 appUpdateSendPush($pdo,$rows[0]['id'],$transport); appUpdateSendPush($pdo,$rows[0]['id'],$transport);
-updateCheck(count($calls)===1 && $calls[0]['included_segments']===['All'] && $calls[0]['isAndroid'] && !$calls[0]['isIos'],'all Android subscribers targeted without a user limit or duplicate push');
+updateCheck(count($calls)===1 && !isset($calls[0]['included_segments']) && $calls[0]['isAndroid'] && !$calls[0]['isIos'],'Android update push is targeted by installed-version tags without a user limit or duplicate push');
+updateCheck($calls[0]['filters'][0]['relation']==='not_exists' && in_array(['field'=>'tag','key'=>'ototag_app_version_code','relation'=>'<','value'=>(string)appUpdateVersionCode('1.0.1')],$calls[0]['filters'],true),'current-version devices are excluded from update push targeting');
 updateCheck($calls[0]['data']['type']==='app_update' && !isset($calls[0]['url']),'push signals a trusted API recheck instead of opening an arbitrary URL');
 $failedKey=null;
 appUpdateSendPush($pdo,$rows[1]['id'],function($payload)use(&$failedKey){$failedKey=$payload['idempotency_key'];return ['status'=>'failed','detail'=>'Temporary failure'];});

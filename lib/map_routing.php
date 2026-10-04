@@ -27,10 +27,17 @@ function routeRequest($url,$body=null,$headers=[]) {
     $response=curl_exec($curl); $code=curl_getinfo($curl,CURLINFO_HTTP_CODE); curl_close($curl);
     return $code===200 ? json_decode($response,true) : null;
 }
+function mapRoutesApiKey() {
+    foreach (['MAPS_ROUTES_API_KEY','MAPS_API_KEY','GOOGLE_MAPS_API_KEY'] as $name) {
+        $value=function_exists('serverConfig') ? serverConfig($name) : (getenv($name) ?: '');
+        if (trim((string)$value)!=='') return trim((string)$value);
+    }
+    return '';
+}
 function calculateServiceRoute($origin,$destination,$mapProvider) {
-    // Google route geometry is displayed on Google Maps only. Apple basemaps use the configured independent road-routing service.
-    $key=serverConfig('MAPS_ROUTES_API_KEY',serverConfig('MAPS_API_KEY'));
-    if ($mapProvider==='google' && $key!=='') {
+    // Use the backend Google Routes key for every mobile map provider so iPhone/Apple map sessions also receive a traffic-aware road route.
+    $key=mapRoutesApiKey();
+    if ($key!=='') {
         $data=routeRequest('https://routes.googleapis.com/directions/v2:computeRoutes',[
             'origin'=>['location'=>['latLng'=>['latitude'=>$origin[0],'longitude'=>$origin[1]]]],
             'destination'=>['location'=>['latLng'=>['latitude'=>$destination[0],'longitude'=>$destination[1]]]],

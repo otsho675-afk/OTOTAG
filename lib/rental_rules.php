@@ -19,13 +19,13 @@ function rentalSameCity($first, $second) {
 function rentalMapLink($value) {
     $value=trim((string)$value);
     $url=parse_url($value);
-    $hosts=['maps.app.goo.gl','goo.gl','www.google.com','google.com','maps.google.com','www.google.com.tr','google.com.tr','maps.google.com.tr','maps.apple.com'];
+    $hosts=['maps.app.goo.gl','share.google','goo.gl','www.google.com','google.com','maps.google.com','www.google.com.tr','google.com.tr','maps.google.com.tr','maps.apple.com'];
     if (strlen($value)>500 || preg_match('/[\x00-\x20\\\\]/',$value) || !$url || strtolower($url['scheme'] ?? '')!=='https'
         || !in_array(strtolower($url['host'] ?? ''),$hosts,true) || isset($url['user']) || isset($url['pass']) || (isset($url['port']) && $url['port']!==443)) {
         throw new InvalidArgumentException('Geçerli bir HTTPS Google Maps veya Apple Haritalar konum linki girin.');
     }
     $host=strtolower($url['host']); $path=$url['path'] ?? '';
-    if (($host==='goo.gl' && strpos($path,'/maps/')!==0) || (strpos($host,'google.com')!==false && strpos($host,'maps.')!==0 && !preg_match('~^/maps(?:/|$)~',$path))) {
+    if (($host==='goo.gl' && strpos($path,'/maps/')!==0) || ($host==='share.google' && !preg_match('~^/[A-Za-z0-9_-]+/?$~',$path)) || (strpos($host,'google.com')!==false && strpos($host,'maps.')!==0 && !preg_match('~^/maps(?:/|$)~',$path))) {
         throw new InvalidArgumentException('Link bir harita konumunu açmalıdır.');
     }
     return $value;

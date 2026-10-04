@@ -36,4 +36,9 @@ ruleCheck($reply['traffic_aware'] && $reply['source']==='google','traffic metada
 ruleCheck(routeGoogleResponse(['routes'=>[['duration'=>'broken','distanceMeters'=>5]]])===null,'unusable routes do not create invented geometry');
 ruleCheck(routeLegacyResponse('abcd',60,800,'osrm')['traffic_aware']===false,'independent routing never claims live traffic');
 ruleCheck(routeLegacyResponse('abcd',-1,800,'osrm')===null,'negative road duration rejected');
+putenv('MAPS_ROUTES_API_KEY');
+putenv('MAPS_API_KEY');
+putenv('GOOGLE_MAPS_API_KEY=google-maps-fallback-key');
+ruleCheck(mapRoutesApiKey()==='google-maps-fallback-key','road routing accepts GOOGLE_MAPS_API_KEY fallback');
+putenv('GOOGLE_MAPS_API_KEY');
 echo "\n$count auth and road-routing rule checks passed.\n";

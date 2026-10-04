@@ -78,6 +78,11 @@ function appUpdateNewer($next, $previous) {
     return $comparison>0 || ($comparison===0 && $next['build_number']>(int)$previous['build_number']);
 }
 
+function appUpdateVersionCode($version) {
+    if (!preg_match('/^([0-9]+)\.([0-9]+)\.([0-9]+)$/D',(string)$version,$m)) return null;
+    return ((int)$m[1])*100000000 + ((int)$m[2])*10000 + (int)$m[3];
+}
+
 function appUpdatePublicRelease($row, $admin=false) {
     $result = ['id'=>(int)$row['id'],'platform'=>$row['platform'],'version'=>$row['version'],
         'build_number'=>(int)$row['build_number'],'title'=>$row['title'],'message'=>$row['message'],
@@ -130,7 +135,31 @@ function appUpdatePublish($pdo, $input, $adminId) {
 }
 
 function appUpdatePushPayload($release, $appId) {
-    return ['app_id'=>$appId,'target_channel'=>'push','included_segments'=>['All'],
+    $versionCode = appUpdateVersionCode($release['version']);
+    $filters = [
+        ['field'=>'tag','key'=>'ototag_app_version_code','relation'=>'not_exists'],
+        ['operator'=>'OR'],
+        ['field'=>'tag','key'=>'ototag_app_platform','relation'=>'=','value'=>$release['platform']],
+        ['operator'=>'AND'],
+        ['field'=>'tag','key'=>'ototag_app_version_code','relation'=>'<','value'=>(string)$versionCode],
+    ];
+    if ((int)$release['build_number']>0) {
+        $filters = array_merge($filters, [
+            ['operator'=>'OR'],
+            ['field'=>'tag','key'=>'ototag_app_platform','relation'=>'=','value'=>$release['platform']],
+            ['operator'=>'AND'],
+            ['field'=>'tag','key'=>'ototag_app_version_code','relation'=>'=','value'=>(string)$versionCode],
+            ['operator'=>'AND'],
+            ['field'=>'tag','key'=>'ototag_app_build','relation'=>'not_exists'],
+            ['operator'=>'OR'],
+            ['field'=>'tag','key'=>'ototag_app_platform','relation'=>'=','value'=>$release['platform']],
+            ['operator'=>'AND'],
+            ['field'=>'tag','key'=>'ototag_app_version_code','relation'=>'=','value'=>(string)$versionCode],
+            ['operator'=>'AND'],
+            ['field'=>'tag','key'=>'ototag_app_build','relation'=>'<','value'=>(string)(int)$release['build_number']],
+        ]);
+    }
+    return ['app_id'=>$appId,'target_channel'=>'push','filters'=>$filters,
         'isAndroid'=>$release['platform']==='android','isIos'=>$release['platform']==='ios','isAnyWeb'=>false,
         'headings'=>['en'=>$release['title'],'tr'=>$release['title']],
         'contents'=>['en'=>$release['message'],'tr'=>$release['message']],

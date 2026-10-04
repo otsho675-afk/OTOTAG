@@ -31,6 +31,7 @@ Uri? rentalMapUri(dynamic value) {
   final uri = Uri.tryParse(text);
   const hosts = {
     'maps.app.goo.gl',
+    'share.google',
     'goo.gl',
     'www.google.com',
     'google.com',
@@ -50,6 +51,10 @@ Uri? rentalMapUri(dynamic value) {
     return null;
   }
   if (uri.host == 'goo.gl' && !uri.path.startsWith('/maps/')) return null;
+  if (uri.host == 'share.google' &&
+      !RegExp(r'^/[A-Za-z0-9_-]+/?$').hasMatch(uri.path)) {
+    return null;
+  }
   if (uri.host.contains('google.com') &&
       !uri.host.startsWith('maps.') &&
       !RegExp(r'^/maps(?:/|$)').hasMatch(uri.path)) {

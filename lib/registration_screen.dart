@@ -187,37 +187,156 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   final Duration _apiTimeout = const Duration(seconds: 25);
 
+  String get _normalizedUserType {
+    final raw = widget.userType
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[\s-]+'), '_');
+
+    if (const {
+      'provider',
+      'usta',
+      'service_provider',
+      'servis',
+      'service',
+      'business'
+    }.contains(raw)) {
+      return 'provider';
+    }
+
+    if (const {
+      'rentacar',
+      'rent_a_car',
+      'rental',
+      'rental_company',
+      'rentacar_company'
+    }.contains(raw)) {
+      return 'rentacar';
+    }
+
+    if (const {'customer', 'musteri', 'müşteri', 'user'}.contains(raw)) {
+      return 'customer';
+    }
+
+    return raw;
+  }
+
+  bool get _hasValidUserType =>
+      const {'customer', 'provider', 'rentacar'}.contains(_normalizedUserType);
+
+  bool get _isCustomer => _normalizedUserType == 'customer';
+  bool get _isProvider => _normalizedUserType == 'provider';
+  bool get _isRentACar => _normalizedUserType == 'rentacar';
+
+  // Usta kayıt ekranından Rent A Car seçilirse kayıt rolünü güvenli şekilde
+  // rentacar'a çevirir; ekranın 4 adımlı provider akışı bozulmaz.
+  bool get _selectedRentACar =>
+      _isProvider && _selectedService == 'rentacar';
+
+  bool get _effectiveIsRentACar =>
+      _isRentACar || _selectedRentACar;
+
+  String get _effectiveRegistrationUserType =>
+      _effectiveIsRentACar ? 'rentacar' : _normalizedUserType;
+
+  int get _stepCount {
+    if (_isCustomer) return 2;
+    if (_isProvider) return 4;
+    if (_isRentACar) return 3;
+    return 1;
+  }
+
+  IconData get _roleIcon {
+    if (!_hasValidUserType) return Icons.error_outline_rounded;
+    if (_isCustomer) return Icons.person_add_rounded;
+    if (_effectiveIsRentACar) return Icons.car_rental_rounded;
+    return Icons.handyman_rounded;
+  }
+
+  String get _roleTitle {
+    if (!_hasValidUserType) return 'Kayıt Ekranı Hatası';
+    if (_isCustomer) return 'Müşteri Hesabı';
+    if (_effectiveIsRentACar) return 'Rent A Car Firma Hesabı';
+    return 'Usta Hesabı';
+  }
+
+  String get _roleBadge {
+    if (!_hasValidUserType) return 'HATA';
+    if (_isCustomer) return 'MÜŞTERİ';
+    if (_effectiveIsRentACar) return 'RENT A CAR';
+    return 'USTA';
+  }
+
+  String get _roleSubtitle {
+    if (!_hasValidUserType) {
+      return 'Hesap türü tanınamadı. Bu ekranı yeniden açın.';
+    }
+    if (_isCustomer) {
+      return 'Aracınız için hizmet alın, teklifleri karşılaştırın.';
+    }
+    if (_effectiveIsRentACar) {
+      return 'Araç kiralama firmanızı doğrulayarak sisteme katılın.';
+    }
+    return 'Hizmet alanınızı seçin, belgelerinizi doğrulayın ve iş almaya başlayın.';
+  }
+
+  List<String> get _stepTitles {
+    if (_isProvider) {
+      return _selectedRentACar
+          ? const ['Hizmet', 'Firma', 'Konum & IBAN', 'Belgeler']
+          : const ['Hizmet', 'Hesap', 'Bölge & IBAN', 'Belgeler'];
+    }
+    if (_isRentACar) {
+      return const ['Firma', 'Bölge & IBAN', 'Belgeler'];
+    }
+    if (_isCustomer) {
+      return const ['Hesap', 'Şehir'];
+    }
+    return const ['Hesap Türü'];
+  }
+
+  void _handleFocusChange() {
+    if (mounted) setState(() {});
+  }
+
   void _nextStep() {
+    if (!_hasValidUserType) {
+      _showCustomSnackBar(
+          'Hesap türü tanınamadı. Lütfen kayıt ekranını yeniden açın.',
+          isError: true);
+      return;
+    }
+
     HapticFeedback.selectionClick();
     FocusScope.of(context).unfocus();
 
-    // Usta (Provider) için Adım 0: Kategori Doğrulaması
-    if (widget.userType == 'provider' && _currentStep == 0) {
-      if (_selectedService.isEmpty) {
+    if (_isProvider && _currentStep == 0) {
+      if (_selectedService.isEmpty || _selectedService == 'none') {
         _showCustomSnackBar('Lütfen ilk olarak bir hizmet kategorisi seçiniz.',
             isError: true);
         return;
       }
     }
 
-    // Temel Bilgiler Adımı Doğrulaması (Müşteri/Rentacar için 0, Usta için 1)
-    int basicInfoStepIndex = widget.userType == 'provider' ? 1 : 0;
+    final int basicInfoStepIndex = _isProvider ? 1 : 0;
     if (_currentStep == basicInfoStepIndex) {
       if (_nameController.text.trim().isEmpty) {
         _showCustomSnackBar(
-            widget.userType == 'rentacar'
+            _isRentACar
                 ? 'Lütfen firma ismini giriniz.'
                 : 'Lütfen ad ve soyadınızı giriniz.',
             isError: true);
         return;
       }
-      String rawPhone =
+
+      final rawPhone =
           _phoneController.text.trim().replaceAll(RegExp(r'\D'), '');
       if (!RegExp(r'^(?:0|90)?[2-5][0-9]{9}$').hasMatch(rawPhone)) {
         _showCustomSnackBar('Lütfen geçerli bir telefon numarası giriniz.',
             isError: true);
         return;
       }
+
       if (_currentOauthId == null &&
           _passwordController.text.trim().length < 6) {
         _showCustomSnackBar('Şifreniz en az 6 karakter olmalıdır.',
@@ -226,7 +345,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       }
     }
 
-    // Şehir / Konum / Banka Doğrulaması
     if (_currentStep == basicInfoStepIndex + 1) {
       if (_selectedCity == null || _selectedCity!.isEmpty) {
         _showCustomSnackBar('Lütfen bulunduğunuz şehri seçiniz.',
@@ -234,15 +352,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         return;
       }
 
-      if (widget.userType != 'customer') {
-        if (widget.userType == 'rentacar' || _selectedService == 'rentacar') {
+      if (!_isCustomer) {
+        if (_effectiveIsRentACar) {
           if (_mapLinkController.text.trim().isEmpty) {
             _showCustomSnackBar('Firma harita linki zorunludur.',
                 isError: true);
             return;
           }
         } else {
-          String cleanPlate = _plateController.text.trim().toUpperCase();
+          final cleanPlate = _plateController.text.trim().toUpperCase();
           if (cleanPlate.isEmpty || cleanPlate.length < 5) {
             _showCustomSnackBar(
                 'Lütfen geçerli bir araç/çekici plakası giriniz.',
@@ -251,7 +369,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           }
         }
 
-        String cleanIban =
+        final cleanIban =
             _ibanController.text.replaceAll(' ', '').toUpperCase();
         if (cleanIban.length != 26 || !cleanIban.startsWith('TR')) {
           _showCustomSnackBar(
@@ -262,15 +380,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       }
     }
 
-    int maxSteps = widget.userType == 'customer'
-        ? 2
-        : (widget.userType == 'provider' ? 4 : 3);
-    if (_currentStep < maxSteps - 1) {
-      setState(() {
-        _currentStep++;
-      });
+    if (_currentStep < _stepCount - 1) {
+      setState(() => _currentStep++);
     } else {
-      _register(); // Son adımdaysa kayıt işlemini başlat
+      _register();
     }
   }
 
@@ -392,6 +505,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     _currentOauthToken = widget.oauthToken;
     _currentOauthEmail = widget.oauthEmail;
 
+    for (final node in [
+      _nameFocus,
+      _phoneFocus,
+      _passwordFocus,
+      _ibanFocus,
+      _plateFocus,
+      _mapLinkFocus,
+    ]) {
+      node.addListener(_handleFocusChange);
+    }
+
     if (widget.initialName != null && widget.initialName!.isNotEmpty) {
       _nameController.text = widget.initialName!;
     }
@@ -399,6 +523,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   @override
   void dispose() {
+    for (final node in [
+      _nameFocus,
+      _phoneFocus,
+      _passwordFocus,
+      _ibanFocus,
+      _plateFocus,
+      _mapLinkFocus,
+    ]) {
+      node.removeListener(_handleFocusChange);
+    }
+
     _nameController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
@@ -783,6 +918,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     FocusScope.of(context).unfocus();
     TextInput.finishAutofillContext();
 
+    if (!_hasValidUserType) {
+      _showCustomSnackBar(
+          'Hesap türü tanınamadı. Lütfen kayıt ekranını yeniden açın.',
+          isError: true);
+      return;
+    }
+
     String rawName = _nameController.text.trim();
     String rawPhone = _phoneController.text.trim();
     String rawPass = _passwordController.text.trim();
@@ -824,8 +966,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       return;
     }
 
-    if (widget.userType == 'provider' || widget.userType == 'rentacar') {
-      if (widget.userType == 'provider' &&
+    if (_isProvider || _isRentACar) {
+      if (_isProvider &&
           (_selectedService.isEmpty || _selectedService == 'none')) {
         HapticFeedback.vibrate();
         _showCustomSnackBar(
@@ -843,7 +985,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         return;
       }
 
-      if (widget.userType != 'rentacar' && _selectedService != 'rentacar') {
+      if (!_effectiveIsRentACar) {
         String cleanPlate = _plateController.text.trim().toUpperCase();
         if (cleanPlate.isEmpty || cleanPlate.length < 5) {
           HapticFeedback.vibrate();
@@ -860,7 +1002,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         }
       }
 
-      if (_selectedService == 'wash' && widget.userType != 'rentacar') {
+      if (_selectedService == 'wash' && _isProvider) {
         if (_driverLicense == null ||
             _vehiclePhoto == null ||
             _equipmentPhoto == null) {
@@ -874,7 +1016,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         if (_taxPlate == null) {
           HapticFeedback.vibrate();
           _showCustomSnackBar(
-              (widget.userType == 'rentacar' || _selectedService == 'rentacar')
+              _effectiveIsRentACar
                   ? 'Firma kaydı için vergi levhası yüklenmesi zorunludur.'
                   : 'Usta kaydı için vergi levhası yüklenmesi zorunludur.',
               isError: true);
@@ -887,24 +1029,22 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     setState(() => isRegistering = true);
 
     try {
-      if (widget.userType == 'provider' || widget.userType == 'rentacar') {
+      if (_isProvider || _isRentACar) {
         var request = http.MultipartRequest(
             'POST', Uri.parse("$baseUrl?action=register"));
         request.fields['name'] = rawName;
         request.fields['phone'] = sanitizedPhone;
         request.fields['password'] = registrationPassword;
-        // API'nin Rent a car firmasını doğru algılaması için user_type değiştiriliyor
-        request.fields['user_type'] =
-            (widget.userType == 'rentacar' || _selectedService == 'rentacar')
-                ? 'rentacar'
-                : widget.userType;
+        // Rol tek bir kaynaktan üretilir; provider içinden Rent A Car
+        // seçildiyse API'ye kesin olarak rentacar gönderilir.
+        request.fields['user_type'] = _effectiveRegistrationUserType;
         request.fields['service_category'] =
-            _selectedService.isEmpty ? 'rentacar' : _selectedService;
+            _effectiveIsRentACar ? 'rentacar' : _selectedService;
         request.fields['iban'] =
             _ibanController.text.replaceAll(' ', '').toUpperCase();
 
         // Firma ise map_link, Usta ise plaka gönderilir
-        if (widget.userType == 'rentacar' || _selectedService == 'rentacar') {
+        if (_effectiveIsRentACar) {
           request.fields['map_link'] = _mapLinkController.text.trim();
         } else {
           request.fields['tow_plate'] =
@@ -917,7 +1057,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         request.fields['oauth_token'] = _currentOauthToken ?? '';
         request.fields['email'] = _currentOauthEmail ?? '';
 
-        if (_selectedService == 'wash' && widget.userType != 'rentacar') {
+        if (_selectedService == 'wash' && _isProvider) {
           request.files.add(http.MultipartFile.fromBytes(
               'driver_license', await _driverLicense!.readAsBytes(),
               filename: _driverLicense!.name));
@@ -944,7 +1084,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             "name": rawName,
             "phone": sanitizedPhone,
             "password": registrationPassword,
-            "user_type": widget.userType,
+            "user_type": _normalizedUserType,
             "service_category": 'none',
             "iban": '',
             "city": _selectedCity!,
@@ -975,6 +1115,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       if ((statusCode == 200 || statusCode == 201) &&
           data['status'] == 'success') {
         HapticFeedback.mediumImpact();
+
+        final responseUserType =
+            (data['user_type']?.toString() ?? _effectiveRegistrationUserType)
+                .trim()
+                .toLowerCase();
         if (data['account_status'] == 'pending') {
           String trackingCode = data['tracking_code']?.toString() ?? "";
           showDialog(
@@ -1078,7 +1223,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                 dialogContext,
                                 MaterialPageRoute(
                                     builder: (context) => LoginScreen(
-                                        userType: widget.userType)));
+                                        userType: responseUserType)));
                           },
                           child: const Text("Tamam, Anladım",
                               style: TextStyle(
@@ -1095,9 +1240,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           int userId = int.parse(data['user_id'].toString());
           Navigator.pushReplacement(context, MaterialPageRoute(
             builder: (context) {
-              if (widget.userType == 'customer') {
+              if (responseUserType == 'customer') {
                 return CustomerDashboardScreen(customerId: userId);
-              } else if (widget.userType == 'rentacar') {
+              } else if (responseUserType == 'rentacar') {
                 return RentACarPanelScreen(companyId: userId);
               } else {
                 return ProviderMapScreen(providerId: userId);
@@ -1390,7 +1535,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                             overflow: TextOverflow.ellipsis),
                         const SizedBox(height: 2),
                         Text(
-                          isSelected ? file.name : "Fotoğraf veya Belge Seç",
+                          isSelected ? file.name : "Galeriden fotoğraf seç",
                           style: TextStyle(
                               color: isSelected ? Colors.white70 : textGray,
                               fontSize: 12,
@@ -1438,21 +1583,58 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  Widget _buildCurrentStepContent(bool isCustomer) {
-    if (widget.userType == 'provider') {
+  Widget _buildCurrentStepContent() {
+    if (!_hasValidUserType) {
+      return _buildInvalidRoleCard();
+    }
+
+    if (_isProvider) {
       if (_currentStep == 0) return _buildProviderServiceStep();
       if (_currentStep == 1) return _buildBasicInfoStep();
       if (_currentStep == 2) return _buildProviderLocationAndVehicleStep();
       if (_currentStep == 3) return _buildProviderDocumentsStep();
-    } else if (widget.userType == 'rentacar') {
+    } else if (_isRentACar) {
       if (_currentStep == 0) return _buildBasicInfoStep();
       if (_currentStep == 1) return _buildProviderLocationAndVehicleStep();
       if (_currentStep == 2) return _buildProviderDocumentsStep();
-    } else {
+    } else if (_isCustomer) {
       if (_currentStep == 0) return _buildBasicInfoStep();
       if (_currentStep == 1) return _buildCustomerLocationStep();
     }
-    return const SizedBox();
+
+    return _buildInvalidRoleCard();
+  }
+
+  Widget _buildInvalidRoleCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: alertRed.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: alertRed.withValues(alpha: 0.3)),
+      ),
+      child: const Column(
+        children: [
+          Icon(Icons.error_outline_rounded, color: alertRed, size: 34),
+          SizedBox(height: 12),
+          Text(
+            'Hesap türü tanınamadı',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          SizedBox(height: 6),
+          Text(
+            'Bu ekran müşteri, usta veya Rent A Car rolü ile açılmalıdır.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: textGray, height: 1.4),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildProviderServiceStep() {
@@ -1493,6 +1675,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               _driverLicense = null;
               _vehiclePhoto = null;
               _equipmentPhoto = null;
+              _plateController.clear();
+              _mapLinkController.clear();
             });
           }),
           const SizedBox(height: 20),
@@ -1629,8 +1813,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           _buildGlassTextField(
             controller: _nameController,
             focusNode: _nameFocus,
-            label: widget.userType == 'rentacar' ? "Firma İsmi" : "Ad Soyad",
-            icon: widget.userType == 'rentacar'
+            label: _effectiveIsRentACar ? "Firma İsmi" : "Ad Soyad",
+            icon: _effectiveIsRentACar
                 ? Icons.store_rounded
                 : Icons.person_rounded,
             isPasswordField: false,
@@ -1697,11 +1881,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           _buildCitySelectorTile(),
           const SizedBox(height: 24),
           _buildSectionHeader(
-              (widget.userType == 'rentacar' || _selectedService == 'rentacar')
+              _effectiveIsRentACar
                   ? "Firma Bilgileri & Banka"
                   : "Hizmet Aracı & Banka",
               Icons.directions_car_filled_rounded),
-          if (widget.userType == 'rentacar' || _selectedService == 'rentacar')
+          if (_effectiveIsRentACar)
             _buildGlassTextField(
               controller: _mapLinkController,
               focusNode: _mapLinkFocus,
@@ -1758,11 +1942,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildSectionHeader(
-              (widget.userType == 'rentacar' || _selectedService == 'rentacar')
+              _effectiveIsRentACar
                   ? "Firma Doğrulama Belgeleri"
                   : "Yetki ve Doğrulama Belgeleri",
               Icons.verified_user_rounded),
-          if (_selectedService == 'wash' && widget.userType != 'rentacar') ...[
+          if (_selectedService == 'wash' && !_effectiveIsRentACar) ...[
             _buildFilePicker(
                 "Ehliyet Fotoğrafı", _driverLicense, 'driver_license'),
             _buildFilePicker(
@@ -1779,289 +1963,468 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final isCustomer = widget.userType == 'customer';
-    final isTablet = size.width > 600;
+    final media = MediaQuery.of(context);
+    final size = media.size;
+    final isWide = size.width >= 700;
+    final compactHeight = size.height < 720;
+    final stepTitles = _stepTitles;
+    final safeStep = _currentStep
+        .clamp(0, (stepTitles.isEmpty ? 1 : stepTitles.length) - 1)
+        .toInt();
+    final progress = _stepCount <= 0
+        ? 0.0
+        : ((_currentStep + 1) / _stepCount).clamp(0.0, 1.0).toDouble();
 
     return Scaffold(
       backgroundColor: pureBlack,
-      extendBodyBehindAppBar: true,
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         leading: IconButton(
+          tooltip: 'Geri',
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
-                shape: BoxShape.circle),
-            child: const Icon(Icons.arrow_back_ios_new_rounded,
-                size: 16, color: Colors.white),
+              color: Colors.white.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              size: 16,
+              color: Colors.white,
+            ),
           ),
           onPressed: () {
             HapticFeedback.selectionClick();
             Navigator.pop(context);
           },
         ),
-        title: Image.asset('assets/images/logo.png',
-            height: 28,
-            errorBuilder: (_, __, ___) => const Icon(Icons.car_repair_rounded,
-                color: neonGreen, size: 28)),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        flexibleSpace: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-            child: Container(color: pureBlack.withValues(alpha: 0.4)),
+        title: Image.asset(
+          'assets/images/logo.png',
+          height: 28,
+          errorBuilder: (_, __, ___) => const Icon(
+            Icons.car_repair_rounded,
+            color: neonGreen,
+            size: 28,
           ),
         ),
+        backgroundColor: pureBlack.withValues(alpha: 0.92),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
       ),
       body: Stack(
         children: [
           Positioned(
-            top: size.height * 0.05,
-            right: -size.width * 0.3,
-            child: Container(
-              width: size.width * 1.1,
-              height: size.width * 1.1,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    neonGreen.withValues(alpha: 0.08),
-                    Colors.transparent
-                  ],
-                  stops: const [0.1, 0.8],
+            top: -size.width * 0.35,
+            right: -size.width * 0.45,
+            child: IgnorePointer(
+              child: Container(
+                width: size.width * 1.35,
+                height: size.width * 1.35,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      neonGreen.withValues(alpha: 0.10),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.72],
+                  ),
                 ),
               ),
             ),
           ),
           SafeArea(
+            top: false,
             child: Center(
               child: ConstrainedBox(
-                constraints:
-                    BoxConstraints(maxWidth: isTablet ? 550 : double.infinity),
+                constraints: BoxConstraints(
+                  maxWidth: isWide ? 620 : double.infinity,
+                ),
                 child: Column(
                   children: [
-                    // --- ÜST BAŞLIK VE ADIM (STEP) ÇUBUĞU ---
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                      padding: EdgeInsets.fromLTRB(
+                          18, compactHeight ? 12 : 18, 18, 12),
                       child: Column(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(20),
+                            width: double.infinity,
+                            padding: EdgeInsets.all(compactHeight ? 14 : 16),
                             decoration: BoxDecoration(
-                              color: neonGreen.withValues(alpha: 0.1),
-                              shape: BoxShape.circle,
+                              color: panelBlack.withValues(alpha: 0.92),
+                              borderRadius: BorderRadius.circular(24),
                               border: Border.all(
-                                  color: neonGreen.withValues(alpha: 0.25),
-                                  width: 1.5),
-                            ),
-                            child: Icon(
-                                widget.userType == 'customer'
-                                    ? Icons.person_add_rounded
-                                    : (widget.userType == 'rentacar'
-                                        ? Icons.car_rental_rounded
-                                        : Icons.handyman_rounded),
-                                size: 36,
-                                color: neonGreen),
-                          ),
-                          const SizedBox(height: 18),
-                          Text(
-                              widget.userType == 'customer'
-                                  ? "Müşteri Hesabı Oluştur"
-                                  : (widget.userType == 'rentacar'
-                                      ? "Firma Hesabı Oluştur"
-                                      : "Usta Hesabı Oluştur"),
-                              style: const TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                  letterSpacing: -0.5)),
-                          const SizedBox(height: 16),
-                          // Dinamik Adım (Step) Çubuğu
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: List.generate(
-                                isCustomer
-                                    ? 2
-                                    : (widget.userType == 'provider' ? 4 : 3),
-                                (index) {
-                              bool isActive = index <= _currentStep;
-                              return AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                margin:
-                                    const EdgeInsets.symmetric(horizontal: 4),
-                                width: isActive ? 28 : 10,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: isActive
-                                      ? neonGreen
-                                      : Colors.white.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(4),
-                                  boxShadow: isActive
-                                      ? [
-                                          BoxShadow(
-                                              color: neonGreen.withValues(
-                                                  alpha: 0.3),
-                                              blurRadius: 6)
-                                        ]
-                                      : [],
+                                color: Colors.white.withValues(alpha: 0.07),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.28),
+                                  blurRadius: 28,
+                                  offset: const Offset(0, 12),
                                 ),
-                              );
-                            }),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: compactHeight ? 46 : 52,
+                                  height: compactHeight ? 46 : 52,
+                                  decoration: BoxDecoration(
+                                    color: neonGreen.withValues(alpha: 0.11),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color:
+                                          neonGreen.withValues(alpha: 0.24),
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    _roleIcon,
+                                    color: neonGreen,
+                                    size: compactHeight ? 24 : 28,
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              _roleTitle,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize:
+                                                    compactHeight ? 18 : 20,
+                                                fontWeight: FontWeight.w900,
+                                                letterSpacing: -0.4,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 9,
+                                              vertical: 5,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: neonGreen.withValues(
+                                                  alpha: 0.12),
+                                              borderRadius:
+                                                  BorderRadius.circular(999),
+                                              border: Border.all(
+                                                color: neonGreen.withValues(
+                                                    alpha: 0.28),
+                                              ),
+                                            ),
+                                            child: Text(
+                                              _roleBadge,
+                                              style: const TextStyle(
+                                                color: neonGreen,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w900,
+                                                letterSpacing: 0.8,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 5),
+                                      Text(
+                                        _roleSubtitle,
+                                        maxLines: compactHeight ? 1 : 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(
+                                              alpha: 0.58),
+                                          fontSize: 12,
+                                          height: 1.35,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.fromLTRB(14, 11, 14, 12),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.025),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.055),
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      'Adım ${_currentStep + 1} / $_stepCount',
+                                      style: const TextStyle(
+                                        color: neonGreen,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    Flexible(
+                                      child: Text(
+                                        stepTitles.isEmpty
+                                            ? ''
+                                            : stepTitles[safeStep],
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        textAlign: TextAlign.right,
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(
+                                              alpha: 0.72),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 9),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(999),
+                                  child: LinearProgressIndicator(
+                                    minHeight: 7,
+                                    value: progress,
+                                    backgroundColor:
+                                        Colors.white.withValues(alpha: 0.08),
+                                    valueColor:
+                                        const AlwaysStoppedAnimation<Color>(
+                                            neonGreen),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
-
-                    // --- ORTA KAYDIRILABİLİR İÇERİK ALANI (Animasyonlu) ---
                     Expanded(
                       child: SingleChildScrollView(
                         physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
                         child: AutofillGroup(
                           child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 400),
+                            duration: const Duration(milliseconds: 260),
+                            switchInCurve: Curves.easeOutCubic,
+                            switchOutCurve: Curves.easeInCubic,
                             transitionBuilder: (child, animation) =>
                                 FadeTransition(
-                                    opacity: animation,
-                                    child: SlideTransition(
-                                      position: Tween<Offset>(
-                                              begin: const Offset(0.05, 0),
-                                              end: Offset.zero)
-                                          .animate(animation),
-                                      child: child,
-                                    )),
-                            child: _buildCurrentStepContent(isCustomer),
+                              opacity: animation,
+                              child: SlideTransition(
+                                position: Tween<Offset>(
+                                  begin: const Offset(0.025, 0),
+                                  end: Offset.zero,
+                                ).animate(animation),
+                                child: child,
+                              ),
+                            ),
+                            child: _buildCurrentStepContent(),
                           ),
                         ),
                       ),
                     ),
-
-                    // --- ALT İLERİ/GERİ BUTONLARI ---
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              if (_currentStep > 0) ...[
-                                Expanded(
-                                  flex: 1,
-                                  child: OutlinedButton(
-                                    onPressed: _prevStep,
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 20),
-                                      side: BorderSide(
+                    SafeArea(
+                      top: false,
+                      minimum: const EdgeInsets.fromLTRB(18, 8, 18, 10),
+                      child: Container(
+                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+                        decoration: BoxDecoration(
+                          color: panelBlack.withValues(alpha: 0.97),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.065),
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              children: [
+                                if (_currentStep > 0) ...[
+                                  SizedBox(
+                                    width: 58,
+                                    height: 54,
+                                    child: OutlinedButton(
+                                      onPressed:
+                                          isRegistering ? null : _prevStep,
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: Colors.white,
+                                        padding: EdgeInsets.zero,
+                                        side: BorderSide(
                                           color: Colors.white
-                                              .withValues(alpha: 0.2),
-                                          width: 1.5),
-                                      shape: RoundedRectangleBorder(
+                                              .withValues(alpha: 0.18),
+                                        ),
+                                        shape: RoundedRectangleBorder(
                                           borderRadius:
-                                              BorderRadius.circular(20)),
+                                              BorderRadius.circular(17),
+                                        ),
+                                      ),
+                                      child: const Icon(
+                                        Icons.arrow_back_rounded,
+                                        size: 22,
+                                      ),
                                     ),
-                                    child: const Icon(Icons.arrow_back_rounded,
-                                        size: 24),
+                                  ),
+                                  const SizedBox(width: 10),
+                                ],
+                                Expanded(
+                                  child: SizedBox(
+                                    height: 54,
+                                    child: ElevatedButton(
+                                      onPressed: (!_hasValidUserType ||
+                                              isRegistering)
+                                          ? null
+                                          : _nextStep,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: neonGreen,
+                                        foregroundColor: Colors.black,
+                                        disabledBackgroundColor: Colors.white
+                                            .withValues(alpha: 0.08),
+                                        disabledForegroundColor:
+                                            Colors.white38,
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(17),
+                                        ),
+                                      ),
+                                      child: isRegistering
+                                          ? const SizedBox(
+                                              width: 22,
+                                              height: 22,
+                                              child:
+                                                  CircularProgressIndicator(
+                                                color: Colors.black,
+                                                strokeWidth: 2.6,
+                                              ),
+                                            )
+                                          : Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Text(
+                                                  _currentStep ==
+                                                          _stepCount - 1
+                                                      ? (_isCustomer
+                                                          ? 'Hesabı Oluştur'
+                                                          : 'Başvuruyu Gönder')
+                                                      : 'Devam Et',
+                                                  style: const TextStyle(
+                                                    fontSize: 15,
+                                                    fontWeight:
+                                                        FontWeight.w900,
+                                                    letterSpacing: -0.2,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 7),
+                                                Icon(
+                                                  _currentStep ==
+                                                          _stepCount - 1
+                                                      ? Icons
+                                                          .check_circle_rounded
+                                                      : Icons
+                                                          .arrow_forward_rounded,
+                                                  size: 19,
+                                                ),
+                                              ],
+                                            ),
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
                               ],
-                              Expanded(
-                                flex: 3,
-                                child: ElevatedButton(
-                                  onPressed: isRegistering ? null : _nextStep,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: neonGreen,
-                                    foregroundColor: Colors.black,
-                                    elevation: 0,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 20),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(20)),
-                                  ),
-                                  child: isRegistering
-                                      ? const SizedBox(
-                                          width: 24,
-                                          height: 24,
-                                          child: CircularProgressIndicator(
-                                              color: Colors.black,
-                                              strokeWidth: 3))
-                                      : Text(
-                                          _currentStep ==
-                                                  (isCustomer
-                                                      ? 1
-                                                      : (widget.userType ==
-                                                              'provider'
-                                                          ? 3
-                                                          : 2))
-                                              ? "Hesabımı Oluştur"
-                                              : "İleri",
-                                          style: const TextStyle(
-                                              fontSize: 17,
-                                              fontWeight: FontWeight.w900,
-                                              letterSpacing: -0.3)),
+                            ),
+                            const SizedBox(height: 8),
+                            TextButton(
+                              onPressed: (!_hasValidUserType || isRegistering)
+                                  ? null
+                                  : () {
+                                      HapticFeedback.selectionClick();
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => LoginScreen(
+                                            userType: _normalizedUserType,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 8,
                                 ),
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          TextButton(
-                            onPressed: () {
-                              HapticFeedback.selectionClick();
-                              Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) => LoginScreen(
-                                          userType: widget.userType)));
-                            },
-                            style: TextButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 20, vertical: 10),
-                            ),
-                            child: RichText(
-                              text: const TextSpan(
-                                  text: "Zaten hesabınız var mı? ",
-                                  style: TextStyle(
-                                      color: textGray,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500),
+                              child: Text.rich(
+                                TextSpan(
+                                  text: 'Zaten hesabınız var mı? ',
+                                  style: const TextStyle(
+                                    color: textGray,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                   children: [
                                     TextSpan(
-                                        text: "Giriş Yap",
-                                        style: TextStyle(
-                                            color: neonGreen,
-                                            fontWeight: FontWeight.w800))
-                                  ]),
+                                      text: _effectiveIsRentACar
+                                          ? 'Firma Girişine Dön'
+                                          : (_isProvider
+                                              ? 'Usta Girişine Dön'
+                                              : 'Giriş Yap'),
+                                      style: const TextStyle(
+                                        color: neonGreen,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          GestureDetector(
-                            onTap: () async {
-                              HapticFeedback.selectionClick();
-                              final url = Uri.parse(
-                                  'https://eliteagency.sbs/gizlilik_politikasi.html');
-                              if (await canLaunchUrl(url)) {
-                                await launchUrl(url);
-                              }
-                            },
-                            child: const Text(
-                              "Gizlilik Politikası ve Kullanım Koşulları",
-                              style: TextStyle(
-                                  color: textGray,
-                                  decoration: TextDecoration.underline,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500),
+                            GestureDetector(
+                              onTap: () async {
+                                HapticFeedback.selectionClick();
+                                final url = Uri.parse(
+                                  'https://eliteagency.sbs/gizlilik_politikasi.html',
+                                );
+                                if (await canLaunchUrl(url)) {
+                                  await launchUrl(url);
+                                }
+                              },
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 4),
+                                child: Text(
+                                  'Gizlilik Politikası ve Kullanım Koşulları',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: textGray,
+                                    decoration: TextDecoration.underline,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 10),
-                        ],
+                          ],
+                        ),
                       ),
-                    )
+                    ),
                   ],
                 ),
               ),
@@ -2071,4 +2434,5 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       ),
     );
   }
+
 }

@@ -22,6 +22,37 @@ function rentalUser($pdo, $id, $role, $requireCity=true) {
 // Idempotent migration. DDL happens before any booking transaction.
 function rentalEnsureSchema($pdo) {
     apiSchemaMigration($pdo,'rental_schema_v2',function() use($pdo) {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS tickets (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        job_id INT NULL,
+        customer_id INT NULL,
+        provider_id INT NULL,
+        reporter_id INT NULL,
+        subject VARCHAR(255) NULL,
+        message TEXT NULL,
+        status VARCHAR(30) DEFAULT 'open',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS rentacar_listings (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        company_id INT NULL,
+        city VARCHAR(100) NULL,
+        car_brand_model VARCHAR(255) NULL,
+        daily_price DECIMAL(10,2) NULL,
+        description TEXT NULL,
+        photo VARCHAR(255) NULL,
+        status VARCHAR(50) DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS rentacar_bids (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        listing_id INT NULL,
+        customer_id INT NULL,
+        amount DECIMAL(10,2) NULL,
+        rent_days INT NULL,
+        status VARCHAR(50) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     $definitions = [
         'users'=>['created_at'=>'DATETIME NULL','subscription_end_date'=>'DATETIME NULL','map_link'=>'VARCHAR(500) NULL','rental_lat'=>'DECIMAL(10,7) NULL','rental_lng'=>'DECIMAL(10,7) NULL','rental_address'=>'VARCHAR(500) NULL','rating'=>'DECIMAL(3,2) NOT NULL DEFAULT 0','reviews_count'=>'INT NOT NULL DEFAULT 0'],
         'tickets'=>['reporter_id'=>'INT NULL'],
@@ -182,7 +213,11 @@ function rentalReserve($pdo,$listing,$bid,$company) {
     $stmt=$pdo->prepare("SELECT id FROM jobs WHERE customer_id=? AND status IN ('searching','matched','accepted','approved','in_progress','customer_paid') LIMIT 1 FOR UPDATE");
     $stmt->execute([$bid['customer_id']]);
     if ($stmt->fetch()) throw new InvalidArgumentException('Devam eden bir işleminiz var. Önce bu işlem tamamlanmalıdır.');
-    $pdo->prepare("INSERT INTO jobs (customer_id,provider_id,service_type,status,city,agreed_price) VALUES (?,?,'rentacar','matched',?,?)")->execute([$bid['customer_id'],$listing['company_id'],trim($company['city']),$bid['amount']]);
+    $jobLat=is_numeric($pickup['rental_lat'] ?? null) ? (float)$pickup['rental_lat'] : 0.0;
+    $jobLng=is_numeric($pickup['rental_lng'] ?? null) ? (float)$pickup['rental_lng'] : 0.0;
+    $matchCode=(string)random_int(100000,999999);
+    $pdo->prepare("INSERT INTO jobs (customer_id,provider_id,service_type,status,city,agreed_price,latitude,longitude,match_code) VALUES (?,?,'rentacar','matched',?,?,?,?,?)")
+        ->execute([$bid['customer_id'],$listing['company_id'],trim($company['city']),$bid['amount'],$jobLat,$jobLng,$matchCode]);
     $jobId=(int)$pdo->lastInsertId();
     $pdo->prepare("UPDATE rentacar_bids SET status='accepted',job_id=?,offer_version=offer_version+1,pickup_map_link=?,pickup_lat=?,pickup_lng=?,pickup_address=?,reserved_at=UTC_TIMESTAMP(),expected_return_at=DATE_ADD(UTC_TIMESTAMP(),INTERVAL ? DAY) WHERE id=?")
         ->execute([$jobId,$mapLink ?: null,$pickup['rental_lat'],$pickup['rental_lng'],$pickup['rental_address'],$bid['rent_days'],$bid['id']]);

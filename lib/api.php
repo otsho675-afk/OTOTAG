@@ -499,6 +499,31 @@ try {
             $pdo->exec("ALTER TABLE users ADD COLUMN has_guarantee TINYINT(1) DEFAULT 1");
         }
 
+        // Kayıt sistemi için zorunlu users kolonlarını garanti et
+        $registrationColumns = [
+            'service_category' => "VARCHAR(50) NULL DEFAULT 'none'",
+            'iban' => "VARCHAR(34) NULL DEFAULT NULL",
+            'tax_plate' => "VARCHAR(255) NULL DEFAULT NULL",
+            'driver_license' => "VARCHAR(255) NULL DEFAULT NULL",
+            'vehicle_photo' => "VARCHAR(255) NULL DEFAULT NULL",
+            'equipment_photo' => "VARCHAR(255) NULL DEFAULT NULL",
+            'tracking_code' => "VARCHAR(20) NULL DEFAULT NULL",
+            'ip_address' => "VARCHAR(45) NULL DEFAULT NULL"
+        ];
+
+        foreach ($registrationColumns as $columnName => $columnDefinition) {
+            $columnCheck = $pdo->query("SHOW COLUMNS FROM users LIKE " . $pdo->quote($columnName))->fetch();
+
+            if (!$columnCheck) {
+                $pdo->exec(
+                    "ALTER TABLE users ADD COLUMN `" .
+                    $columnName .
+                    "` " .
+                    $columnDefinition
+                );
+            }
+        }
+
         // Rent a Car kullanıcıları için enum kolonunu güncelle (Data truncated hatası için)
         $typeColumn = $pdo->query("SHOW COLUMNS FROM users LIKE 'user_type'")->fetch();
         if ($typeColumn && strpos($typeColumn['Type'], "'rentacar'") === false && stripos($typeColumn['Type'], 'enum(') === 0) {
@@ -2213,6 +2238,18 @@ switch ($action) {
         $oauth_id = trim($_POST['oauth_id'] ?? '');
         $email = trim($_POST['email'] ?? '');
         $hasRegistrationPassword=$password!=='';
+
+@file_put_contents(
+    __DIR__ . '/register_request.log',
+    '[' . date('Y-m-d H:i:s') . '] ' .
+    'PHONE=' . $phone .
+    ' | USER_TYPE=' . $user_type .
+    ' | SERVICE=' . $service_category .
+    ' | CITY=' . $city .
+    ' | OAUTH=' . $oauth_provider .
+    PHP_EOL,
+    FILE_APPEND
+);
         if ($oauth_provider !== '' || $oauth_id !== '') {
             $identity=verifyOAuthIdentity($oauth_provider, $_POST['oauth_token'] ?? '');
             $oauth_id=$identity['sub']; $email=$identity['email'];
@@ -2232,6 +2269,12 @@ switch ($action) {
             if ($password!=='' && strlen($password)<6) throw new InvalidArgumentException('Şifre en az 6 karakter olmalı.');
         } catch (InvalidArgumentException $e) { sendResponse(422,['status'=>'error','message'=>$e->getMessage()]); }
 
+        @file_put_contents(
+            __DIR__ . '/register_request.log',
+            '[' . date('Y-m-d H:i:s') . '] STEP=VALIDATION_OK | PHONE=' . $clean_phone . PHP_EOL,
+            FILE_APPEND
+        );
+
         if (empty($password) && empty($oauth_id)) {
             sendResponse(400, ["status" => "error", "message" => "Şifre alanı zorunludur."]);
         }
@@ -2249,23 +2292,271 @@ switch ($action) {
         $equipment_photo = null;
 
         $uploadFile = function($fileKey, $dir) {
-            if (isset($_FILES[$fileKey]) && $_FILES[$fileKey]['error'] === UPLOAD_ERR_OK) {
-                $tmp_name = $_FILES[$fileKey]['tmp_name'];
-                $name = $_FILES[$fileKey]['name'];
-                $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
-                if(empty($ext)) $ext = 'jpg';
-                $allowed_exts = ['jpg', 'jpeg', 'png', 'pdf'];
-                
-                if (in_array($ext, $allowed_exts) && isSafeFile($tmp_name, $allowed_exts)) {
-                    $filename = time() . '_' . $fileKey . '_' . uniqid() . '.' . $ext;
-                    if (@move_uploaded_file($tmp_name, $dir . $filename)) {
-                        return 'uploads/' . $filename;
-                    }
-                }
-            }
-            return null;
-        };
 
+    $logFile = __DIR__ . '/register_request.log';
+
+    if (!isset($_FILES[$fileKey])) {
+
+        @file_put_contents(
+            $logFile,
+            '[' . date('Y-m-d H:i:s') . '] FILE_ERROR=' . $fileKey .
+            ' | REASON=FILES_ALANINDA_YOK' .
+            PHP_EOL,
+            FILE_APPEND
+        );
+
+        return null;
+    }
+
+    $file = $_FILES[$fileKey];
+
+    $uploadError = $file['error'] ?? -1;
+
+    @file_put_contents(
+        $logFile,
+        '[' . date('Y-m-d H:i:s') . '] FILE_RECEIVED=' . $fileKey .
+        ' | NAME=' . ($file['name'] ?? '') .
+        ' | TYPE=' . ($file['type'] ?? '') .
+        ' | SIZE=' . ($file['size'] ?? 0) .
+        ' | ERROR=' . $uploadError .
+        PHP_EOL,
+        FILE_APPEND
+    );
+
+
+    if ($uploadError !== UPLOAD_ERR_OK) {
+
+        $errorNames = [
+            UPLOAD_ERR_INI_SIZE   => 'UPLOAD_ERR_INI_SIZE',
+            UPLOAD_ERR_FORM_SIZE  => 'UPLOAD_ERR_FORM_SIZE',
+            UPLOAD_ERR_PARTIAL    => 'UPLOAD_ERR_PARTIAL',
+            UPLOAD_ERR_NO_FILE    => 'UPLOAD_ERR_NO_FILE',
+            UPLOAD_ERR_NO_TMP_DIR => 'UPLOAD_ERR_NO_TMP_DIR',
+            UPLOAD_ERR_CANT_WRITE => 'UPLOAD_ERR_CANT_WRITE',
+            UPLOAD_ERR_EXTENSION  => 'UPLOAD_ERR_EXTENSION',
+        ];
+
+        @file_put_contents(
+            $logFile,
+            '[' . date('Y-m-d H:i:s') . '] FILE_ERROR=' . $fileKey .
+            ' | REASON=' . ($errorNames[$uploadError] ?? 'UNKNOWN_UPLOAD_ERROR') .
+            PHP_EOL,
+            FILE_APPEND
+        );
+
+        return null;
+    }
+
+
+    $tmp_name = $file['tmp_name'] ?? '';
+    $originalName = $file['name'] ?? '';
+
+    if (
+        $tmp_name === '' ||
+        !file_exists($tmp_name)
+    ) {
+
+        @file_put_contents(
+            $logFile,
+            '[' . date('Y-m-d H:i:s') . '] FILE_ERROR=' . $fileKey .
+            ' | REASON=TMP_FILE_YOK' .
+            PHP_EOL,
+            FILE_APPEND
+        );
+
+        return null;
+    }
+
+
+    $ext = strtolower(
+        pathinfo(
+            $originalName,
+            PATHINFO_EXTENSION
+        )
+    );
+
+
+    /*
+     * Flutter / Android / iPhone / Web için
+     * desteklenen resim formatları
+     */
+    $allowed_exts = [
+        'jpg',
+        'jpeg',
+        'png',
+        'webp',
+        'heic',
+        'pdf'
+    ];
+
+
+    /*
+     * Dosya isminin uzantısı gelmediyse MIME'dan belirle
+     */
+    if ($ext === '') {
+
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime = finfo_file($finfo, $tmp_name);
+        finfo_close($finfo);
+
+        switch ($mime) {
+
+            case 'image/jpeg':
+                $ext = 'jpg';
+                break;
+
+            case 'image/png':
+                $ext = 'png';
+                break;
+
+            case 'image/webp':
+                $ext = 'webp';
+                break;
+
+            case 'image/heic':
+            case 'image/heif':
+                $ext = 'heic';
+                break;
+
+            case 'application/pdf':
+                $ext = 'pdf';
+                break;
+
+            default:
+                $ext = '';
+                break;
+        }
+    }
+
+
+    if (
+        $ext === '' ||
+        !in_array(
+            $ext,
+            $allowed_exts,
+            true
+        )
+    ) {
+
+        @file_put_contents(
+            $logFile,
+            '[' . date('Y-m-d H:i:s') . '] FILE_ERROR=' . $fileKey .
+            ' | REASON=UZANTI_DESTEKLENMIYOR' .
+            ' | EXT=' . $ext .
+            ' | NAME=' . $originalName .
+            PHP_EOL,
+            FILE_APPEND
+        );
+
+        return null;
+    }
+
+
+    if (
+        !isSafeFile(
+            $tmp_name,
+            $allowed_exts
+        )
+    ) {
+
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $detectedMime = finfo_file($finfo, $tmp_name);
+        finfo_close($finfo);
+
+        @file_put_contents(
+            $logFile,
+            '[' . date('Y-m-d H:i:s') . '] FILE_ERROR=' . $fileKey .
+            ' | REASON=MIME_GUVENLIK_REDDETTI' .
+            ' | MIME=' . $detectedMime .
+            ' | EXT=' . $ext .
+            PHP_EOL,
+            FILE_APPEND
+        );
+
+        return null;
+    }
+
+
+    if (!is_dir($dir)) {
+
+        if (!@mkdir($dir, 0775, true)) {
+
+            @file_put_contents(
+                $logFile,
+                '[' . date('Y-m-d H:i:s') . '] FILE_ERROR=' . $fileKey .
+                ' | REASON=UPLOAD_KLASORU_OLUSTURULAMADI' .
+                ' | DIR=' . $dir .
+                PHP_EOL,
+                FILE_APPEND
+            );
+
+            return null;
+        }
+    }
+
+
+    if (!is_writable($dir)) {
+
+        @file_put_contents(
+            $logFile,
+            '[' . date('Y-m-d H:i:s') . '] FILE_ERROR=' . $fileKey .
+            ' | REASON=UPLOAD_KLASORU_YAZILABILIR_DEGIL' .
+            ' | DIR=' . $dir .
+            PHP_EOL,
+            FILE_APPEND
+        );
+
+        return null;
+    }
+
+
+    $filename =
+        date('YmdHis') .
+        '_' .
+        $fileKey .
+        '_' .
+        bin2hex(random_bytes(8)) .
+        '.' .
+        $ext;
+
+
+    $destination =
+        rtrim($dir, '/') .
+        '/' .
+        $filename;
+
+
+    if (
+        !@move_uploaded_file(
+            $tmp_name,
+            $destination
+        )
+    ) {
+
+        @file_put_contents(
+            $logFile,
+            '[' . date('Y-m-d H:i:s') . '] FILE_ERROR=' . $fileKey .
+            ' | REASON=MOVE_UPLOADED_FILE_BASARISIZ' .
+            ' | DEST=' . $destination .
+            PHP_EOL,
+            FILE_APPEND
+        );
+
+        return null;
+    }
+
+
+    @file_put_contents(
+        $logFile,
+        '[' . date('Y-m-d H:i:s') . '] FILE_OK=' . $fileKey .
+        ' | PATH=uploads/' . $filename .
+        PHP_EOL,
+        FILE_APPEND
+    );
+
+
+    return 'uploads/' . $filename;
+};
         if ($user_type === 'provider') {
             if (empty($service_category) || $service_category === 'none') {
                 sendResponse(400, ["status" => "error", "message" => "Usta kaydı için hizmet kategorisi seçimi zorunludur."]);
@@ -2291,6 +2582,12 @@ switch ($action) {
                     sendResponse(400, ["status" => "error", "message" => "Usta kaydı için vergi levhası belgesinin yüklenmesi zorunludur."]);
                 }
             }
+
+            @file_put_contents(
+                __DIR__ . '/register_request.log',
+                '[' . date('Y-m-d H:i:s') . '] STEP=PROVIDER_FILES_OK | TAX=' . ($tax_plate ?: 'NONE') . PHP_EOL,
+                FILE_APPEND
+            );
         }
 
         if ($user_type==='rentacar') {
@@ -2326,6 +2623,13 @@ switch ($action) {
         if ($existingUser && (!$completionUser || (int)$existingUser['id']!==(int)$completionUser['id'])) {
             sendResponse(409,['status'=>'error','message'=>'Bu telefon zaten kayıtlı. Mevcut hesabınıza giriş yapıp sosyal hesabı profilinizden bağlayın.']);
         }
+
+        @file_put_contents(
+            __DIR__ . '/register_request.log',
+            '[' . date('Y-m-d H:i:s') . '] STEP=PHONE_CHECK_OK | PHONE=' . $clean_phone . PHP_EOL,
+            FILE_APPEND
+        );
+
         if ($oauth_id !== '' && !$completionUser) {
             $oauthCheck=$pdo->prepare('SELECT id FROM users WHERE oauth_provider=? AND oauth_id=? AND user_type=? LIMIT 1');
             $oauthCheck->execute([$oauth_provider,$oauth_id,$user_type]);
@@ -2342,6 +2646,12 @@ switch ($action) {
         $status = ($user_type === 'provider' || $user_type === 'rentacar') ? 'pending' : 'active';
         $tracking_code = ($user_type === 'provider' || $user_type === 'rentacar') ? rand(10000000, 99999999) : null;
 
+        @file_put_contents(
+            __DIR__ . '/register_request.log',
+            '[' . date('Y-m-d H:i:s') . '] STEP=BEFORE_INSERT | PHONE=' . $clean_phone . PHP_EOL,
+            FILE_APPEND
+        );
+
         try {
             $stmt = $pdo->prepare("INSERT INTO users (name, email, phone, password, user_type, service_category, iban, tow_plate, map_link, city, status, is_premium, tax_plate, driver_license, vehicle_photo, equipment_photo, tracking_code, ip_address, oauth_provider, oauth_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([$name, !empty($email) ? $email : null, $clean_phone, $hashed_password, $user_type, $service_category, $iban, $tow_plate ?: null, !empty($map_link) ? $map_link : null, $city, $status, $tax_plate, $driver_license, $vehicle_photo, $equipment_photo, $tracking_code, $user_ip, !empty($oauth_provider) ? $oauth_provider : null, !empty($oauth_id) ? $oauth_id : null]);
@@ -2355,9 +2665,25 @@ switch ($action) {
                 "account_status" => $status, 
                 "tracking_code" => $tracking_code
             ]);
-        } catch (Exception $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
-            sendResponse(500, ["status" => "error", "message" => "Kayıt tamamlanamadı. Tekrar deneyin."]);
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+
+            @file_put_contents(
+                __DIR__ . '/register_error.log',
+                '[' . date('Y-m-d H:i:s') . '] REGISTER ERROR: ' .
+                $e->getMessage() .
+                ' | FILE: ' . $e->getFile() .
+                ' | LINE: ' . $e->getLine() .
+                PHP_EOL,
+                FILE_APPEND
+            );
+
+            sendResponse(500, [
+                "status" => "error",
+                "message" => "Kayıt hatası: " . $e->getMessage()
+            ]);
         }
         break;
 

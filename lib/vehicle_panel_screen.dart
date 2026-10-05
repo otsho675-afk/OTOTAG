@@ -3498,18 +3498,29 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                     physics: const BouncingScrollPhysics(),
                                     child: Row(
                                       children: [
-                                        _buildQuickChip("⛽ 45 Lt Mazot (Opet)",
+                                        _buildQuickChip(
+                                            Icons.local_gas_station_rounded,
+                                            "45 Lt Mazot (Opet)",
                                             "Bugün Opet'ten 45 litre mazot aldım 1950 TL"),
                                         _buildQuickChip(
-                                            "🔧 Castrol 5W-30 Bakım",
+                                            Icons.build_rounded,
+                                            "Castrol 5W-30 Bakım",
                                             "Dün 4800 TL Castrol yağ ve filtre bakımı yapıldı 10 bin km sonra"),
-                                        _buildQuickChip("🛞 4 Michelin Lastik",
+                                        _buildQuickChip(
+                                            Icons.tire_repair_rounded,
+                                            "4 Michelin Lastik",
                                             "Dün 9500 TL 4 Michelin lastik ve balans yapıldı 2 yıl sonra"),
-                                        _buildQuickChip("🛡️ Allianz Kasko",
+                                        _buildQuickChip(
+                                            Icons.shield_rounded,
+                                            "Allianz Kasko",
                                             "Bugün 13500 TL Allianz kasko yenilendi 1 yıl sonra"),
-                                        _buildQuickChip("🛑 Brembo Ön Balata",
+                                        _buildQuickChip(
+                                            Icons.disc_full_rounded,
+                                            "Brembo Ön Balata",
                                             "Bugün 2800 TL ön fren balataları değişti"),
-                                        _buildQuickChip("⚡ Varta 72Ah Akü",
+                                        _buildQuickChip(
+                                            Icons.battery_charging_full_rounded,
+                                            "Varta 72Ah Akü",
                                             "Bugün 3400 TL Varta akü takıldı 2 yıl sonra garanti"),
                                       ],
                                     ),
@@ -3911,27 +3922,45 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                         : 'İşlemi kaydet',
                             textAlign: TextAlign.center))),
           ]));
-  Widget _buildQuickChip(String label, String templateText) {
+  Widget _buildQuickChip(
+      IconData icon, String label, String templateText) {
     return Padding(
       padding: const EdgeInsets.only(right: 8.0),
-      child: InkWell(
-        onTap: () {
-          FocusScope.of(context).unfocus();
-          _processSmartNote(manualText: templateText);
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.04),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            FocusScope.of(context).unfocus();
+            _processSmartNote(manualText: templateText);
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.04),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  size: 15,
+                  color: const Color(0xFF00FFA3),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
           ),
-          child: Text(label,
-              style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700)),
         ),
       ),
     );

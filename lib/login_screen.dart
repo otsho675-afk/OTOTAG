@@ -81,6 +81,28 @@ class _LoginScreenState extends State<LoginScreen> {
   static const String _iosGoogleClientId =
       '73273804842-u0lcirptug9aotm2m6gn27g92hftt5ud.apps.googleusercontent.com';
 
+  GoogleSignIn? _mobileGoogleSignIn;
+
+  GoogleSignIn _getMobileGoogleSignIn() {
+    if (_mobileGoogleSignIn != null) return _mobileGoogleSignIn!;
+
+    // Android'de google-services.json içindeki OAuth yapılandırmasını kullan.
+    // Böylece Android client / SHA eşleşmesi Firebase üzerinden yönetilir.
+    if (!kIsWeb && Platform.isAndroid) {
+      _mobileGoogleSignIn = GoogleSignIn(
+        scopes: const ['email', 'profile'],
+      );
+    } else {
+      _mobileGoogleSignIn = GoogleSignIn(
+        clientId: _iosGoogleClientId,
+        serverClientId: AppConstants.googleWebClientId,
+        scopes: const ['email', 'profile'],
+      );
+    }
+
+    return _mobileGoogleSignIn!;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -234,53 +256,89 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _socialBusy = false;
 
   Future<void> _signInWithGoogle() async {
-    if (_socialBusy) return;
+    if (_socialBusy || isLoggingIn) return;
+
     setState(() => _socialBusy = true);
+
     try {
       if (!kIsWeb) HapticFeedback.selectionClick();
-      try {
-        final GoogleSignIn googleSignIn = GoogleSignIn(
-          clientId: kIsWeb
-              ? AppConstants.googleWebClientId
-              : Platform.isIOS
-                  ? _iosGoogleClientId
-                  : null,
-          serverClientId: kIsWeb ? null : AppConstants.googleWebClientId,
-          scopes: const ['email', 'profile'],
-        );
 
-        try {
-          if (await googleSignIn.isSignedIn()) {
-            await googleSignIn.signOut();
-          }
-        } catch (_) {}
+      final GoogleSignIn googleSignIn = _getMobileGoogleSignIn();
 
-        final GoogleSignInAccount? account = await googleSignIn.signIn();
+      // Her tıklamada isSignedIn()/signOut() çağırmak Android'de gereksiz
+      // yeniden kimlik doğrulama akışı oluşturabiliyor. Doğrudan signIn kullan.
+      final GoogleSignInAccount? account = await googleSignIn.signIn();
 
-        if (!mounted) return;
+      if (!mounted || account == null) return;
 
-        if (account != null) {
-          await _handleOAuthLogin(
-            provider: 'google',
-            oauthId: account.id,
-            oauthToken: (await account.authentication).idToken ?? '',
-            email: account.email,
-            name: account.displayName ?? '',
-          );
-        }
-      } on PlatformException catch (e) {
+      final GoogleSignInAuthentication authentication =
+          await account.authentication;
+
+      final String idToken = authentication.idToken ?? '';
+
+      if (idToken.isEmpty) {
         debugPrint(
-            "Google Sign In Platform Exception: ${e.code} - ${e.message}");
-        if (!mounted) return;
-        if (e.code != 'sign_in_canceled' && e.code != 'canceled') {
-          _showCustomSnackBar("Google ile oturum açılamadı (${e.code}).",
-              isError: true);
-        }
-      } catch (e) {
-        debugPrint("Google Sign In Error: $e");
-        if (!mounted) return;
-        _showCustomSnackBar("Google ile giriş yapılamadı: $e", isError: true);
+          'Google Sign-In: Hesap seçildi fakat ID token alınamadı. '
+          'Android OAuth / SHA yapılandırmasını kontrol edin.',
+        );
+        _showCustomSnackBar(
+          'Google kimlik doğrulaması tamamlanamadı. Lütfen tekrar deneyin.',
+          isError: true,
+        );
+        return;
       }
+
+      await _handleOAuthLogin(
+        provider: 'google',
+        oauthId: account.id,
+        oauthToken: idToken,
+        email: account.email,
+        name: account.displayName ?? '',
+      );
+    } on PlatformException catch (e, stackTrace) {
+      debugPrint(
+        'Google Sign In Platform Exception: '
+        'code=${e.code}, message=${e.message}, details=${e.details}',
+      );
+      debugPrintStack(stackTrace: stackTrace);
+
+      if (!mounted) return;
+
+      final String code = e.code.toLowerCase();
+
+      if (code == 'sign_in_canceled' || code == 'canceled') {
+        return;
+      }
+
+      if (code == 'sign_in_failed' ||
+          code == 'developer_error' ||
+          code == '10') {
+        _showCustomSnackBar(
+          'Google oturum açma yapılandırması doğrulanamadı. '
+          'Android SHA-1/SHA-256 ve uygulama kimliği kontrol edilmeli.',
+          isError: true,
+        );
+      } else if (code == 'network_error') {
+        _showCustomSnackBar(
+          'Google girişinde bağlantı hatası oluştu.',
+          isError: true,
+        );
+      } else {
+        _showCustomSnackBar(
+          'Google ile oturum açılamadı (${e.code}).',
+          isError: true,
+        );
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Google Sign In Error: $e');
+      debugPrintStack(stackTrace: stackTrace);
+
+      if (!mounted) return;
+
+      _showCustomSnackBar(
+        'Google ile giriş yapılamadı. Lütfen tekrar deneyin.',
+        isError: true,
+      );
     } finally {
       if (mounted) setState(() => _socialBusy = false);
     }

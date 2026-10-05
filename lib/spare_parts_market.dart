@@ -16,7 +16,7 @@ const Color darkGreen = Color(0xFF002200);
 const Color pureBlack = AppConstants.bgColor; 
 const Color panelBlack = AppConstants.cardColor; 
 const Color textGray = Color(0xFFFFFFFF);
-const Color alertRed = Color(0xFFFFFFFF);
+const Color alertRed = Color(0xFFFF3B30);
 const Color goldAccent = Color(0xFFFFFFFF);
 const Color neonCyan = Color(0xFFFFFFFF);
 
@@ -99,6 +99,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
   Set<String> selectedKeys = {};
 
   late AnimationController _fadeController;
+  ScaffoldMessengerState? _scaffoldMessenger;
 
   final List<String> _cities = [
     "Tüm Şehirler", "Adana", "Adıyaman", "Afyonkarahisar", "Ağrı", "Amasya", "Ankara", "Antalya", "Artvin", "Aydın", 
@@ -153,8 +154,13 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
+  }
+
+  @override
   void dispose() {
-    _dismissTopSnackBar();
     _tabController.dispose();
     _partNameCtrl.dispose();
     _carModelCtrl.dispose();
@@ -171,14 +177,17 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
   }
 
   void _dismissTopSnackBar() {
-    if (mounted) ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
+    _scaffoldMessenger?.hideCurrentSnackBar();
   }
 
   void _showTopSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
     _dismissTopSnackBar();
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    final messenger = _scaffoldMessenger;
+    if (messenger == null) return;
+
+    messenger.showSnackBar(
       SnackBar(
         elevation: 0,
         behavior: SnackBarBehavior.floating,
@@ -648,432 +657,478 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
 
   void _showCreateListingDialog() {
     HapticFeedback.lightImpact();
-    _partNameCtrl.clear(); _carModelCtrl.clear(); _descCtrl.clear(); _priceCtrl.clear();
-    
-    bool isSelling = false; 
-    String selectedCategory = _categories[1]; 
-    String selectedCondition = _conditionOptions[1]; 
+    _partNameCtrl.clear();
+    _carModelCtrl.clear();
+    _descCtrl.clear();
+    _priceCtrl.clear();
+
+    int currentStep = 0;
+    bool isSelling = false;
+    String selectedCategory = _categories[1];
+    String selectedCondition = _conditionOptions[1];
     String selectedListingType = _listingTypeOptions[1];
-    String selectedBrand = _carBrands[0]; 
-    
-    List<String> years = ["Yıl Seçin", ...List.generate(35, (index) => (DateTime.now().year - index).toString())];
+    String selectedBrand = _carBrands[0];
+    final List<String> years = [
+      "Yıl Seçin",
+      ...List.generate(35, (index) => (DateTime.now().year - index).toString()),
+    ];
     String selectedYear = years[0];
-
-    final List<String> bodyTypes = ["Kasa Tipi Seçin", "Sedan", "Hatchback", "SUV / Arazi", "Station Wagon", "Ticari / Minivan", "Coupe", "Cabriolet", "Pick-up", "Diğer"];
+    final List<String> bodyTypes = [
+      "Kasa Tipi Seçin",
+      "Sedan",
+      "Hatchback",
+      "SUV / Arazi",
+      "Station Wagon",
+      "Ticari / Minivan",
+      "Coupe",
+      "Cabriolet",
+      "Pick-up",
+      "Diğer",
+    ];
     String selectedBodyType = bodyTypes[0];
-
     List<XFile> selectedPhotos = [];
 
     showModalBottomSheet(
-      context: context, 
-      isScrollControlled: true, 
-      useSafeArea: true, 
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      enableDrag: true,
+      isDismissible: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) {
-          bool isClosing = false;
+          final media = MediaQuery.of(ctx);
+          final bottomInset = media.viewInsets.bottom;
+          final bool compact = media.size.width < 560;
+          final double pagePadding = media.size.width < 380 ? 14 : 20;
+          final Color accent = isSelling ? neonGreen : neonCyan;
+
           void safeClose() {
-            if (!isClosing) {
-              isClosing = true;
-              Future.microtask(() {
-                if (ctx.mounted && Navigator.canPop(ctx)) {
-                  Navigator.pop(ctx);
+            FocusManager.instance.primaryFocus?.unfocus();
+            Navigator.of(ctx).maybePop();
+          }
+
+          Future<void> pickImages() async {
+            final picker = ImagePicker();
+            final images = await picker.pickMultiImage(
+              imageQuality: 75,
+              maxWidth: 1200,
+              maxHeight: 1200,
+            );
+            if (images.isEmpty) return;
+            setModalState(() {
+              selectedPhotos.addAll(images);
+              if (selectedPhotos.length > 3) {
+                selectedPhotos = selectedPhotos.take(3).toList();
+              }
+            });
+          }
+
+          bool validateStep() {
+            if (currentStep == 2 && _partNameCtrl.text.trim().isEmpty) {
+              _showTopSnackBar("Parça adını girmelisiniz.", isError: true);
+              return false;
+            }
+            if (currentStep == 3 && isSelling) {
+              final price = double.tryParse(_priceCtrl.text.trim().replaceAll(',', '.'));
+              if (price == null || price <= 0) {
+                _showTopSnackBar("Geçerli bir satış fiyatı girin.", isError: true);
+                return false;
+              }
+              if (selectedPhotos.length < 2) {
+                _showTopSnackBar("Satılık ilan için en az 2 fotoğraf eklemelisiniz.", isError: true);
+                return false;
+              }
+            }
+            return true;
+          }
+
+          Future<void> publishListing() async {
+            if (_partNameCtrl.text.trim().isEmpty) {
+              _showTopSnackBar("Parça adını girmelisiniz.", isError: true);
+              return;
+            }
+            if (isSelling && !validateStep()) return;
+
+            setModalState(() => isProcessing = true);
+            final finalPartName =
+                "${isSelling ? "[SATILIK]" : "[ALINIK]"} [$selectedCategory] [$selectedCondition] [$selectedListingType] ${_partNameCtrl.text.trim()}";
+            final carParts = <String>[];
+            if (selectedBrand != "Diğer / Belirtilmemiş") carParts.add(selectedBrand);
+            if (selectedBodyType != "Kasa Tipi Seçin") carParts.add(selectedBodyType);
+            if (_carModelCtrl.text.trim().isNotEmpty) carParts.add(_carModelCtrl.text.trim());
+            if (selectedYear != "Yıl Seçin") carParts.add("($selectedYear)");
+
+            try {
+              final request = _secureMultipart("$baseUrl?action=create_part_listing");
+              request.fields['user_id'] = widget.currentUserId.toString();
+              request.fields['user_type'] = widget.currentUserType;
+              request.fields['customer_id'] = widget.currentUserId.toString();
+              request.fields['city'] = widget.userCity;
+              request.fields['part_name'] = finalPartName;
+              request.fields['car_model'] = carParts.join(' ');
+              request.fields['description'] = _descCtrl.text.trim();
+
+              if (isSelling) {
+                request.fields['price'] = _priceCtrl.text.trim();
+                for (int i = 0; i < selectedPhotos.length; i++) {
+                  if (kIsWeb) {
+                    request.files.add(http.MultipartFile.fromBytes(
+                      'photo${i + 1}',
+                      await selectedPhotos[i].readAsBytes(),
+                      filename: selectedPhotos[i].name,
+                    ));
+                  } else {
+                    request.files.add(await http.MultipartFile.fromPath(
+                      'photo${i + 1}',
+                      selectedPhotos[i].path,
+                    ));
+                  }
                 }
-              });
+              }
+
+              final streamed = await request.send().timeout(_uploadTimeout);
+              final response = await http.Response.fromStream(streamed);
+              final data = json.decode(response.body);
+              if (!mounted) return;
+              if (data['status'] == 'success') {
+                safeClose();
+                _showTopSnackBar("İlanınız başarıyla yayınlandı.");
+                _fetchAllData();
+              } else {
+                _showTopSnackBar(data['message'] ?? "İlan yayınlanamadı.", isError: true);
+              }
+            } catch (_) {
+              if (mounted) _showTopSnackBar("Bağlantı hatası oluştu.", isError: true);
+            } finally {
+              if (mounted) setModalState(() => isProcessing = false);
             }
           }
 
-          final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
-          Future<void> pickImages() async {
-            final ImagePicker picker = ImagePicker();
-            final List<XFile> images = await picker.pickMultiImage(
-              imageQuality: 75,
-              maxWidth: 1024,
-              maxHeight: 1024
+          Widget stepDot(int index, IconData icon, String text) {
+            final active = currentStep == index;
+            final done = currentStep > index;
+            return Expanded(
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      if (index > 0)
+                        Expanded(child: Container(height: 2, color: done ? accent : Colors.white.withValues(alpha: 0.08))),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        width: active ? 40 : 34,
+                        height: active ? 40 : 34,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: active || done ? accent : Colors.white.withValues(alpha: 0.05),
+                          border: Border.all(color: active || done ? accent : Colors.white.withValues(alpha: 0.10)),
+                        ),
+                        child: Icon(done ? Icons.check_rounded : icon, color: active || done ? pureBlack : Colors.white54, size: 18),
+                      ),
+                      if (index < 3)
+                        Expanded(child: Container(height: 2, color: done ? accent : Colors.white.withValues(alpha: 0.08))),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: active ? accent : Colors.white54, fontSize: 9.5, fontWeight: active ? FontWeight.w900 : FontWeight.w700)),
+                ],
+              ),
             );
-            if (images.isNotEmpty) {
-              setModalState(() { 
-                selectedPhotos.addAll(images); 
-                if (selectedPhotos.length > 3) selectedPhotos = selectedPhotos.sublist(0, 3); 
-              });
+          }
+
+          Widget typeCard(bool selected, Color color, IconData icon, String title, String subtitle, VoidCallback onTap) {
+            return InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(18),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                  color: selected ? color.withValues(alpha: 0.10) : Colors.white.withValues(alpha: 0.025),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: selected ? color : Colors.white.withValues(alpha: 0.08), width: selected ? 1.5 : 1),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(color: selected ? color : Colors.white.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(14)),
+                      child: Icon(icon, color: selected ? pureBlack : Colors.white70),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(title, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
+                      const SizedBox(height: 3),
+                      Text(subtitle, style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                    ])),
+                    Icon(selected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, color: selected ? color : Colors.white24, size: 22),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          Widget stepOne() => Column(
+                key: const ValueKey(0),
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text("İlan Türünü Seç", style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 5),
+                  const Text("Parça mı arıyorsun, yoksa elindeki parçayı mı satıyorsun?", style: TextStyle(color: Colors.white54, fontSize: 12, height: 1.4)),
+                  const SizedBox(height: 20),
+                  LayoutBuilder(builder: (context, c) {
+                    final a = typeCard(!isSelling, neonCyan, Icons.search_rounded, "Parça Arıyorum", "İhtiyacın olan parçayı ilan ver", () => setModalState(() => isSelling = false));
+                    final b = typeCard(isSelling, neonGreen, Icons.sell_rounded, "Parça Satıyorum", "Elindeki parçayı satışa çıkar", () => setModalState(() => isSelling = true));
+                    return c.maxWidth < 520 ? Column(children: [a, const SizedBox(height: 10), b]) : Row(children: [Expanded(child: a), const SizedBox(width: 12), Expanded(child: b)]);
+                  }),
+                  const SizedBox(height: 22),
+                  _buildGlassDropdown("Parça Kategorisi", selectedCategory, _categories.where((e) => e != "Tüm Kategoriler").toList(), accent, (v) { if (v != null) setModalState(() => selectedCategory = v); }),
+                  const SizedBox(height: 16),
+                  LayoutBuilder(builder: (context, c) {
+                    final a = _buildGlassDropdown("Parça Durumu", selectedCondition, _conditionOptions.where((e) => e != "Tüm Durumlar").toList(), accent, (v) { if (v != null) setModalState(() => selectedCondition = v); });
+                    final b = _buildGlassDropdown("Satış Tipi", selectedListingType, _listingTypeOptions.where((e) => e != "Tüm Satış Tipleri").toList(), accent, (v) { if (v != null) setModalState(() => selectedListingType = v); });
+                    return c.maxWidth < 520 ? Column(children: [a, const SizedBox(height: 16), b]) : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: a), const SizedBox(width: 12), Expanded(child: b)]);
+                  }),
+                ],
+              );
+
+          Widget stepTwo() => Column(
+                key: const ValueKey(1),
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text("Araç Bilgileri", style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 5),
+                  const Text("Parçanın hangi araca uyduğunu belirt.", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  const SizedBox(height: 22),
+                  LayoutBuilder(builder: (context, c) {
+                    final brand = _buildGlassDropdown("Araç Markası", selectedBrand, _carBrands, accent, (v) { if (v != null) setModalState(() => selectedBrand = v); });
+                    final year = _buildGlassDropdown("Model Yılı", selectedYear, years, accent, (v) { if (v != null) setModalState(() => selectedYear = v); });
+                    return c.maxWidth < 520 ? Column(children: [brand, const SizedBox(height: 16), year]) : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(flex: 3, child: brand), const SizedBox(width: 12), Expanded(flex: 2, child: year)]);
+                  }),
+                  const SizedBox(height: 16),
+                  _buildGlassDropdown("Kasa Tipi", selectedBodyType, bodyTypes, accent, (v) { if (v != null) setModalState(() => selectedBodyType = v); }),
+                  const SizedBox(height: 16),
+                  _buildInput(_carModelCtrl, "Model / Seri", "Örn: Egea, Civic, Megane, Focus", Icons.directions_car_filled_rounded, action: TextInputAction.done),
+                  const SizedBox(height: 18),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(color: accent.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(16), border: Border.all(color: accent.withValues(alpha: 0.16))),
+                    child: Row(children: [Icon(Icons.info_outline_rounded, color: accent, size: 20), const SizedBox(width: 10), const Expanded(child: Text("Araç bilgilerini doğru girmek ilanınızın daha kolay bulunmasını sağlar.", style: TextStyle(color: Colors.white54, fontSize: 11, height: 1.4)))]),
+                  ),
+                ],
+              );
+
+          Widget stepThree() => Column(
+                key: const ValueKey(2),
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text("Parça Bilgileri", style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 5),
+                  const Text("İlan başlığını ve açıklamasını oluştur.", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  const SizedBox(height: 22),
+                  _buildInput(_partNameCtrl, "Parça Adı *", "Örn: Sağ Ön Far", Icons.settings_rounded, action: TextInputAction.next),
+                  const SizedBox(height: 16),
+                  _buildInput(_descCtrl, "Açıklama", "Parçanın durumu, orijinalliği, kusurları ve diğer detayları...", Icons.notes_rounded, maxLines: 5, action: TextInputAction.newline),
+                  const SizedBox(height: 18),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.025), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withValues(alpha: 0.07))),
+                    child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(Icons.tips_and_updates_outlined, color: neonGreen, size: 21), SizedBox(width: 11), Expanded(child: Text("Başlığı kısa ve anlaşılır yaz. Örnek: “Fiat Egea Sağ Far Orijinal”.", style: TextStyle(color: Colors.white54, fontSize: 11, height: 1.4)))]),
+                  ),
+                ],
+              );
+
+          Widget photoSection() => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(children: [
+                    const Expanded(child: Text("İlan Fotoğrafları *", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900))),
+                    Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5), decoration: BoxDecoration(color: accent.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(8)), child: Text("${selectedPhotos.length}/3", style: TextStyle(color: accent, fontWeight: FontWeight.w900, fontSize: 11))),
+                  ]),
+                  const SizedBox(height: 5),
+                  const Text("En az 2, en fazla 3 fotoğraf ekleyebilirsiniz.", style: TextStyle(color: Colors.white38, fontSize: 10)),
+                  const SizedBox(height: 12),
+                  if (selectedPhotos.isEmpty)
+                    InkWell(
+                      onTap: pickImages,
+                      borderRadius: BorderRadius.circular(18),
+                      child: Container(
+                        height: 125,
+                        decoration: BoxDecoration(color: accent.withValues(alpha: 0.04), borderRadius: BorderRadius.circular(18), border: Border.all(color: accent.withValues(alpha: 0.30))),
+                        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.add_photo_alternate_rounded, color: accent, size: 34), const SizedBox(height: 8), Text("Fotoğraf Ekle", style: TextStyle(color: accent, fontSize: 13, fontWeight: FontWeight.w900)), const SizedBox(height: 3), const Text("Galeriden fotoğraf seç", style: TextStyle(color: Colors.white38, fontSize: 10))]),
+                      ),
+                    )
+                  else
+                    SizedBox(
+                      height: 105,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: selectedPhotos.length + (selectedPhotos.length < 3 ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == selectedPhotos.length) {
+                            return InkWell(onTap: pickImages, borderRadius: BorderRadius.circular(16), child: Container(width: 98, margin: const EdgeInsets.only(right: 10), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.04), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withValues(alpha: 0.10))), child: Icon(Icons.add_rounded, color: accent, size: 30)));
+                          }
+                          final photo = selectedPhotos[index];
+                          return Stack(children: [
+                            Container(
+                              width: 98,
+                              margin: const EdgeInsets.only(right: 10),
+                              clipBehavior: Clip.antiAlias,
+                              decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), border: Border.all(color: accent.withValues(alpha: 0.35))),
+                              child: kIsWeb ? Image.network(photo.path, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: Colors.white.withValues(alpha: 0.04), child: const Icon(Icons.image_rounded, color: Colors.white38))) : Image.file(File(photo.path), fit: BoxFit.cover),
+                            ),
+                            Positioned(top: 5, right: 15, child: InkWell(onTap: () => setModalState(() => selectedPhotos.removeAt(index)), child: Container(width: 24, height: 24, decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.75), shape: BoxShape.circle), child: const Icon(Icons.close_rounded, color: Colors.white, size: 15)))),
+                          ]);
+                        },
+                      ),
+                    ),
+                ],
+              );
+
+          Widget summaryRow(IconData icon, String label, String value) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(children: [
+                  Container(width: 35, height: 35, decoration: BoxDecoration(color: accent.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(10)), child: Icon(icon, size: 17, color: accent)),
+                  const SizedBox(width: 11),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: const TextStyle(color: Colors.white38, fontSize: 9, fontWeight: FontWeight.w700)), const SizedBox(height: 2), Text(value, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800))])),
+                ]),
+              );
+
+          Widget stepFour() {
+            final vehicle = [
+              if (selectedBrand != "Diğer / Belirtilmemiş") selectedBrand,
+              if (_carModelCtrl.text.trim().isNotEmpty) _carModelCtrl.text.trim(),
+              if (selectedYear != "Yıl Seçin") selectedYear,
+            ].join(' ');
+            return Column(
+              key: const ValueKey(3),
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(isSelling ? "İlanı Tamamla" : "İlanı Kontrol Et", style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 5),
+                Text(isSelling ? "Fiyat ve fotoğrafları ekleyerek ilanını yayınla." : "Bilgilerini kontrol et ve ilanını yayınla.", style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                if (isSelling) ...[
+                  const SizedBox(height: 22),
+                  _buildInput(_priceCtrl, "Satış Fiyatı *", "Örn: 2500", Icons.payments_rounded, isNumber: true, action: TextInputAction.done),
+                  const SizedBox(height: 22),
+                  photoSection(),
+                ],
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.025), borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white.withValues(alpha: 0.07))),
+                  child: Column(children: [
+                    summaryRow(Icons.storefront_rounded, "İlan Türü", isSelling ? "Satılık" : "Aranıyor"),
+                    Divider(height: 1, color: Colors.white.withValues(alpha: 0.05)),
+                    summaryRow(Icons.category_rounded, "Kategori", selectedCategory),
+                    Divider(height: 1, color: Colors.white.withValues(alpha: 0.05)),
+                    summaryRow(Icons.settings_rounded, "Parça", _partNameCtrl.text.trim().isEmpty ? "Belirtilmedi" : _partNameCtrl.text.trim()),
+                    Divider(height: 1, color: Colors.white.withValues(alpha: 0.05)),
+                    summaryRow(Icons.directions_car_rounded, "Araç", vehicle.isEmpty ? "Belirtilmedi" : vehicle),
+                    if (isSelling) ...[
+                      Divider(height: 1, color: Colors.white.withValues(alpha: 0.05)),
+                      summaryRow(Icons.payments_rounded, "Fiyat", _priceCtrl.text.trim().isEmpty ? "Henüz girilmedi" : "${_priceCtrl.text.trim()} ₺"),
+                    ],
+                  ]),
+                ),
+              ],
+            );
+          }
+
+          Widget currentPage() {
+            switch (currentStep) {
+              case 0: return stepOne();
+              case 1: return stepTwo();
+              case 2: return stepThree();
+              default: return stepFour();
             }
           }
 
           return GestureDetector(
             onTap: () => FocusScope.of(context).unfocus(),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
               child: Align(
                 alignment: Alignment.bottomCenter,
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 700),
-                  child: SafeArea(
-                    child: Container(
-                      constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.92),
-                      padding: EdgeInsets.only(bottom: bottomInset > 0 ? bottomInset + 16 : 24),
-                      decoration: BoxDecoration(
-                        color: panelBlack.withValues(alpha: 0.85),
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                        border: Border.all(color: neonGreen.withValues(alpha: 0.2), width: 1.5),
-                        boxShadow: [BoxShadow(color: pureBlack.withValues(alpha: 0.8), blurRadius: 50)],
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onVerticalDragUpdate: (details) {
-                              if ((details.primaryDelta ?? 0) > 8) {
-                                safeClose();
-                              }
-                            },
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.only(top: 14, bottom: 10),
-                              color: Colors.transparent,
-                              child: Center(
-                                child: Container(
-                                  width: 48,
-                                  height: 6,
-                                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)),
-                                ),
-                              ),
+                  constraints: const BoxConstraints(maxWidth: 760),
+                  child: Container(
+                    width: double.infinity,
+                    constraints: BoxConstraints(maxHeight: media.size.height * 0.94),
+                    decoration: BoxDecoration(
+                      color: panelBlack.withValues(alpha: 0.98),
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                      border: Border.all(color: accent.withValues(alpha: 0.18)),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.75), blurRadius: 45)],
+                    ),
+                    child: SafeArea(
+                      top: false,
+                      child: Padding(
+                        padding: EdgeInsets.only(bottom: bottomInset),
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(pagePadding, 12, pagePadding, 12),
+                              child: Column(children: [
+                                Container(width: 45, height: 5, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(20))),
+                                const SizedBox(height: 14),
+                                Row(children: [
+                                  Container(width: 44, height: 44, decoration: BoxDecoration(color: accent.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(13)), child: Icon(isSelling ? Icons.sell_rounded : Icons.search_rounded, color: accent, size: 22)),
+                                  const SizedBox(width: 12),
+                                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(isSelling ? "Yeni Satılık İlan" : "Yeni Aranıyor İlanı", style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)), const SizedBox(height: 2), Text("Adım ${currentStep + 1} / 4", style: TextStyle(color: accent, fontSize: 11, fontWeight: FontWeight.w800))])),
+                                  IconButton(onPressed: safeClose, icon: const Icon(Icons.close_rounded, color: Colors.white60)),
+                                ]),
+                                const SizedBox(height: 16),
+                                Row(children: [stepDot(0, Icons.storefront_rounded, "Tür"), stepDot(1, Icons.directions_car_rounded, "Araç"), stepDot(2, Icons.settings_rounded, "Parça"), stepDot(3, Icons.rocket_launch_rounded, "Yayınla")]),
+                              ]),
                             ),
-                          ),
-                          Flexible(
-                            child: NotificationListener<ScrollNotification>(
-                              onNotification: (notification) {
-                                if (notification is ScrollUpdateNotification) {
-                                  if (notification.metrics.pixels < -30 && (notification.scrollDelta ?? 0) < 0) {
-                                    safeClose();
-                                    return true;
-                                  }
-                                } else if (notification is OverscrollNotification) {
-                                  if (notification.overscroll < -15) {
-                                    safeClose();
-                                    return true;
-                                  }
-                                }
-                                return false;
-                              },
+                            Divider(height: 1, color: Colors.white.withValues(alpha: 0.06)),
+                            Expanded(
                               child: SingleChildScrollView(
-                                physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-                                padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(14),
-                                          decoration: BoxDecoration(color: isSelling ? neonGreen.withValues(alpha: 0.15) : neonCyan.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(16), border: Border.all(color: isSelling ? neonGreen.withValues(alpha: 0.3) : neonCyan.withValues(alpha: 0.3))),
-                                          child: Icon(isSelling ? Icons.sell_rounded : Icons.search_rounded, color: isSelling ? neonGreen : neonCyan, size: 28),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(isSelling ? "Parça Sat" : "Parça Ara", style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
-                                              const SizedBox(height: 4),
-                                              Text(widget.userCity, style: const TextStyle(fontSize: 13, color: goldAccent, fontWeight: FontWeight.w700)),
-                                            ],
-                                          ),
-                                        ),
-                                        IconButton(
-                                          onPressed: safeClose,
-                                          icon: Container(
-                                            padding: const EdgeInsets.all(6),
-                                            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.08), shape: BoxShape.circle),
-                                            child: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 24),
-                                    
-                                    Container(
-                                      height: 60, padding: const EdgeInsets.all(6),
-                                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.04), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white.withValues(alpha: 0.05))),
-                                      child: Row(
-                                        children: [
-                                          Expanded(
-                                            child: GestureDetector(
-                                              onTap: () { HapticFeedback.selectionClick(); setModalState(() => isSelling = false); },
-                                              child: AnimatedContainer(
-                                                duration: const Duration(milliseconds: 300), curve: Curves.fastOutSlowIn,
-                                                decoration: BoxDecoration(
-                                                  color: !isSelling ? neonCyan : Colors.transparent, borderRadius: BorderRadius.circular(14),
-                                                  boxShadow: !isSelling ? [BoxShadow(color: neonCyan.withValues(alpha: 0.4), blurRadius: 15, offset: const Offset(0, 4))] : [],
-                                                ),
-                                                child: Center(child: Text("Arıyorum", style: TextStyle(color: !isSelling ? pureBlack : textGray, fontWeight: FontWeight.w900, fontSize: 15))),
-                                              ),
-                                            ),
-                                          ),
-                                          Expanded(
-                                            child: GestureDetector(
-                                              onTap: () { HapticFeedback.selectionClick(); setModalState(() => isSelling = true); },
-                                              child: AnimatedContainer(
-                                                duration: const Duration(milliseconds: 300), curve: Curves.fastOutSlowIn,
-                                                decoration: BoxDecoration(
-                                                  color: isSelling ? neonGreen : Colors.transparent, borderRadius: BorderRadius.circular(14),
-                                                  boxShadow: isSelling ? [BoxShadow(color: neonGreen.withValues(alpha: 0.4), blurRadius: 15, offset: const Offset(0, 4))] : [],
-                                                ),
-                                                child: Center(child: Text("Satıyorum", style: TextStyle(color: isSelling ? pureBlack : textGray, fontWeight: FontWeight.w900, fontSize: 15))),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 24),
-                
-                                    Container(
-                                      padding: const EdgeInsets.all(20),
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(colors: [Colors.white.withValues(alpha: 0.04), Colors.white.withValues(alpha: 0.01)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                                        borderRadius: BorderRadius.circular(24), border: Border.all(color: Colors.white.withValues(alpha: 0.08))
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: neonCyan.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.category_rounded, color: neonCyan, size: 20)),
-                                              const SizedBox(width: 12),
-                                              const Text("Kategorizasyon", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: -0.3)),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 20),
-                                          Row(
-                                            children: [
-                                              Expanded(child: _buildGlassDropdown("Durum", selectedCondition, _conditionOptions.where((c) => c != "Tüm Durumlar").toList(), neonCyan, (val) => setModalState(() => selectedCondition = val!))),
-                                              const SizedBox(width: 12),
-                                              Expanded(child: _buildGlassDropdown("Satış Tipi", selectedListingType, _listingTypeOptions.where((c) => c != "Tüm Satış Tipleri").toList(), goldAccent, (val) => setModalState(() => selectedListingType = val!))),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 16),
-                                          _buildGlassDropdown("Parça Kategorisi", selectedCategory, _categories.where((c) => c != "Tüm Kategoriler").toList(), neonGreen, (val) => setModalState(() => selectedCategory = val!)),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    
-                                    Container(
-                                      padding: const EdgeInsets.all(20),
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(colors: [Colors.white.withValues(alpha: 0.04), Colors.white.withValues(alpha: 0.01)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                                        borderRadius: BorderRadius.circular(24), border: Border.all(color: Colors.white.withValues(alpha: 0.08))
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: goldAccent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.directions_car_rounded, color: goldAccent, size: 20)),
-                                              const SizedBox(width: 12),
-                                              const Text("Araç Bilgileri", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: -0.3)),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 20),
-                                          Row(
-                                            children: [
-                                              Expanded(flex: 3, child: _buildGlassDropdown("Marka", selectedBrand, _carBrands, Colors.white, (val) => setModalState(() => selectedBrand = val!))),
-                                              const SizedBox(width: 12),
-                                              Expanded(flex: 2, child: _buildGlassDropdown("Model Yılı", selectedYear, years, neonCyan, (val) => setModalState(() => selectedYear = val!))),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 16),
-                                          _buildGlassDropdown("Kasa Tipi / Seri", selectedBodyType, bodyTypes, goldAccent, (val) => setModalState(() => selectedBodyType = val!)),
-                                          
-                                          const SizedBox(height: 28),
-                                          Row(
-                                            children: [
-                                              Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: neonGreen.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.build_circle_rounded, color: neonGreen, size: 20)),
-                                              const SizedBox(width: 12),
-                                              const Text("Parça Detayları", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: -0.3)),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 20),
-                                          _buildInput(_carModelCtrl, "Spesifik Model (İsteğe Bağlı)", "Örn: Civic, Megane, Focus", Icons.format_list_bulleted_rounded, action: TextInputAction.next),
-                                          const SizedBox(height: 16),
-                                          _buildInput(_partNameCtrl, "Parça Adı", "Örn: Sol Ön Çamurluk", Icons.settings_rounded, action: TextInputAction.next),
-                                          const SizedBox(height: 16),
-                                          _buildInput(_descCtrl, "Detaylı Açıklama", "Parçanın durumu, rengi, orjinalliği, varsa kusurları...", Icons.notes_rounded, maxLines: 4, action: TextInputAction.newline),
-                                        ],
-                                      ),
-                                    ),
-                                    
-                                    if (isSelling) ...[
-                                      const SizedBox(height: 16),
-                                      Container(
-                                        padding: const EdgeInsets.all(20),
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(colors: [Colors.white.withValues(alpha: 0.04), Colors.white.withValues(alpha: 0.01)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                                          borderRadius: BorderRadius.circular(24), border: Border.all(color: Colors.white.withValues(alpha: 0.08))
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              children: [
-                                                Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: isSelling ? neonGreen.withValues(alpha: 0.15) : neonCyan.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)), child: Icon(Icons.monetization_on_rounded, color: isSelling ? neonGreen : neonCyan, size: 20)),
-                                                const SizedBox(width: 12),
-                                                const Text("Satış Bilgileri", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: -0.3)),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 20),
-                                            _buildInput(_priceCtrl, "Satış Fiyatı (TL)", "0.00", Icons.attach_money_rounded, isNumber: true, action: TextInputAction.done, onSubmitted: (_) => FocusScope.of(context).unfocus()),
-                                            const SizedBox(height: 28),
-                                            
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                const Text("Fotoğraflar", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15)),
-                                                Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: const Text("Min: 2, Max: 3", style: TextStyle(color: textGray, fontSize: 11, fontWeight: FontWeight.w800))),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 12),
-                                            
-                                            if (selectedPhotos.isEmpty)
-                                              GestureDetector(
-                                                onTap: pickImages,
-                                                child: Container(
-                                                  width: double.infinity, height: 120,
-                                                  decoration: BoxDecoration(
-                                                    color: neonGreen.withValues(alpha: 0.05),
-                                                    borderRadius: BorderRadius.circular(20),
-                                                    border: Border.all(color: neonGreen.withValues(alpha: 0.3), width: 1.5),
-                                                  ),
-                                                  child: Column(
-                                                    mainAxisAlignment: MainAxisAlignment.center,
-                                                    children: [
-                                                      Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: neonGreen.withValues(alpha: 0.15), shape: BoxShape.circle), child: const Icon(Icons.add_photo_alternate_rounded, color: neonGreen, size: 32)),
-                                                      const SizedBox(height: 12),
-                                                      const Text("Galeriden Fotoğraf Seç", style: TextStyle(color: neonGreen, fontWeight: FontWeight.w800, fontSize: 14)),
-                                                    ],
-                                                  ),
-                                                ),
-                                              )
-                                            else
-                                              Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  SizedBox(
-                                                    height: 100,
-                                                    child: ListView.builder(
-                                                      scrollDirection: Axis.horizontal, physics: const BouncingScrollPhysics(), itemCount: selectedPhotos.length + (selectedPhotos.length < 3 ? 1 : 0),
-                                                      itemBuilder: (context, index) {
-                                                        if (index == selectedPhotos.length) {
-                                                          return GestureDetector(
-                                                            onTap: pickImages,
-                                                            child: Container(
-                                                              margin: const EdgeInsets.only(right: 12), width: 100, height: 100,
-                                                              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white.withValues(alpha: 0.2))),
-                                                              child: const Icon(Icons.add_rounded, color: Colors.white54, size: 32),
-                                                            ),
-                                                          );
-                                                        }
-                                                        return Stack(
-                                                          children: [
-                                                            Container(
-                                                              margin: const EdgeInsets.only(right: 12), width: 100, height: 100,
-                                                              decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: neonGreen.withValues(alpha: 0.5), width: 2), image: DecorationImage(image: kIsWeb ? NetworkImage(selectedPhotos[index].path) as ImageProvider : FileImage(File(selectedPhotos[index].path)), fit: BoxFit.cover)),
-                                                            ),
-                                                            Positioned(
-                                                              top: 6, right: 18,
-                                                              child: GestureDetector(
-                                                                onTap: () { HapticFeedback.lightImpact(); setModalState(() => selectedPhotos.removeAt(index)); },
-                                                                child: Container(padding: const EdgeInsets.all(4), decoration: BoxDecoration(color: alertRed.withValues(alpha: 0.9), shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 1.5)), child: const Icon(Icons.close_rounded, color: Colors.white, size: 14)),
-                                                              ),
-                                                            )
-                                                          ],
-                                                        );
-                                                      }
-                                                    ),
-                                                  ),
-                                                ],
-                                              )
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                
-                                    const SizedBox(height: 32),
-                                    Container(
-                                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: (isSelling ? neonGreen : neonCyan).withValues(alpha: 0.3), blurRadius: 30, offset: const Offset(0, 10))]),
-                                      child: ElevatedButton(
-                                        onPressed: isProcessing ? null : () async {
-                                          if (_partNameCtrl.text.isEmpty) return _showTopSnackBar("Lütfen zorunlu alanları doldurun.", isError: true);
-                                          if (isSelling && _priceCtrl.text.isEmpty) return _showTopSnackBar("Satılık ilanlar için fiyat girmelisiniz.", isError: true);
-                                          if (isSelling && selectedPhotos.length < 2) return _showTopSnackBar("En az 2 adet fotoğraf yüklemelisiniz.", isError: true);
-                
-                                          setModalState(() => isProcessing = true);
-                                          String finalPartName = "${isSelling ? "[SATILIK]" : "[ALINIK]"} [$selectedCategory] [$selectedCondition] [$selectedListingType] ${_partNameCtrl.text.trim()}";
-                                          
-                                          String finalCarModel = "";
-                                          if (selectedBrand != "Diğer / Belirtilmemiş") finalCarModel += "$selectedBrand ";
-                                          if (selectedBodyType != "Kasa Tipi Seçin") finalCarModel += "$selectedBodyType ";
-                                          finalCarModel += _carModelCtrl.text.trim();
-                                          if (selectedYear != "Yıl Seçin") finalCarModel += " ($selectedYear)";
-                                          
-                                          try {
-                                            var request = _secureMultipart("$baseUrl?action=create_part_listing");
-                                            request.fields['user_id'] = widget.currentUserId.toString(); 
-                                            request.fields['user_type'] = widget.currentUserType; 
-                                            request.fields['customer_id'] = widget.currentUserId.toString(); 
-                                            request.fields['city'] = widget.userCity;
-                                            request.fields['part_name'] = finalPartName;
-                                            request.fields['car_model'] = finalCarModel.trim();
-                                            request.fields['description'] = _descCtrl.text.trim();
-                
-                                            if (isSelling) {
-                                              request.fields['price'] = _priceCtrl.text.trim();
-                                              for (int i = 0; i < selectedPhotos.length; i++) {
-                                                if (kIsWeb) {
-                                                  request.files.add(http.MultipartFile.fromBytes('photo${i + 1}', await selectedPhotos[i].readAsBytes(), filename: selectedPhotos[i].name));
-                                                } else {
-                                                  request.files.add(await http.MultipartFile.fromPath('photo${i + 1}', selectedPhotos[i].path));
-                                                }
-                                              }
-                                            }
-                
-                                            var streamedResponse = await request.send().timeout(_uploadTimeout);
-                                            var response = await http.Response.fromStream(streamedResponse);
-                                            final data = json.decode(response.body);
-                
-                                            if (mounted) {
-                                              if (data['status'] == 'success') {
-                                                safeClose();
-                                                _showTopSnackBar("İlanınız efsanevi bir şekilde yayınlandı! 🚀");
-                                                _fetchAllData();
-                                              } else {
-                                                _showTopSnackBar(data['message'] ?? "İlan yüklenemedi.", isError: true);
-                                              }
-                                            }
-                                          } catch (e) {
-                                            if (mounted) _showTopSnackBar("Bağlantı hatası oluştu.", isError: true);
-                                          } finally {
-                                            if (mounted) setModalState(() => isProcessing = false);
-                                          }
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: isSelling ? neonGreen : neonCyan,
-                                          padding: const EdgeInsets.symmetric(vertical: 22),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                        ),
-                                        child: isProcessing 
-                                            ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 3))
-                                            : Text(isSelling ? "Satılık İlanı Yayınla" : "Alınık İlanı Yayınla", style: const TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 17, letterSpacing: 0.5)),
-                                      ),
-                                    )
-                                  ],
-                                ),
+                                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                                physics: const ClampingScrollPhysics(),
+                                padding: EdgeInsets.fromLTRB(pagePadding, 22, pagePadding, 24),
+                                child: AnimatedSwitcher(duration: const Duration(milliseconds: 220), child: currentPage()),
                               ),
                             ),
-                          ),
-                        ],
+                            Container(
+                              padding: EdgeInsets.fromLTRB(pagePadding, 11, pagePadding, 13),
+                              decoration: BoxDecoration(color: panelBlack, border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.07)))),
+                              child: Row(children: [
+                                if (currentStep > 0) ...[
+                                  Expanded(child: OutlinedButton.icon(
+                                    onPressed: isProcessing ? null : () => setModalState(() => currentStep--),
+                                    icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                                    label: const Text("Geri", style: TextStyle(fontWeight: FontWeight.w900)),
+                                    style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: BorderSide(color: Colors.white.withValues(alpha: 0.15)), padding: const EdgeInsets.symmetric(vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                                  )),
+                                  const SizedBox(width: 10),
+                                ],
+                                Expanded(
+                                  flex: currentStep > 0 ? 2 : 1,
+                                  child: ElevatedButton(
+                                    onPressed: isProcessing ? null : () async {
+                                      FocusScope.of(context).unfocus();
+                                      if (currentStep < 3) {
+                                        if (!validateStep()) return;
+                                        setModalState(() => currentStep++);
+                                      } else {
+                                        if (!validateStep()) return;
+                                        await publishListing();
+                                      }
+                                    },
+                                    style: ElevatedButton.styleFrom(backgroundColor: accent, foregroundColor: pureBlack, padding: const EdgeInsets.symmetric(vertical: 15), elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                                    child: isProcessing
+                                        ? const SizedBox(width: 21, height: 21, child: CircularProgressIndicator(strokeWidth: 2.5, color: pureBlack))
+                                        : Row(mainAxisAlignment: MainAxisAlignment.center, children: [Text(currentStep == 3 ? "İlanı Yayınla" : "Devam Et", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900)), const SizedBox(width: 6), Icon(currentStep == 3 ? Icons.rocket_launch_rounded : Icons.arrow_forward_rounded, size: 18)]),
+                                  ),
+                                ),
+                              ]),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -1082,7 +1137,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
             ),
           );
         },
-      )
+      ),
     );
   }
 
@@ -1207,16 +1262,28 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                       itemBuilder: (context, index) {
                                         final item = filteredItems[index];
                                         final isSelected = item == currentValue;
-                                        return ListTile(
-                                          onTap: () {
-                                            FocusScope.of(context).unfocus();
-                                            HapticFeedback.selectionClick();
-                                            onSelected(item);
-                                            Navigator.pop(ctx);
-                                          },
-                                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                                          title: Text(item, style: TextStyle(color: isSelected ? accentColor : Colors.white, fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600, fontSize: 15)),
-                                          trailing: isSelected ? Icon(Icons.check_circle_rounded, color: accentColor, size: 20) : null,
+                                        return Material(
+                                          type: MaterialType.transparency,
+                                          child: ListTile(
+                                            onTap: () {
+                                              FocusScope.of(context).unfocus();
+                                              HapticFeedback.selectionClick();
+                                              onSelected(item);
+                                              Navigator.pop(ctx);
+                                            },
+                                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                                            title: Text(
+                                              item,
+                                              style: TextStyle(
+                                                color: isSelected ? accentColor : Colors.white,
+                                                fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                            trailing: isSelected
+                                                ? Icon(Icons.check_circle_rounded, color: accentColor, size: 20)
+                                                : null,
+                                          ),
                                         );
                                       },
                                     ),
@@ -2282,162 +2349,368 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
     return null;
   }
 
-  Widget _buildGridListingCard(Map<String, dynamic> item) {
-    String rawPartName = item['part_name'] ?? '';
-    bool isForSale = rawPartName.startsWith('[SATILIK]');
-    bool isToBuy = rawPartName.startsWith('[ALINIK]');
-    String cleanPartName = rawPartName.replaceAll(RegExp(r'\[.*?\]'), '').trim();
-    Color typeColor = isForSale ? neonGreen : goldAccent;
-    String typeText = isForSale ? "SATILIK" : (isToBuy ? "ARANIYOR" : "İLAN");
-    
-    String? imageUrl = _getFirstImage(item);
+  String _listingTag(String rawPartName, int index) {
+    final matches = RegExp(r'\[(.*?)\]').allMatches(rawPartName).toList();
+    if (index < 0 || index >= matches.length) return '';
+    return matches[index].group(1) ?? '';
+  }
 
+  IconData _marketCategoryIcon(String category) {
+    const icons = <String, IconData>{
+      "Tüm Kategoriler": Icons.grid_view_rounded,
+      "Motor & Parçaları": Icons.settings_rounded,
+      "Kaporta & Dış Aksam": Icons.car_repair_rounded,
+      "Elektronik & Beyin": Icons.memory_rounded,
+      "Fren Sistemi": Icons.disc_full_rounded,
+      "Süspansiyon & Yürüyen": Icons.alt_route_rounded,
+      "Şanzıman & Aktarma": Icons.settings_input_component_rounded,
+      "Aydınlatma": Icons.lightbulb_rounded,
+      "Egzoz Sistemi": Icons.air_rounded,
+      "Soğutma & Isıtma": Icons.ac_unit_rounded,
+      "Yakıt Sistemi": Icons.local_gas_station_rounded,
+      "İç Trim & Döşeme": Icons.weekend_rounded,
+      "Direksiyon Sistemi": Icons.pan_tool_alt_rounded,
+      "Klima Sistemi": Icons.air_rounded,
+      "Filtreler": Icons.filter_alt_rounded,
+      "Jant & Lastik": Icons.tire_repair_rounded,
+      "Aksesuar & Tuning": Icons.auto_awesome_rounded,
+      "Şasi": Icons.view_in_ar_rounded,
+      "Diğer": Icons.widgets_rounded,
+    };
+    return icons[category] ?? Icons.category_rounded;
+  }
+
+  int get _activeMarketFilterCount {
+    int count = 0;
+    if (currentCategoryFilter != "Tüm Kategoriler") count++;
+    if (currentConditionFilter != "Tüm Durumlar") count++;
+    if (currentListingTypeFilter != "Tüm Satış Tipleri") count++;
+    if (currentModeFilter != "Tümü") count++;
+    if (minPriceFilter != null || maxPriceFilter != null) count++;
+    if (searchQuery.trim().isNotEmpty) count++;
+    return count;
+  }
+
+  void _resetMarketFilters() {
+    HapticFeedback.selectionClick();
+    final String defaultCity = _cities.contains(widget.userCity)
+        ? widget.userCity
+        : "Tüm Şehirler";
+    final bool cityChanged = currentCityFilter != defaultCity;
+
+    setState(() {
+      _searchCtrl.clear();
+      searchQuery = "";
+      currentCategoryFilter = "Tüm Kategoriler";
+      currentConditionFilter = "Tüm Durumlar";
+      currentListingTypeFilter = "Tüm Satış Tipleri";
+      currentModeFilter = "Tümü";
+      currentSortFilter = "En Yeni";
+      minPriceFilter = null;
+      maxPriceFilter = null;
+      currentCityFilter = defaultCity;
+      marketPage = 1;
+    });
+
+    if (cityChanged) _fetchAllData();
+  }
+
+  Widget _buildMarketTag(String text, {bool strong = false}) {
+    if (text.trim().isEmpty) return const SizedBox.shrink();
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
       decoration: BoxDecoration(
-        color: panelBlack.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.5),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 20, offset: const Offset(0, 8)),
-          BoxShadow(color: typeColor.withValues(alpha: 0.05), blurRadius: 30, spreadRadius: -5),
-        ],
+        color: strong
+            ? neonGreen.withValues(alpha: 0.12)
+            : Colors.white.withValues(alpha: 0.055),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: strong
+              ? neonGreen.withValues(alpha: 0.35)
+              : Colors.white.withValues(alpha: 0.08),
+        ),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () {
-                HapticFeedback.lightImpact();
-                _showListingDetailsModal(item, false, false);
-              },
-              highlightColor: typeColor.withValues(alpha: 0.1),
-              splashColor: typeColor.withValues(alpha: 0.2),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    flex: 5, 
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        if (imageUrl != null)
-                          Image.network(
-                            imageUrl, 
-                            cacheWidth: 300,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => _buildPlaceholderImage(typeColor, isForSale),
-                          )
-                        else
-                          _buildPlaceholderImage(typeColor, isForSale),
-                          
-                        Positioned.fill(
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [Colors.black.withValues(alpha: 0.1), panelBlack.withValues(alpha: 0.9)],
-                                stops: const [0.5, 1.0],
-                              )
-                            )
-                          )
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: strong ? neonGreen : Colors.white70,
+          fontWeight: FontWeight.w800,
+          fontSize: 9.5,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGridListingCard(Map<String, dynamic> item) {
+    final String rawPartName = (item['part_name'] ?? '').toString();
+    final bool isForSale = rawPartName.startsWith('[SATILIK]');
+    final bool isToBuy = rawPartName.startsWith('[ALINIK]');
+    final String cleanPartName = rawPartName.replaceAll(RegExp(r'\[.*?\]'), '').trim();
+    final String category = _listingTag(rawPartName, 1);
+    final String condition = _listingTag(rawPartName, 2);
+    final String listingType = _listingTag(rawPartName, 3);
+    final String carModel = (item['car_model'] ?? 'Araç bilgisi belirtilmedi').toString().trim();
+    final String city = (item['city'] ?? 'Bilinmiyor').toString();
+    final bool sameCity = city == widget.userCity;
+    final Color typeColor = isForSale ? neonGreen : Colors.white;
+    final String typeText = isForSale ? "SATILIK" : (isToBuy ? "ARANIYOR" : "İLAN");
+    final String? imageUrl = _getFirstImage(item);
+    final String priceText = item['price']?.toString().trim() ?? '';
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () {
+          HapticFeedback.lightImpact();
+          _showListingDetailsModal(item, false, false);
+        },
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: panelBlack,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.26),
+                blurRadius: 14,
+                offset: const Offset(0, 7),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AspectRatio(
+                aspectRatio: 1.55,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Container(color: Colors.white.withValues(alpha: 0.025)),
+                    if (imageUrl != null)
+                      Image.network(
+                        imageUrl,
+                        cacheWidth: 520,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _buildPlaceholderImage(typeColor, isForSale),
+                      )
+                    else
+                      _buildPlaceholderImage(typeColor, isForSale),
+                    Positioned.fill(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              Colors.black.withValues(alpha: 0.28),
+                            ],
+                            stops: const [0.56, 1.0],
+                          ),
                         ),
-                        
-                        Positioned(
-                          top: 10,
-                          right: 10,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.4), 
-                                  borderRadius: BorderRadius.circular(10), 
-                                  border: Border.all(color: typeColor.withValues(alpha: 0.6), width: 1.5)
+                      ),
+                    ),
+                    Positioned(
+                      top: 9,
+                      left: 9,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: isForSale ? neonGreen : Colors.black.withValues(alpha: 0.78),
+                          borderRadius: BorderRadius.circular(9),
+                          border: Border.all(
+                            color: isForSale ? neonGreen : Colors.white24,
+                          ),
+                        ),
+                        child: Text(
+                          typeText,
+                          style: TextStyle(
+                            color: isForSale ? pureBlack : Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 9.5,
+                            letterSpacing: 0.35,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (sameCity)
+                      Positioned(
+                        top: 9,
+                        right: 9,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.78),
+                            borderRadius: BorderRadius.circular(9),
+                            border: Border.all(color: neonGreen.withValues(alpha: 0.45)),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.near_me_rounded, color: neonGreen, size: 11),
+                              SizedBox(width: 4),
+                              Text(
+                                "Yakın",
+                                style: TextStyle(
+                                  color: neonGreen,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w900,
                                 ),
-                                child: Text(typeText, style: TextStyle(color: typeColor, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.8)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 11, 12, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        cleanPartName.isEmpty ? "İsimsiz ilan" : cleanPartName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w900,
+                          height: 1.2,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const Icon(Icons.directions_car_rounded, color: Colors.white38, size: 13),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(
+                              carModel.isEmpty ? "Araç bilgisi belirtilmedi" : carModel,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white60,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 10.5,
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    flex: 6, 
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                cleanPartName, 
-                                maxLines: 2, 
-                                overflow: TextOverflow.ellipsis, 
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white, height: 1.2, letterSpacing: -0.3)
-                              ),
-                              const SizedBox(height: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(6)),
-                                child: Text(
-                                  "${item['car_model']}", 
-                                  maxLines: 1, 
-                                  overflow: TextOverflow.ellipsis, 
-                                  style: const TextStyle(color: textGray, fontWeight: FontWeight.w700, fontSize: 11)
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              if (RegExp(r'\[(.*?)\]').allMatches(rawPartName).length > 3)
-                                Row(
-                                  children: [
-                                    Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: neonCyan.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)), child: Text(RegExp(r'\[(.*?)\]').allMatches(rawPartName).elementAt(2).group(1) ?? "", style: const TextStyle(color: neonCyan, fontSize: 9, fontWeight: FontWeight.w900))),
-                                    const SizedBox(width: 4),
-                                    Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: goldAccent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)), child: Text(RegExp(r'\[(.*?)\]').allMatches(rawPartName).elementAt(3).group(1) ?? "", style: const TextStyle(color: goldAccent, fontSize: 9, fontWeight: FontWeight.w900))),
-                                  ],
-                                ),
-                            ],
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (isForSale && item['price'] != null)
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text("${item['price']} ₺", style: const TextStyle(color: neonGreen, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
-                                ),
-                              if (!isForSale)
-                                const Text("Teklif Bekliyor", style: TextStyle(color: goldAccent, fontSize: 12, fontWeight: FontWeight.w900)),
-                              
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Icon(Icons.location_on_rounded, color: neonCyan.withValues(alpha: 0.8), size: 14),
-                                  const SizedBox(width: 4),
-                                  Expanded(
-                                    child: Text(item['city'] ?? 'Bilinmiyor', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: textGray, fontWeight: FontWeight.w600, fontSize: 12)),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          )
                         ],
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          if (condition.isNotEmpty)
+                            Flexible(child: _buildMarketTag(condition, strong: true)),
+                          if (condition.isNotEmpty && listingType.isNotEmpty)
+                            const SizedBox(width: 5),
+                          if (listingType.isNotEmpty)
+                            Flexible(child: _buildMarketTag(listingType)),
+                        ],
+                      ),
+                      const Spacer(),
+                      if (category.isNotEmpty) ...[
+                        Row(
+                          children: [
+                            Icon(_marketCategoryIcon(category), color: Colors.white38, size: 13),
+                            const SizedBox(width: 5),
+                            Expanded(
+                              child: Text(
+                                category,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white38,
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 7),
+                      ],
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  isForSale ? "Fiyat" : "Durum",
+                                  style: const TextStyle(
+                                    color: Colors.white38,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  isForSale && priceText.isNotEmpty
+                                      ? "$priceText ₺"
+                                      : "Teklif bekliyor",
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: isForSale ? neonGreen : Colors.white,
+                                    fontSize: isForSale ? 17 : 11.5,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: isForSale ? -0.4 : 0,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.055),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                            ),
+                            child: const Icon(
+                              Icons.arrow_forward_rounded,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 7),
+                      Row(
+                        children: [
+                          const Icon(Icons.location_on_rounded, color: Colors.white38, size: 12),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              city,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white38,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -2468,12 +2741,28 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: isSelected ? neonGreen.withValues(alpha: 0.1) : panelBlack.withValues(alpha: 0.6),
+        color: isSelected
+            ? panelBlack.withValues(alpha: 0.96)
+            : panelBlack.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: isSelected ? neonGreen : Colors.white.withValues(alpha: 0.08), width: 1.5),
+        border: Border.all(
+          color: isSelected
+              ? neonGreen.withValues(alpha: 0.78)
+              : Colors.white.withValues(alpha: 0.08),
+          width: isSelected ? 1.5 : 1,
+        ),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 6)),
-          if (isSelected) BoxShadow(color: neonGreen.withValues(alpha: 0.15), blurRadius: 20, spreadRadius: 2),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.30),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
+          ),
+          if (isSelected)
+            BoxShadow(
+              color: neonGreen.withValues(alpha: 0.10),
+              blurRadius: 14,
+              spreadRadius: 0,
+            ),
         ],
       ),
       child: ClipRRect(
@@ -2755,12 +3044,27 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
       backgroundColor: pureBlack,
       extendBodyBehindAppBar: true,
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(120),
+        preferredSize: const Size.fromHeight(112),
         child: ClipRRect(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
             child: AppBar(
-              title: const Text("Yedek Parça Pazarı", style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5, fontSize: 22)),
+              title: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.storefront_rounded, color: neonGreen, size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    "Yedek Parça Pazarı",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: -0.45,
+                      fontSize: 19,
+                    ),
+                  ),
+                ],
+              ),
               backgroundColor: panelBlack.withValues(alpha: 0.65),
               elevation: 0,
               centerTitle: true,
@@ -2832,7 +3136,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                     builder: (context, constraints) {
                       return Center(
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 1200),
+                          constraints: const BoxConstraints(maxWidth: 1440),
                           child: TabBarView(
                             controller: _tabController,
                             children: [
@@ -2848,272 +3152,528 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
           ),
         ],
       ),
-      floatingActionButton: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: neonGreen.withValues(alpha: 0.4), blurRadius: 20, offset: const Offset(0, 8))],
-        ),
-        child: FloatingActionButton.extended(
-          onPressed: _showCreateListingDialog,
-          backgroundColor: neonGreen,
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          icon: const Icon(Icons.add_box_rounded, color: pureBlack, size: 24),
-          label: const Text("Yeni İlan", style: TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
-        ),
-      ),
+      floatingActionButton: MediaQuery.sizeOf(context).width >= 560
+          ? FloatingActionButton.extended(
+              onPressed: _showCreateListingDialog,
+              backgroundColor: neonGreen,
+              foregroundColor: pureBlack,
+              elevation: 5,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              icon: const Icon(Icons.add_rounded, size: 22),
+              label: const Text(
+                "Yeni İlan",
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
+              ),
+            )
+          : FloatingActionButton(
+              onPressed: _showCreateListingDialog,
+              backgroundColor: neonGreen,
+              foregroundColor: pureBlack,
+              elevation: 5,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: const Icon(Icons.add_rounded, size: 26),
+            ),
     ));
   }
 
   Widget _buildMarketTab(BoxConstraints constraints) {
-    double paddingHorizontal = constraints.maxWidth > 800 ? 32 : 16;
-    
-    int totalPages = (_filteredMarketListings.length / itemsPerPage).ceil();
-    if (marketPage > totalPages && totalPages > 0) marketPage = totalPages;
-    List<dynamic> paginatedItems = _filteredMarketListings.skip((marketPage - 1) * itemsPerPage).take(itemsPerPage).toList();
-    
-    double childAspectRatio = constraints.maxWidth < 380 ? 0.62 : (constraints.maxWidth > 800 ? 0.72 : 0.68);
-    int gridCrossAxisCount = constraints.maxWidth > 1000 ? 4 : (constraints.maxWidth > 600 ? 3 : 2);
+    final double width = constraints.maxWidth;
+    final double paddingHorizontal = width >= 1100 ? 28 : (width >= 700 ? 20 : 12);
 
-    return Column(
-      children: [
-        Padding(
-          padding: EdgeInsets.fromLTRB(paddingHorizontal, 16, paddingHorizontal, 12),
-          child: Container(
-            decoration: BoxDecoration(
-              color: panelBlack.withValues(alpha: 0.65),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.5),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8))],
+    final int totalPages = (_filteredMarketListings.length / itemsPerPage).ceil();
+    if (marketPage > totalPages && totalPages > 0) marketPage = totalPages;
+    final List<dynamic> paginatedItems = _filteredMarketListings
+        .skip((marketPage - 1) * itemsPerPage)
+        .take(itemsPerPage)
+        .toList();
+
+    final int gridCrossAxisCount = width >= 1320
+        ? 5
+        : width >= 1000
+            ? 4
+            : width >= 680
+                ? 3
+                : 2;
+    final double gridMainAxisExtent = width < 390 ? 318 : (width < 700 ? 326 : 336);
+
+    Widget compactDropdown({
+      required IconData icon,
+      required String value,
+      required List<String> items,
+      required ValueChanged<String?> onChanged,
+      required bool active,
+    }) {
+      return Container(
+        height: 42,
+        padding: const EdgeInsets.only(left: 11, right: 7),
+        decoration: BoxDecoration(
+          color: active
+              ? neonGreen.withValues(alpha: 0.09)
+              : Colors.white.withValues(alpha: 0.035),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: active
+                ? neonGreen.withValues(alpha: 0.36)
+                : Colors.white.withValues(alpha: 0.08),
+          ),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: value,
+            dropdownColor: panelBlack,
+            borderRadius: BorderRadius.circular(14),
+            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white54, size: 17),
+            style: TextStyle(
+              color: active ? neonGreen : Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 11.5,
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                child: Column(
-                  children: [
-                    TextField(
+            items: items
+                .map(
+                  (v) => DropdownMenuItem<String>(
+                    value: v,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(icon, color: v == value && active ? neonGreen : Colors.white54, size: 14),
+                        const SizedBox(width: 7),
+                        Text(v),
+                      ],
+                    ),
+                  ),
+                )
+                .toList(),
+            onChanged: onChanged,
+          ),
+        ),
+      );
+    }
+
+    Widget topAction({
+      required IconData icon,
+      required String label,
+      required VoidCallback onTap,
+      bool active = false,
+    }) {
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(13),
+          child: Container(
+            height: 46,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: active
+                  ? neonGreen.withValues(alpha: 0.08)
+                  : Colors.white.withValues(alpha: 0.035),
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(
+                color: active
+                    ? neonGreen.withValues(alpha: 0.32)
+                    : Colors.white.withValues(alpha: 0.08),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, color: active ? neonGreen : Colors.white70, size: 17),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: active ? neonGreen : Colors.white,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white38, size: 16),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      color: neonGreen,
+      backgroundColor: panelBlack,
+      onRefresh: _fetchAllData,
+      child: CustomScrollView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        physics: const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(paddingHorizontal, 14, paddingHorizontal, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: panelBlack,
+                      borderRadius: BorderRadius.circular(17),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.18),
+                          blurRadius: 14,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: TextField(
                       controller: _searchCtrl,
                       textInputAction: TextInputAction.search,
                       onSubmitted: (_) => FocusScope.of(context).unfocus(),
                       onChanged: (val) => setState(() {
                         searchQuery = val;
-                        marketPage = 1; 
+                        marketPage = 1;
                       }),
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
                       decoration: InputDecoration(
-                        hintText: "Parça, marka, durum (sıfır/çıkma) ara...",
-                        hintStyle: TextStyle(color: textGray.withValues(alpha: 0.6), fontSize: 14),
-                        prefixIcon: const Padding(padding: EdgeInsets.only(left: 12, right: 8), child: Icon(Icons.search_rounded, color: neonGreen, size: 22)),
+                        hintText: "Parça, marka, model veya ilan no ara",
+                        hintStyle: const TextStyle(color: Colors.white38, fontSize: 12.5),
+                        prefixIcon: const Icon(Icons.search_rounded, color: neonGreen, size: 21),
                         suffixIcon: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             if (searchQuery.isNotEmpty)
                               IconButton(
-                                icon: const Icon(Icons.close_rounded, color: textGray, size: 20),
-                                onPressed: () { 
-                                  HapticFeedback.selectionClick();
-                                  setState(() { _searchCtrl.clear(); searchQuery = ""; marketPage = 1; });
-                                  FocusScope.of(context).unfocus();
+                                tooltip: "Aramayı temizle",
+                                onPressed: () {
+                                  setState(() {
+                                    _searchCtrl.clear();
+                                    searchQuery = "";
+                                    marketPage = 1;
+                                  });
                                 },
+                                icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 18),
                               ),
-                            Container(width: 1.5, height: 24, color: Colors.white.withValues(alpha: 0.1)),
-                            IconButton(
-                              icon: Icon(Icons.tune_rounded, color: (minPriceFilter != null || maxPriceFilter != null) ? neonGreen : Colors.white, size: 22),
-                              onPressed: _showAdvancedFilterDialog,
+                            Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                IconButton(
+                                  tooltip: "Gelişmiş filtre",
+                                  onPressed: _showAdvancedFilterDialog,
+                                  icon: Icon(
+                                    Icons.tune_rounded,
+                                    color: (minPriceFilter != null || maxPriceFilter != null)
+                                        ? neonGreen
+                                        : Colors.white70,
+                                    size: 20,
+                                  ),
+                                ),
+                                if (_activeMarketFilterCount > 0)
+                                  Positioned(
+                                    right: 4,
+                                    top: 3,
+                                    child: Container(
+                                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                                      decoration: const BoxDecoration(
+                                        color: neonGreen,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        "$_activeMarketFilterCount",
+                                        style: const TextStyle(
+                                          color: pureBlack,
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: 3),
                           ],
                         ),
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 18)
+                        contentPadding: const EdgeInsets.symmetric(vertical: 16),
                       ),
                     ),
-                    Container(height: 1.5, color: Colors.white.withValues(alpha: 0.06)),
-                    
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: _showCityPicker,
-                              highlightColor: neonCyan.withValues(alpha: 0.1),
-                              splashColor: neonCyan.withValues(alpha: 0.2),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(6),
-                                      decoration: BoxDecoration(color: neonCyan.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
-                                      child: const Icon(Icons.map_rounded, color: neonCyan, size: 16),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        currentCityFilter,
-                                        maxLines: 1, overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          color: currentCityFilter == "Tüm Şehirler" ? textGray : Colors.white,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                    ),
-                                    const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white70, size: 16),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
+                  ),
+                  const SizedBox(height: 9),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: topAction(
+                          icon: Icons.location_on_rounded,
+                          label: currentCityFilter,
+                          onTap: _showCityPicker,
+                          active: currentCityFilter != "Tüm Şehirler",
                         ),
-                        Container(width: 1.5, height: 30, color: Colors.white.withValues(alpha: 0.06)),
-                        Expanded(
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: _showSortPicker,
-                              highlightColor: goldAccent.withValues(alpha: 0.1),
-                              splashColor: goldAccent.withValues(alpha: 0.2),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(6),
-                                      decoration: BoxDecoration(color: goldAccent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
-                                      child: const Icon(Icons.sort_rounded, color: goldAccent, size: 16),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        currentSortFilter,
-                                        maxLines: 1, overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          color: currentSortFilter == "En Yeni" ? textGray : Colors.white,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                    ),
-                                    const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white70, size: 16),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: topAction(
+                          icon: Icons.swap_vert_rounded,
+                          label: currentSortFilter,
+                          onTap: _showSortPicker,
+                          active: currentSortFilter != "En Yeni",
                         ),
-                      ],
-                    )
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
-        ),
-        
-        SizedBox(
-          height: 44,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            padding: EdgeInsets.symmetric(horizontal: paddingHorizontal),
-            children: [
-              Container(
-                margin: const EdgeInsets.only(right: 10),
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(color: panelBlack, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white30)),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: currentModeFilter, dropdownColor: panelBlack, icon: const Icon(Icons.arrow_drop_down, color: Colors.white70),
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13),
-                    items: _modeOptions.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
-                    onChanged: (val) { if (val != null) setState(() { currentModeFilter = val; marketPage = 1; }); },
-                  ),
-                ),
-              ),
-              Container(
-                margin: const EdgeInsets.only(right: 10),
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(color: panelBlack, borderRadius: BorderRadius.circular(20), border: Border.all(color: goldAccent.withValues(alpha: 0.5))),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: currentListingTypeFilter, dropdownColor: panelBlack, icon: const Icon(Icons.arrow_drop_down, color: goldAccent),
-                    style: const TextStyle(color: goldAccent, fontWeight: FontWeight.w800, fontSize: 13),
-                    items: _listingTypeOptions.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
-                    onChanged: (val) { if (val != null) setState(() { currentListingTypeFilter = val; marketPage = 1; }); },
-                  ),
-                ),
-              ),
-              Container(
-                margin: const EdgeInsets.only(right: 10),
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(color: panelBlack, borderRadius: BorderRadius.circular(20), border: Border.all(color: neonCyan.withValues(alpha: 0.5))),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: currentConditionFilter, dropdownColor: panelBlack, icon: const Icon(Icons.arrow_drop_down, color: neonCyan),
-                    style: const TextStyle(color: neonCyan, fontWeight: FontWeight.w800, fontSize: 13),
-                    items: _conditionOptions.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
-                    onChanged: (val) { if (val != null) setState(() { currentConditionFilter = val; marketPage = 1; }); },
-                  ),
-                ),
-              ),
-              ..._categories.map((cat) {
-                final isSelected = cat == currentCategoryFilter;
-                return GestureDetector(
-                  onTap: () { HapticFeedback.selectionClick(); setState(() { currentCategoryFilter = cat; marketPage = 1; }); },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.only(right: 10),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isSelected ? neonGreen : Colors.white.withValues(alpha: 0.04),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: isSelected ? neonGreen : Colors.white.withValues(alpha: 0.1)),
-                      boxShadow: isSelected ? [BoxShadow(color: neonGreen.withValues(alpha: 0.3), blurRadius: 10)] : [],
-                    ),
-                    child: Center(child: Text(cat, style: TextStyle(color: isSelected ? pureBlack : Colors.white, fontWeight: FontWeight.w900, fontSize: 13))),
-                  ),
-                );
-              }),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
 
-        Expanded(
-          child: _filteredMarketListings.isEmpty
-            ? _buildEmptyState()
-            : RefreshIndicator(
-                color: neonGreen,
-                backgroundColor: panelBlack,
-                onRefresh: _fetchAllData,
-                child: FadeTransition(
-                  opacity: _fadeController,
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: GridView.builder(
-                          padding: EdgeInsets.fromLTRB(paddingHorizontal, 8, paddingHorizontal, 100),
-                          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: gridCrossAxisCount,
-                            childAspectRatio: childAspectRatio,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                          ),
-                          itemCount: paginatedItems.length,
-                          itemBuilder: (ctx, i) => _buildGridListingCard(paginatedItems[i]),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(paddingHorizontal, 8, paddingHorizontal, 9),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      "Kategoriler",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16.5,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.25,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    "${_categories.length - 1} kategori",
+                    style: const TextStyle(
+                      color: Colors.white38,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: 88,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.symmetric(horizontal: paddingHorizontal),
+                itemCount: _categories.length,
+                itemBuilder: (context, index) {
+                  final String category = _categories[index];
+                  final bool selected = category == currentCategoryFilter;
+                  return InkWell(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() {
+                        currentCategoryFilter = category;
+                        marketPage = 1;
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(14),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      width: 84,
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.fromLTRB(7, 8, 7, 7),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? neonGreen.withValues(alpha: 0.09)
+                            : Colors.white.withValues(alpha: 0.028),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: selected
+                              ? neonGreen.withValues(alpha: 0.55)
+                              : Colors.white.withValues(alpha: 0.07),
                         ),
                       ),
-                      _buildPaginationBar(marketPage, totalPages, (page) => setState(() => marketPage = page)),
-                    ],
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 35,
+                            height: 35,
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? neonGreen
+                                  : Colors.white.withValues(alpha: 0.055),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              _marketCategoryIcon(category),
+                              color: selected ? pureBlack : Colors.white70,
+                              size: 19,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            category,
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: selected ? neonGreen : Colors.white70,
+                              fontSize: 8.8,
+                              height: 1.05,
+                              fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+
+          const SliverToBoxAdapter(child: SizedBox(height: 11)),
+
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: 42,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.symmetric(horizontal: paddingHorizontal),
+                children: [
+                  compactDropdown(
+                    icon: Icons.storefront_rounded,
+                    value: currentModeFilter,
+                    items: _modeOptions,
+                    active: currentModeFilter != "Tümü",
+                    onChanged: (val) {
+                      if (val == null) return;
+                      setState(() {
+                        currentModeFilter = val;
+                        marketPage = 1;
+                      });
+                    },
                   ),
+                  const SizedBox(width: 8),
+                  compactDropdown(
+                    icon: Icons.shopping_bag_rounded,
+                    value: currentListingTypeFilter,
+                    items: _listingTypeOptions,
+                    active: currentListingTypeFilter != "Tüm Satış Tipleri",
+                    onChanged: (val) {
+                      if (val == null) return;
+                      setState(() {
+                        currentListingTypeFilter = val;
+                        marketPage = 1;
+                      });
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  compactDropdown(
+                    icon: Icons.verified_rounded,
+                    value: currentConditionFilter,
+                    items: _conditionOptions,
+                    active: currentConditionFilter != "Tüm Durumlar",
+                    onChanged: (val) {
+                      if (val == null) return;
+                      setState(() {
+                        currentConditionFilter = val;
+                        marketPage = 1;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(paddingHorizontal, 18, paddingHorizontal, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "İlanlar",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.25,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          "${_filteredMarketListings.length} sonuç bulundu",
+                          style: const TextStyle(
+                            color: Colors.white38,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_activeMarketFilterCount > 0)
+                    TextButton.icon(
+                      onPressed: _resetMarketFilters,
+                      style: TextButton.styleFrom(
+                        foregroundColor: neonGreen,
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+                      ),
+                      icon: const Icon(Icons.restart_alt_rounded, size: 16),
+                      label: const Text(
+                        "Temizle",
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+
+          if (_filteredMarketListings.isEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: paddingHorizontal),
+                child: SizedBox(height: 320, child: _buildEmptyState()),
+              ),
+            )
+          else
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(paddingHorizontal, 4, paddingHorizontal, 18),
+              sliver: SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: gridCrossAxisCount,
+                  mainAxisExtent: gridMainAxisExtent,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
                 ),
-              )
-        ),
-      ],
+                delegate: SliverChildBuilderDelegate(
+                  (ctx, i) => _buildGridListingCard(paginatedItems[i]),
+                  childCount: paginatedItems.length,
+                ),
+              ),
+            ),
+
+          SliverToBoxAdapter(
+            child: _buildPaginationBar(
+              marketPage,
+              totalPages,
+              (page) => setState(() => marketPage = page),
+            ),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 88)),
+        ],
+      ),
     );
   }
 

@@ -22,17 +22,28 @@ class GoogleLoginButton extends StatefulWidget {
 }
 
 class _GoogleLoginButtonState extends State<GoogleLoginButton> {
-  // Web tarafında aynı client id için tek GoogleSignIn nesnesi kullan.
-  // Böylece route rebuild / tekrar giriş ekranına dönüşte gereksiz init azalır.
-  static final Map<String, GoogleSignIn> _clients = <String, GoogleSignIn>{};
+  // google_sign_in 6.x web tarafında gerçekte tek global GIS istemcisi
+  // kullanır. Uygulama içinde birden fazla GoogleSignIn örneği oluşturmak
+  // google.accounts.id.initialize() çağrısını tekrarlayabildiği için burada
+  // bütün login/register/profile ekranları tek örneği paylaşır.
+  static GoogleSignIn? _sharedGoogle;
+  static String? _sharedClientId;
 
-  late final GoogleSignIn _google = _clients.putIfAbsent(
-    widget.clientId,
-    () => GoogleSignIn(
-      clientId: widget.clientId,
+  static GoogleSignIn _obtainGoogle(String clientId) {
+    final existing = _sharedGoogle;
+    if (existing != null) {
+      assert(_sharedClientId == clientId,
+          'GoogleLoginButton must use one web client id per app.');
+      return existing;
+    }
+    _sharedClientId = clientId;
+    return _sharedGoogle = GoogleSignIn(
+      clientId: clientId,
       scopes: const <String>['email', 'profile'],
-    ),
-  );
+    );
+  }
+
+  late final GoogleSignIn _google = _obtainGoogle(widget.clientId);
 
   StreamSubscription<GoogleSignInAccount?>? _listener;
   Widget? _button;

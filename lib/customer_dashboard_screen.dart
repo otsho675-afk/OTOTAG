@@ -6,6 +6,7 @@ import 'widgets/dashboard_service_grid.dart';
 import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_motion.dart';
+import 'core/theme/premium_surfaces.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -20,6 +21,7 @@ import 'customer_map_screen.dart';
 import 'customer_bids_screen.dart';
 import 'profile_screen.dart';
 import 'vehicle_panel_screen.dart';
+import 'diagnostic_screen.dart';
 import 'job_tracking_screen.dart';
 import 'spare_parts_market.dart';
 import 'dart:async';
@@ -2024,11 +2026,24 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
             padding: EdgeInsets.only(
               bottom: MediaQuery.viewInsetsOf(context).bottom,
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Container(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: (MediaQuery.sizeOf(context).height -
+                        MediaQuery.viewInsetsOf(context).bottom -
+                        MediaQuery.paddingOf(context).top -
+                        12)
+                    .clamp(240.0, double.infinity)
+                    .toDouble(),
+              ),
+              child: SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Container(
                   margin:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
                   padding: const EdgeInsets.all(24),
@@ -2347,18 +2362,29 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                       ],
                     ),
                   ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
       ),
     ).whenComplete(() {
       _isVehicleModalOpen = false;
-      plateCtrl.dispose();
-      cKmCtrl.dispose();
-      mKmCtrl.dispose();
-      engineCtrl.dispose();
+      // showModalBottomSheet Future'i route pop edildiğinde tamamlanabilir;
+      // kapanış animasyonu sırasında TextField hâlâ bir frame daha controller'a
+      // erişebildiği için controller'ları hemen dispose etmiyoruz.
+      Future<void>.delayed(const Duration(milliseconds: 450), () {
+        try {
+          plateCtrl.dispose();
+          cKmCtrl.dispose();
+          mKmCtrl.dispose();
+          engineCtrl.dispose();
+        } catch (_) {
+          // Controller daha önce temizlendiyse kapanış sırasında uygulamayı bozma.
+        }
+      });
     });
   }
 
@@ -2713,69 +2739,143 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
   Widget _buildSparePartsBanner(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-          color: _cardColor,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-              color: Colors.white.withValues(alpha: 0.05), width: 1.5),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
-                blurRadius: 15,
-                offset: const Offset(0, 5))
-          ]),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF15171C), Color(0xFF0D0F13)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: _primaryColor.withValues(alpha: 0.18),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.24),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(20),
           onTap: () {
             Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => SparePartsMarketScreen(
-                          currentUserId: widget.customerId,
-                          currentUserType: 'customer',
-                          userCity: userCity,
-                        )));
+              context,
+              MaterialPageRoute(
+                builder: (_) => SparePartsMarketScreen(
+                  currentUserId: widget.customerId,
+                  currentUserType: 'customer',
+                  userCity: userCity,
+                ),
+              ),
+            );
           },
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
+          child: Stack(
+            children: [
+              Positioned(
+                top: -42,
+                right: -28,
+                child: Container(
+                  width: 130,
+                  height: 130,
                   decoration: BoxDecoration(
-                    color: _primaryColor.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        _primaryColor.withValues(alpha: 0.09),
+                        Colors.transparent,
+                      ],
+                    ),
                   ),
-                  child: const Icon(Icons.storefront_rounded,
-                      color: _primaryColor, size: 32),
                 ),
-                const SizedBox(width: 16),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("Yedek Parça Pazarı",
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
+              ),
+              Padding(
+                padding: const EdgeInsets.all(18),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            _primaryColor.withValues(alpha: 0.18),
+                            _primaryColor.withValues(alpha: 0.06),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: _primaryColor.withValues(alpha: 0.20),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.storefront_rounded,
+                        color: _primaryColor,
+                        size: 26,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'PAZAR YERİ',
+                            style: TextStyle(
+                              color: _primaryColor,
+                              fontSize: 9.5,
                               fontWeight: FontWeight.w900,
-                              letterSpacing: -0.5)),
-                      SizedBox(height: 4),
-                      Text(
-                          "Şehrinizdeki çıkma/yeni yedek parçaları bulun veya ilan verin.",
-                          style: TextStyle(
+                              letterSpacing: 1.15,
+                            ),
+                          ),
+                          SizedBox(height: 5),
+                          Text(
+                            'Yedek Parça Pazarı',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Şehrinizdeki yeni ve çıkma parçaları keşfedin veya ilan verin.',
+                            style: TextStyle(
                               color: Colors.white54,
-                              fontSize: 13,
+                              fontSize: 12,
                               fontWeight: FontWeight.w500,
-                              height: 1.3)),
-                    ],
-                  ),
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(11),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.07),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.arrow_forward_rounded,
+                        color: _primaryColor,
+                        size: 18,
+                      ),
+                    ),
+                  ],
                 ),
-                const Icon(Icons.arrow_forward_ios_rounded,
-                    color: _primaryColor, size: 18),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -2944,9 +3044,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
     return Column(
       children: [
         SizedBox(
-          height: screenHeight * 0.16 < 140
-              ? 140
-              : (screenWidth > 800 ? 180 : screenHeight * 0.16),
+          height: screenHeight * 0.18 < 166
+              ? 166
+              : (screenWidth > 800 ? 188 : screenHeight * 0.18),
           child: PageView.builder(
             controller: _adPageController,
             physics: const BouncingScrollPhysics(),
@@ -2999,54 +3099,136 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
   }
 
   Widget _buildHeaderCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _cardColor,
-        borderRadius: BorderRadius.circular(24),
-        border:
-            Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 20,
-              offset: const Offset(0, 8))
-        ],
-      ),
-      child: Row(
+    return PremiumGlassPanel(
+      radius: 24,
+      blur: 14,
+      accent: true,
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      child: Stack(
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: _primaryColor.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
+          Positioned(
+            right: -18,
+            top: -28,
+            child: IgnorePointer(
+              child: Icon(
+                Icons.directions_car_filled_rounded,
+                size: 126,
+                color: _primaryColor.withValues(alpha: .035),
+              ),
             ),
-            child:
-                const Icon(Icons.bolt_rounded, color: _primaryColor, size: 32),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text("Oto Yardım Yanınızda",
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const PremiumStatusPill(
+                    'OTO TAG  •  MÜŞTERİ MERKEZİ',
+                    icon: Icons.verified_rounded,
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: .035),
+                      borderRadius: BorderRadius.circular(99),
+                      border:
+                          Border.all(color: Colors.white.withValues(alpha: .06)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.bolt_rounded,
+                            color: _primaryColor, size: 12),
+                        SizedBox(width: 4),
+                        Text(
+                          '7/24',
+                          style: TextStyle(
+                            color: _textColor,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const PremiumBrandMark(
+                    size: 52,
+                    icon: Icons.directions_car_rounded,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Aracınız için her şey tek merkezde',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: _textColor,
+                            letterSpacing: -.45,
+                            height: 1.1,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Yol yardımından bakıma, parçadan kiralamaya kadar ihtiyaçlarınıza hızlı ve güvenli erişin.',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: Colors.white.withValues(alpha: .60),
+                            height: 1.35,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              const Row(
+                children: [
+                  Icon(Icons.location_on_outlined,
+                      size: 13, color: _primaryColor),
+                  SizedBox(width: 5),
+                  Text(
+                    'Konum bazlı eşleşme',
                     style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white.withValues(alpha: 0.95),
-                        letterSpacing: -0.5)),
-                const SizedBox(height: 6),
-                Text(
-                    "Araçlarınızı güvenle takip edin, yolda kaldığınızda tek tıkla en yakın ustayı çağırın.",
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white.withValues(alpha: 0.6),
-                        height: 1.4,
-                        fontWeight: FontWeight.w500)),
-              ],
-            ),
-          )
+                      color: _subtitleColor,
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(width: 14),
+                  Icon(Icons.shield_outlined,
+                      size: 13, color: _primaryColor),
+                  SizedBox(width: 5),
+                  Flexible(
+                    child: Text(
+                      'Güvenli OTO TAG deneyimi',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: _subtitleColor,
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -3281,7 +3463,16 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
             flexibleSpace: ClipRect(
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                child: Container(color: Colors.transparent),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: _bgColor.withValues(alpha: 0.84),
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.055),
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
@@ -3289,7 +3480,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
               ? const Center(
                   child: CircularProgressIndicator(
                       color: _primaryColor, strokeWidth: 3))
-              : Stack(
+              : PremiumScene(
+                  accentStrength: .82,
+                  child: Stack(
                   children: [
                     Positioned(
                       top: MediaQuery.of(context).size.height * 0.1,
@@ -3434,97 +3627,46 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                           ),
                                         ),
                                       ],
-                                      Row(
-                                        children: [
-                                          Container(
-                                              width: 5,
-                                              height: 24,
-                                              decoration: BoxDecoration(
-                                                  color: _primaryColor,
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          10))),
-                                          const SizedBox(width: 12),
-                                          const Text("Hızlı Hizmet Çağır",
-                                              style: TextStyle(
-                                                  fontSize: 20,
-                                                  fontWeight: FontWeight.w900,
-                                                  color: _textColor,
-                                                  letterSpacing: -0.5)),
-                                        ],
+                                      const PremiumSectionHeading(
+                                        title: 'Hızlı Hizmet',
+                                        subtitle:
+                                            'İhtiyacınızı seçin, yakınınızdaki uygun işletmeyle eşleşin.',
                                       ),
                                       const SizedBox(height: 16),
                                       _buildServiceCards(context, constraints),
                                       const SizedBox(height: 32),
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Container(
-                                                  width: 5,
-                                                  height: 24,
-                                                  decoration: BoxDecoration(
-                                                      color: _primaryColor,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              10))),
-                                              const SizedBox(width: 12),
-                                              const Text("Garajım",
-                                                  style: TextStyle(
-                                                      fontSize: 20,
-                                                      fontWeight:
-                                                          FontWeight.w900,
-                                                      color: _textColor,
-                                                      letterSpacing: -0.5)),
-                                            ],
-                                          ),
-                                          Container(
-                                            decoration: BoxDecoration(
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                                color: Colors.white
-                                                    .withValues(alpha: 0.05),
-                                                border: Border.all(
-                                                    color: Colors.white
-                                                        .withValues(
-                                                            alpha: 0.1))),
-                                            child: ElevatedButton.icon(
-                                              onPressed: () {
-                                                if (vehicles.isNotEmpty &&
-                                                    !isPremium) {
-                                                  _showPremiumModal();
-                                                } else {
-                                                  _showVehicleDialog();
-                                                }
-                                              },
-                                              icon: const Icon(
-                                                  Icons.add_rounded,
-                                                  size: 18,
-                                                  color: Colors.white),
-                                              label: const Text("Araç Ekle",
-                                                  style: TextStyle(
-                                                      color: Colors.white,
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                      fontSize: 13)),
-                                              style: ElevatedButton.styleFrom(
-                                                  backgroundColor:
-                                                      Colors.transparent,
-                                                  shadowColor:
-                                                      Colors.transparent,
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      horizontal: 16,
-                                                      vertical: 12),
-                                                  shape: RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              12))),
+                                      PremiumSectionHeading(
+                                        title: 'Garajım',
+                                        subtitle:
+                                            'Araç, muayene, sigorta ve bakım takibini tek yerde yönetin.',
+                                        trailing: OutlinedButton.icon(
+                                          onPressed: () {
+                                            if (vehicles.isNotEmpty &&
+                                                !isPremium) {
+                                              _showPremiumModal();
+                                            } else {
+                                              _showVehicleDialog();
+                                            }
+                                          },
+                                          icon: const Icon(
+                                              Icons.add_rounded,
+                                              size: 17),
+                                          label: const Text('Araç Ekle'),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: _textColor,
+                                            minimumSize: const Size(0, 42),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 12),
+                                            side: BorderSide(
+                                              color: _primaryColor
+                                                  .withValues(alpha: .22),
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
                                             ),
                                           ),
-                                        ],
+                                        ),
                                       ),
                                       const SizedBox(height: 16),
                                       if (vehicles.isEmpty)
@@ -3559,6 +3701,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                     ),
                   ],
                 ),
+              ),
         ),
       ),
     );
@@ -3737,7 +3880,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // ÜST KISIM: Plaka, Başlık ve Ayar Butonu
+                // ÜST KISIM: Araç bilgileri + sağ üst hızlı aksiyonlar
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -3874,85 +4017,56 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                         ],
                       ),
                     ),
-                    // Sağ Üst İkonlar (Paylaş ve Ayarlar)
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () =>
-                                _generateAndShareVehicleReport(vehicle),
-                            borderRadius: BorderRadius.circular(14),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: _primaryColor.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(
-                                    color:
-                                        _primaryColor.withValues(alpha: 0.3)),
-                              ),
-                              child: const Icon(Icons.share_rounded,
-                                  color: _primaryColor, size: 18),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Ayarlar Butonu (Kompakt Glass)
-                        Material(
-                          color: Colors.transparent,
-                          child: InkWell(
+                    const SizedBox(width: 8),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 1),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildVehicleQuickAction(
+                            icon: Icons.tune_rounded,
+                            tooltip: 'Aracı Düzenle',
+                            compact: true,
                             onTap: () =>
                                 _showVehicleDialog(vehicleToEdit: vehicle),
-                            borderRadius: BorderRadius.circular(14),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.05),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(
-                                    color:
-                                        Colors.white.withValues(alpha: 0.07)),
-                              ),
-                              child: const Icon(Icons.tune_rounded,
-                                  color: Colors.white70, size: 18),
-                            ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 6),
+                          _buildVehicleQuickAction(
+                            icon: Icons.warning_amber_rounded,
+                            tooltip: 'Arıza Teşhisi',
+                            emphasized: true,
+                            compact: true,
+                            onTap: () {
+                              HapticFeedback.mediumImpact();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => DiagnosticScreen(
+                                    userType: 'customer',
+                                    vehiclePlate: vehicle['plate']?.toString(),
+                                    vehicleModel:
+                                        vehicle['brand_model']?.toString(),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(width: 6),
+                          _buildVehicleQuickAction(
+                            icon: Icons.share_rounded,
+                            tooltip: 'Araç Raporunu Paylaş',
+                            compact: true,
+                            accent: true,
+                            onTap: () =>
+                                _generateAndShareVehicleReport(vehicle),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
 
-                // ORTA KISIM: Derli Toplu Araba Rozeti (Boşluklar daraltıldı)
-                Expanded(
-                  child: Center(
-                    child: Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: const Color(0xFF161824),
-                        border: Border.all(
-                            color: _primaryColor.withValues(alpha: 0.3),
-                            width: 1.2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _primaryColor.withValues(alpha: 0.15),
-                            blurRadius: 12,
-                            spreadRadius: -1,
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.directions_car_filled_rounded,
-                        size: 26,
-                        color: _primaryColor,
-                      ),
-                    ),
-                  ),
-                ),
+                const SizedBox(height: 12),
 
                 // DURUM KUTULARI: 3'lü Mini Kartlar
                 Row(
@@ -4033,6 +4147,68 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildVehicleQuickAction({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+    bool emphasized = false,
+    bool accent = false,
+    bool compact = false,
+  }) {
+    final double size = compact
+        ? (emphasized ? 40 : 34)
+        : (emphasized ? 50 : 42);
+    final Color borderColor = emphasized
+        ? _primaryColor.withValues(alpha: 0.60)
+        : accent
+            ? _primaryColor.withValues(alpha: 0.30)
+            : Colors.white.withValues(alpha: 0.09);
+    final Color backgroundColor = emphasized
+        ? _primaryColor.withValues(alpha: 0.12)
+        : accent
+            ? _primaryColor.withValues(alpha: 0.08)
+            : Colors.white.withValues(alpha: 0.045);
+    final Color iconColor = emphasized || accent ? _primaryColor : Colors.white70;
+
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(compact ? 12 : (emphasized ? 17 : 14)),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(compact ? 12 : (emphasized ? 17 : 14)),
+              border: Border.all(
+                color: borderColor,
+                width: emphasized ? 1.4 : 1.0,
+              ),
+              boxShadow: emphasized
+                  ? [
+                      BoxShadow(
+                        color: _primaryColor.withValues(alpha: 0.14),
+                        blurRadius: 14,
+                        spreadRadius: -2,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Icon(
+              icon,
+              color: iconColor,
+              size: compact ? (emphasized ? 20 : 16) : (emphasized ? 25 : 19),
+            ),
+          ),
+        ),
       ),
     );
   }

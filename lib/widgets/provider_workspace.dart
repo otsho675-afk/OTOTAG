@@ -11,13 +11,17 @@ class ProviderStatusHeader extends StatelessWidget {
       required this.jobCount,
       required this.radius,
       required this.onToggle,
-      required this.onRefresh});
+      required this.onRefresh,
+      this.onLogout,
+      this.loggingOut = false});
   final String service;
   final bool online;
   final int jobCount;
   final double radius;
   final ValueChanged<bool> onToggle;
   final VoidCallback onRefresh;
+  final VoidCallback? onLogout;
+  final bool loggingOut;
   @override
   Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(16),
@@ -49,9 +53,41 @@ class ProviderStatusHeader extends StatelessWidget {
                     style: const TextStyle(
                         color: AppConstants.mutedColor, fontSize: 12))
               ])),
+          Tooltip(
+            message: 'Hızlı çıkış',
+            child: Material(
+              color: const Color(0xFFFF586B).withValues(alpha: .10),
+              borderRadius: BorderRadius.circular(12),
+              child: InkWell(
+                onTap: loggingOut || onLogout == null ? null : onLogout,
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: Center(
+                    child: loggingOut
+                        ? const SizedBox(
+                            width: 17,
+                            height: 17,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Color(0xFFFF586B),
+                            ),
+                          )
+                        : const Icon(
+                            Icons.power_settings_new_rounded,
+                            color: Color(0xFFFF586B),
+                            size: 20,
+                          ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 7),
           Switch.adaptive(
               value: online,
-              onChanged: onToggle,
+              onChanged: loggingOut ? null : onToggle,
               activeTrackColor: AppConstants.primaryColor,
               activeThumbColor: Colors.black),
         ]),
@@ -134,11 +170,15 @@ class ProviderOfflineDashboard extends StatelessWidget {
       required this.monthlyEarnings,
       required this.onOnline,
       required this.onSubscription,
-      required this.onHistory});
+      required this.onHistory,
+      this.onLogout,
+      this.loggingOut = false});
   final String service;
   final double rating, monthlyEarnings;
   final int reviewCount;
   final VoidCallback onOnline, onSubscription, onHistory;
+  final VoidCallback? onLogout;
+  final bool loggingOut;
   @override
   Widget build(BuildContext context) => SafeArea(
       child: Center(
@@ -149,11 +189,49 @@ class ProviderOfflineDashboard extends StatelessWidget {
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Text('Usta paneli',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 28,
-                                fontWeight: FontWeight.w700)),
+                        Row(children: [
+                          const Expanded(
+                            child: Text('Usta paneli',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w700)),
+                          ),
+                          Tooltip(
+                            message: 'Hızlı çıkış',
+                            child: OutlinedButton.icon(
+                              onPressed: loggingOut || onLogout == null ? null : onLogout,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFFFF586B),
+                                side: BorderSide(
+                                  color: const Color(0xFFFF586B)
+                                      .withValues(alpha: .30),
+                                ),
+                                backgroundColor: const Color(0xFFFF586B)
+                                    .withValues(alpha: .055),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 11),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(13),
+                                ),
+                              ),
+                              icon: loggingOut
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Color(0xFFFF586B),
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.power_settings_new_rounded,
+                                      size: 18,
+                                    ),
+                              label: const Text('Çıkış'),
+                            ),
+                          ),
+                        ]),
                         const SizedBox(height: 8),
                         Text('$service • İşlerini buradan yönet',
                             style: const TextStyle(

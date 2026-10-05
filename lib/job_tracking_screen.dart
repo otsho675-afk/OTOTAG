@@ -2710,7 +2710,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                         isError: true);
                                   }
                                 } finally {
-                                  if (mounted && _isComplaintModalOpen) {
+                                  if (mounted &&
+                                      modalCtx.mounted &&
+                                      _isComplaintModalOpen) {
                                     setModalState(() => isSending = false);
                                   }
                                 }
@@ -2755,8 +2757,12 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
       ),
     ).whenComplete(() {
       _isComplaintModalOpen = false;
-      subjectController.dispose();
-      messageController.dispose();
+      Future<void>.delayed(const Duration(milliseconds: 450), () {
+        try {
+          subjectController.dispose();
+          messageController.dispose();
+        } catch (_) {}
+      });
     });
   }
 

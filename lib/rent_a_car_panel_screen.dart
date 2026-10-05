@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/constants/app_constants.dart';
+import 'core/theme/premium_surfaces.dart';
 import 'services/rental_service.dart';
 import 'widgets/rental_bid_card.dart';
 import 'widgets/rental_market_style.dart';
@@ -362,26 +363,184 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
     }
   }
 
+  Widget _businessHero() {
+    final pending =
+        _bids.where((b) => '${b['status']}' == 'pending').length;
+    final rented =
+        _cars.where((c) => '${c['status']}' == 'rented').length;
+
+    return PremiumGlassPanel(
+      radius: 24,
+      blur: 14,
+      accent: true,
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -22,
+            bottom: -42,
+            child: IgnorePointer(
+              child: Icon(
+                Icons.business_center_rounded,
+                size: 138,
+                color: AppConstants.primaryColor.withValues(alpha: .032),
+              ),
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const PremiumStatusPill(
+                    'OTO TAG BUSINESS',
+                    icon: Icons.verified_rounded,
+                  ),
+                  const Spacer(),
+                  PremiumStatusPill(
+                    _canWork ? 'OPERASYON AKTİF' : 'YENİLEME GEREKİYOR',
+                    icon: _canWork
+                        ? Icons.check_circle_outline_rounded
+                        : Icons.lock_outline_rounded,
+                    accent: _canWork,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const PremiumBrandMark(
+                    size: 56,
+                    icon: Icons.apartment_rounded,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Firma operasyon merkezi',
+                          style: TextStyle(
+                            color: AppConstants.textColor,
+                            fontSize: 21,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -.5,
+                            height: 1.08,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          _city.isEmpty
+                              ? 'Filo, teklifler ve kiralama süreçleri tek panelde.'
+                              : '$_city operasyonları • Filo, teklifler ve kiralama süreçleri tek panelde.',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: rentalMuted,
+                            fontSize: 11.5,
+                            height: 1.4,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  PremiumMetric(
+                    label: 'Filo',
+                    value: '${_cars.length} araç',
+                    icon: Icons.directions_car_outlined,
+                  ),
+                  PremiumMetric(
+                    label: 'Kirada',
+                    value: '$rented araç',
+                    icon: Icons.key_outlined,
+                  ),
+                  PremiumMetric(
+                    label: 'Yeni teklif',
+                    value: '$pending bekliyor',
+                    icon: Icons.handshake_outlined,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _stat(String label, int value, IconData icon) => Expanded(
-      child: Container(
+        child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-              color: AppConstants.cardColor,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: rentalBorder)),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Icon(icon, size: 18, color: AppConstants.primaryColor),
-            const SizedBox(height: 10),
-            Text('$value',
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppConstants.cardElevated.withValues(alpha: .96),
+                AppConstants.cardColor,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: rentalBorder),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: .16),
+                blurRadius: 14,
+                offset: const Offset(0, 7),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: AppConstants.primaryColor.withValues(alpha: .09),
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(
+                    color: AppConstants.primaryColor.withValues(alpha: .13),
+                  ),
+                ),
+                child: Icon(icon,
+                    size: 16, color: AppConstants.primaryColor),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                '$value',
                 style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 24)),
-            const SizedBox(height: 3),
-            Text(label,
-                style: const TextStyle(color: rentalMuted, fontSize: 11)),
-          ])));
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 22,
+                  letterSpacing: -.4,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: rentalMuted,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
   Widget _fleetCard(Map<String, dynamic> car, double width) {
     final rented = car['status'] == 'rented';
     final price = rentalCents('${car['daily_price']}');
@@ -394,9 +553,24 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
         child: Container(
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
-                color: AppConstants.cardColor,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: rentalBorder)),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppConstants.cardElevated.withValues(alpha: .96),
+                    AppConstants.cardColor,
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                    color: AppConstants.primaryColor.withValues(alpha: .10)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: .24),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  )
+                ]),
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -562,9 +736,31 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
               length: 2,
               child: Scaffold(
                   appBar: AppBar(
-                      title: const Text('Rent A Car',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w700, fontSize: 20)),
+                      title: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Image.asset('assets/images/logo.png', height: 24),
+                            const SizedBox(width: 9),
+                            const Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('OTO TAG BUSINESS',
+                                    style: TextStyle(
+                                        color: AppConstants.primaryColor,
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 9,
+                                        letterSpacing: 1.15)),
+                                SizedBox(height: 1),
+                                Text('Rent A Car',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 16,
+                                        letterSpacing: -.2)),
+                              ],
+                            ),
+                          ],
+                        ),
                       backgroundColor: AppConstants.bgColor,
                       surfaceTintColor: Colors.transparent,
                       foregroundColor: Colors.white,
@@ -617,10 +813,40 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                                   }
                                 },
                         ),
-                        TextButton.icon(
-                            onPressed: _busy ? null : _logout,
-                            icon: const Icon(Icons.logout_rounded, size: 18),
-                            label: const Text('Çıkış')),
+                        Padding(
+                          padding: const EdgeInsets.only(right: 10),
+                          child: Tooltip(
+                            message: 'Hızlı çıkış',
+                            child: Material(
+                              color: const Color(0xFFFF586B).withValues(alpha: .10),
+                              borderRadius: BorderRadius.circular(12),
+                              child: InkWell(
+                                onTap: _busy ? null : _logout,
+                                borderRadius: BorderRadius.circular(12),
+                                child: SizedBox(
+                                  width: 40,
+                                  height: 40,
+                                  child: Center(
+                                    child: _busy
+                                        ? const SizedBox(
+                                            width: 17,
+                                            height: 17,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Color(0xFFFF586B),
+                                            ),
+                                          )
+                                        : const Icon(
+                                            Icons.power_settings_new_rounded,
+                                            color: Color(0xFFFF586B),
+                                            size: 20,
+                                          ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                       bottom: PreferredSize(
                           preferredSize: const Size.fromHeight(60),
@@ -633,11 +859,27 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                                       child: Container(
                                           height: 44,
                                           decoration: BoxDecoration(
-                                              color: AppConstants.cardColor,
+                                              gradient: const LinearGradient(
+                                                begin: Alignment.topLeft,
+                                                end: Alignment.bottomRight,
+                                                colors: [
+                                                  AppConstants.cardElevated,
+                                                  AppConstants.cardColor,
+                                                ],
+                                              ),
                                               borderRadius:
-                                                  BorderRadius.circular(13),
+                                                  BorderRadius.circular(14),
                                               border: Border.all(
-                                                  color: rentalBorder)),
+                                                  color: AppConstants.primaryColor
+                                                      .withValues(alpha: .10)),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withValues(alpha: .18),
+                                                  blurRadius: 16,
+                                                  offset: const Offset(0, 7),
+                                                )
+                                              ]),
                                           child: TabBar(
                                               padding: const EdgeInsets.all(3),
                                               indicatorSize:
@@ -660,8 +902,12 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                           style: const TextStyle(fontWeight: FontWeight.w700))),
                   body: _loading
                       ? const Center(child: CircularProgressIndicator())
-                      : TabBarView(children: [
+                      : PremiumScene(
+                          accentStrength: .78,
+                          child: TabBarView(children: [
                           _page([
+                            _businessHero(),
+                            const SizedBox(height: 18),
                             if (_subscription != null) ...[
                               ListTile(
                                   contentPadding: const EdgeInsets.symmetric(
@@ -694,22 +940,15 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                                   onTap: _membership),
                               const SizedBox(height: 16),
                             ],
-                            Row(children: [
-                              const Expanded(
-                                  child: Text('Filonu yönet',
-                                      style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 23,
-                                          fontWeight: FontWeight.w700))),
-                              RentalTag(_city, icon: Icons.location_on_outlined)
-                            ]),
-                            const SizedBox(height: 6),
-                            const Text(
-                                'Araçlarını ekle, fiyatlarını güncelle ve kiralamalarını takip et.',
-                                style: TextStyle(
-                                    color: rentalMuted,
-                                    fontSize: 12,
-                                    height: 1.5)),
+                            PremiumSectionHeading(
+                              title: 'Filonu yönet',
+                              subtitle:
+                                  'Araçlarını, fiyatlarını ve müsaitlik durumlarını kurumsal filo görünümünden yönet.',
+                              trailing: RentalTag(
+                                _city,
+                                icon: Icons.location_on_outlined,
+                              ),
+                            ),
                             const SizedBox(height: 18),
                             Row(children: [
                               _stat('Toplam araç', _cars.length,
@@ -753,19 +992,12 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                             }),
                           ]),
                           _page([
-                            const Text('Müşteri teklifleri',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 23,
-                                    fontWeight: FontWeight.w700)),
-                            const SizedBox(height: 6),
-                            const Text(
-                                'İlan fiyatını kabul eden müşteri doğrudan rezervasyon oluşturur. Pazarlık tekliflerini burada yanıtlayabilirsin.',
-                                style: TextStyle(
-                                    color: rentalMuted,
-                                    fontSize: 13,
-                                    height: 1.5)),
-                            const SizedBox(height: 14),
+                            const PremiumSectionHeading(
+                              title: 'Müşteri teklifleri',
+                              subtitle:
+                                  'Yeni talepleri inceleyin, pazarlık tekliflerini yanıtlayın ve rezervasyon akışını yönetin.',
+                            ),
+                            const SizedBox(height: 16),
                             if (_bids.isEmpty && _error == null)
                               _empty(
                                   'Henüz teklif yok',
@@ -779,5 +1011,5 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                                 onChat: () => _chat(bid),
                                 onBooking: () => _booking(bid))),
                           ]),
-                        ])))));
+                        ]))))));
 }

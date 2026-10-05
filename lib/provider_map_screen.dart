@@ -27,6 +27,9 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'services/live_activity_service.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'diagnostic_screen.dart';
+import 'services/app_session.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'main.dart' show RoleSelectionScreen;
 
 class ProviderMapScreen extends StatefulWidget {
   final int providerId;
@@ -66,6 +69,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
   bool _isModalOpen = false;
   bool _isMapReady = false;
   bool _isNavigating = false;
+  bool _isLoggingOut = false;
   int _currentJobIndex = 0;
   bool _isJobCardExpanded = true;
 
@@ -4173,6 +4177,31 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
     if (action == 7) _showSubscriptionRequiredSheet();
   }
 
+  Future<void> _quickLogout() async {
+    if (_isLoggingOut) return;
+    HapticFeedback.mediumImpact();
+    if (mounted) setState(() => _isLoggingOut = true);
+    try {
+      await AppSession.clear();
+      if (!kIsWeb) {
+        try {
+          await OneSignal.logout().timeout(const Duration(seconds: 5));
+        } catch (_) {}
+      }
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
+        (_) => false,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoggingOut = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Oturum kapatılamadı. Tekrar deneyin.')),
+      );
+    }
+  }
+
   Widget _buildOfflineDashboard(BoxConstraints constraints) =>
       ProviderOfflineDashboard(
           service: _getServiceName(providerServiceType),
@@ -4181,7 +4210,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
           monthlyEarnings: _parseDouble(earningsData['monthly']),
           onOnline: () => _toggleOnlineStatus(true),
           onSubscription: _showSubscriptionRequiredSheet,
-          onHistory: () => _selectWorkspace(1));
+          onHistory: () => _selectWorkspace(1),
+          onLogout: _quickLogout,
+          loggingOut: _isLoggingOut);
 
   @override
   Widget build(BuildContext context) {
@@ -4546,7 +4577,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                       radius: _searchRadius,
                                       onToggle: _toggleOnlineStatus,
                                       onRefresh: () => _fetchNearbyJobs(
-                                          radius: _searchRadius.toInt()))))),
+                                          radius: _searchRadius.toInt()),
+                                      onLogout: _quickLogout,
+                                      loggingOut: _isLoggingOut)))),
                       if (isOnline)
                         Positioned(
                           // Header has two rows. Start below it so the range

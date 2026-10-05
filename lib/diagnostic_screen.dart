@@ -1502,71 +1502,109 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.help_outline_rounded,
-                color: cyanAccent, size: 22),
-            tooltip: "Cihaz ve Bağlantı Rehberi",
-            onPressed: _showHardwareAndGuideModal,
-          ),
           Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: InkWell(
-              onTap: _isConnectingSocket ? null : _connectToElmSocket,
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _isConnectedToSocket
-                      ? neonGreen.withValues(alpha: 0.15)
-                      : Colors.white.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: _isConnectedToSocket ? neonGreen : Colors.white24,
-                    width: 1.2,
+            padding: const EdgeInsets.only(right: 6),
+            child: Tooltip(
+              message: 'Cihaz ve bağlantı rehberi',
+              child: InkWell(
+                onTap: _showHardwareAndGuideModal,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.045),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.07),
+                    ),
                   ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _isConnectedToSocket
-                          ? Icons.link_rounded
-                          : Icons.link_off_rounded,
-                      color: _isConnectedToSocket ? neonGreen : Colors.white60,
-                      size: 15,
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      _isConnectedToSocket ? "AKTİF" : "BAĞLA",
-                      style: TextStyle(
-                        color:
-                            _isConnectedToSocket ? neonGreen : Colors.white70,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 10.5,
-                      ),
-                    ),
-                  ],
+                  child: const Icon(
+                    Icons.help_outline_rounded,
+                    color: neonGreen,
+                    size: 19,
+                  ),
                 ),
               ),
             ),
-          )
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Tooltip(
+              message: _isConnectedToSocket
+                  ? 'Soket bağlantısı aktif'
+                  : 'ELM327 bağlantısı',
+              child: InkWell(
+                onTap: _isConnectingSocket ? null : _connectToElmSocket,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: (_isConnectedToSocket ? neonGreen : Colors.white)
+                        .withValues(alpha: _isConnectedToSocket ? 0.11 : 0.045),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: (_isConnectedToSocket ? neonGreen : Colors.white)
+                          .withValues(alpha: _isConnectedToSocket ? 0.28 : 0.07),
+                    ),
+                  ),
+                  child: Icon(
+                    _isConnectedToSocket
+                        ? Icons.link_rounded
+                        : Icons.link_off_rounded,
+                    color: _isConnectedToSocket ? neonGreen : Colors.white54,
+                    size: 19,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: neonGreen,
-          indicatorWeight: 3,
-          labelColor: neonGreen,
-          unselectedLabelColor: Colors.white54,
-          labelStyle:
-              const TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
-          tabs: const [
-            Tab(
-                icon: Icon(Icons.qr_code_scanner_rounded, size: 19),
-                text: "Arıza Kodları (DTC)"),
-            Tab(
-                icon: Icon(Icons.cable_rounded, size: 19),
-                text: "Gerçek Soket (ELM327)"),
-          ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(54),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
+            child: Container(
+              height: 42,
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.035),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.055),
+                ),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                dividerColor: Colors.transparent,
+                indicatorSize: TabBarIndicatorSize.tab,
+                indicator: BoxDecoration(
+                  color: neonGreen.withValues(alpha: 0.11),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: neonGreen.withValues(alpha: 0.20),
+                  ),
+                ),
+                labelColor: neonGreen,
+                unselectedLabelColor: const Color(0x75FFFFFF),
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 11.5,
+                ),
+                tabs: const [
+                  SizedBox(
+                    height: 34,
+                    child: Center(child: Text('Arıza Kodları')),
+                  ),
+                  SizedBox(
+                    height: 34,
+                    child: Center(child: Text('Canlı OBD')),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
       body: Center(
@@ -2465,291 +2503,277 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
   Widget _buildSocketTelemetryTab() {
     return ListView(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 28),
       children: [
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                _isSubscribed
-                    ? neonGreen.withValues(alpha: 0.12)
-                    : purpleAccent.withValues(alpha: 0.16),
-                surfaceBlack,
+                AppConstants.primaryColor.withValues(alpha: 0.13),
+                cardBlack,
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(22),
             border: Border.all(
-              color: _isSubscribed
-                  ? neonGreen.withValues(alpha: 0.4)
-                  : purpleAccent.withValues(alpha: 0.4),
-              width: 1.2,
+              color: AppConstants.primaryColor.withValues(alpha: 0.22),
             ),
           ),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                width: 46,
+                height: 46,
                 decoration: BoxDecoration(
-                  color: (_isSubscribed ? neonGreen : purpleAccent)
-                      .withValues(alpha: 0.18),
-                  shape: BoxShape.circle,
+                  color: AppConstants.primaryColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(15),
                 ),
-                child: Icon(
-                  _isSubscribed
-                      ? Icons.verified_rounded
-                      : Icons.workspace_premium_rounded,
-                  color: _isSubscribed ? neonGreen : purpleAccent,
+                child: const Icon(
+                  Icons.monitor_heart_rounded,
+                  color: neonGreen,
                   size: 24,
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: [
-                        Text(
-                          _isSubscribed
-                              ? "Canlı Teşhis Aktif"
-                              : "Canlı Teşhis Paketi",
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 14),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: neonGreen.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Text("Aylık üyelik",
-                              style: TextStyle(
-                                  color: neonGreen,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 10)),
-                        )
-                      ],
+                    const Text(
+                      'Canlı Araç Teşhisi',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 15,
+                      ),
                     ),
                     const SizedBox(height: 3),
                     Text(
                       _isSubscribed
-                          ? "Sınırsız ECU okuma ve lamba söndürme açık."
-                          : "Hangi cihazı almalıyım? Nasıl bağlanırım?",
-                      style: const TextStyle(
-                          color: Colors.white60, fontSize: 11.5),
+                          ? 'Gerçek ECU verileri ve arıza işlemleri kullanıma hazır.'
+                          : 'ELM327 bağlantısı, canlı sensörler ve ECU arıza işlemleri.',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.56),
+                        fontSize: 11.2,
+                        height: 1.35,
+                      ),
                     ),
                   ],
                 ),
               ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          _isSubscribed ? surfaceBlack : cyanAccent,
-                      foregroundColor:
-                          _isSubscribed ? Colors.white70 : Colors.black,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
+              const SizedBox(width: 10),
+              InkWell(
+                onTap: _showHardwareAndGuideModal,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.055),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.08),
                     ),
-                    onPressed: _showHardwareAndGuideModal,
-                    child: const Text("Rehber",
-                        style: TextStyle(
-                            fontWeight: FontWeight.w900, fontSize: 11.5)),
                   ),
-                  if (!_isSubscribed)
-                    TextButton(
-                      style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          visualDensity: VisualDensity.compact),
-                      onPressed: () async {
-                        try {
-                          await _showSubscriptionModal();
-                          _showSnackbar("Satın alımlar kontrol ediliyor...");
-                        } catch (e) {
-                          _showSnackbar("Geri yükleme hatası: $e",
-                              isError: true);
-                        }
-                      },
-                      child: const Text("Geri Yükle",
-                          style: TextStyle(
-                              color: cyanAccent,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold)),
-                    )
-                ],
-              )
+                  child: const Icon(
+                    Icons.help_outline_rounded,
+                    color: neonGreen,
+                    size: 19,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
         Container(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: cardBlack,
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
               color: _isConnectedToSocket
-                  ? neonGreen.withValues(alpha: 0.5)
-                  : cyanAccent.withValues(alpha: 0.3),
-              width: 1.2,
+                  ? neonGreen.withValues(alpha: 0.34)
+                  : Colors.white.withValues(alpha: 0.08),
             ),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.4), blurRadius: 15)
-            ],
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    width: 42,
+                    height: 42,
                     decoration: BoxDecoration(
                       color: (_isConnectedToSocket ? neonGreen : cyanAccent)
-                          .withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
+                          .withValues(alpha: 0.11),
+                      borderRadius: BorderRadius.circular(13),
                     ),
                     child: Icon(
                       _isConnectedToSocket
                           ? Icons.cable_rounded
-                          : Icons.link_off_rounded,
+                          : Icons.settings_ethernet_rounded,
                       color: _isConnectedToSocket ? neonGreen : cyanAccent,
-                      size: 26,
+                      size: 21,
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 11),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          _isConnectedToSocket
-                              ? "ELM327 Soket Aktif"
-                              : "ELM327 Wi-Fi / TCP Soket",
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 16),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          _isConnectedToSocket
-                              ? "Protokol: $_liveProtocol • VIN: $_liveVin"
-                              : "Soket IP ve Portunu ayarlayıp bağlanın",
+                        const Text(
+                          'ELM327 Bağlantısı',
                           style: TextStyle(
-                              color: _isConnectedToSocket
-                                  ? neonGreen
-                                  : Colors.white54,
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w600),
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 14.5,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _isConnectedToSocket
+                              ? '$_liveProtocol • VIN: $_liveVin'
+                              : 'Wi-Fi / TCP soket bilgilerinizi girin.',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: _isConnectedToSocket
+                                ? neonGreen.withValues(alpha: 0.9)
+                                : Colors.white.withValues(alpha: 0.48),
+                            fontSize: 10.8,
+                            height: 1.25,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: (_isConnectedToSocket ? neonGreen : Colors.white)
+                          .withValues(alpha: _isConnectedToSocket ? 0.11 : 0.045),
+                      borderRadius: BorderRadius.circular(99),
+                      border: Border.all(
+                        color: (_isConnectedToSocket ? neonGreen : Colors.white)
+                            .withValues(alpha: _isConnectedToSocket ? 0.25 : 0.07),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: _isConnectedToSocket
+                                ? neonGreen
+                                : Colors.white38,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          _isConnectedToSocket ? 'BAĞLI' : 'HAZIR',
+                          style: TextStyle(
+                            color: _isConnectedToSocket
+                                ? neonGreen
+                                : Colors.white54,
+                            fontSize: 9.2,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.35,
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
               if (!_isConnectedToSocket) ...[
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: surfaceBlack,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white12),
-                        ),
-                        child: TextField(
-                          controller: _ipController,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold),
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            labelText: "Soket IP",
-                            labelStyle:
-                                TextStyle(color: Colors.white54, fontSize: 11),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 1,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: surfaceBlack,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white12),
-                        ),
-                        child: TextField(
-                          controller: _portController,
-                          keyboardType: TextInputType.number,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold),
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            labelText: "Port",
-                            labelStyle:
-                                TextStyle(color: Colors.white54, fontSize: 11),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 14),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final bool stackFields = constraints.maxWidth < 390;
+                    final ipField = _buildDiagnosticInput(
+                      controller: _ipController,
+                      label: 'Soket IP',
+                      icon: Icons.lan_rounded,
+                    );
+                    final portField = _buildDiagnosticInput(
+                      controller: _portController,
+                      label: 'Port',
+                      icon: Icons.numbers_rounded,
+                      keyboardType: TextInputType.number,
+                    );
+                    if (stackFields) {
+                      return Column(
+                        children: [
+                          ipField,
+                          const SizedBox(height: 8),
+                          portField,
+                        ],
+                      );
+                    }
+                    return Row(
+                      children: [
+                        Expanded(flex: 2, child: ipField),
+                        const SizedBox(width: 8),
+                        Expanded(child: portField),
+                      ],
+                    );
+                  },
+                ),
               ],
+              const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: _isConnectingSocket ? null : _connectToElmSocket,
                   icon: _isConnectingSocket
                       ? const SizedBox(
-                          width: 18,
-                          height: 18,
+                          width: 17,
+                          height: 17,
                           child: CircularProgressIndicator(
-                              color: Colors.black, strokeWidth: 2))
+                            color: Colors.black,
+                            strokeWidth: 2,
+                          ),
+                        )
                       : Icon(
                           _isConnectedToSocket
                               ? Icons.power_settings_new_rounded
                               : Icons.link_rounded,
-                          size: 20),
+                          size: 19,
+                        ),
                   label: Text(
                     _isConnectingSocket
-                        ? "ELM327 Soketine Bağlanıyor..."
+                        ? 'Bağlanıyor...'
                         : (_isConnectedToSocket
-                            ? "Soket Bağlantısını Kes"
-                            : "Gerçek Sokete Bağlan"),
+                            ? 'Bağlantıyı Kes'
+                            : 'Gerçek Sokete Bağlan'),
                     style: const TextStyle(
-                        fontWeight: FontWeight.w900, fontSize: 13.5),
+                      fontWeight: FontWeight.w900,
+                      fontSize: 13,
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
                         _isConnectedToSocket ? alertRed : neonGreen,
                     foregroundColor:
                         _isConnectedToSocket ? Colors.white : Colors.black,
+                    disabledBackgroundColor:
+                        neonGreen.withValues(alpha: 0.35),
                     padding: const EdgeInsets.symmetric(vertical: 14),
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                 ),
               ),
@@ -2757,185 +2781,262 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
           ),
         ),
         const SizedBox(height: 20),
-        const Text("Canlı Sensör Parametreleri (ECU Mode 01)",
-            style: TextStyle(
-                color: Colors.white70,
-                fontWeight: FontWeight.bold,
-                fontSize: 13)),
+        _buildDiagnosticSectionTitle(
+          icon: Icons.sensors_rounded,
+          title: 'Canlı Sensörler',
+          subtitle: 'ECU Mode 01 • Anlık araç verileri',
+        ),
         const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-                child: _buildTelemetryGauge(
-                    "MOTOR DEVRİ",
-                    _isConnectedToSocket ? "$_liveRpm" : "--",
-                    "d/dk",
+        LayoutBuilder(
+          builder: (context, constraints) {
+            const double gap = 10;
+            final double tileWidth = (constraints.maxWidth - gap) / 2;
+            return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: [
+                SizedBox(
+                  width: tileWidth,
+                  child: _buildTelemetryGauge(
+                    'MOTOR DEVRİ',
+                    _isConnectedToSocket ? '$_liveRpm' : '--',
+                    'd/dk',
                     Icons.speed_rounded,
                     cyanAccent,
-                    (_liveRpm / 6000).clamp(0.0, 1.0))),
-            const SizedBox(width: 10),
-            Expanded(
-                child: _buildTelemetryGauge(
-                    "HIZ",
-                    _isConnectedToSocket ? "$_liveSpeed" : "--",
-                    "KM/H",
+                    (_liveRpm / 6000).clamp(0.0, 1.0),
+                  ),
+                ),
+                SizedBox(
+                  width: tileWidth,
+                  child: _buildTelemetryGauge(
+                    'HIZ',
+                    _isConnectedToSocket ? '$_liveSpeed' : '--',
+                    'KM/H',
                     Icons.navigation_rounded,
                     neonGreen,
-                    (_liveSpeed / 220).clamp(0.0, 1.0))),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-                child: _buildTelemetryGauge(
-                    "HARARET",
+                    (_liveSpeed / 220).clamp(0.0, 1.0),
+                  ),
+                ),
+                SizedBox(
+                  width: tileWidth,
+                  child: _buildTelemetryGauge(
+                    'HARARET',
                     _isConnectedToSocket
                         ? _liveCoolantTemp.toStringAsFixed(1)
-                        : "--",
-                    "°C",
+                        : '--',
+                    '°C',
                     Icons.thermostat_rounded,
                     _liveCoolantTemp > 95 ? alertRed : warningOrange,
-                    (_liveCoolantTemp / 120).clamp(0.0, 1.0))),
-            const SizedBox(width: 10),
-            Expanded(
-                child: _buildTelemetryGauge(
-                    "AKÜ VOLTAJI",
+                    (_liveCoolantTemp / 120).clamp(0.0, 1.0),
+                  ),
+                ),
+                SizedBox(
+                  width: tileWidth,
+                  child: _buildTelemetryGauge(
+                    'AKÜ VOLTAJI',
                     _isConnectedToSocket
                         ? _liveBatteryVoltage.toStringAsFixed(1)
-                        : "--",
-                    "Volt",
+                        : '--',
+                    'Volt',
                     Icons.battery_charging_full_rounded,
-                    purpleAccent,
-                    (_liveBatteryVoltage / 16).clamp(0.0, 1.0))),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-                child: _buildTelemetryGauge(
-                    "YAKIT BASINCI",
+                    neonGreen,
+                    (_liveBatteryVoltage / 16).clamp(0.0, 1.0),
+                  ),
+                ),
+                SizedBox(
+                  width: tileWidth,
+                  child: _buildTelemetryGauge(
+                    'YAKIT BASINCI',
                     _isConnectedToSocket
-                        ? "${_liveFuelRailPressure.toInt()}"
-                        : "--",
-                    "Bar",
+                        ? '${_liveFuelRailPressure.toInt()}'
+                        : '--',
+                    'Bar',
                     Icons.local_gas_station_rounded,
                     neonGreen,
-                    (_liveFuelRailPressure / 1600).clamp(0.0, 1.0))),
-            const SizedBox(width: 10),
-            Expanded(
-                child: _buildTelemetryGauge(
-                    "TURBO BASINCI",
+                    (_liveFuelRailPressure / 1600).clamp(0.0, 1.0),
+                  ),
+                ),
+                SizedBox(
+                  width: tileWidth,
+                  child: _buildTelemetryGauge(
+                    'TURBO BASINCI',
                     _isConnectedToSocket
                         ? _liveBoostPressure.toStringAsFixed(2)
-                        : "--",
-                    "Bar",
+                        : '--',
+                    'Bar',
                     Icons.air_rounded,
                     warningOrange,
-                    (_liveBoostPressure / 2.0).clamp(0.0, 1.0))),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-                child: _buildTelemetryGauge(
-                    "GAZ KELEBEĞİ",
-                    _isConnectedToSocket ? "${_liveThrottlePos.toInt()}" : "--",
-                    "%",
+                    (_liveBoostPressure / 2.0).clamp(0.0, 1.0),
+                  ),
+                ),
+                SizedBox(
+                  width: tileWidth,
+                  child: _buildTelemetryGauge(
+                    'GAZ KELEBEĞİ',
+                    _isConnectedToSocket
+                        ? '${_liveThrottlePos.toInt()}'
+                        : '--',
+                    '%',
                     Icons.tune_rounded,
                     cyanAccent,
-                    (_liveThrottlePos / 100).clamp(0.0, 1.0))),
-            const SizedBox(width: 10),
-            Expanded(
-                child: _buildTelemetryGauge(
-                    "EMME HAVA SIC.",
-                    _isConnectedToSocket ? "$_liveIntakeTemp" : "--",
-                    "°C",
+                    (_liveThrottlePos / 100).clamp(0.0, 1.0),
+                  ),
+                ),
+                SizedBox(
+                  width: tileWidth,
+                  child: _buildTelemetryGauge(
+                    'EMME HAVA SIC.',
+                    _isConnectedToSocket ? '$_liveIntakeTemp' : '--',
+                    '°C',
                     Icons.device_thermostat_rounded,
                     warningOrange,
-                    (_liveIntakeTemp / 60).clamp(0.0, 1.0))),
-          ],
+                    (_liveIntakeTemp / 60).clamp(0.0, 1.0),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 20),
         Container(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: cardBlack,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.08),
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Row(
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.terminal_rounded, color: neonGreen, size: 20),
-                  SizedBox(width: 8),
-                  Text("ECU Hata Kodu Okuma & Sıfırlama (Mode 03 / 04)",
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 14)),
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: neonGreen.withValues(alpha: 0.11),
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    child: const Icon(
+                      Icons.car_repair_rounded,
+                      color: neonGreen,
+                      size: 21,
+                    ),
+                  ),
+                  const SizedBox(width: 11),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'ECU Arıza İşlemleri',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 14.5,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          'Motor beynindeki kayıtlı hata kodlarını okuyun veya arıza lambasını sıfırlayın.',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.5),
+                            fontSize: 10.8,
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  _buildModeBadge('MODE 03', 'Hata okuma'),
+                  const SizedBox(width: 7),
+                  _buildModeBadge('MODE 04', 'Sıfırlama'),
                 ],
               ),
               const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _isReadingDtc ? null : _readRealDtcFromEcu,
-                      icon: _isReadingDtc
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                  color: Colors.black, strokeWidth: 2))
-                          : const Icon(Icons.search_rounded, size: 18),
-                      label: Text(
-                          _isReadingDtc ? "Taranıyor..." : "Hataları Çek",
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w800, fontSize: 13)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: cyanAccent,
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14)),
-                      ),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _isReadingDtc ? null : _readRealDtcFromEcu,
+                  icon: _isReadingDtc
+                      ? const SizedBox(
+                          width: 17,
+                          height: 17,
+                          child: CircularProgressIndicator(
+                            color: Colors.black,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Icon(Icons.search_rounded, size: 19),
+                  label: Text(
+                    _isReadingDtc ? 'Hatalar Taranıyor...' : 'Hata Kodlarını Tara',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 13,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _isClearingDtc || _socketDetectedCodes.isEmpty
-                          ? null
-                          : _clearSocketCodes,
-                      icon: _isClearingDtc
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                  color: Colors.white, strokeWidth: 2))
-                          : const Icon(Icons.cleaning_services_rounded,
-                              size: 18),
-                      label: Text(
-                          _isClearingDtc ? "Siliniyor..." : "Lambayı Söndür",
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w800, fontSize: 13)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: alertRed,
-                        disabledBackgroundColor:
-                            alertRed.withValues(alpha: 0.3),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14)),
-                      ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: neonGreen,
+                    foregroundColor: Colors.black,
+                    disabledBackgroundColor:
+                        neonGreen.withValues(alpha: 0.35),
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                ],
+                ),
+              ),
+              const SizedBox(height: 9),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _isClearingDtc || _socketDetectedCodes.isEmpty
+                      ? null
+                      : _clearSocketCodes,
+                  icon: _isClearingDtc
+                      ? const SizedBox(
+                          width: 17,
+                          height: 17,
+                          child: CircularProgressIndicator(
+                            color: alertRed,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Icon(Icons.cleaning_services_rounded, size: 18),
+                  label: Text(
+                    _isClearingDtc
+                        ? 'Sıfırlanıyor...'
+                        : 'Arıza Lambasını Sıfırla',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12.5,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: alertRed,
+                    disabledForegroundColor: Colors.white24,
+                    side: BorderSide(
+                      color: (_socketDetectedCodes.isEmpty
+                              ? Colors.white
+                              : alertRed)
+                          .withValues(alpha: 0.28),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -2944,70 +3045,219 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
     );
   }
 
-  Widget _buildTelemetryGauge(String title, String value, String unit,
-      IconData icon, Color color, double progress) {
+  Widget _buildDiagnosticInput({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+  }) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: cardBlack,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: color.withValues(alpha: 0.3), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-              color: color.withValues(alpha: 0.08),
-              blurRadius: 10,
-              offset: const Offset(0, 3))
-        ],
+        color: surfaceBlack,
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(title,
-                  style: const TextStyle(
-                      color: Colors.white54,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5)),
-              Icon(icon, color: color, size: 16),
-            ],
-          ),
-          const SizedBox(height: 8),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(value,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 22,
-                        letterSpacing: -0.5)),
-                const SizedBox(width: 4),
-                Text(unit,
-                    style: TextStyle(
-                        color: color,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800)),
-              ],
+          Icon(icon, color: Colors.white38, size: 17),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              keyboardType: keyboardType,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
+              ),
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                isDense: true,
+                labelText: label,
+                labelStyle: const TextStyle(
+                  color: Colors.white38,
+                  fontSize: 10.5,
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 4,
-              backgroundColor: Colors.white10,
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-            ),
-          )
         ],
       ),
     );
   }
+
+  Widget _buildDiagnosticSectionTitle({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 30,
+          decoration: BoxDecoration(
+            color: neonGreen,
+            borderRadius: BorderRadius.circular(99),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Icon(icon, color: neonGreen, size: 19),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                subtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white38,
+                  fontSize: 10.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModeBadge(String mode, String description) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        decoration: BoxDecoration(
+          color: surfaceBlack,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              mode,
+              style: const TextStyle(
+                color: neonGreen,
+                fontWeight: FontWeight.w900,
+                fontSize: 9.5,
+                letterSpacing: 0.45,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              description,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white54,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTelemetryGauge(String title, String value, String unit,
+      IconData icon, Color color, double progress) {
+    final double safeProgress = progress.clamp(0.0, 1.0).toDouble();
+    return Container(
+      constraints: const BoxConstraints(minHeight: 116),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cardBlack,
+        borderRadius: BorderRadius.circular(17),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.075)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(icon, color: color, size: 14),
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white54,
+                    fontSize: 9.2,
+                    height: 1.05,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.25,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 20,
+                    letterSpacing: -0.4,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  unit,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 9),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(99),
+            child: LinearProgressIndicator(
+              value: safeProgress,
+              minHeight: 3,
+              backgroundColor: Colors.white.withValues(alpha: 0.06),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
 }

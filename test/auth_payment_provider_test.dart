@@ -104,7 +104,8 @@ void main() {
                           monthlyEarnings: 12500.5,
                           onOnline: () {},
                           onSubscription: () {},
-                          onHistory: () {}))))));
+                          onHistory: () {},
+                          onLogout: () {}))))));
       await tester.pumpAndSettle();
       expect(find.text('Henüz puan yok'), findsOneWidget);
       final earningsCard = find
@@ -132,7 +133,8 @@ void main() {
                 jobCount: 8,
                 radius: 10,
                 onToggle: (_) {},
-                onRefresh: () {}),
+                onRefresh: () {},
+                onLogout: () {}),
             SizedBox(
                 height: 230,
                 child: ProviderJobPreview(

@@ -865,7 +865,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 _showCustomSnackBar("Bağlantı hatası.",
                                     isError: true);
                               } finally {
-                                if (mounted) {
+                                if (mounted && modalCtx.mounted) {
                                   setModalState(() => isUpdating = false);
                                 }
                               }
@@ -897,7 +897,14 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
         );
       }),
-    );
+    ).whenComplete(() {
+      Future<void>.delayed(const Duration(milliseconds: 450), () {
+        try {
+          oldPasswordCtrl.dispose();
+          newPasswordCtrl.dispose();
+        } catch (_) {}
+      });
+    });
   }
 
   void _showFeedbackDialog() {
@@ -1033,7 +1040,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     _showCustomSnackBar("Bağlantı hatası.",
                                         isError: true);
                                   } finally {
-                                    if (mounted) {
+                                    if (mounted && modalCtx.mounted) {
                                       setModalState(() => isSending = false);
                                     }
                                   }
@@ -1067,7 +1074,14 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
         );
       }),
-    );
+    ).whenComplete(() {
+      Future<void>.delayed(const Duration(milliseconds: 450), () {
+        try {
+          subjectCtrl.dispose();
+          messageCtrl.dispose();
+        } catch (_) {}
+      });
+    });
   }
 
   void _showComplaintDialog(
@@ -1230,7 +1244,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                           isError: true);
                                     }
                                   } finally {
-                                    if (mounted) {
+                                    if (mounted && modalCtx.mounted) {
                                       setModalState(() => isSending = false);
                                     }
                                   }
@@ -1265,7 +1279,14 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
         );
       }),
-    );
+    ).whenComplete(() {
+      Future<void>.delayed(const Duration(milliseconds: 450), () {
+        try {
+          subjectController.dispose();
+          messageController.dispose();
+        } catch (_) {}
+      });
+    });
   }
 
   // Kategorilere göre özel ikon belirleme
@@ -3227,7 +3248,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                       _showCustomSnackBar("Bağlantı hatası.",
                                           isError: true);
                                     } finally {
-                                      if (mounted) {
+                                      if (mounted && modalCtx.mounted) {
                                         setModalState(
                                             () => isSubmitting = false);
                                       }
@@ -3264,7 +3285,13 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
         );
       }),
-    );
+    ).whenComplete(() {
+      Future<void>.delayed(const Duration(milliseconds: 450), () {
+        try {
+          commentController.dispose();
+        } catch (_) {}
+      });
+    });
   }
 
   // GÖRSELDEKİ GİBİ GEÇMİŞ LİSTESİ VE KATEGORİ HAPLARI

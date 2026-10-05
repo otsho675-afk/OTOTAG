@@ -708,7 +708,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           }
         );
       }
-    );
+    ).whenComplete(() {
+      Future<void>.delayed(const Duration(milliseconds: 450), () {
+        try {
+          titleController.dispose();
+          messageController.dispose();
+        } catch (_) {}
+      });
+    });
   }
 
   Future<void> _fetchAndShowProviderReviews(int providerId, String providerName) async {
@@ -851,12 +858,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       )
     ) ?? false;
 
-    if (confirm && passwordController.text.isNotEmpty) {
+    final String newPassword = passwordController.text;
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    passwordController.dispose();
+
+    if (confirm && newPassword.isNotEmpty) {
       try {
         final response = await http.post(
           Uri.parse("$baseUrl?action=admin_change_password"),
           headers: {"Content-Type": "application/x-www-form-urlencoded"},
-          body: {"admin_id": "1", "new_password": passwordController.text},
+          body: {"admin_id": "1", "new_password": newPassword},
         );
         final data = json.decode(response.body);
         if (data is Map && data['status'] == 'success' && mounted) {
@@ -3043,7 +3054,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           ));
                           }
                         } finally {
-                          setSheetState(() => isSavingAd = false);
+                          if (context.mounted) {
+                            setSheetState(() => isSavingAd = false);
+                          }
                         }
                       },
                       style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), backgroundColor: AppConstants.primaryColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
@@ -3059,7 +3072,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           }
         );
       }
-    );
+    ).whenComplete(() {
+      Future<void>.delayed(const Duration(milliseconds: 450), () {
+        try {
+          titleCtrl.dispose();
+          descCtrl.dispose();
+          priorityCtrl.dispose();
+        } catch (_) {}
+      });
+    });
   }
 
   void _showEditAdModal(BuildContext context, bool isDark, Map<String, dynamic> ad, VoidCallback onSuccess) {
@@ -3226,7 +3247,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           ));
                           }
                         } finally {
-                          setSheetState(() => isSavingAd = false);
+                          if (context.mounted) {
+                            setSheetState(() => isSavingAd = false);
+                          }
                         }
                       },
                       style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), backgroundColor: AppConstants.primaryColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
@@ -3242,7 +3265,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           }
         );
       }
-    );
+    ).whenComplete(() {
+      Future<void>.delayed(const Duration(milliseconds: 450), () {
+        try {
+          titleCtrl.dispose();
+          descCtrl.dispose();
+          priorityCtrl.dispose();
+        } catch (_) {}
+      });
+    });
   }
 
   Future<void> _deleteAd(dynamic adId, VoidCallback onSuccess) async {

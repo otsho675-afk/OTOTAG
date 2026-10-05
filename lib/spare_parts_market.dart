@@ -540,9 +540,13 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                   border: Border.all(color: neonGreen.withValues(alpha: 0.15), width: 1.5),
                   boxShadow: [BoxShadow(color: neonGreen.withValues(alpha: 0.05), blurRadius: 40, spreadRadius: -10)]
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+                child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                     Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10))),
                     const SizedBox(height: 24),
                     Row(
@@ -623,14 +627,22 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                         ),
                       ],
                     )
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
           );
         }
       )
-    );
+    ).whenComplete(() {
+      Future<void>.delayed(const Duration(milliseconds: 450), () {
+        try {
+          minCtrl.dispose();
+          maxCtrl.dispose();
+        } catch (_) {}
+      });
+    });
   }
 
   Widget _buildQuickPriceChip(String label, int min, int max, TextEditingController minCtrl, TextEditingController maxCtrl, StateSetter setModalState) {
@@ -699,7 +711,6 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
         builder: (context, setModalState) {
           final media = MediaQuery.of(ctx);
           final bottomInset = media.viewInsets.bottom;
-          final bool compact = media.size.width < 560;
           final double pagePadding = media.size.width < 380 ? 14 : 20;
           final Color accent = isSelling ? neonGreen : neonCyan;
 
@@ -801,7 +812,9 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
             } catch (_) {
               if (mounted) _showTopSnackBar("Bağlantı hatası oluştu.", isError: true);
             } finally {
-              if (mounted) setModalState(() => isProcessing = false);
+              if (mounted && ctx.mounted) {
+                setModalState(() => isProcessing = false);
+              }
             }
           }
 
@@ -1405,7 +1418,9 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                 } catch (e) {
                                   if (mounted) _showTopSnackBar("Bağlantı hatası.", isError: true);
                                 } finally {
-                                  if (mounted) setModalState(() => isSending = false);
+                                  if (mounted && ctx.mounted) {
+                                    setModalState(() => isSending = false);
+                                  }
                                 }
                               },
                               child: isSending 
@@ -1423,7 +1438,13 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
           );
         },
       )
-    );
+    ).whenComplete(() {
+      Future<void>.delayed(const Duration(milliseconds: 450), () {
+        try {
+          msgCtrl.dispose();
+        } catch (_) {}
+      });
+    });
   }
 
   void _showBidDialog(int listingId, bool isForSale, {BuildContext? parentCtx}) {

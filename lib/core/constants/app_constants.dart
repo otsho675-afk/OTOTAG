@@ -25,13 +25,43 @@ class AppConstants {
         : '';
   }
 
-  // Proje Geneli Ana Renkler
-  static const Color primaryColor =
-      Color(0xFF00FFA3); // neonGreen / _primaryColor
-  static const Color dangerColor = Color(0xFFFF3366); // alertRed / _dangerColor
-  static const Color bgColor = Color(0xFF030305); // pureBlack / _bgColor
-  static const Color cardColor = Color(0xFF111115); // panelBlack / _cardColor
-  static const Color mutedColor = Color(0xFF939AA4);
+  // ---------------------------------------------------------------------------
+  // OTO TAG — Kurumsal tasarım sistemi
+  // Mevcut ana renk değerleri korunur. Böylece eski ekranların davranışı ve
+  // testleri bozulmadan yeni yüzeyler aynı marka diliyle kullanılabilir.
+  // ---------------------------------------------------------------------------
+  static const Color primaryColor = Color(0xFF00FFA3);
+  static const Color primaryDeep = Color(0xFF00D68A);
+  static const Color primaryDark = Color(0xFF009B69);
+  static const Color primaryInk = Color(0xFF041A12);
+  static const Color primarySoft = Color(0x1F00FFA3);
+
+  static const Color dangerColor = Color(0xFFFF3366);
+  static const Color warningColor = Color(0xFFF6B73C);
+  static const Color infoColor = Color(0xFF6FA8FF);
+
+  static const Color bgColor = Color(0xFF030305);
+  static const Color bgElevated = Color(0xFF08090C);
+  static const Color cardColor = Color(0xFF111115);
+  static const Color cardElevated = Color(0xFF15161B);
   static const Color fieldColor = Color(0xFF191D22);
+  static const Color fieldHoverColor = Color(0xFF1E232A);
+
+  static const Color textColor = Color(0xFFF5F7F8);
+  static const Color mutedColor = Color(0xFF939AA4);
+  static const Color subtleTextColor = Color(0xFF737B86);
   static const Color borderColor = Color(0xFF292E35);
+  static const Color borderStrongColor = Color(0xFF353C45);
+
+  static const LinearGradient premiumSurfaceGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF17191F), Color(0xFF0E1014)],
+  );
+
+  static const LinearGradient brandGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [primaryColor, primaryDeep],
+  );
 }

@@ -3,6 +3,7 @@ import 'services/vehicle_deadline.dart';
 // vehicle_panel_screen.dart
 import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
+import 'core/theme/premium_surfaces.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -14,7 +15,6 @@ import 'dart:ui';
 import 'dart:io';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'diagnostic_screen.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
@@ -559,6 +559,10 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
           barrierDismissible: false,
           builder: (_) => VehicleKilometerUpdateDialog(
             currentKm: currentKm,
+            maintenanceTargetKm: int.tryParse(
+                currentVehicleData['maintenance_km']?.toString() ?? ''),
+            vehicleName: currentVehicleData['brand_model']?.toString(),
+            plate: currentVehicleData['plate']?.toString(),
             onSave: _saveCurrentKilometers,
           ),
         );
@@ -1095,43 +1099,615 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
     }
   }
 
+
+  Future<void> _showKilometerUpdate() async {
+    final currentKm =
+        int.tryParse(currentVehicleData['current_km']?.toString() ?? '0') ?? 0;
+    HapticFeedback.selectionClick();
+    final saved = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => VehicleKilometerUpdateDialog(
+        currentKm: currentKm,
+        maintenanceTargetKm: int.tryParse(
+            currentVehicleData['maintenance_km']?.toString() ?? ''),
+        vehicleName: currentVehicleData['brand_model']?.toString(),
+        plate: currentVehicleData['plate']?.toString(),
+        onSave: _saveCurrentKilometers,
+      ),
+    );
+    if (saved == true && mounted) {
+      _showCustomSnackBar('Güncel kilometre kaydedildi.');
+    }
+  }
+
+  Widget _buildVehicleHero() {
+    final String plate =
+        currentVehicleData['plate']?.toString().trim().toUpperCase() ?? '';
+    final String brandModel =
+        currentVehicleData['brand_model']?.toString().trim() ?? '';
+    final String modelYear =
+        currentVehicleData['model_year']?.toString().trim() ?? '';
+    final String engineType =
+        currentVehicleData['engine_type']?.toString().trim() ?? '';
+    final int currentKm =
+        int.tryParse(currentVehicleData['current_km']?.toString() ?? '0') ?? 0;
+    final int healthScore = _vehicleHealthScore();
+    final Color healthColor = _vehicleHealthColor(healthScore);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      child: PremiumGlassPanel(
+        padding: EdgeInsets.zero,
+        radius: 30,
+        blur: 18,
+        accent: true,
+        child: Stack(
+          children: [
+            Positioned(
+              right: -22,
+              bottom: -24,
+              child: IgnorePointer(
+                child: Icon(
+                  Icons.directions_car_filled_rounded,
+                  size: 168,
+                  color: AppConstants.primaryColor.withValues(alpha: .035),
+                ),
+              ),
+            ),
+            Positioned(
+              top: -70,
+              right: -45,
+              child: IgnorePointer(
+                child: Container(
+                  width: 190,
+                  height: 190,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        AppConstants.primaryColor.withValues(alpha: .12),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const PremiumBrandMark(
+                        size: 44,
+                        icon: Icons.directions_car_filled_rounded,
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'OTO TAG GARAGE',
+                              style: TextStyle(
+                                color: AppConstants.primaryColor,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.45,
+                              ),
+                            ),
+                            SizedBox(height: 3),
+                            Text(
+                              'Araç Komuta Merkezi',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -.25,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: healthColor.withValues(alpha: .09),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: healthColor.withValues(alpha: .22)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.health_and_safety_rounded, size: 12, color: healthColor),
+                            const SizedBox(width: 5),
+                            Text(
+                              '$healthScore%',
+                              style: TextStyle(
+                                color: healthColor,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
+                  Text(
+                    brandModel.isEmpty ? 'Aracım' : brandModel,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      height: 1.02,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 13, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: AppConstants.primaryColor.withValues(alpha: .09),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color:
+                                AppConstants.primaryColor.withValues(alpha: .24),
+                          ),
+                        ),
+                        child: Text(
+                          plate.isEmpty ? 'PLAKA YOK' : plate,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                      ),
+                      if (modelYear.isNotEmpty)
+                        PremiumStatusPill(
+                          '$modelYear MODEL',
+                          icon: Icons.calendar_today_rounded,
+                          accent: false,
+                        ),
+                      if (engineType.isNotEmpty)
+                        PremiumStatusPill(
+                          engineType.toUpperCase(),
+                          icon: Icons.local_gas_station_rounded,
+                          accent: false,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Wrap(
+                    spacing: 9,
+                    runSpacing: 9,
+                    children: [
+                      _buildHeroMetric(
+                        'GÜNCEL KM',
+                        NumberFormat.decimalPattern('tr_TR').format(currentKm),
+                        Icons.speed_rounded,
+                      ),
+                      _buildHeroMetric(
+                        'TOPLAM GİDER',
+                        '${totalExpense.toStringAsFixed(0)} ₺',
+                        Icons.account_balance_wallet_rounded,
+                      ),
+                      _buildHeroMetric(
+                        'KAYIT',
+                        records.length.toString(),
+                        Icons.receipt_long_rounded,
+                      ),
+                      _buildHeroMetric(
+                        'ARAÇ SAĞLIĞI',
+                        _vehicleHealthLabel(healthScore),
+                        Icons.health_and_safety_rounded,
+                        accentColor: healthColor,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _showKilometerUpdate,
+                        icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                        label: const Text('Akıllı KM'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppConstants.primaryColor,
+                          side: BorderSide(
+                            color: AppConstants.primaryColor.withValues(alpha: .28),
+                          ),
+                          backgroundColor:
+                              AppConstants.primaryColor.withValues(alpha: .055),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 15, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                      ),
+                      FilledButton.icon(
+                        onPressed: () => _showRecordSheet(),
+                        icon: const Icon(Icons.add_rounded, size: 19),
+                        label: const Text('İşlem Ekle'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppConstants.primaryColor,
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 17, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeroMetric(String label, String value, IconData icon, {Color? accentColor}) {
+    final color = accentColor ?? AppConstants.primaryColor;
+    return Container(
+      constraints: const BoxConstraints(minWidth: 128),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .035),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: .065)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: .085),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 16),
+          ),
+          const SizedBox(width: 9),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  color: AppConstants.subtleTextColor,
+                  fontSize: 8.5,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: .8,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                value,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -.25,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  int _vehicleHealthScore() {
+    int score = 100;
+
+    void applyDeadline(DateTime? date) {
+      if (date == null) {
+        score -= 10;
+        return;
+      }
+      final days = VehicleDeadline(date).days;
+      if (days == null) {
+        score -= 10;
+      } else if (days < 0) {
+        score -= 30;
+      } else if (days <= 15) {
+        score -= 16;
+      } else if (days <= 30) {
+        score -= 8;
+      }
+    }
+
+    applyDeadline(_effectiveInsuranceDate);
+    applyDeadline(_effectiveInspectionDate);
+
+    final currentKm =
+        int.tryParse(currentVehicleData['current_km']?.toString() ?? '0') ?? 0;
+    final maintenanceKm = int.tryParse(
+            currentVehicleData['maintenance_km']?.toString() ?? '0') ??
+        0;
+    if (maintenanceKm > 0) {
+      final remaining = maintenanceKm - currentKm;
+      if (remaining <= 0) {
+        score -= 28;
+      } else if (remaining <= 1000) {
+        score -= 14;
+      } else if (remaining <= 3000) {
+        score -= 6;
+      }
+    }
+    return score.clamp(0, 100).toInt();
+  }
+
+  String _vehicleHealthLabel(int score) {
+    if (score >= 90) return 'MÜKEMMEL';
+    if (score >= 75) return 'İYİ';
+    if (score >= 55) return 'DİKKAT';
+    return 'KRİTİK';
+  }
+
+  Color _vehicleHealthColor(int score) {
+    if (score >= 75) return AppConstants.primaryColor;
+    if (score >= 55) return const Color(0xFFFFB547);
+    return const Color(0xFFFF586B);
+  }
+
+  Widget _buildSmartMileageCard() {
+    final formatter = NumberFormat.decimalPattern('tr_TR');
+    final currentKm =
+        int.tryParse(currentVehicleData['current_km']?.toString() ?? '0') ?? 0;
+    final maintenanceKm = int.tryParse(
+            currentVehicleData['maintenance_km']?.toString() ?? '0') ??
+        0;
+    final remaining = maintenanceKm > 0 ? maintenanceKm - currentKm : null;
+    final Color statusColor = remaining == null
+        ? AppConstants.mutedColor
+        : remaining <= 0
+            ? const Color(0xFFFF586B)
+            : remaining <= 1000
+                ? const Color(0xFFFFB547)
+                : AppConstants.primaryColor;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: _showKilometerUpdate,
+          child: Container(
+            padding: const EdgeInsets.all(17),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppConstants.primaryColor.withValues(alpha: .075),
+                  const Color(0xFF111419),
+                  const Color(0xFF0A0C0F),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: AppConstants.primaryColor.withValues(alpha: .16),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: .24),
+                  blurRadius: 22,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: AppConstants.primaryColor.withValues(alpha: .10),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppConstants.primaryColor.withValues(alpha: .17),
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.auto_awesome_rounded,
+                    color: AppConstants.primaryColor,
+                    size: 23,
+                  ),
+                ),
+                const SizedBox(width: 13),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'AKILLI KM ASİSTANI',
+                        style: TextStyle(
+                          color: AppConstants.primaryColor,
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.05,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${formatter.format(currentKm)} km',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -.45,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        remaining == null
+                            ? 'Güncel kilometreyi hızlı ve kontrollü güncelle'
+                            : remaining <= 0
+                                ? 'Bakım hedefi ${formatter.format(remaining.abs())} km aşılmış'
+                                : 'Bakım hedefine ${formatter.format(remaining)} km kaldı',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: remaining == null
+                              ? AppConstants.mutedColor
+                              : statusColor,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: AppConstants.primaryColor.withValues(alpha: .09),
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_forward_rounded,
+                    color: AppConstants.primaryColor,
+                    size: 19,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader({
+    required String eyebrow,
+    required String title,
+    String? trailing,
+    IconData icon = Icons.auto_awesome_rounded,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 22, 16, 12),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppConstants.primaryColor.withValues(alpha: .08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppConstants.primaryColor.withValues(alpha: .14),
+              ),
+            ),
+            child: Icon(icon, color: AppConstants.primaryColor, size: 18),
+          ),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  eyebrow,
+                  style: const TextStyle(
+                    color: AppConstants.primaryColor,
+                    fontSize: 8.5,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.1,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (trailing != null)
+            PremiumStatusPill(
+              trailing,
+              icon: Icons.layers_rounded,
+              accent: false,
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildExpenseCards() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isNarrow = constraints.maxWidth < 360;
+        final isNarrow = constraints.maxWidth < 390;
+        final serviceExpense = totalExpense - totalFuelExpense;
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: isNarrow
               ? Column(
                   children: [
                     _buildMiniExpenseCard(
-                        "Servis & Bakım",
-                        totalExpense - totalFuelExpense,
-                        Icons.build_circle_rounded,
-                        const Color(0xFF00FFA3)),
-                    const SizedBox(height: 12),
+                      'SERVİS & BAKIM',
+                      serviceExpense,
+                      Icons.build_circle_rounded,
+                      'Planlı bakım ve servis harcamaları',
+                    ),
+                    const SizedBox(height: 10),
                     _buildMiniExpenseCard(
-                        "Yakıt Gideri",
-                        totalFuelExpense,
-                        Icons.local_gas_station_rounded,
-                        const Color(0xFF00FFA3)),
+                      'YAKIT GİDERİ',
+                      totalFuelExpense,
+                      Icons.local_gas_station_rounded,
+                      'Toplam yakıt maliyeti',
+                    ),
                   ],
                 )
               : Row(
                   children: [
                     Expanded(
-                        child: _buildMiniExpenseCard(
-                            "Servis & Bakım",
-                            totalExpense - totalFuelExpense,
-                            Icons.build_circle_rounded,
-                            const Color(0xFF00FFA3))),
-                    const SizedBox(width: 14),
+                      child: _buildMiniExpenseCard(
+                        'SERVİS & BAKIM',
+                        serviceExpense,
+                        Icons.build_circle_rounded,
+                        'Planlı bakım ve servis harcamaları',
+                      ),
+                    ),
+                    const SizedBox(width: 10),
                     Expanded(
-                        child: _buildMiniExpenseCard(
-                            "Yakıt Gideri",
-                            totalFuelExpense,
-                            Icons.local_gas_station_rounded,
-                            const Color(0xFF00FFA3))),
+                      child: _buildMiniExpenseCard(
+                        'YAKIT GİDERİ',
+                        totalFuelExpense,
+                        Icons.local_gas_station_rounded,
+                        'Toplam yakıt maliyeti',
+                      ),
+                    ),
                   ],
                 ),
         );
@@ -1140,153 +1716,86 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
   }
 
   Widget _buildMiniExpenseCard(
-      String title, double amount, IconData icon, Color color) {
+      String title, double amount, IconData icon, String subtitle) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(17),
       decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [const Color(0xFF161822), color.withValues(alpha: 0.08)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF15181D), Color(0xFF0C0E12)],
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withValues(alpha: .065)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .24),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
           ),
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
-          boxShadow: [
-            BoxShadow(
-                color: color.withValues(alpha: 0.15),
-                blurRadius: 20,
-                offset: const Offset(0, 8)),
-            BoxShadow(
-                color: Colors.black.withValues(alpha: 0.4),
-                blurRadius: 10,
-                offset: const Offset(0, 4))
-          ]),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                          color: color.withValues(alpha: 0.3), blurRadius: 12)
-                    ]),
-                child: Icon(icon, color: color, size: 24),
+                  color: AppConstants.primaryColor.withValues(alpha: .075),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppConstants.primaryColor.withValues(alpha: .12),
+                  ),
+                ),
+                child: Icon(icon, color: AppConstants.primaryColor, size: 19),
               ),
-              const Icon(Icons.arrow_outward_rounded,
-                  color: Colors.white24, size: 20),
+              const Spacer(),
+              Icon(
+                Icons.north_east_rounded,
+                color: Colors.white.withValues(alpha: .22),
+                size: 17,
+              ),
             ],
           ),
-          const SizedBox(height: 24),
-          Text(title,
-              style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.7),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.3),
-              overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 8),
+          const SizedBox(height: 17),
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppConstants.subtleTextColor,
+              fontSize: 9.5,
+              fontWeight: FontWeight.w900,
+              letterSpacing: .8,
+            ),
+          ),
+          const SizedBox(height: 5),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text("${amount.toStringAsFixed(2)} ₺",
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.8)),
+            child: Text(
+              '${amount.toStringAsFixed(2)} ₺',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -.75,
+              ),
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppConstants.subtleTextColor,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildDiagnosticBanner() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: InkWell(
-        onTap: () {
-          HapticFeedback.mediumImpact();
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => DiagnosticScreen(
-                userType: 'customer',
-                vehiclePlate: currentVehicleData['plate']?.toString(),
-                vehicleModel: currentVehicleData['brand_model']?.toString(),
-              ),
-            ),
-          );
-        },
-        borderRadius: BorderRadius.circular(22),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                const Color(0xFF161822),
-                Colors.white.withValues(alpha: 0.1)
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-                color: Colors.white.withValues(alpha: 0.35), width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4)),
-              BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.4),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4)),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                  border:
-                      Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                ),
-                child: const Icon(Icons.car_crash_rounded,
-                    color: Colors.white, size: 24),
-              ),
-              const SizedBox(width: 14),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("Arıza Teşhisi & OBD-II Rehberi",
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 15,
-                            letterSpacing: -0.3)),
-                    SizedBox(height: 3),
-                    Text("Hata kodu sorgula veya şikayetini yapay zekaya anlat",
-                        style: TextStyle(
-                            color: Colors.white60,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600)),
-                  ],
-                ),
-              ),
-              const Icon(Icons.arrow_forward_ios_rounded,
-                  color: Colors.white, size: 16),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -1299,35 +1808,106 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
         10000;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-          color: const Color(0xFF161822),
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(
-              color: Colors.white.withValues(alpha: 0.06), width: 1.5),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 8))
-          ]),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF14171C), Color(0xFF0B0D10)],
+        ),
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: Colors.white.withValues(alpha: .065)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .26),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(19),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildInfoRow("Trafik Sigortası", _effectiveInsuranceDate,
-                Icons.shield_rounded, 365),
+            Row(
+              children: [
+                Container(
+                  width: 39,
+                  height: 39,
+                  decoration: BoxDecoration(
+                    color: AppConstants.primaryColor.withValues(alpha: .08),
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: const Icon(
+                    Icons.health_and_safety_rounded,
+                    color: AppConstants.primaryColor,
+                    size: 19,
+                  ),
+                ),
+                const SizedBox(width: 11),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'ARAÇ SAĞLIK MERKEZİ',
+                        style: TextStyle(
+                          color: AppConstants.primaryColor,
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.05,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Kritik takipler',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const PremiumStatusPill(
+                  '3 KONTROL',
+                  icon: Icons.shield_outlined,
+                  accent: false,
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Divider(height: 1, color: Colors.white.withValues(alpha: .065)),
+            const SizedBox(height: 18),
+            _buildInfoRow(
+              'Trafik Sigortası',
+              _effectiveInsuranceDate,
+              Icons.shield_rounded,
+              365,
+            ),
             Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Divider(
-                    height: 1, color: Colors.white.withValues(alpha: 0.08))),
-            _buildInfoRow("Araç Muayenesi", _effectiveInspectionDate,
-                Icons.fact_check_rounded, 365),
+              padding: const EdgeInsets.symmetric(vertical: 15),
+              child: Divider(
+                height: 1,
+                color: Colors.white.withValues(alpha: .065),
+              ),
+            ),
+            _buildInfoRow(
+              'Araç Muayenesi',
+              _effectiveInspectionDate,
+              Icons.fact_check_rounded,
+              365,
+            ),
             Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Divider(
-                    height: 1, color: Colors.white.withValues(alpha: 0.08))),
+              padding: const EdgeInsets.symmetric(vertical: 15),
+              child: Divider(
+                height: 1,
+                color: Colors.white.withValues(alpha: .065),
+              ),
+            ),
             _buildMaintenanceRow(cKm, mKm),
           ],
         ),
@@ -1484,51 +2064,157 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFF161822),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.06), width: 1.5),
-            ),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (val) {
-                searchQuery = val;
-                setState(() => _applyFilters());
-              },
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15),
-              decoration: InputDecoration(
-                hintText: "İşlem, not veya tutar ara...",
-                hintStyle: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.35),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500),
-                prefixIcon: const Padding(
-                    padding: EdgeInsets.only(left: 14, right: 10),
-                    child: Icon(Icons.search_rounded,
-                        color: Color(0xFF00FFA3), size: 22)),
-                suffixIcon: searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear_rounded,
-                            color: Colors.white54, size: 18),
-                        onPressed: () {
-                          HapticFeedback.selectionClick();
-                          _searchController.clear();
-                          searchQuery = "";
-                          setState(() => _applyFilters());
-                        },
-                      )
-                    : null,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 52,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF15181D), Color(0xFF0D0F13)],
+                    ),
+                    borderRadius: BorderRadius.circular(17),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: .065),
+                    ),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (val) {
+                      searchQuery = val;
+                      setState(() => _applyFilters());
+                    },
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'İşlem, not veya tutar ara',
+                      hintStyle: const TextStyle(
+                        color: AppConstants.subtleTextColor,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search_rounded,
+                        color: AppConstants.mutedColor,
+                        size: 20,
+                      ),
+                      suffixIcon: searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(
+                                Icons.close_rounded,
+                                color: AppConstants.mutedColor,
+                                size: 17,
+                              ),
+                              onPressed: () {
+                                HapticFeedback.selectionClick();
+                                _searchController.clear();
+                                searchQuery = '';
+                                setState(() => _applyFilters());
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 9),
+              PopupMenuButton<String>(
+                initialValue: selectedDateFilter,
+                onSelected: (value) {
+                  HapticFeedback.selectionClick();
+                  setState(() {
+                    selectedDateFilter = value;
+                    _applyFilters();
+                  });
+                },
+                color: const Color(0xFF15181D),
+                elevation: 18,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(
+                    color: Colors.white.withValues(alpha: .08),
+                  ),
+                ),
+                itemBuilder: (_) => dateFilterOptions
+                    .map(
+                      (value) => PopupMenuItem<String>(
+                        value: value,
+                        child: Row(
+                          children: [
+                            Icon(
+                              value == selectedDateFilter
+                                  ? Icons.check_circle_rounded
+                                  : Icons.schedule_rounded,
+                              color: value == selectedDateFilter
+                                  ? AppConstants.primaryColor
+                                  : AppConstants.mutedColor,
+                              size: 17,
+                            ),
+                            const SizedBox(width: 9),
+                            Text(
+                              value,
+                              style: TextStyle(
+                                color: value == selectedDateFilter
+                                    ? Colors.white
+                                    : AppConstants.mutedColor,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                    .toList(),
+                child: Container(
+                  height: 52,
+                  padding: const EdgeInsets.symmetric(horizontal: 13),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF15181D), Color(0xFF0D0F13)],
+                    ),
+                    borderRadius: BorderRadius.circular(17),
+                    border: Border.all(
+                      color: selectedDateFilter == 'Tümü'
+                          ? Colors.white.withValues(alpha: .065)
+                          : AppConstants.primaryColor.withValues(alpha: .18),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.tune_rounded,
+                        size: 18,
+                        color: selectedDateFilter == 'Tümü'
+                            ? AppConstants.mutedColor
+                            : AppConstants.primaryColor,
+                      ),
+                      const SizedBox(width: 7),
+                      Text(
+                        selectedDateFilter == 'Tümü'
+                            ? 'Dönem'
+                            : selectedDateFilter,
+                        style: TextStyle(
+                          color: selectedDateFilter == 'Tümü'
+                              ? AppConstants.mutedColor
+                              : Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
@@ -1536,28 +2222,36 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
               children: filterOptions.map((f) {
                 final isSelected = selectedFilter == f;
                 return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
+                  padding: const EdgeInsets.only(right: 7),
                   child: ChoiceChip(
-                    label: Text(f,
-                        style: TextStyle(
-                            color: isSelected ? Colors.black : Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 13,
-                            letterSpacing: 0.2)),
-                    selected: isSelected,
-                    selectedColor: const Color(0xFF00FFA3),
-                    backgroundColor: const Color(0xFF161822),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    elevation: isSelected ? 8 : 0,
-                    shadowColor: const Color(0xFF00FFA3).withValues(alpha: 0.5),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20)),
-                    side: BorderSide(
+                    showCheckmark: false,
+                    label: Text(
+                      f,
+                      style: TextStyle(
                         color: isSelected
-                            ? const Color(0xFF00FFA3)
-                            : Colors.white.withValues(alpha: 0.1),
-                        width: 1.5),
+                            ? AppConstants.primaryColor
+                            : AppConstants.mutedColor,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 11.5,
+                        letterSpacing: .1,
+                      ),
+                    ),
+                    selected: isSelected,
+                    selectedColor:
+                        AppConstants.primaryColor.withValues(alpha: .075),
+                    backgroundColor: const Color(0xFF111318),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 9),
+                    elevation: 0,
+                    pressElevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    side: BorderSide(
+                      color: isSelected
+                          ? AppConstants.primaryColor.withValues(alpha: .22)
+                          : Colors.white.withValues(alpha: .055),
+                    ),
                     onSelected: (val) {
                       if (val && selectedFilter != f) {
                         HapticFeedback.selectionClick();
@@ -1583,63 +2277,44 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
     final double cost =
         double.tryParse(record['cost']?.toString() ?? '0') ?? 0.0;
     final String description = record['description']?.toString() ?? '';
-
     final IconData icon = _typeIcons[type] ?? Icons.handyman_rounded;
-    final Color color = _typeColors[type] ?? const Color(0xFF00FFA3);
+    final Color color = _typeColors[type] ?? AppConstants.primaryColor;
+    final bool hasAttachment =
+        record['document_url'] != null || record['image_url'] != null;
 
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Column(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFF161822),
-                        color.withValues(alpha: 0.15)
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: color, width: 2.5),
-                    boxShadow: [
-                      BoxShadow(
-                          color: color.withValues(alpha: 0.4),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4)),
-                      BoxShadow(
-                          color: color.withValues(alpha: 0.1),
-                          blurRadius: 4,
-                          spreadRadius: 2)
-                    ]),
-                child: Icon(icon, color: color, size: 22),
-              ),
-              if (!isLast)
-                Expanded(
+          SizedBox(
+            width: 40,
+            child: Column(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: .075),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: color.withValues(alpha: .16)),
+                  ),
+                  child: Icon(icon, color: color, size: 17),
+                ),
+                if (!isLast)
+                  Expanded(
                     child: Container(
-                        width: 3,
-                        margin: const EdgeInsets.symmetric(vertical: 6),
-                        decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                color.withValues(alpha: 0.6),
-                                color.withValues(alpha: 0.05)
-                              ],
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                            ),
-                            borderRadius: BorderRadius.circular(2)))),
-            ],
+                      width: 1,
+                      margin: const EdgeInsets.symmetric(vertical: 6),
+                      color: Colors.white.withValues(alpha: .075),
+                    ),
+                  ),
+              ],
+            ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 10),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.only(bottom: 11),
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
@@ -1647,91 +2322,108 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                     HapticFeedback.lightImpact();
                     _showRecordDetailSheet(record);
                   },
-                  borderRadius: BorderRadius.circular(22),
-                  splashColor: color.withValues(alpha: 0.1),
-                  highlightColor: color.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(20),
                   child: Container(
+                    padding: const EdgeInsets.all(15),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF161822),
-                      borderRadius: BorderRadius.circular(22),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF15181D), Color(0xFF0C0E12)],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.06),
-                          width: 1.5),
+                        color: Colors.white.withValues(alpha: .06),
+                      ),
                     ),
-                    padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                  color: color.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                      color: color.withValues(alpha: 0.3))),
-                              child: Text(type.toUpperCase(),
-                                  style: TextStyle(
-                                      color: color,
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: 11,
-                                      letterSpacing: 0.4)),
+                            Expanded(
+                              child: Text(
+                                type,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 13.5,
+                                  letterSpacing: -.2,
+                                ),
+                              ),
                             ),
-                            Text(DateFormat('dd.MM.yyyy').format(date),
-                                style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.55),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12)),
+                            const SizedBox(width: 8),
+                            Text(
+                              DateFormat('dd.MM.yyyy').format(date),
+                              style: const TextStyle(
+                                color: AppConstants.subtleTextColor,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 10.5,
+                              ),
+                            ),
                           ],
                         ),
                         if (description.isNotEmpty) ...[
-                          const SizedBox(height: 10),
-                          Text(description,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                  fontSize: 13,
-                                  height: 1.4,
-                                  fontWeight: FontWeight.w500)),
+                          const SizedBox(height: 8),
+                          Text(
+                            description,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppConstants.mutedColor,
+                              fontSize: 11.5,
+                              height: 1.4,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ],
-                        if (cost > 0 ||
-                            record['document_url'] != null ||
-                            record['image_url'] != null) ...[
+                        if (cost > 0 || hasAttachment) ...[
                           const SizedBox(height: 12),
+                          Divider(
+                            height: 1,
+                            color: Colors.white.withValues(alpha: .055),
+                          ),
+                          const SizedBox(height: 10),
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               if (cost > 0)
-                                Text("${cost.toStringAsFixed(2)} ₺",
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 16,
-                                        letterSpacing: -0.4))
-                              else
-                                const SizedBox.shrink(),
-                              if (record['document_url'] != null ||
-                                  record['image_url'] != null)
-                                Row(
-                                  children: [
-                                    const Icon(Icons.attach_file_rounded,
-                                        color: Colors.white54, size: 15),
-                                    const SizedBox(width: 4),
-                                    Text("Ekler",
-                                        style: TextStyle(
-                                            color: Colors.white
-                                                .withValues(alpha: 0.55),
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w600)),
-                                  ],
+                                Text(
+                                  '${cost.toStringAsFixed(2)} ₺',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 14.5,
+                                    letterSpacing: -.3,
+                                  ),
                                 ),
+                              const Spacer(),
+                              if (hasAttachment) ...[
+                                const Icon(
+                                  Icons.attach_file_rounded,
+                                  color: AppConstants.subtleTextColor,
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 3),
+                                const Text(
+                                  'Ek mevcut',
+                                  style: TextStyle(
+                                    color: AppConstants.subtleTextColor,
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                              ],
+                              const Icon(
+                                Icons.arrow_forward_rounded,
+                                color: AppConstants.subtleTextColor,
+                                size: 15,
+                              ),
                             ],
-                          )
-                        ]
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -1746,8 +2438,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
 
   @override
   Widget build(BuildContext context) {
-    const bgColor = Color(0xFF090A0F);
-    const textColor = Colors.white;
+    const bgColor = AppConstants.bgColor;
     final displayRecords = _filteredRecordsList;
 
     return CallbackShortcuts(
@@ -1766,8 +2457,10 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                 ? const Center(
                     child: CircularProgressIndicator(
                         color: Color(0xFF00FFA3), strokeWidth: 3.5))
-                : Center(
-                    child: ConstrainedBox(
+                : PremiumScene(
+                    accentStrength: .9,
+                    child: Center(
+                      child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 750),
                       child: Stack(
                         children: [
@@ -1801,7 +2494,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                     parent: AlwaysScrollableScrollPhysics()),
                                 slivers: [
                                   SliverAppBar(
-                                    expandedHeight: 160.0,
+                                    expandedHeight: 112.0,
                                     floating: false,
                                     pinned: true,
                                     backgroundColor:
@@ -1875,112 +2568,87 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                       ),
                                     ],
                                     flexibleSpace: FlexibleSpaceBar(
-                                      stretchModes: const [
-                                        StretchMode.zoomBackground,
-                                        StretchMode.blurBackground
-                                      ],
-                                      background: Stack(
-                                        fit: StackFit.expand,
-                                        children: [
-                                          Positioned(
-                                            right: -50,
-                                            top: -50,
-                                            child: Container(
-                                              width: 200,
-                                              height: 200,
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                gradient:
-                                                    RadialGradient(colors: [
-                                                  const Color(0xFF00FFA3)
-                                                      .withValues(alpha: 0.15),
-                                                  Colors.transparent
-                                                ]),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
                                       titlePadding: const EdgeInsets.only(
                                           left: 64, bottom: 16, right: 16),
                                       centerTitle: false,
-                                      title: FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        alignment: Alignment.bottomLeft,
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 14,
-                                                      vertical: 6),
-                                              decoration: BoxDecoration(
-                                                  gradient:
-                                                      LinearGradient(colors: [
-                                                    const Color(0xFF00FFA3)
-                                                        .withValues(alpha: 0.2),
-                                                    const Color(0xFF00FFA3)
-                                                        .withValues(alpha: 0.05)
-                                                  ]),
-                                                  borderRadius:
-                                                      BorderRadius.circular(12),
-                                                  border: Border.all(
-                                                      color: const Color(
-                                                          0xFF00FFA3),
-                                                      width: 1.5),
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                        color: const Color(
-                                                                0xFF00FFA3)
-                                                            .withValues(
-                                                                alpha: 0.2),
-                                                        blurRadius: 12)
-                                                  ]),
-                                              child: Text(
+                                      title: Row(
+                                        children: [
+                                          Container(
+                                            width: 30,
+                                            height: 30,
+                                            decoration: BoxDecoration(
+                                              color: AppConstants.primaryColor
+                                                  .withValues(alpha: .08),
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              border: Border.all(
+                                                color: AppConstants.primaryColor
+                                                    .withValues(alpha: .15),
+                                              ),
+                                            ),
+                                            child: const Icon(
+                                              Icons.directions_car_filled_rounded,
+                                              color: AppConstants.primaryColor,
+                                              size: 15,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 9),
+                                          Expanded(
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                const Text(
+                                                  'ARAÇ MERKEZİ',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 15,
+                                                    fontWeight: FontWeight.w900,
+                                                    letterSpacing: -.3,
+                                                  ),
+                                                ),
+                                                Text(
                                                   currentVehicleData['plate']
                                                           ?.toString()
                                                           .toUpperCase() ??
                                                       '',
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
                                                   style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.w900,
-                                                      color: Colors.white,
-                                                      fontSize: 20,
-                                                      letterSpacing: 1.2)),
+                                                    color: AppConstants.mutedColor,
+                                                    fontSize: 9.5,
+                                                    fontWeight: FontWeight.w700,
+                                                    letterSpacing: .65,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                            if ((currentVehicleData[
-                                                        'brand_model'] ??
-                                                    '')
-                                                .toString()
-                                                .isNotEmpty) ...[
-                                              const SizedBox(width: 12),
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 10,
-                                                        vertical: 6),
-                                                decoration: BoxDecoration(
-                                                    color: Colors.white
-                                                        .withValues(
-                                                            alpha: 0.08),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            8)),
-                                                child: Text(
-                                                    currentVehicleData[
-                                                            'brand_model'] ??
-                                                        '',
-                                                    style: const TextStyle(
-                                                        fontSize: 14,
-                                                        color: Colors.white,
-                                                        fontWeight:
-                                                            FontWeight.w700,
-                                                        letterSpacing: 0.5)),
+                                          ),
+                                        ],
+                                      ),
+                                      background: Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          Positioned(
+                                            right: -35,
+                                            top: -52,
+                                            child: Container(
+                                              width: 180,
+                                              height: 180,
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                gradient: RadialGradient(
+                                                  colors: [
+                                                    AppConstants.primaryColor
+                                                        .withValues(alpha: .11),
+                                                    Colors.transparent,
+                                                  ],
+                                                ),
                                               ),
-                                            ]
-                                          ],
-                                        ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),
@@ -1991,67 +2659,27 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                         crossAxisAlignment:
                                             CrossAxisAlignment.stretch,
                                         children: [
-                                          const SizedBox(height: 8),
+                                          _buildVehicleHero(),
+                                          _buildSmartMileageCard(),
+                                          _buildSectionHeader(
+                                            eyebrow: 'ARAÇ FİNANS ÖZETİ',
+                                            title: 'Maliyet görünümü',
+                                            trailing: 'CANLI',
+                                            icon: Icons.analytics_rounded,
+                                          ),
                                           _buildExpenseCards(),
-                                          const SizedBox(height: 6),
-                                          _buildDiagnosticBanner(),
-                                          const SizedBox(height: 10),
+                                          _buildSectionHeader(
+                                            eyebrow: 'KRİTİK ARAÇ TAKİPLERİ',
+                                            title: 'Sigorta, muayene ve bakım',
+                                            trailing: '3 KONTROL',
+                                            icon: Icons.shield_rounded,
+                                          ),
                                           _buildVerticalSummary(),
-                                          Padding(
-                                            padding: const EdgeInsets.fromLTRB(
-                                                16, 24, 16, 14),
-                                            child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                Row(
-                                                  children: [
-                                                    Container(
-                                                        width: 4,
-                                                        height: 22,
-                                                        decoration: BoxDecoration(
-                                                            color: const Color(
-                                                                0xFF00FFA3),
-                                                            borderRadius:
-                                                                BorderRadius
-                                                                    .circular(
-                                                                        8))),
-                                                    const SizedBox(width: 10),
-                                                    const Text("İşlem Geçmişi",
-                                                        style: TextStyle(
-                                                            fontSize: 18,
-                                                            fontWeight:
-                                                                FontWeight.w900,
-                                                            color: textColor,
-                                                            letterSpacing:
-                                                                -0.5)),
-                                                  ],
-                                                ),
-                                                Container(
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      horizontal: 12,
-                                                      vertical: 6),
-                                                  decoration: BoxDecoration(
-                                                      color: const Color(
-                                                              0xFF00FFA3)
-                                                          .withValues(
-                                                              alpha: 0.12),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              12)),
-                                                  child: Text(
-                                                      "${records.length} Kayıt",
-                                                      style: const TextStyle(
-                                                          color:
-                                                              Color(0xFF00FFA3),
-                                                          fontWeight:
-                                                              FontWeight.w900,
-                                                          fontSize: 13)),
-                                                )
-                                              ],
-                                            ),
+                                          _buildSectionHeader(
+                                            eyebrow: 'ARAÇ GEÇMİŞİ',
+                                            title: 'İşlem kayıtları',
+                                            trailing: '${records.length} KAYIT',
+                                            icon: Icons.history_rounded,
                                           ),
                                           _buildFilterAndSearchBar(),
                                           const SizedBox(height: 20),
@@ -2116,38 +2744,40 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                           ),
                         ],
                       ),
+                      ),
                     ),
                   ),
             floatingActionButton: Container(
-              height: 56,
+              height: 52,
               decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(28),
-                  boxShadow: [
-                    BoxShadow(
-                        color: const Color(0xFF00FFA3).withValues(alpha: 0.4),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8)),
-                    BoxShadow(
-                        color: const Color(0xFF00FFA3).withValues(alpha: 0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4))
-                  ]),
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppConstants.primaryColor.withValues(alpha: .16),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
               child: FloatingActionButton.extended(
                 onPressed: () => _showRecordSheet(),
-                backgroundColor: const Color(0xFF00FFA3),
+                backgroundColor: AppConstants.primaryColor,
+                foregroundColor: Colors.black,
                 elevation: 0,
                 highlightElevation: 0,
                 hoverElevation: 0,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28)),
-                icon: const Icon(Icons.add_task_rounded,
-                    color: Colors.black, size: 24),
-                label: const Text("Yeni İşlem Ekle",
-                    style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 16,
-                        letterSpacing: 0.5)),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                icon: const Icon(Icons.add_rounded, size: 21),
+                label: const Text(
+                  'Yeni Kayıt',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 14,
+                    letterSpacing: .15,
+                  ),
+                ),
               ),
             ),
           ),

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_motion.dart';
+import 'core/theme/premium_surfaces.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -961,6 +962,12 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             );
           });
+        }).whenComplete(() {
+          Future<void>.delayed(const Duration(milliseconds: 450), () {
+            try {
+              trackCtrl.dispose();
+            } catch (_) {}
+          });
         });
   }
 
@@ -1080,205 +1087,356 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final customer = widget.userType == 'customer';
+    final rentacar = widget.userType == 'rentacar';
     final title = customer
         ? 'Müşteri Girişi'
-        : widget.userType == 'rentacar'
-            ? 'Firma Girişi'
-            : 'Usta Girişi';
+        : rentacar
+            ? 'Rent A Car Firma Girişi'
+            : 'Hizmet Sağlayıcı Girişi';
+    final eyebrow = customer
+        ? 'OTO TAG  •  MÜŞTERİ'
+        : rentacar
+            ? 'OTO TAG BUSINESS  •  RENT A CAR'
+            : 'OTO TAG BUSINESS  •  HİZMET SAĞLAYICI';
+    final subtitle = customer
+        ? 'Aracınız için servis, yol yardım, parça ve kiralama hizmetlerine güvenle erişin.'
+        : rentacar
+            ? 'Filo, ilan, teklif ve kiralama operasyonlarınızı güvenli firma panelinden yönetin.'
+            : 'Talepleri görüntüleyin, teklif verin ve işletme operasyonlarınızı tek merkezden yönetin.';
+    final roleIcon = customer
+        ? Icons.person_rounded
+        : rentacar
+            ? Icons.business_center_rounded
+            : Icons.engineering_rounded;
+
     return Scaffold(
-        backgroundColor: AppConstants.bgColor,
-        appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            title: GestureDetector(
-                onLongPress: () {
-                  _phoneController.text = 'admin';
-                  _passwordFocus.requestFocus();
-                },
-                child: Image.asset('assets/images/logo.png', height: 28)),
-            centerTitle: true),
-        body: SafeArea(
-            child: LayoutBuilder(
-                builder: (context, constraints) => Center(
-                    child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 440),
-                        child: SingleChildScrollView(
-                            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-                            child: AutofillGroup(
+      backgroundColor: AppConstants.bgColor,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: GestureDetector(
+          onLongPress: () {
+            _phoneController.text = 'admin';
+            _passwordFocus.requestFocus();
+          },
+          child: Image.asset('assets/images/logo.png', height: 27),
+        ),
+        centerTitle: true,
+      ),
+      body: PremiumScene(
+        accentStrength: rentacar ? 1.18 : 1.0,
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 470),
+              child: PremiumEntrance(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
+                  child: AutofillGroup(
+                    child: PremiumGlassPanel(
+                      radius: 28,
+                      blur: 18,
+                      accent: true,
+                      padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              PremiumBrandMark(size: 58, icon: roleIcon),
+                              const SizedBox(width: 15),
+                              Expanded(
                                 child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                  Center(
-                                      child: Container(
-                                          padding: const EdgeInsets.all(18),
-                                          decoration: BoxDecoration(
-                                              color: AppConstants.primaryColor
-                                                  .withValues(alpha: .12),
-                                              shape: BoxShape.circle),
-                                          child: Icon(
-                                              customer
-                                                  ? Icons.person_outline_rounded
-                                                  : Icons.engineering_outlined,
-                                              size: 34,
-                                              color:
-                                                  AppConstants.primaryColor))),
-                                  const SizedBox(height: 18),
-                                  Text(title,
-                                      textAlign: TextAlign.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    PremiumStatusPill(
+                                      eyebrow,
+                                      icon: rentacar
+                                          ? Icons.apartment_rounded
+                                          : Icons.verified_user_rounded,
+                                    ),
+                                    const SizedBox(height: 9),
+                                    Text(
+                                      title,
                                       style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 27,
-                                          fontWeight: FontWeight.w700)),
-                                  const SizedBox(height: 6),
-                                  const Text('Devam etmek için bilgilerini gir',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                          color: AppConstants.mutedColor,
-                                          fontSize: 14)),
-                                  const SizedBox(height: 26),
-                                  _buildGlassTextField(
-                                      controller: _phoneController,
-                                      focusNode: _phoneFocus,
-                                      label: 'Telefon No',
-                                      icon: Icons.phone_outlined,
-                                      isPasswordField: false,
-                                      type: TextInputType.phone,
-                                      inputFormatters: [SmartPhoneFormatter()],
-                                      onEditingComplete: () =>
-                                          _passwordFocus.requestFocus()),
-                                  const SizedBox(height: 14),
-                                  _buildGlassTextField(
-                                      controller: _passwordController,
-                                      focusNode: _passwordFocus,
-                                      label: 'Şifre',
-                                      icon: Icons.lock_outline_rounded,
-                                      isPasswordField: true,
-                                      onEditingComplete: _login),
-                                  const SizedBox(height: 22),
-                                  FilledButton(
-                                      onPressed: isLoggingIn || _socialBusy
-                                          ? null
-                                          : _login,
-                                      style: FilledButton.styleFrom(
-                                          backgroundColor:
-                                              AppConstants.primaryColor,
-                                          foregroundColor: Colors.black,
-                                          minimumSize:
-                                              const Size.fromHeight(52),
-                                          shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(18))),
-                                      child: isLoggingIn
-                                          ? const SizedBox(
-                                              width: 22,
-                                              height: 22,
-                                              child: CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  color: Colors.black))
-                                          : const Text('Giriş Yap',
-                                              style: TextStyle(
-                                                  fontWeight: FontWeight.w700,
-                                                  fontSize: 16))),
-                                  const SizedBox(height: 22),
-                                  const Row(children: [
-                                    Expanded(
-                                        child: Divider(
-                                            color: AppConstants.borderColor)),
-                                    Padding(
-                                        padding: EdgeInsets.symmetric(
-                                            horizontal: 12),
-                                        child: Text('veya',
-                                            style: TextStyle(
-                                                color:
-                                                    AppConstants.mutedColor))),
-                                    Expanded(
-                                        child: Divider(
-                                            color: AppConstants.borderColor))
-                                  ]),
-                                  const SizedBox(height: 14),
-                                  Row(children: [
-                                    Expanded(
-                                        child: kIsWeb
-                                            ? GoogleLoginButton(
-                                                clientId: AppConstants
-                                                    .googleWebClientId,
-                                                enabled: !isLoggingIn &&
-                                                    !_socialBusy,
-                                                onSignedIn: _googleWebAccount,
-                                                onError: (message) =>
-                                                    _showCustomSnackBar(message,
-                                                        isError: true))
-                                            : OutlinedButton.icon(
-                                                onPressed:
-                                                    isLoggingIn || _socialBusy
-                                                        ? null
-                                                        : _signInWithGoogle,
-                                                icon: const Icon(
-                                                    Icons.g_mobiledata_rounded),
-                                                label: const Text('Google'),
-                                                style: _socialStyle())),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                        child: OutlinedButton.icon(
-                                            onPressed:
-                                                isLoggingIn || _socialBusy
-                                                    ? null
-                                                    : _signInWithApple,
-                                            icon: const Icon(Icons.apple,
-                                                size: 22),
-                                            label: const Text('Apple'),
-                                            style: _socialStyle()))
-                                  ]),
-                                  if (!customer)
-                                    TextButton(
-                                        onPressed: isLoggingIn || _socialBusy
-                                            ? null
-                                            : _showTrackingDialog,
-                                        child: const Text(
-                                            'Başvuru durumunu sorgula')),
-                                  const SizedBox(height: 20),
-                                  Wrap(
-                                      alignment: WrapAlignment.center,
-                                      crossAxisAlignment:
-                                          WrapCrossAlignment.center,
+                                        color: AppConstants.textColor,
+                                        fontSize: 26,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: -.65,
+                                        height: 1.05,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 13),
+                          Text(
+                            subtitle,
+                            style: const TextStyle(
+                              color: AppConstants.mutedColor,
+                              fontSize: 12.5,
+                              height: 1.5,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          const PremiumHairline(),
+                          const SizedBox(height: 20),
+                          _buildGlassTextField(
+                            controller: _phoneController,
+                            focusNode: _phoneFocus,
+                            label: 'Telefon No',
+                            icon: Icons.phone_outlined,
+                            isPasswordField: false,
+                            type: TextInputType.phone,
+                            inputFormatters: [SmartPhoneFormatter()],
+                            onEditingComplete: () =>
+                                _passwordFocus.requestFocus(),
+                          ),
+                          const SizedBox(height: 13),
+                          _buildGlassTextField(
+                            controller: _passwordController,
+                            focusNode: _passwordFocus,
+                            label: 'Şifre',
+                            icon: Icons.lock_outline_rounded,
+                            isPasswordField: true,
+                            onEditingComplete: _login,
+                          ),
+                          const SizedBox(height: 18),
+                          Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: isLoggingIn || _socialBusy
+                                  ? null
+                                  : [
+                                      BoxShadow(
+                                        color: AppConstants.primaryColor
+                                            .withValues(alpha: .14),
+                                        blurRadius: 22,
+                                        offset: const Offset(0, 9),
+                                      ),
+                                    ],
+                            ),
+                            child: FilledButton(
+                              onPressed:
+                                  isLoggingIn || _socialBusy ? null : _login,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppConstants.primaryColor,
+                                foregroundColor: AppConstants.primaryInk,
+                                minimumSize: const Size.fromHeight(54),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                              child: isLoggingIn
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppConstants.primaryInk,
+                                      ),
+                                    )
+                                  : const Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        const Text('Hesabın yok mu?',
-                                            style: TextStyle(
-                                                color:
-                                                    AppConstants.mutedColor)),
-                                        TextButton(
-                                            onPressed: isLoggingIn ||
-                                                    _socialBusy
+                                        Text(
+                                          'Güvenli Giriş',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 15,
+                                            letterSpacing: -.1,
+                                          ),
+                                        ),
+                                        SizedBox(width: 8),
+                                        Icon(Icons.arrow_forward_rounded,
+                                            size: 18),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Row(
+                            children: [
+                              const Expanded(
+                                child: Divider(
+                                    color: AppConstants.borderColor),
+                              ),
+                              Container(
+                                margin:
+                                    const EdgeInsets.symmetric(horizontal: 10),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 9, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color:
+                                      Colors.white.withValues(alpha: .025),
+                                  borderRadius: BorderRadius.circular(99),
+                                  border: Border.all(
+                                    color:
+                                        Colors.white.withValues(alpha: .055),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'HIZLI GİRİŞ',
+                                  style: TextStyle(
+                                    color: AppConstants.subtleTextColor,
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: .8,
+                                  ),
+                                ),
+                              ),
+                              const Expanded(
+                                child: Divider(
+                                    color: AppConstants.borderColor),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: kIsWeb
+                                    ? GoogleLoginButton(
+                                        clientId:
+                                            AppConstants.googleWebClientId,
+                                        enabled:
+                                            !isLoggingIn && !_socialBusy,
+                                        onSignedIn: _googleWebAccount,
+                                        onError: (message) =>
+                                            _showCustomSnackBar(
+                                          message,
+                                          isError: true,
+                                        ),
+                                      )
+                                    : OutlinedButton.icon(
+                                        onPressed:
+                                            isLoggingIn || _socialBusy
                                                 ? null
-                                                : () => Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                        builder: (_) =>
-                                                            RegistrationScreen(
-                                                                userType: widget
-                                                                    .userType))),
-                                            child: const Text('Kayıt ol'))
-                                      ]),
-                                  OutlinedButton.icon(
-                                      onPressed: isLoggingIn || _socialBusy
-                                          ? null
-                                          : () => Navigator.pushReplacement(
-                                              context,
-                                              MaterialPageRoute(
-                                                  builder: (_) => LoginScreen(
-                                                      userType: customer
-                                                          ? 'provider'
-                                                          : 'customer'))),
-                                      icon: Icon(
-                                          customer
-                                              ? Icons.engineering_outlined
-                                              : Icons.person_outline_rounded,
-                                          size: 20),
-                                      label: Text(customer
-                                          ? 'Usta / Firma girişine geç'
-                                          : 'Müşteri girişine geç')),
-                                ]))))))));
+                                                : _signInWithGoogle,
+                                        icon: const Icon(
+                                            Icons.g_mobiledata_rounded),
+                                        label: const Text('Google'),
+                                        style: _socialStyle(),
+                                      ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: isLoggingIn || _socialBusy
+                                      ? null
+                                      : _signInWithApple,
+                                  icon: const Icon(Icons.apple, size: 21),
+                                  label: const Text('Apple'),
+                                  style: _socialStyle(),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (!customer) ...[
+                            const SizedBox(height: 4),
+                            TextButton.icon(
+                              onPressed: isLoggingIn || _socialBusy
+                                  ? null
+                                  : _showTrackingDialog,
+                              icon: const Icon(
+                                  Icons.fact_check_outlined,
+                                  size: 17),
+                              label:
+                                  const Text('Başvuru durumunu sorgula'),
+                            ),
+                          ],
+                          const SizedBox(height: 10),
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              const Text(
+                                'Hesabın yok mu?',
+                                style: TextStyle(
+                                    color: AppConstants.mutedColor),
+                              ),
+                              TextButton(
+                                onPressed: isLoggingIn || _socialBusy
+                                    ? null
+                                    : () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                RegistrationScreen(
+                                              userType: widget.userType,
+                                            ),
+                                          ),
+                                        ),
+                                child: const Text('Kayıt ol'),
+                              ),
+                            ],
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: isLoggingIn || _socialBusy
+                                ? null
+                                : () => Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => LoginScreen(
+                                          userType:
+                                              customer ? 'provider' : 'customer',
+                                        ),
+                                      ),
+                                    ),
+                            icon: Icon(
+                              customer
+                                  ? Icons.business_center_outlined
+                                  : Icons.person_outline_rounded,
+                              size: 19,
+                            ),
+                            label: Text(
+                              customer
+                                  ? 'İşletme / firma girişine geç'
+                                  : 'Müşteri girişine geç',
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.shield_outlined,
+                                color: AppConstants.subtleTextColor,
+                                size: 13,
+                              ),
+                              SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  'Şifreli oturum  •  Güvenli bağlantı  •  OTO TAG',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: AppConstants.subtleTextColor,
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   ButtonStyle _socialStyle() => OutlinedButton.styleFrom(

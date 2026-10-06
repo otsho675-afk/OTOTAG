@@ -55,6 +55,86 @@ function serviceOfferIsCurrent($bid, $input) {
          (int)$input['offer_version'] === (int)$bid['negotiation_count']);
 }
 
+
+function serviceEligibleRealProviders($pdo,$job,$limit=1) {
+    if (!$job || ($job['status'] ?? '')!=='searching' || ($job['service_type'] ?? '')==='rentacar') return [];
+    $city=trim((string)($job['city'] ?? ''));
+    $service=trim((string)($job['service_type'] ?? ''));
+    if ($city==='' || $service==='') return [];
+    $stmt=$pdo->prepare("SELECT * FROM users
+        WHERE user_type='provider' AND status='active' AND COALESCE(is_suspended,0)=0
+        AND service_category=? AND LOWER(TRIM(city))=LOWER(TRIM(?))
+        AND lat IS NOT NULL AND lng IS NOT NULL AND NOT (lat=0 AND lng=0)
+        ORDER BY id ASC LIMIT 100");
+    $stmt->execute([$service,$city]);
+    $radius=min(50,max(1,(float)($job['search_radius'] ?? 50)));
+    $eligible=[];
+    while ($provider=$stmt->fetch(PDO::FETCH_ASSOC)) {
+        if (!businessSubscriptionStatus($provider)['can_work']) continue;
+        try {
+            if (serviceDistanceKm($provider['lat'],$provider['lng'],$job['latitude'],$job['longitude'])>$radius) continue;
+        } catch (Throwable $e) { continue; }
+        $eligible[]=$provider;
+        if (count($eligible)>=$limit) break;
+    }
+    return $eligible;
+}
+
+function serviceSimulationFallback($pdo,$job) {
+    if (!$job || ($job['status'] ?? '')!=='searching' || ($job['service_type'] ?? '')==='rentacar') return null;
+    if (serviceEligibleRealProviders($pdo,$job,1)) return null;
+
+    try {
+        $lat=serviceCoordinate($job['latitude'] ?? null);
+        $lng=serviceCoordinate($job['longitude'] ?? null,false);
+    } catch (Throwable $e) { return null; }
+
+    $service=(string)($job['service_type'] ?? 'mechanic');
+    $priceBands=[
+        'mechanic'=>[900,1700],
+        'tow'=>[1200,2600],
+        'tire'=>[550,1200],
+        'wash'=>[350,900],
+    ];
+    [$baseLow,$baseHigh]=$priceBands[$service] ?? $priceBands['mechanic'];
+    $jobId=(int)($job['id'] ?? 0);
+    $radius=min(8.0,max(2.0,(float)($job['search_radius'] ?? 8)));
+    $cos=max(0.2,cos(deg2rad($lat)));
+    $points=[];
+
+    for ($i=1;$i<=3;$i++) {
+        $seed=(int)sprintf('%u',crc32($jobId.'|'.$service.'|'.($job['city'] ?? '').'|'.$i));
+        $distance=min($radius,1.4+(($seed % 53)/10));
+        $angle=deg2rad(($seed >> 5) % 360);
+        $pointLat=$lat+((cos($angle)*$distance)/111.0);
+        $pointLng=$lng+((sin($angle)*$distance)/(111.0*$cos));
+        $spread=(($seed >> 9)%21)-10;
+        $low=max(100,(int)round($baseLow*(1+$spread/100)));
+        $high=max($low+100,(int)round($baseHigh*(1+$spread/120)));
+        $points[]=[
+            'id'=>'sim-'.$jobId.'-'.$i,
+            'label'=>'Bölgesel örnek nokta '.$i,
+            'latitude'=>round($pointLat,6),
+            'longitude'=>round($pointLng,6),
+            'distance_km'=>round($distance,1),
+            'estimated_time'=>7+(($seed >> 13)%27),
+            'estimate_low'=>$low,
+            'estimate_high'=>$high,
+            'simulated'=>true,
+        ];
+    }
+
+    return [
+        'active'=>true,
+        'mode'=>'simulation',
+        'service_type'=>$service,
+        'city'=>(string)($job['city'] ?? ''),
+        'real_provider_available'=>false,
+        'points'=>$points,
+        'disclosure'=>'Simülasyon: Bu noktalar ve fiyatlar gerçek usta teklifi değildir. Bölgede uygun gerçek sağlayıcı görünür görünmez bu alan otomatik kapanır.',
+    ];
+}
+
 function serviceAcceptOffer($pdo, $actor, $input) {
     $jobId=(int)($input['job_id'] ?? 0); $bidId=(int)($input['bid_id'] ?? 0);
     $providerId=(int)($input['provider_id'] ?? 0);

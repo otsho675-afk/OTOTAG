@@ -4123,11 +4123,21 @@ switch ($action) {
                     $provider['badges'] = $badges;
                 }
             }
-            $jobStatusCheck = $pdo->prepare("SELECT status FROM jobs WHERE id = ?");
+            $jobStatusCheck = $pdo->prepare("SELECT * FROM jobs WHERE id = ?");
             $jobStatusCheck->execute([$job_id]);
-            $currentJobStatus = $jobStatusCheck->fetchColumn();
+            $currentJob = $jobStatusCheck->fetch(PDO::FETCH_ASSOC);
+            $currentJobStatus = $currentJob['status'] ?? null;
+            $simulationFallback = null;
+            if ($user_type !== 'provider' && empty($bids) && $currentJobStatus === 'searching') {
+                $simulationFallback = serviceSimulationFallback($pdo, $currentJob);
+            }
             
-            sendResponse(200, ["status" => "success", "job_status" => $currentJobStatus, "bids" => $bids]);
+            sendResponse(200, [
+                "status" => "success",
+                "job_status" => $currentJobStatus,
+                "bids" => $bids,
+                "simulation_fallback" => $simulationFallback
+            ]);
         } catch (Exception $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             sendResponse(500, ["status" => "error", "message" => "Teklifler çekilirken hata: " . $e->getMessage()]);
@@ -4256,7 +4266,7 @@ switch ($action) {
         authenticateRequest($customerId);
         try {
             $pdo->beginTransaction();
-            $jobStmt=$pdo->prepare('SELECT id, customer_id, provider_id, status, service_type FROM jobs WHERE id=? AND customer_id=? FOR UPDATE');
+            $jobStmt=$pdo->prepare('SELECT * FROM jobs WHERE id=? AND customer_id=? FOR UPDATE');
             $jobStmt->execute([$jobId,$customerId]);
             $job=$jobStmt->fetch(PDO::FETCH_ASSOC);
             if (!$job || $job['service_type']==='rentacar') {
@@ -4271,6 +4281,16 @@ switch ($action) {
             if ((int)$bidStmt->fetchColumn() > 0) {
                 $pdo->commit();
                 sendResponse(200,['status'=>'success','job_status'=>'searching','expired'=>false]);
+            }
+            $simulationFallback=serviceSimulationFallback($pdo,$job);
+            if ($simulationFallback!==null) {
+                $pdo->commit();
+                sendResponse(200,[
+                    'status'=>'success',
+                    'job_status'=>'searching',
+                    'expired'=>false,
+                    'simulation_fallback'=>$simulationFallback
+                ]);
             }
             $pdo->prepare("UPDATE jobs SET status='cancelled' WHERE id=? AND status='searching'")->execute([$jobId]);
             $pdo->commit();

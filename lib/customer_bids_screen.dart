@@ -38,6 +38,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
   final _live = RealtimeClient();
   late final AdaptivePolling _polling;
   List<Map<String, dynamic>> _bids = [];
+  Map<String, dynamic>? _simulationFallback;
   String? _error, _status;
   bool _loading = true, _fetching = false, _busy = false, _dialog = false;
   bool _foreground = true, _covered = false, _navigating = false;
@@ -121,13 +122,20 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
           .where((b) =>
               rentalId(b['bid_id']) > 0 && rentalId(b['provider_id']) > 0)
           .toList();
+      final rawSimulation = data['simulation_fallback'];
+      final simulation = rawSimulation is Map
+          ? Map<String, dynamic>.from(rawSimulation)
+          : null;
       setState(() {
         _bids = bids;
+        _simulationFallback = bids.isEmpty ? simulation : null;
         _status = data['job_status'];
         _error = null;
         _loading = false;
       });
-      if (bids.isEmpty && _status == 'searching') {
+      if (bids.isEmpty &&
+          _simulationFallback == null &&
+          _status == 'searching') {
         _startUnansweredTimer();
       } else {
         _unansweredTimer?.cancel();
@@ -395,14 +403,18 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
                                                     : _busy
                                                         ? 'İşleminiz doğrulanıyor'
                                                         : list.isEmpty
-                                                            ? 'Usta teklifleri bekleniyor'
+                                                            ? (_simulationFallback != null
+                                                                ? 'Bölgede gerçek usta bekleniyor'
+                                                                : 'Usta teklifleri bekleniyor')
                                                             : '${list.length} teklif geldi',
                                                 message: _error != null
                                                     ? 'Son alınan teklifler korunuyor. İşlem yapmadan önce yenileyin.'
                                                     : _busy
                                                         ? 'Güncel talep ve teklif durumu kontrol ediliyor.'
                                                         : list.isEmpty
-                                                            ? 'Talebiniz açık. Gelen teklifleri burada karşılaştırabilir, uygun ustayı seçebilirsiniz.'
+                                                            ? (_simulationFallback != null
+                                                                ? 'Şu anda uygun gerçek sağlayıcı bulunamadı. Aşağıdaki noktalar yalnızca OTO TAG simülasyonudur; gerçek sağlayıcı görünür görünmez otomatik olarak kaldırılır.'
+                                                                : 'Talebiniz açık. Gelen teklifleri burada karşılaştırabilir, uygun ustayı seçebilirsiniz.')
                                                             : 'Fiyatı, ustanın puanını ve tahmini varış süresini inceleyin. Seçim sizin.',
                                                 icon: _error != null
                                                     ? Icons.wifi_off_rounded
@@ -468,13 +480,16 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
                                             if (!_loading &&
                                                 list.isEmpty &&
                                                 _error == null)
-                                              const Padding(
-                                                  padding: EdgeInsets.symmetric(
-                                                      vertical: 30),
-                                                  child: Text(
-                                                      'Henüz teklif yok. Yeni teklifler otomatik olarak görünecek.',
-                                                      textAlign:
-                                                          TextAlign.center)),
+                                              _simulationFallback != null
+                                                  ? _simulationPanel()
+                                                  : const Padding(
+                                                      padding:
+                                                          EdgeInsets.symmetric(
+                                                              vertical: 30),
+                                                      child: Text(
+                                                          'Henüz teklif yok. Yeni teklifler otomatik olarak görünecek.',
+                                                          textAlign:
+                                                              TextAlign.center)),
                                           ]))))),
                           SliverPadding(
                               padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
@@ -488,6 +503,87 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
                         ]))),
           ])),
         ));
+  }
+
+  Widget _simulationPanel() {
+    final fallback = _simulationFallback;
+    if (fallback == null) return const SizedBox.shrink();
+    final points = (fallback['points'] as List? ?? const [])
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+
+    return Padding(
+        padding: const EdgeInsets.only(top: 18, bottom: 4),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: .08),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: .22))),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Icon(Icons.science_outlined),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: Text(
+                        fallback['disclosure']?.toString() ??
+                            'Simülasyon: Aşağıdaki bilgiler gerçek usta teklifi değildir.',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyMedium
+                            ?.copyWith(height: 1.45))),
+              ])),
+          const SizedBox(height: 12),
+          for (final point in points)
+            Card(
+                margin: const EdgeInsets.only(bottom: 10),
+                elevation: 0,
+                child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [
+                            const CircleAvatar(
+                                child: Icon(Icons.location_on_outlined)),
+                            const SizedBox(width: 10),
+                            Expanded(
+                                child: Text(
+                                    point['label']?.toString() ??
+                                        'Bölgesel örnek nokta',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium)),
+                            const Chip(label: Text('SİMÜLASYON')),
+                          ]),
+                          const SizedBox(height: 12),
+                          Wrap(spacing: 14, runSpacing: 8, children: [
+                            Text(
+                                '${point['distance_km'] ?? '-'} km civarı'),
+                            Text(
+                                'Tahmini ${point['estimated_time'] ?? '-'} dk'),
+                            Text(
+                                '${point['estimate_low'] ?? '-'}–${point['estimate_high'] ?? '-'} ₺ tahmini aralık'),
+                          ]),
+                          const SizedBox(height: 8),
+                          Text(
+                              'Yaklaşık konum: ${point['latitude'] ?? '-'}, ${point['longitude'] ?? '-'}',
+                              style: Theme.of(context).textTheme.bodySmall),
+                        ]))),
+          const SizedBox(height: 4),
+          Text(
+              'Gerçek bir usta teklif gönderdiğinde bu simülasyon kartları otomatik olarak kapanır ve yalnızca gerçek teklif görünür.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall),
+        ]));
   }
 
   Widget _offerCard(Map<String, dynamic> bid) {

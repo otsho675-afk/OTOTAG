@@ -616,6 +616,108 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
               onRequest: () => _request(car),
               onCompanyProfile: () => _company(car))));
 
+  Widget _rentalSimulationFallback() {
+    final days = _appliedDays > 0 ? _appliedDays : 1;
+    final examples = <Map<String, dynamic>>[
+      {
+        'label': 'Ekonomik sınıf örneği',
+        'daily': 1100,
+        'note': 'Şehir içi kullanım için tahmini piyasa seviyesi',
+      },
+      {
+        'label': 'Sedan sınıfı örneği',
+        'daily': 1450,
+        'note': 'Orta sınıf araçlar için tahmini piyasa seviyesi',
+      },
+      {
+        'label': 'SUV sınıfı örneği',
+        'daily': 1900,
+        'note': 'SUV araçlar için tahmini piyasa seviyesi',
+      },
+    ];
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+              color: AppConstants.primaryColor.withValues(alpha: .08),
+              border: Border.all(
+                  color: AppConstants.primaryColor.withValues(alpha: .25)),
+              borderRadius: BorderRadius.circular(18)),
+          child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Icon(Icons.science_outlined, color: AppConstants.primaryColor),
+            SizedBox(width: 10),
+            Expanded(
+                child: Text(
+                    'SİMÜLASYON: Şu anda bu şehirde uygun gerçek rent a car ilanı bulunmuyor. Aşağıdaki araç sınıfları ve fiyatlar gerçek firma/ilan değildir; yalnızca tahmini piyasa örneğidir.',
+                    style: TextStyle(
+                        color: Colors.white, height: 1.5, fontSize: 13))),
+          ])),
+      const SizedBox(height: 12),
+      for (final item in examples)
+        Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+                color: AppConstants.cardColor,
+                border: Border.all(color: rentalBorder),
+                borderRadius: BorderRadius.circular(18)),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                        color: AppConstants.primaryColor.withValues(alpha: .1),
+                        borderRadius: BorderRadius.circular(12)),
+                    child: const Icon(Icons.directions_car_outlined,
+                        color: AppConstants.primaryColor)),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: Text(item['label'].toString(),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15))),
+                Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                    decoration: BoxDecoration(
+                        color: AppConstants.primaryColor.withValues(alpha: .1),
+                        borderRadius: BorderRadius.circular(999)),
+                    child: const Text('SİMÜLASYON',
+                        style: TextStyle(
+                            color: AppConstants.primaryColor,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800))),
+              ]),
+              const SizedBox(height: 14),
+              Text(
+                  'Tahmini günlük: ${rentalPrice((item['daily'] as int) * 100)} ₺',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              Text(
+                  '$days gün için yaklaşık: ${rentalPrice((item['daily'] as int) * days * 100)} ₺',
+                  style: const TextStyle(
+                      color: AppConstants.primaryColor,
+                      fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              Text(item['note'].toString(),
+                  style: const TextStyle(
+                      color: rentalMuted, fontSize: 12, height: 1.45)),
+            ])),
+      const Padding(
+          padding: EdgeInsets.only(top: 4, bottom: 8),
+          child: Text(
+              'Gerçek bir firma aynı şehirde aktif ilan yayınladığında bu örnekler otomatik olarak kaldırılır ve yalnızca gerçek ilanlar gösterilir.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: rentalMuted, fontSize: 11, height: 1.5))),
+    ]);
+  }
+
   Widget _emptyState({required bool offers}) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
       decoration: BoxDecoration(
@@ -769,7 +871,7 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                         ]),
                         const SizedBox(height: 12),
                         if (_cars.isEmpty && _error == null)
-                          _emptyState(offers: false),
+                          _rentalSimulationFallback(),
                         LayoutBuilder(builder: (context, constraints) {
                           final twoColumns = constraints.maxWidth >= 760;
                           final width = twoColumns

@@ -61,7 +61,7 @@ class SmartPhoneFormatter extends TextInputFormatter {
 
 class LoginScreen extends StatefulWidget {
   final String userType;
-  LoginScreen({super.key, required this.userType});
+  const LoginScreen({super.key, required this.userType});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();

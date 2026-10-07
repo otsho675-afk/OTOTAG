@@ -22,12 +22,19 @@ class PremiumScene extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isLight = theme.brightness == Brightness.light;
+    final background = theme.scaffoldBackgroundColor;
+    final surface = scheme.surface;
+    final elevated = scheme.surfaceContainerHighest;
+    final onSurface = scheme.onSurface;
     final double strength = accentStrength.clamp(0.0, 1.4).toDouble();
 
     return Stack(
       fit: StackFit.expand,
       children: [
-        const ColoredBox(color: AppConstants.bgColor),
+        ColoredBox(color: background),
         Positioned.fill(
           child: DecoratedBox(
             decoration: BoxDecoration(
@@ -35,9 +42,9 @@ class PremiumScene extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  AppConstants.bgElevated.withValues(alpha: .88),
-                  AppConstants.bgColor,
-                  const Color(0xFF020403),
+                  elevated.withValues(alpha: isLight ? .96 : .88),
+                  background,
+                  isLight ? const Color(0xFFF1F5F3) : const Color(0xFF020403),
                 ],
                 stops: const [0, .48, 1],
               ),
@@ -78,7 +85,7 @@ class PremiumScene extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    Colors.white.withValues(alpha: .025),
+                    onSurface.withValues(alpha: isLight ? .025 : .025),
                     AppConstants.primaryColor
                         .withValues(alpha: .018 * strength),
                     Colors.transparent,
@@ -94,7 +101,10 @@ class PremiumScene extends StatelessWidget {
             child: IgnorePointer(
               child: Opacity(
                 opacity: .52,
-                child: CustomPaint(painter: _CorporateGridPainter()),
+                child: CustomPaint(painter: _CorporateGridPainter(
+                  color: onSurface.withValues(alpha: isLight ? .035 : .017),
+                  accentColor: AppConstants.primaryColor.withValues(alpha: isLight ? .03 : .014),
+                )),
               ),
             ),
           ),
@@ -124,6 +134,9 @@ class PremiumGlassPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isLight = theme.brightness == Brightness.light;
     final borderRadius = BorderRadius.circular(radius);
     return Container(
       margin: margin,
@@ -131,7 +144,7 @@ class PremiumGlassPanel extends StatelessWidget {
         borderRadius: borderRadius,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: .34),
+            color: Colors.black.withValues(alpha: isLight ? .08 : .34),
             blurRadius: 28,
             offset: const Offset(0, 14),
           ),
@@ -154,15 +167,15 @@ class PremiumGlassPanel extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  const Color(0xFF171A1F).withValues(alpha: .94),
-                  const Color(0xFF0D0F13).withValues(alpha: .91),
+                  scheme.surfaceContainerHighest.withValues(alpha: isLight ? .98 : .94),
+                  scheme.surface.withValues(alpha: isLight ? .96 : .91),
                 ],
               ),
               borderRadius: borderRadius,
               border: Border.all(
                 color: accent
                     ? AppConstants.primaryColor.withValues(alpha: .22)
-                    : Colors.white.withValues(alpha: .075),
+                    : scheme.onSurface.withValues(alpha: isLight ? .10 : .075),
               ),
             ),
             child: child,
@@ -232,8 +245,9 @@ class PremiumStatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color =
-        accent ? AppConstants.primaryColor : AppConstants.mutedColor;
+    final color = accent
+        ? AppConstants.primaryColor
+        : Theme.of(context).colorScheme.onSurface.withValues(alpha: .58);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
@@ -301,8 +315,8 @@ class PremiumSectionHeading extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  color: AppConstants.textColor,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -.4,
@@ -312,8 +326,8 @@ class PremiumSectionHeading extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   subtitle!,
-                  style: const TextStyle(
-                    color: AppConstants.mutedColor,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: .58),
                     fontSize: 11.5,
                     fontWeight: FontWeight.w500,
                     height: 1.35,
@@ -349,9 +363,9 @@ class PremiumMetric extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: .028),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: Theme.of(context).brightness == Brightness.light ? .035 : .028),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: .055)),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -364,16 +378,16 @@ class PremiumMetric extends StatelessWidget {
             children: [
               Text(
                 value,
-                style: const TextStyle(
-                  color: AppConstants.textColor,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 11.5,
                   fontWeight: FontWeight.w800,
                 ),
               ),
               Text(
                 label,
-                style: const TextStyle(
-                  color: AppConstants.subtleTextColor,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: .46),
                   fontSize: 8.5,
                   fontWeight: FontWeight.w600,
                 ),
@@ -398,7 +412,7 @@ class PremiumHairline extends StatelessWidget {
           colors: [
             Colors.transparent,
             AppConstants.primaryColor.withValues(alpha: .24),
-            Colors.white.withValues(alpha: .08),
+            Theme.of(context).colorScheme.onSurface.withValues(alpha: .08),
             Colors.transparent,
           ],
         ),
@@ -416,11 +430,19 @@ class PremiumEntrance extends StatelessWidget {
 }
 
 class _CorporateGridPainter extends CustomPainter {
+  _CorporateGridPainter({
+    required this.color,
+    required this.accentColor,
+  });
+
+  final Color color;
+  final Color accentColor;
+
   @override
   void paint(Canvas canvas, Size size) {
     const step = 44.0;
     final paint = Paint()
-      ..color = Colors.white.withValues(alpha: .017)
+      ..color = color
       ..strokeWidth = .7;
 
     for (double x = 0; x <= size.width; x += step) {
@@ -431,7 +453,7 @@ class _CorporateGridPainter extends CustomPainter {
     }
 
     final accentPaint = Paint()
-      ..color = AppConstants.primaryColor.withValues(alpha: .014)
+      ..color = accentColor
       ..strokeWidth = 1;
     for (double x = step * 4; x <= size.width; x += step * 4) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), accentPaint);
@@ -439,5 +461,6 @@ class _CorporateGridPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _CorporateGridPainter oldDelegate) =>
+      color != oldDelegate.color || accentColor != oldDelegate.accentColor;
 }

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../constants/app_constants.dart';
 import 'app_motion.dart';
+import 'theme_controller.dart';
 
-ThemeData appTheme() => darkAppTheme();
+ThemeData appTheme() =>
+    AppThemeController.isLight ? lightAppTheme() : darkAppTheme();
 
 ThemeData darkAppTheme() {
   return _buildTheme(

@@ -28,6 +28,7 @@ import 'services/platform_http_client.dart';
 import 'rent_a_car_panel_screen.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_controller.dart';
 import 'core/theme/app_motion.dart';
 import 'core/theme/premium_surfaces.dart';
 import 'widgets/app_update_gate.dart';
@@ -41,6 +42,7 @@ void main() {
 
 Future<void> _startApp() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppThemeController.load();
   final mobile = !kIsWeb &&
       [TargetPlatform.android, TargetPlatform.iOS]
           .contains(defaultTargetPlatform);
@@ -151,7 +153,7 @@ Future<void> _startApp() async {
     }
 
     SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
+      SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.light,
         systemNavigationBarColor:
@@ -179,53 +181,63 @@ Future<void> _startApp() async {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (AppSession.token == null) {
         navigatorKey.currentState?.pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
+            MaterialPageRoute(builder: (_) => RoleSelectionScreen()),
             (_) => false);
       }
     });
     WidgetsBinding.instance.scheduleFrame();
   });
 
-  runApp(const MyApp());
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaler:
-                MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.4),
-          ),
-          child: AppUpdateGate(
-              navigatorKey: navigatorKey, waitForStartup: true, child: child!),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: AppThemeController.mode,
+      builder: (context, themeMode, _) {
+        return MaterialApp(
+          builder: (context, child) {
+            return MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler:
+                    MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.4),
+              ),
+              child: AppUpdateGate(
+                navigatorKey: navigatorKey,
+                waitForStartup: true,
+                child: child!,
+              ),
+            );
+          },
+          navigatorKey: navigatorKey,
+          title: 'OTO TAG',
+          debugShowCheckedModeBanner: false,
+          localizationsDelegates: [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: [
+            Locale('tr', 'TR'),
+            Locale('en', 'US'),
+          ],
+          locale: Locale('tr', 'TR'),
+          theme: lightAppTheme(),
+          darkTheme: darkAppTheme(),
+          themeMode: themeMode,
+          home: SplashScreen(),
         );
       },
-      navigatorKey: navigatorKey,
-      title: 'Oto Tamir App',
-      debugShowCheckedModeBanner: false,
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [
-        Locale('tr', 'TR'),
-        Locale('en', 'US'),
-      ],
-      locale: const Locale('tr', 'TR'),
-      theme: appTheme(),
-      home: const SplashScreen(),
     );
   }
 }
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  SplashScreen({super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -239,7 +251,7 @@ class _SplashScreenState extends State<SplashScreen>
   Widget? _nextScreen;
   late Future<void> _loginStatus;
   bool _animationStarted = false;
-  final QuickActions quickActions = const QuickActions();
+  final QuickActions quickActions = QuickActions();
 
   @override
   void initState() {
@@ -284,7 +296,7 @@ class _SplashScreenState extends State<SplashScreen>
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => _nextScreen ?? const RoleSelectionScreen(),
+        pageBuilder: (_, __, ___) => _nextScreen ?? RoleSelectionScreen(),
         // The logo entrance has finished; do not animate a second time.
         transitionDuration: Duration.zero,
       ),
@@ -320,19 +332,19 @@ class _SplashScreenState extends State<SplashScreen>
     });
 
     quickActions.setShortcutItems(<ShortcutItem>[
-      const ShortcutItem(
+      ShortcutItem(
           type: 'action_mechanic',
           localizedTitle: 'Tamirci Çağır',
           icon: 'marker_mechanic'),
-      const ShortcutItem(
+      ShortcutItem(
           type: 'action_tow',
           localizedTitle: 'Çekici Çağır',
           icon: 'marker_tow'),
-      const ShortcutItem(
+      ShortcutItem(
           type: 'action_tire',
           localizedTitle: 'Lastikçi Çağır',
           icon: 'marker_tire'),
-      const ShortcutItem(
+      ShortcutItem(
           type: 'action_wash',
           localizedTitle: 'Oto Yıkama Çağır',
           icon: 'marker_wash'),
@@ -345,7 +357,7 @@ class _SplashScreenState extends State<SplashScreen>
       final String? userType = AppSession.userType;
 
       if (userId != null && userType != null) {
-        await Future.delayed(const Duration(milliseconds: 300));
+        await Future.delayed(Duration(milliseconds: 300));
 
         if (userType == 'customer') {
           _nextScreen = CustomerDashboardScreen(customerId: userId);
@@ -354,7 +366,7 @@ class _SplashScreenState extends State<SplashScreen>
         } else if (userType == 'rentacar') {
           _nextScreen = RentACarPanelScreen(companyId: userId);
         } else if (userType == 'admin') {
-          _nextScreen = const AdminDashboardScreen();
+          _nextScreen = AdminDashboardScreen();
         }
       }
     } catch (e) {
@@ -374,7 +386,7 @@ class _SplashScreenState extends State<SplashScreen>
     final double logoSize = size.width > 600 ? 150 : 112;
 
     return Scaffold(
-      backgroundColor: AppConstants.bgColor,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
           Positioned(
@@ -391,7 +403,7 @@ class _SplashScreenState extends State<SplashScreen>
                       AppConstants.primaryColor.withValues(alpha: .10),
                       Colors.transparent,
                     ],
-                    stops: const [.0, .72],
+                    stops: [.0, .72],
                   ),
                 ),
               ),
@@ -405,7 +417,7 @@ class _SplashScreenState extends State<SplashScreen>
                 child: Container(
                   padding: EdgeInsets.all(size.width > 600 ? 30 : 24),
                   decoration: BoxDecoration(
-                    color: AppConstants.cardColor.withValues(alpha: .86),
+                    color: Theme.of(context).colorScheme.surface.withValues(alpha: .86),
                     borderRadius: BorderRadius.circular(32),
                     border: Border.all(
                       color: AppConstants.primaryColor.withValues(alpha: .16),
@@ -414,7 +426,7 @@ class _SplashScreenState extends State<SplashScreen>
                       BoxShadow(
                         color: Colors.black.withValues(alpha: .42),
                         blurRadius: 34,
-                        offset: const Offset(0, 18),
+                        offset: Offset(0, 18),
                       ),
                       BoxShadow(
                         color: AppConstants.primaryColor.withValues(alpha: .07),
@@ -446,14 +458,14 @@ class _SplashScreenState extends State<SplashScreen>
 }
 
 class RoleSelectionScreen extends StatelessWidget {
-  const RoleSelectionScreen({super.key});
+  RoleSelectionScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
 
     return Scaffold(
-      backgroundColor: AppConstants.bgColor,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: PremiumScene(
         accentStrength: 1.05,
         child: Stack(
@@ -472,7 +484,7 @@ class RoleSelectionScreen extends StatelessWidget {
                       AppConstants.primaryColor.withValues(alpha: .11),
                       Colors.transparent,
                     ],
-                    stops: const [.0, .70],
+                    stops: [.0, .70],
                   ),
                 ),
               ),
@@ -489,7 +501,7 @@ class RoleSelectionScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      Colors.white.withValues(alpha: .025),
+                      Theme.of(context).colorScheme.onSurface.withValues(alpha: .025),
                       Colors.transparent,
                     ],
                   ),
@@ -500,25 +512,25 @@ class RoleSelectionScreen extends StatelessWidget {
           SafeArea(
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 540),
+                constraints: BoxConstraints(maxWidth: 540),
                 child: AppEntrance(
                   child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(22, 28, 22, 30),
+                    physics: BouncingScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(22, 28, 22, 30),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Center(
                           child: Container(
-                            padding: const EdgeInsets.symmetric(
+                            padding: EdgeInsets.symmetric(
                                 horizontal: 24, vertical: 18),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                                 colors: [
-                                  AppConstants.cardElevated.withValues(alpha: .94),
-                                  AppConstants.cardColor.withValues(alpha: .82),
+                                  Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: .94),
+                                  Theme.of(context).colorScheme.surface.withValues(alpha: .82),
                                 ],
                               ),
                               borderRadius: BorderRadius.circular(24),
@@ -529,7 +541,7 @@ class RoleSelectionScreen extends StatelessWidget {
                                 BoxShadow(
                                   color: Colors.black.withValues(alpha: .30),
                                   blurRadius: 28,
-                                  offset: const Offset(0, 14),
+                                  offset: Offset(0, 14),
                                 ),
                               ],
                             ),
@@ -540,7 +552,7 @@ class RoleSelectionScreen extends StatelessWidget {
                                   .round(),
                               height: 64,
                               errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(
+                                  Icon(
                                 Icons.directions_car_rounded,
                                 color: AppConstants.primaryColor,
                                 size: 64,
@@ -548,8 +560,8 @@ class RoleSelectionScreen extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 34),
-                        const Text(
+                        SizedBox(height: 34),
+                        Text(
                           'OTO TAG',
                           textAlign: TextAlign.center,
                           style: TextStyle(
@@ -559,39 +571,39 @@ class RoleSelectionScreen extends StatelessWidget {
                             letterSpacing: 2.8,
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        const Text(
+                        SizedBox(height: 10),
+                        Text(
                           'Aracınızın dijital merkezi',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.w900,
-                            color: AppConstants.textColor,
+                            color: Theme.of(context).colorScheme.onSurface,
                             letterSpacing: -.8,
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        const Text(
+                        SizedBox(height: 10),
+                        Text(
                           'Yol yardımı, bakım, parça ve kiralama süreçlerine kurumsal OTO TAG deneyimiyle ulaşın.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 14,
-                            color: AppConstants.mutedColor,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: .58),
                             fontWeight: FontWeight.w500,
                             height: 1.5,
                           ),
                         ),
-                        const SizedBox(height: 38),
-                        const Text(
+                        SizedBox(height: 38),
+                        Text(
                           'OTO TAG HESAP TÜRÜ',
                           style: TextStyle(
-                            color: AppConstants.subtleTextColor,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: .46),
                             fontSize: 10.5,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1.25,
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         _buildRoleButton(
                           context: context,
                           title: 'Hizmet Almak İstiyorum',
@@ -600,7 +612,7 @@ class RoleSelectionScreen extends StatelessWidget {
                           icon: Icons.person_search_rounded,
                           userType: 'customer',
                         ),
-                        const SizedBox(height: 14),
+                        SizedBox(height: 14),
                         _buildRoleButton(
                           context: context,
                           title: 'Hizmet Vermek İstiyorum',
@@ -610,7 +622,7 @@ class RoleSelectionScreen extends StatelessWidget {
                           userType: 'provider',
                           isSecondary: true,
                         ),
-                        const SizedBox(height: 14),
+                        SizedBox(height: 14),
                         _buildRoleButton(
                           context: context,
                           title: 'Rent A Car Firmasıyım',
@@ -620,7 +632,7 @@ class RoleSelectionScreen extends StatelessWidget {
                           userType: 'rentacar',
                           isSecondary: true,
                         ),
-                        const SizedBox(height: 24),
+                        SizedBox(height: 24),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -628,13 +640,13 @@ class RoleSelectionScreen extends StatelessWidget {
                                 color: AppConstants.primaryColor
                                     .withValues(alpha: .72),
                                 size: 15),
-                            const SizedBox(width: 7),
-                            const Flexible(
+                            SizedBox(width: 7),
+                            Flexible(
                               child: Text(
                                 'Güvenli eşleşme  •  Konum bazlı hizmet  •  Hızlı teklif',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  color: AppConstants.subtleTextColor,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: .46),
                                   fontSize: 10.5,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -673,10 +685,10 @@ class RoleSelectionScreen extends StatelessWidget {
         );
       },
       borderRadius: BorderRadius.circular(20),
-      color: AppConstants.cardColor,
+      color: Theme.of(context).colorScheme.surface,
       side: BorderSide(
         color: isSecondary
-            ? AppConstants.borderColor
+            ? Theme.of(context).colorScheme.outlineVariant
             : AppConstants.primaryColor.withValues(alpha: .28),
       ),
       child: Stack(
@@ -700,7 +712,7 @@ class RoleSelectionScreen extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(17),
+            padding: EdgeInsets.all(17),
             child: Row(
               children: [
                 Container(
@@ -723,13 +735,13 @@ class RoleSelectionScreen extends StatelessWidget {
                   child: Icon(icon,
                       size: 27, color: AppConstants.primaryColor),
                 ),
-                const SizedBox(width: 15),
+                SizedBox(width: 15),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(
+                        padding: EdgeInsets.symmetric(
                             horizontal: 7, vertical: 3),
                         decoration: BoxDecoration(
                           color: AppConstants.primaryColor
@@ -738,7 +750,7 @@ class RoleSelectionScreen extends StatelessWidget {
                         ),
                         child: Text(
                           badge,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppConstants.primaryColor,
                             fontSize: 8.5,
                             fontWeight: FontWeight.w900,
@@ -746,41 +758,41 @@ class RoleSelectionScreen extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 7),
+                      SizedBox(height: 7),
                       Text(
                         title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
-                          color: AppConstants.textColor,
+                          color: Theme.of(context).colorScheme.onSurface,
                           letterSpacing: -.25,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         subtitle,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11.5,
                           height: 1.35,
                           fontWeight: FontWeight.w500,
-                          color: AppConstants.mutedColor,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: .58),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Container(
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: .035),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: .035),
                     borderRadius: BorderRadius.circular(11),
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: .06),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: .06),
                     ),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.arrow_forward_rounded,
                     color: AppConstants.primaryColor,
                     size: 18,
@@ -839,35 +851,35 @@ class SmartNotificationHelper {
                 child: Container(
                   width: double.infinity,
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF151518),
+                    color: Color(0xFF151518),
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.5),
                         blurRadius: 20,
-                        offset: const Offset(0, 10),
+                        offset: Offset(0, 10),
                       ),
                     ],
                     border: Border.all(
-                        color: const Color(0xFF00FFA3).withValues(alpha: 0.6),
+                        color: Color(0xFF00FFA3).withValues(alpha: 0.6),
                         width: 1.5),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color:
-                              const Color(0xFF00FFA3).withValues(alpha: 0.15),
+                              Color(0xFF00FFA3).withValues(alpha: 0.15),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.notifications_active_rounded,
+                        child: Icon(Icons.notifications_active_rounded,
                             color: Color(0xFF00FFA3), size: 24),
                       ),
-                      const SizedBox(width: 16),
+                      SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -875,14 +887,14 @@ class SmartNotificationHelper {
                           children: [
                             Text(
                               title,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w800,
                                 fontFamily: 'Inter',
                               ),
                             ),
-                            const SizedBox(height: 6),
+                            SizedBox(height: 6),
                             Text(
                               body,
                               style: TextStyle(
@@ -899,7 +911,7 @@ class SmartNotificationHelper {
                         onTap: () {
                           if (overlayEntry.mounted) overlayEntry.remove();
                         },
-                        child: const Padding(
+                        child: Padding(
                           padding: EdgeInsets.only(left: 8.0),
                           child: Icon(Icons.close_rounded,
                               color: Colors.white54, size: 22),
@@ -918,7 +930,7 @@ class SmartNotificationHelper {
     overlay.insert(overlayEntry);
 
     // Bildirimi 4 saniye sonra otomatik ekrandan kaldır
-    Future.delayed(const Duration(seconds: 4), () {
+    Future.delayed(Duration(seconds: 4), () {
       if (overlayEntry.mounted) {
         overlayEntry.remove();
       }

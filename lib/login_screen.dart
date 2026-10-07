@@ -77,9 +77,9 @@ class _LoginScreenState extends State<LoginScreen> {
   bool isLoggingIn = false;
   bool _obscurePassword = true;
   final String baseUrl = AppConstants.baseUrl;
-  final Duration apiTimeout = const Duration(seconds: 20);
+  final Duration apiTimeout = Duration(seconds: 20);
 
-  static const String _iosGoogleClientId =
+  static String _iosGoogleClientId =
       '73273804842-u0lcirptug9aotm2m6gn27g92hftt5ud.apps.googleusercontent.com';
 
   GoogleSignIn? _mobileGoogleSignIn;
@@ -91,13 +91,13 @@ class _LoginScreenState extends State<LoginScreen> {
     // Böylece Android client / SHA eşleşmesi Firebase üzerinden yönetilir.
     if (!kIsWeb && Platform.isAndroid) {
       _mobileGoogleSignIn = GoogleSignIn(
-        scopes: const ['email', 'profile'],
+        scopes: ['email', 'profile'],
       );
     } else {
       _mobileGoogleSignIn = GoogleSignIn(
         clientId: _iosGoogleClientId,
         serverClientId: AppConstants.googleWebClientId,
-        scopes: const ['email', 'profile'],
+        scopes: ['email', 'profile'],
       );
     }
 
@@ -418,7 +418,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (isLoggingIn) return;
 
     if (!kIsWeb) HapticFeedback.lightImpact();
-    Future.delayed(const Duration(milliseconds: 50), () {
+    Future.delayed(Duration(milliseconds: 50), () {
       if (mounted) {
         FocusScope.of(context).unfocus();
         TextInput.finishAutofillContext();
@@ -527,7 +527,7 @@ class _LoginScreenState extends State<LoginScreen> {
           Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                  builder: (context) => const AdminDashboardScreen()));
+                  builder: (context) => AdminDashboardScreen()));
         } else {
           int userId = int.parse(data['user_id'].toString());
 
@@ -591,47 +591,47 @@ class _LoginScreenState extends State<LoginScreen> {
             child: AlertDialog(
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(32),
-                  side: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
-              backgroundColor: const Color(0xFF111115).withValues(alpha: 0.95),
+                  side: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1))),
+              backgroundColor: Theme.of(context).colorScheme.surface.withValues(alpha: 0.95),
               elevation: 24,
               insetPadding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                  EdgeInsets.symmetric(horizontal: 20, vertical: 24),
               title: Column(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                        color: const Color(0xFF00FFA3).withValues(alpha: 0.1),
+                        color: Color(0xFF00FFA3).withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                              color: const Color(0xFF00FFA3)
+                              color: Color(0xFF00FFA3)
                                   .withValues(alpha: 0.2),
                               blurRadius: 20)
                         ]),
-                    child: const Icon(Icons.location_on_rounded,
+                    child: Icon(Icons.location_on_rounded,
                         color: Color(0xFF00FFA3), size: 36),
                   ),
-                  const SizedBox(height: 20),
-                  const Text("Arka Plan Konum İzni",
+                  SizedBox(height: 20),
+                  Text("Arka Plan Konum İzni",
                       textAlign: TextAlign.center,
                       style: TextStyle(
                           fontWeight: FontWeight.w900,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 22,
                           letterSpacing: -0.5)),
                 ],
               ),
-              content: const Text(
+              content: Text(
                 "Ototag, müşterilerin size ulaşabilmesi ve hizmete giderken canlı konumunuzu haritadan takip edebilmesi için, uygulama kapalıyken veya arka planda çalışırken bile konum verilerinizi toplar.",
                 style: TextStyle(
-                    color: Colors.white70,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: .70),
                     fontSize: 15,
                     height: 1.5,
                     fontWeight: FontWeight.w500),
                 textAlign: TextAlign.center,
               ),
-              actionsPadding: const EdgeInsets.only(
+              actionsPadding: EdgeInsets.only(
                   left: 24, right: 24, bottom: 24, top: 8),
               actions: [
                 Row(
@@ -649,25 +649,25 @@ class _LoginScreenState extends State<LoginScreen> {
                                         ProviderMapScreen(providerId: userId)));
                           },
                           style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              padding: EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(20))),
-                          child: const Text("Reddet",
+                          child: Text("Reddet",
                               style: TextStyle(
-                                  color: Colors.white54,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: .54),
                                   fontWeight: FontWeight.w700,
                                   fontSize: 15))),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF00FFA3),
+                            backgroundColor: Color(0xFF00FFA3),
                             foregroundColor: Colors.black,
                             elevation: 10,
                             shadowColor:
-                                const Color(0xFF00FFA3).withValues(alpha: 0.5),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                                Color(0xFF00FFA3).withValues(alpha: 0.5),
+                            padding: EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20))),
                         onPressed: () async {
@@ -682,7 +682,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   builder: (context) =>
                                       ProviderMapScreen(providerId: userId)));
                         },
-                        child: const Text("Kabul Et",
+                        child: Text("Kabul Et",
                             style: TextStyle(
                                 fontWeight: FontWeight.w800, fontSize: 16)),
                       ),
@@ -720,42 +720,42 @@ class _LoginScreenState extends State<LoginScreen> {
               );
             },
             child: Container(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color:
-                    isError ? const Color(0xFFFF3366) : const Color(0xFF00FFA3),
+                    isError ? Color(0xFFFF3366) : Color(0xFF00FFA3),
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
                       color: (isError
-                              ? const Color(0xFFFF3366)
-                              : const Color(0xFF00FFA3))
+                              ? Color(0xFFFF3366)
+                              : Color(0xFF00FFA3))
                           .withValues(alpha: 0.35),
                       blurRadius: 25,
-                      offset: const Offset(0, 10))
+                      offset: Offset(0, 10))
                 ],
               ),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
                         shape: BoxShape.circle),
                     child: Icon(
                         isError
                             ? Icons.error_outline_rounded
                             : Icons.check_circle_outline_rounded,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                         size: 24),
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: 16),
                   Expanded(
                     child: Text(message,
                         maxLines: 4,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            color: Colors.white,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontWeight: FontWeight.w700,
                             fontSize: 14,
                             letterSpacing: 0.2)),
@@ -769,7 +769,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     overlay.insert(overlayEntry);
-    Future.delayed(const Duration(seconds: 3), () {
+    Future.delayed(Duration(seconds: 3), () {
       if (overlayEntry.mounted) {
         overlayEntry.remove();
       }
@@ -792,34 +792,34 @@ class _LoginScreenState extends State<LoginScreen> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(32),
                     side:
-                        BorderSide(color: Colors.white.withValues(alpha: 0.1))),
+                        BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1))),
                 backgroundColor:
-                    const Color(0xFF111115).withValues(alpha: 0.95),
+                    Theme.of(context).colorScheme.surface.withValues(alpha: 0.95),
                 elevation: 24,
                 insetPadding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                    EdgeInsets.symmetric(horizontal: 20, vertical: 24),
                 title: Column(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                          color: const Color(0xFF00FFA3).withValues(alpha: 0.1),
+                          color: Color(0xFF00FFA3).withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                                color: const Color(0xFF00FFA3)
+                                color: Color(0xFF00FFA3)
                                     .withValues(alpha: 0.2),
                                 blurRadius: 20)
                           ]),
-                      child: const Icon(Icons.manage_search_rounded,
+                      child: Icon(Icons.manage_search_rounded,
                           color: Color(0xFF00FFA3), size: 36),
                     ),
-                    const SizedBox(height: 20),
-                    const Text("Kayıt Sorgula",
+                    SizedBox(height: 20),
+                    Text("Kayıt Sorgula",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                             fontWeight: FontWeight.w900,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 24,
                             letterSpacing: -0.5)),
                   ],
@@ -828,8 +828,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   controller: trackCtrl,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  style: const TextStyle(
-                      color: Colors.white,
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.w900,
                       fontSize: 22,
                       letterSpacing: 1.5),
@@ -837,24 +837,24 @@ class _LoginScreenState extends State<LoginScreen> {
                   enabled: !isChecking,
                   decoration: InputDecoration(
                       labelText: "Takip Numarası",
-                      labelStyle: const TextStyle(
+                      labelStyle: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
-                          color: Colors.white54,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: .54),
                           letterSpacing: 0),
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
                           borderSide: BorderSide.none),
                       filled: true,
-                      fillColor: Colors.white.withValues(alpha: 0.05),
-                      focusedBorder: const OutlineInputBorder(
+                      fillColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
+                      focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(24)),
                           borderSide:
                               BorderSide(color: Color(0xFF00FFA3), width: 1.5)),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 20)),
+                      contentPadding: EdgeInsets.symmetric(vertical: 20)),
                 ),
                 actionsPadding:
-                    const EdgeInsets.only(left: 24, right: 24, bottom: 24),
+                    EdgeInsets.only(left: 24, right: 24, bottom: 24),
                 actions: [
                   Row(
                     children: [
@@ -870,27 +870,27 @@ class _LoginScreenState extends State<LoginScreen> {
                                   },
                             style: TextButton.styleFrom(
                                 padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
+                                    EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(20))),
-                            child: const Text("İptal",
+                            child: Text("İptal",
                                 style: TextStyle(
-                                    color: Colors.white54,
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: .54),
                                     fontWeight: FontWeight.w700,
                                     fontSize: 15))),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF00FFA3),
-                              disabledBackgroundColor: const Color(0xFF00FFA3)
+                              backgroundColor: Color(0xFF00FFA3),
+                              disabledBackgroundColor: Color(0xFF00FFA3)
                                   .withValues(alpha: 0.5),
                               foregroundColor: Colors.black,
                               elevation: 10,
-                              shadowColor: const Color(0xFF00FFA3)
+                              shadowColor: Color(0xFF00FFA3)
                                   .withValues(alpha: 0.5),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              padding: EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(20))),
                           onPressed: isChecking
@@ -945,12 +945,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                   }
                                 },
                           child: isChecking
-                              ? const SizedBox(
+                              ? SizedBox(
                                   width: 20,
                                   height: 20,
                                   child: CircularProgressIndicator(
                                       color: Colors.black, strokeWidth: 2.5))
-                              : const Text("Sorgula",
+                              : Text("Sorgula",
                                   style: TextStyle(
                                       fontWeight: FontWeight.w800,
                                       fontSize: 16)),
@@ -963,7 +963,7 @@ class _LoginScreenState extends State<LoginScreen> {
             );
           });
         }).whenComplete(() {
-          Future<void>.delayed(const Duration(milliseconds: 450), () {
+          Future<void>.delayed(Duration(milliseconds: 450), () {
             try {
               trackCtrl.dispose();
             } catch (_) {}
@@ -983,28 +983,28 @@ class _LoginScreenState extends State<LoginScreen> {
   }) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Padding(
-          padding: const EdgeInsets.only(left: 6, bottom: 8),
+          padding: EdgeInsets.only(left: 6, bottom: 8),
           child: Text(label.trim(),
-              style: const TextStyle(
-                  color: AppConstants.mutedColor,
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: .58),
                   fontSize: 13,
                   fontWeight: FontWeight.w600))),
       AnimatedContainer(
         duration: AppMotion.duration(context, AppMotion.interaction),
         decoration: BoxDecoration(
           color: focusNode.hasFocus
-              ? Colors.white.withValues(alpha: 0.08)
-              : Colors.white.withValues(alpha: 0.03),
+              ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08)
+              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
               color: focusNode.hasFocus
-                  ? const Color(0xFF00FFA3)
-                  : Colors.white.withValues(alpha: 0.05),
+                  ? Color(0xFF00FFA3)
+                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
               width: focusNode.hasFocus ? 1.5 : 1.0),
           boxShadow: focusNode.hasFocus
               ? [
                   BoxShadow(
-                      color: const Color(0xFF00FFA3).withValues(alpha: 0.1),
+                      color: Color(0xFF00FFA3).withValues(alpha: 0.1),
                       blurRadius: 15,
                       spreadRadius: 1)
                 ]
@@ -1025,8 +1025,8 @@ class _LoginScreenState extends State<LoginScreen> {
               inputFormatters: inputFormatters,
               onEditingComplete:
                   onEditingComplete ?? () => FocusScope.of(context).nextFocus(),
-              style: const TextStyle(
-                  color: Colors.white,
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w600,
                   fontSize: 16),
               decoration: InputDecoration(
@@ -1034,20 +1034,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 hintText: isPasswordField ? 'Şifreni gir' : '05xx xxx xx xx',
                 labelStyle: TextStyle(
                     color: focusNode.hasFocus
-                        ? const Color(0xFF00FFA3)
-                        : Colors.white.withValues(alpha: 0.5),
+                        ? Color(0xFF00FFA3)
+                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                     fontSize: 14,
                     fontWeight: FontWeight.w500),
                 prefixIcon: Padding(
-                    padding: const EdgeInsets.only(left: 20, right: 16),
+                    padding: EdgeInsets.only(left: 20, right: 16),
                     child: Icon(icon,
                         color: focusNode.hasFocus
-                            ? const Color(0xFF00FFA3)
-                            : Colors.white70,
+                            ? Color(0xFF00FFA3)
+                            : Theme.of(context).colorScheme.onSurface.withValues(alpha: .70),
                         size: 22)),
                 suffixIcon: isPasswordField
                     ? Padding(
-                        padding: const EdgeInsets.only(right: 8),
+                        padding: EdgeInsets.only(right: 8),
                         child: IconButton(
                           splashRadius: 24,
                           icon: Icon(
@@ -1055,8 +1055,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ? Icons.visibility_off_rounded
                                 : Icons.visibility_rounded,
                             color: focusNode.hasFocus
-                                ? const Color(0xFF00FFA3)
-                                : Colors.white54,
+                                ? Color(0xFF00FFA3)
+                                : Theme.of(context).colorScheme.onSurface.withValues(alpha: .54),
                             size: 20,
                           ),
                           onPressed: () {
@@ -1071,7 +1071,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 filled: true,
                 fillColor: Colors.transparent,
                 contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
@@ -1110,7 +1110,7 @@ class _LoginScreenState extends State<LoginScreen> {
             : Icons.engineering_rounded;
 
     return Scaffold(
-      backgroundColor: AppConstants.bgColor,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -1129,17 +1129,17 @@ class _LoginScreenState extends State<LoginScreen> {
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 470),
+              constraints: BoxConstraints(maxWidth: 470),
               child: PremiumEntrance(
                 child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
+                  physics: BouncingScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(18, 18, 18, 28),
                   child: AutofillGroup(
                     child: PremiumGlassPanel(
                       radius: 28,
                       blur: 18,
                       accent: true,
-                      padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+                      padding: EdgeInsets.fromLTRB(20, 22, 20, 20),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -1147,7 +1147,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               PremiumBrandMark(size: 58, icon: roleIcon),
-                              const SizedBox(width: 15),
+                              SizedBox(width: 15),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1158,11 +1158,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                           ? Icons.apartment_rounded
                                           : Icons.verified_user_rounded,
                                     ),
-                                    const SizedBox(height: 9),
+                                    SizedBox(height: 9),
                                     Text(
                                       title,
-                                      style: const TextStyle(
-                                        color: AppConstants.textColor,
+                                      style: TextStyle(
+                                        color: Theme.of(context).colorScheme.onSurface,
                                         fontSize: 26,
                                         fontWeight: FontWeight.w900,
                                         letterSpacing: -.65,
@@ -1174,19 +1174,19 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 13),
+                          SizedBox(height: 13),
                           Text(
                             subtitle,
-                            style: const TextStyle(
-                              color: AppConstants.mutedColor,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: .58),
                               fontSize: 12.5,
                               height: 1.5,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          const SizedBox(height: 18),
-                          const PremiumHairline(),
-                          const SizedBox(height: 20),
+                          SizedBox(height: 18),
+                          PremiumHairline(),
+                          SizedBox(height: 20),
                           _buildGlassTextField(
                             controller: _phoneController,
                             focusNode: _phoneFocus,
@@ -1198,7 +1198,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             onEditingComplete: () =>
                                 _passwordFocus.requestFocus(),
                           ),
-                          const SizedBox(height: 13),
+                          SizedBox(height: 13),
                           _buildGlassTextField(
                             controller: _passwordController,
                             focusNode: _passwordFocus,
@@ -1207,7 +1207,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             isPasswordField: true,
                             onEditingComplete: _login,
                           ),
-                          const SizedBox(height: 18),
+                          SizedBox(height: 18),
                           Container(
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(16),
@@ -1218,7 +1218,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         color: AppConstants.primaryColor
                                             .withValues(alpha: .14),
                                         blurRadius: 22,
-                                        offset: const Offset(0, 9),
+                                        offset: Offset(0, 9),
                                       ),
                                     ],
                             ),
@@ -1228,13 +1228,13 @@ class _LoginScreenState extends State<LoginScreen> {
                               style: FilledButton.styleFrom(
                                 backgroundColor: AppConstants.primaryColor,
                                 foregroundColor: AppConstants.primaryInk,
-                                minimumSize: const Size.fromHeight(54),
+                                minimumSize: Size.fromHeight(54),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                               ),
                               child: isLoggingIn
-                                  ? const SizedBox(
+                                  ? SizedBox(
                                       width: 22,
                                       height: 22,
                                       child: CircularProgressIndicator(
@@ -1242,7 +1242,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         color: AppConstants.primaryInk,
                                       ),
                                     )
-                                  : const Row(
+                                  : Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
                                       mainAxisSize: MainAxisSize.min,
@@ -1262,28 +1262,28 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                             ),
                           ),
-                          const SizedBox(height: 20),
+                          SizedBox(height: 20),
                           Row(
                             children: [
-                              const Expanded(
+                              Expanded(
                                 child: Divider(
-                                    color: AppConstants.borderColor),
+                                    color: Theme.of(context).colorScheme.outlineVariant),
                               ),
                               Container(
                                 margin:
-                                    const EdgeInsets.symmetric(horizontal: 10),
-                                padding: const EdgeInsets.symmetric(
+                                    EdgeInsets.symmetric(horizontal: 10),
+                                padding: EdgeInsets.symmetric(
                                     horizontal: 9, vertical: 4),
                                 decoration: BoxDecoration(
                                   color:
-                                      Colors.white.withValues(alpha: .025),
+                                      Theme.of(context).colorScheme.onSurface.withValues(alpha: .025),
                                   borderRadius: BorderRadius.circular(99),
                                   border: Border.all(
                                     color:
-                                        Colors.white.withValues(alpha: .055),
+                                        Theme.of(context).colorScheme.onSurface.withValues(alpha: .055),
                                   ),
                                 ),
-                                child: const Text(
+                                child: Text(
                                   'HIZLI GİRİŞ',
                                   style: TextStyle(
                                     color: AppConstants.subtleTextColor,
@@ -1293,13 +1293,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                               ),
-                              const Expanded(
+                              Expanded(
                                 child: Divider(
-                                    color: AppConstants.borderColor),
+                                    color: Theme.of(context).colorScheme.outlineVariant),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 14),
+                          SizedBox(height: 14),
                           Row(
                             children: [
                               Expanded(
@@ -1321,47 +1321,47 @@ class _LoginScreenState extends State<LoginScreen> {
                                             isLoggingIn || _socialBusy
                                                 ? null
                                                 : _signInWithGoogle,
-                                        icon: const Icon(
+                                        icon: Icon(
                                             Icons.g_mobiledata_rounded),
-                                        label: const Text('Google'),
+                                        label: Text('Google'),
                                         style: _socialStyle(),
                                       ),
                               ),
-                              const SizedBox(width: 10),
+                              SizedBox(width: 10),
                               Expanded(
                                 child: OutlinedButton.icon(
                                   onPressed: isLoggingIn || _socialBusy
                                       ? null
                                       : _signInWithApple,
-                                  icon: const Icon(Icons.apple, size: 21),
-                                  label: const Text('Apple'),
+                                  icon: Icon(Icons.apple, size: 21),
+                                  label: Text('Apple'),
                                   style: _socialStyle(),
                                 ),
                               ),
                             ],
                           ),
                           if (!customer) ...[
-                            const SizedBox(height: 4),
+                            SizedBox(height: 4),
                             TextButton.icon(
                               onPressed: isLoggingIn || _socialBusy
                                   ? null
                                   : _showTrackingDialog,
-                              icon: const Icon(
+                              icon: Icon(
                                   Icons.fact_check_outlined,
                                   size: 17),
                               label:
-                                  const Text('Başvuru durumunu sorgula'),
+                                  Text('Başvuru durumunu sorgula'),
                             ),
                           ],
-                          const SizedBox(height: 10),
+                          SizedBox(height: 10),
                           Wrap(
                             alignment: WrapAlignment.center,
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              const Text(
+                              Text(
                                 'Hesabın yok mu?',
                                 style: TextStyle(
-                                    color: AppConstants.mutedColor),
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: .58)),
                               ),
                               TextButton(
                                 onPressed: isLoggingIn || _socialBusy
@@ -1375,7 +1375,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                             ),
                                           ),
                                         ),
-                                child: const Text('Kayıt ol'),
+                                child: Text('Kayıt ol'),
                               ),
                             ],
                           ),
@@ -1403,8 +1403,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   : 'Müşteri girişine geç',
                             ),
                           ),
-                          const SizedBox(height: 14),
-                          const Row(
+                          SizedBox(height: 14),
+                          Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
@@ -1440,9 +1440,9 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   ButtonStyle _socialStyle() => OutlinedButton.styleFrom(
-      foregroundColor: Colors.white,
-      backgroundColor: AppConstants.cardColor,
-      minimumSize: const Size.fromHeight(48),
-      side: const BorderSide(color: AppConstants.borderColor),
+      foregroundColor: Theme.of(context).colorScheme.onSurface,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      minimumSize: Size.fromHeight(48),
+      side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)));
 }

@@ -4,6 +4,7 @@ import 'subscriptions_screen.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'core/constants/app_constants.dart';
+import 'core/theme/theme_controller.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -2198,6 +2199,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
               ),
 
+              const SizedBox(height: 24),
+              _buildThemePreferenceCard(),
+
               const SizedBox(height: 32),
 
               Row(
@@ -2421,6 +2425,89 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildThemePreferenceCard() {
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: AppThemeController.mode,
+      builder: (context, mode, _) {
+        final theme = Theme.of(context);
+        final isLight = mode == ThemeMode.light;
+        final surface = theme.colorScheme.surface;
+        final text = theme.colorScheme.onSurface;
+        final muted = text.withValues(alpha: 0.58);
+        final border = theme.colorScheme.outlineVariant;
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          decoration: BoxDecoration(
+            color: surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: border),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isLight ? 0.06 : 0.18),
+                blurRadius: 18,
+                offset: const Offset(0, 7),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: _primaryColor.withValues(alpha: isLight ? 0.18 : 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  isLight ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                  color: isLight ? AppConstants.primaryDark : _primaryColor,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Aydınlık Tema',
+                      style: TextStyle(
+                        color: text,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      isLight
+                          ? 'Açık renkli görünüm aktif'
+                          : 'Koyu görünüm aktif',
+                      style: TextStyle(
+                        color: muted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch.adaptive(
+                value: isLight,
+                activeColor: AppConstants.primaryDark,
+                activeTrackColor:
+                    AppConstants.primaryColor.withValues(alpha: 0.42),
+                onChanged: (value) async {
+                  HapticFeedback.selectionClick();
+                  await AppThemeController.setLightMode(value);
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

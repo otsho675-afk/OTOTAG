@@ -1,9 +1,7 @@
-# pubspec.yaml
-
 name: ototag
 description: Oto Eslestirme Sistemi
 publish_to: 'none'
-version: 1.0.1+77
+version: 1.0.1+78
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

@@ -28,7 +28,7 @@ class ProfileScreen extends StatefulWidget {
   final http.Client? client;
   final bool showHistory;
 
-  ProfileScreen({
+  const ProfileScreen({
     super.key,
     required this.userId,
     required this.userType,

@@ -28,6 +28,7 @@ import 'services/platform_http_client.dart';
 import 'rent_a_car_panel_screen.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_controller.dart';
 import 'core/theme/app_motion.dart';
 import 'core/theme/premium_surfaces.dart';
 import 'widgets/app_update_gate.dart';
@@ -41,6 +42,7 @@ void main() {
 
 Future<void> _startApp() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppThemeController.load();
   final mobile = !kIsWeb &&
       [TargetPlatform.android, TargetPlatform.iOS]
           .contains(defaultTargetPlatform);
@@ -194,32 +196,42 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaler:
-                MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.4),
-          ),
-          child: AppUpdateGate(
-              navigatorKey: navigatorKey, waitForStartup: true, child: child!),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: AppThemeController.mode,
+      builder: (context, themeMode, _) {
+        return MaterialApp(
+          builder: (context, child) {
+            return MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler:
+                    MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.4),
+              ),
+              child: AppUpdateGate(
+                navigatorKey: navigatorKey,
+                waitForStartup: true,
+                child: child!,
+              ),
+            );
+          },
+          navigatorKey: navigatorKey,
+          title: 'OTO TAG',
+          debugShowCheckedModeBanner: false,
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('tr', 'TR'),
+            Locale('en', 'US'),
+          ],
+          locale: const Locale('tr', 'TR'),
+          theme: lightAppTheme(),
+          darkTheme: darkAppTheme(),
+          themeMode: themeMode,
+          home: const SplashScreen(),
         );
       },
-      navigatorKey: navigatorKey,
-      title: 'Oto Tamir App',
-      debugShowCheckedModeBanner: false,
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [
-        Locale('tr', 'TR'),
-        Locale('en', 'US'),
-      ],
-      locale: const Locale('tr', 'TR'),
-      theme: appTheme(),
-      home: const SplashScreen(),
     );
   }
 }

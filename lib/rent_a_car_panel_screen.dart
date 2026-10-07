@@ -75,7 +75,7 @@ class TurkishPlateFormatter extends TextInputFormatter {
 }
 
 class RentACarPanelScreen extends StatefulWidget {
-  RentACarPanelScreen({super.key, required this.companyId, this.service});
+  const RentACarPanelScreen({super.key, required this.companyId, this.service});
   final int companyId;
   final RentalService? service;
   @override

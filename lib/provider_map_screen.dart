@@ -34,7 +34,7 @@ import 'main.dart' show RoleSelectionScreen;
 class ProviderMapScreen extends StatefulWidget {
   final int providerId;
   final bool initialOnline;
-  const ProviderMapScreen(
+  ProviderMapScreen(
       {super.key, required this.providerId, this.initialOnline = true});
 
   @override
@@ -44,7 +44,7 @@ class ProviderMapScreen extends StatefulWidget {
 class _ProviderMapScreenState extends State<ProviderMapScreen>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   final http.Client _httpClient = http.Client();
-  final Duration _apiTimeout = const Duration(seconds: 15);
+  final Duration _apiTimeout = Duration(seconds: 15);
 
   gmaps.GoogleMapController? _googleMapController;
   amaps.AppleMapController? _appleMapController;
@@ -129,11 +129,16 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
   final String baseUrl = AppConstants.baseUrl;
   late final String googleApiKey;
 
-  static const Color neonGreen = Color(0xFF00FFA3);
-  static const Color pureBlack = Color(0xFF030305);
-  static const Color panelBlack = Color(0xFF111115);
-  static const Color textGray = Colors.white54;
-  static const Color alertRed = Color(0xFFFF3366);
+  static Color neonGreen = Color(0xFF00FFA3);
+  Color get pureBlack => Theme.of(context).scaffoldBackgroundColor;
+  Color get panelBlack => Theme.of(context).colorScheme.surface;
+  Color get panelElevated =>
+      Theme.of(context).colorScheme.surfaceContainerHighest;
+  Color get textColor => Theme.of(context).colorScheme.onSurface;
+  Color get textGray =>
+      Theme.of(context).colorScheme.onSurface.withValues(alpha: .58);
+  Color get borderColor => Theme.of(context).colorScheme.outlineVariant;
+  static Color alertRed = Color(0xFFFF3366);
 
   gmaps.BitmapDescriptor? _customerMarkerIconGmaps;
   amaps.BitmapDescriptor? _customerMarkerIconAmaps;
@@ -165,7 +170,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
     _pageController = PageController(viewportFraction: 0.92);
 
     _slideController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 2500))
+        vsync: this, duration: Duration(milliseconds: 2500))
       ..addListener(() {
         if (_oldProviderPos != null && _targetProviderPos != null && mounted) {
           _animatedProviderPos.value = LatLng(
@@ -207,8 +212,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
     final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(pictureRecorder);
     final double centerX = width / 2;
-    const double centerY = 56.0;
-    const double circleRadius = 46.0;
+    double centerY = 56.0;
+    double circleRadius = 46.0;
 
     final Path shadowPath = Path();
     shadowPath.addOval(Rect.fromCenter(
@@ -218,7 +223,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
     ));
     final Paint shadowPaint = Paint()
       ..color = Colors.black.withValues(alpha: 0.45)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 4);
     canvas.drawPath(shadowPath, shadowPaint);
 
     final Path pinPath = Path();
@@ -235,7 +240,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
       ..color = neonGreen.withValues(alpha: 0.6)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 6.0
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 5);
     canvas.drawPath(pinPath, pinGlowPaint);
 
     final Paint pinFillPaint = Paint()
@@ -265,7 +270,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
     canvas.clipPath(clipPath);
 
     final Paint silhouettePaint = Paint()
-      ..color = Colors.white
+      ..color = textColor
       ..style = PaintingStyle.fill;
 
     canvas.drawCircle(Offset(centerX, centerY - 8), 13.0, silhouettePaint);
@@ -282,7 +287,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
 
     final Paint alertGlow = Paint()
       ..color = alertRed.withValues(alpha: 0.8)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 4);
     canvas.drawCircle(Offset(centerX + 30, centerY - 28), 7.5, alertGlow);
 
     final Paint alertDot = Paint()
@@ -291,7 +296,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
     canvas.drawCircle(Offset(centerX + 30, centerY - 28), 6.5, alertDot);
 
     final Paint alertCenter = Paint()
-      ..color = Colors.white
+      ..color = textColor
       ..style = PaintingStyle.fill;
     canvas.drawCircle(Offset(centerX + 30, centerY - 28), 2.5, alertCenter);
 
@@ -361,14 +366,14 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
         child: Container(
           decoration: BoxDecoration(
             color: panelBlack.withValues(alpha: 0.98),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
             border:
                 Border.all(color: alertRed.withValues(alpha: 0.4), width: 1.5),
             boxShadow: [
               BoxShadow(
                   color: pureBlack.withValues(alpha: 0.9),
                   blurRadius: 40,
-                  offset: const Offset(0, -10)),
+                  offset: Offset(0, -10)),
               BoxShadow(color: alertRed.withValues(alpha: 0.1), blurRadius: 30),
             ],
           ),
@@ -379,7 +384,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
               right: 24),
           child: SafeArea(
             child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
+              physics: BouncingScrollPhysics(),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -388,38 +393,38 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                           width: 44,
                           height: 5,
                           decoration: BoxDecoration(
-                              color: Colors.white24,
+                              color: textColor.withValues(alpha: .24),
                               borderRadius: BorderRadius.circular(10)))),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: alertRed.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                       border:
                           Border.all(color: alertRed.withValues(alpha: 0.4)),
                     ),
-                    child: const Icon(Icons.gavel_rounded,
+                    child: Icon(Icons.gavel_rounded,
                         color: alertRed, size: 40),
                   ),
-                  const SizedBox(height: 18),
-                  const Text("Hesabınız Askıya Alındı",
+                  SizedBox(height: 18),
+                  Text("Hesabınız Askıya Alındı",
                       style: TextStyle(
-                          color: Colors.white,
+                          color: textColor,
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
                           letterSpacing: -0.4),
                       textAlign: TextAlign.center),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   Text(
                       "Hesabınız kural ihlali veya düşük performans nedeniyle $suspensionEndDate tarihine kadar askıya alınmıştır. Bu süre zarfında yeni çağrı alamazsınız.",
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.8),
+                          color: textColor.withValues(alpha: 0.8),
                           fontSize: 13,
                           height: 1.45,
                           fontWeight: FontWeight.w500)),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24),
                   Container(
                     width: double.infinity,
                     height: 50,
@@ -427,7 +432,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                       borderRadius: BorderRadius.circular(18),
                       color: pureBlack,
                       border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.12)),
+                          color: textColor.withValues(alpha: 0.12)),
                     ),
                     child: ElevatedButton(
                       onPressed: () => Navigator.pop(context),
@@ -437,9 +442,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(18)),
                       ),
-                      child: const Text("Bilgilendim ve Kapat",
+                      child: Text("Bilgilendim ve Kapat",
                           style: TextStyle(
-                              color: Colors.white,
+                              color: textColor,
                               fontSize: 15,
                               fontWeight: FontWeight.w900)),
                     ),
@@ -495,10 +500,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
 
     void scrollToBottom() {
       if (scrollController.hasClients) {
-        Future.delayed(const Duration(milliseconds: 150), () {
+        Future.delayed(Duration(milliseconds: 150), () {
           scrollController.animateTo(
             scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 350),
+            duration: Duration(milliseconds: 350),
             curve: Curves.easeOutCubic,
           );
         });
@@ -532,7 +537,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                 countdownTimer?.cancel();
                 setDialogState(() => remainingSeconds = 20);
                 countdownTimer =
-                    Timer.periodic(const Duration(seconds: 1), (timer) {
+                    Timer.periodic(Duration(seconds: 1), (timer) {
                   if (remainingSeconds > 0) {
                     setDialogState(() => remainingSeconds--);
                   } else {
@@ -550,7 +555,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                   final response = await _httpClient
                       .get(Uri.parse(
                           "$baseUrl?action=get_bids&job_id=$jobId&provider_id=${widget.providerId}&user_type=provider&_t=$ts"))
-                      .timeout(const Duration(seconds: 5));
+                      .timeout(Duration(seconds: 5));
 
                   if (response.statusCode == 200 &&
                       mounted &&
@@ -620,7 +625,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                 resetAndStartTimer();
                 fetchBidsData();
                 dialogPollingTimer = Timer.periodic(
-                    const Duration(seconds: 2), (_) => fetchBidsData());
+                    Duration(seconds: 2), (_) => fetchBidsData());
               }
 
               final bool isMyTurn =
@@ -638,7 +643,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                     padding: EdgeInsets.only(bottom: bottomInset),
                     child: ClipRRect(
                       borderRadius:
-                          const BorderRadius.vertical(top: Radius.circular(32)),
+                          BorderRadius.vertical(top: Radius.circular(32)),
                       child: BackdropFilter(
                         filter: ui.ImageFilter.blur(sigmaX: 25, sigmaY: 25),
                         child: Container(
@@ -649,7 +654,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                           ),
                           decoration: BoxDecoration(
                               color: panelBlack.withValues(alpha: 0.98),
-                              borderRadius: const BorderRadius.vertical(
+                              borderRadius: BorderRadius.vertical(
                                   top: Radius.circular(32)),
                               border: Border.all(
                                   color: neonGreen.withValues(alpha: 0.35),
@@ -658,7 +663,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                 BoxShadow(
                                     color: pureBlack.withValues(alpha: 0.95),
                                     blurRadius: 40,
-                                    offset: const Offset(0, -10)),
+                                    offset: Offset(0, -10)),
                                 BoxShadow(
                                     color: neonGreen.withValues(alpha: 0.06),
                                     blurRadius: 30),
@@ -682,9 +687,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                         width: 44,
                                         height: 4.5,
                                         margin:
-                                            const EdgeInsets.only(bottom: 14),
+                                            EdgeInsets.only(bottom: 14),
                                         decoration: BoxDecoration(
-                                            color: Colors.white24,
+                                            color: textColor.withValues(alpha: .24),
                                             borderRadius:
                                                 BorderRadius.circular(10)),
                                       ),
@@ -694,7 +699,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                           CrossAxisAlignment.center,
                                       children: [
                                         Container(
-                                          padding: const EdgeInsets.all(12),
+                                          padding: EdgeInsets.all(12),
                                           decoration: BoxDecoration(
                                             color: neonGreen.withValues(
                                                 alpha: 0.12),
@@ -710,7 +715,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                               color: neonGreen,
                                               size: isSmallScreen ? 22 : 24),
                                         ),
-                                        const SizedBox(width: 12),
+                                        SizedBox(width: 12),
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment:
@@ -718,7 +723,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                             children: [
                                               Text("$serviceName Talebi",
                                                   style: TextStyle(
-                                                      color: Colors.white,
+                                                      color: textColor,
                                                       fontSize: isSmallScreen
                                                           ? 17
                                                           : 19,
@@ -728,33 +733,33 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                   maxLines: 1,
                                                   overflow:
                                                       TextOverflow.ellipsis),
-                                              const SizedBox(height: 4),
+                                              SizedBox(height: 4),
                                               Row(
                                                 children: [
-                                                  const Icon(
+                                                  Icon(
                                                       Icons.near_me_rounded,
                                                       color: neonGreen,
                                                       size: 13),
-                                                  const SizedBox(width: 4),
+                                                  SizedBox(width: 4),
                                                   Text("$distance KM",
-                                                      style: const TextStyle(
+                                                      style: TextStyle(
                                                           color: neonGreen,
                                                           fontSize: 12,
                                                           fontWeight:
                                                               FontWeight.w900)),
-                                                  const SizedBox(width: 6),
+                                                  SizedBox(width: 6),
                                                   Container(
                                                       width: 3,
                                                       height: 3,
                                                       decoration:
-                                                          const BoxDecoration(
+                                                          BoxDecoration(
                                                               color: Colors
                                                                   .white30,
                                                               shape: BoxShape
                                                                   .circle)),
-                                                  const SizedBox(width: 6),
+                                                  SizedBox(width: 6),
                                                   Text("~$autoTimeStr Dk Varış",
-                                                      style: const TextStyle(
+                                                      style: TextStyle(
                                                           color: textGray,
                                                           fontSize: 12,
                                                           fontWeight:
@@ -764,10 +769,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                             ],
                                           ),
                                         ),
-                                        const SizedBox(width: 8),
+                                        SizedBox(width: 8),
                                         // SAYAÇ / DURUM ROZETİ
                                         Container(
-                                          padding: const EdgeInsets.symmetric(
+                                          padding: EdgeInsets.symmetric(
                                               horizontal: 10, vertical: 6),
                                           decoration: BoxDecoration(
                                             color: isMyTurn
@@ -776,7 +781,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                         alpha: 0.15)
                                                     : neonGreen.withValues(
                                                         alpha: 0.15))
-                                                : Colors.white
+                                                : textColor
                                                     .withValues(alpha: 0.05),
                                             borderRadius:
                                                 BorderRadius.circular(14),
@@ -787,7 +792,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                           alpha: 0.5)
                                                       : neonGreen.withValues(
                                                           alpha: 0.4))
-                                                  : Colors.white24,
+                                                  : textColor.withValues(alpha: .24),
                                             ),
                                           ),
                                           child: Row(
@@ -802,9 +807,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                       ? (remainingSeconds <= 5
                                                           ? alertRed
                                                           : neonGreen)
-                                                      : Colors.white70,
+                                                      : textColor.withValues(alpha: .70),
                                                   size: 14),
-                                              const SizedBox(width: 5),
+                                              SizedBox(width: 5),
                                               Text(
                                                 isMyTurn
                                                     ? "${remainingSeconds}s"
@@ -814,7 +819,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                       ? (remainingSeconds <= 5
                                                           ? alertRed
                                                           : neonGreen)
-                                                      : Colors.white70,
+                                                      : textColor.withValues(alpha: .70),
                                                   fontWeight: FontWeight.w900,
                                                   fontSize: 13,
                                                 ),
@@ -822,7 +827,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                             ],
                                           ),
                                         ),
-                                        const SizedBox(width: 8),
+                                        SizedBox(width: 8),
                                         // AŞAĞI AL / ASKIYA AL BUTONU
                                         InkWell(
                                           onTap: isSubmitting
@@ -845,34 +850,34 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                           borderRadius:
                                               BorderRadius.circular(20),
                                           child: Container(
-                                            padding: const EdgeInsets.all(7),
+                                            padding: EdgeInsets.all(7),
                                             decoration: BoxDecoration(
-                                              color: Colors.white
+                                              color: textColor
                                                   .withValues(alpha: 0.06),
                                               shape: BoxShape.circle,
                                               border: Border.all(
-                                                  color: Colors.white10),
+                                                  color: textColor.withValues(alpha: .10)),
                                             ),
-                                            child: const Icon(
+                                            child: Icon(
                                                 Icons
                                                     .keyboard_arrow_down_rounded,
-                                                color: Colors.white70,
+                                                color: textColor.withValues(alpha: .70),
                                                 size: 22),
                                           ),
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 12),
+                                    SizedBox(height: 12),
                                     // MÜŞTERİ NOTU / AÇIKLAMA KARTI
                                     Container(
                                       width: double.infinity,
-                                      padding: const EdgeInsets.symmetric(
+                                      padding: EdgeInsets.symmetric(
                                           horizontal: 14, vertical: 10),
                                       decoration: BoxDecoration(
                                         color: pureBlack,
                                         borderRadius: BorderRadius.circular(16),
                                         border: Border.all(
-                                            color: Colors.white
+                                            color: textColor
                                                 .withValues(alpha: 0.06)),
                                       ),
                                       child: Row(
@@ -881,7 +886,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                         children: [
                                           Container(
                                             margin:
-                                                const EdgeInsets.only(top: 2),
+                                                EdgeInsets.only(top: 2),
                                             width: 3,
                                             height: 28,
                                             decoration: BoxDecoration(
@@ -890,13 +895,13 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                   BorderRadius.circular(4),
                                             ),
                                           ),
-                                          const SizedBox(width: 10),
+                                          SizedBox(width: 10),
                                           Expanded(
                                             child: Column(
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
                                               children: [
-                                                const Text(
+                                                Text(
                                                   "MÜŞTERİ NOTU",
                                                   style: TextStyle(
                                                     color: textGray,
@@ -905,13 +910,13 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                     letterSpacing: 0.6,
                                                   ),
                                                 ),
-                                                const SizedBox(height: 2),
+                                                SizedBox(height: 2),
                                                 Text(
                                                   probDesc.trim().isNotEmpty
                                                       ? probDesc
                                                       : "Müşteri özel bir açıklama belirtmedi. Detayları teklif sonrası öğrenebilirsiniz.",
                                                   style: TextStyle(
-                                                      color: Colors.white
+                                                      color: textColor
                                                           .withValues(
                                                               alpha: 0.85),
                                                       fontSize: isSmallScreen
@@ -944,12 +949,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                       color: pureBlack,
                                       borderRadius: BorderRadius.circular(20),
                                       border: Border.all(
-                                          color: Colors.white
+                                          color: textColor
                                               .withValues(alpha: 0.06),
                                           width: 1.2)),
                                   child: bidHistory.isEmpty
                                       ? Padding(
-                                          padding: const EdgeInsets.symmetric(
+                                          padding: EdgeInsets.symmetric(
                                               horizontal: 16, vertical: 16),
                                           child: Column(
                                             mainAxisSize: MainAxisSize.min,
@@ -960,34 +965,34 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                 children: [
                                                   Expanded(
                                                     child: Container(
-                                                      padding: const EdgeInsets
+                                                      padding: EdgeInsets
                                                           .symmetric(
                                                           vertical: 10,
                                                           horizontal: 8),
                                                       decoration: BoxDecoration(
-                                                        color: Colors.white
+                                                        color: textColor
                                                             .withValues(
                                                                 alpha: 0.03),
                                                         borderRadius:
                                                             BorderRadius
                                                                 .circular(14),
                                                         border: Border.all(
-                                                            color: Colors.white
+                                                            color: textColor
                                                                 .withValues(
                                                                     alpha:
                                                                         0.06)),
                                                       ),
                                                       child: Column(
                                                         children: [
-                                                          const Icon(
+                                                          Icon(
                                                               Icons
                                                                   .route_rounded,
                                                               color: neonGreen,
                                                               size: 18),
-                                                          const SizedBox(
+                                                          SizedBox(
                                                               height: 4),
                                                           Text("$distance KM",
-                                                              style: const TextStyle(
+                                                              style: TextStyle(
                                                                   color: Colors
                                                                       .white,
                                                                   fontWeight:
@@ -995,9 +1000,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                                           .w900,
                                                                   fontSize:
                                                                       13)),
-                                                          const SizedBox(
+                                                          SizedBox(
                                                               height: 2),
-                                                          const Text("Mesafe",
+                                                          Text("Mesafe",
                                                               style: TextStyle(
                                                                   color:
                                                                       textGray,
@@ -1009,38 +1014,38 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                       ),
                                                     ),
                                                   ),
-                                                  const SizedBox(width: 8),
+                                                  SizedBox(width: 8),
                                                   Expanded(
                                                     child: Container(
-                                                      padding: const EdgeInsets
+                                                      padding: EdgeInsets
                                                           .symmetric(
                                                           vertical: 10,
                                                           horizontal: 8),
                                                       decoration: BoxDecoration(
-                                                        color: Colors.white
+                                                        color: textColor
                                                             .withValues(
                                                                 alpha: 0.03),
                                                         borderRadius:
                                                             BorderRadius
                                                                 .circular(14),
                                                         border: Border.all(
-                                                            color: Colors.white
+                                                            color: textColor
                                                                 .withValues(
                                                                     alpha:
                                                                         0.06)),
                                                       ),
                                                       child: Column(
                                                         children: [
-                                                          const Icon(
+                                                          Icon(
                                                               Icons
                                                                   .timer_outlined,
                                                               color: neonGreen,
                                                               size: 18),
-                                                          const SizedBox(
+                                                          SizedBox(
                                                               height: 4),
                                                           Text(
                                                               "~$autoTimeStr Dk",
-                                                              style: const TextStyle(
+                                                              style: TextStyle(
                                                                   color: Colors
                                                                       .white,
                                                                   fontWeight:
@@ -1048,9 +1053,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                                           .w900,
                                                                   fontSize:
                                                                       13)),
-                                                          const SizedBox(
+                                                          SizedBox(
                                                               height: 2),
-                                                          const Text(
+                                                          Text(
                                                               "Tahmini Varış",
                                                               style: TextStyle(
                                                                   color:
@@ -1063,27 +1068,27 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                       ),
                                                     ),
                                                   ),
-                                                  const SizedBox(width: 8),
+                                                  SizedBox(width: 8),
                                                   Expanded(
                                                     child: Container(
-                                                      padding: const EdgeInsets
+                                                      padding: EdgeInsets
                                                           .symmetric(
                                                           vertical: 10,
                                                           horizontal: 8),
                                                       decoration: BoxDecoration(
-                                                        color: Colors.white
+                                                        color: textColor
                                                             .withValues(
                                                                 alpha: 0.03),
                                                         borderRadius:
                                                             BorderRadius
                                                                 .circular(14),
                                                         border: Border.all(
-                                                            color: Colors.white
+                                                            color: textColor
                                                                 .withValues(
                                                                     alpha:
                                                                         0.06)),
                                                       ),
-                                                      child: const Column(
+                                                      child: Column(
                                                         children: [
                                                           Icon(
                                                               Icons
@@ -1115,10 +1120,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                   ),
                                                 ],
                                               ),
-                                              const SizedBox(height: 14),
+                                              SizedBox(height: 14),
                                               Container(
                                                 padding:
-                                                    const EdgeInsets.symmetric(
+                                                    EdgeInsets.symmetric(
                                                         horizontal: 12,
                                                         vertical: 8),
                                                 decoration: BoxDecoration(
@@ -1131,7 +1136,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                           neonGreen.withValues(
                                                               alpha: 0.2)),
                                                 ),
-                                                child: const Row(
+                                                child: Row(
                                                   mainAxisAlignment:
                                                       MainAxisAlignment.center,
                                                   children: [
@@ -1160,9 +1165,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                         )
                                       : ListView.builder(
                                           controller: scrollController,
-                                          padding: const EdgeInsets.all(12),
+                                          padding: EdgeInsets.all(12),
                                           physics:
-                                              const BouncingScrollPhysics(),
+                                              BouncingScrollPhysics(),
                                           shrinkWrap: true,
                                           itemCount: bidHistory.length,
                                           itemBuilder: (context, index) {
@@ -1174,29 +1179,29 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                   ? Alignment.centerRight
                                                   : Alignment.centerLeft,
                                               child: Container(
-                                                margin: const EdgeInsets.only(
+                                                margin: EdgeInsets.only(
                                                     bottom: 10),
                                                 constraints: BoxConstraints(
                                                     maxWidth:
                                                         dialogWidth * 0.78),
                                                 padding:
-                                                    const EdgeInsets.symmetric(
+                                                    EdgeInsets.symmetric(
                                                         horizontal: 14,
                                                         vertical: 10),
                                                 decoration: BoxDecoration(
                                                     color: isMine
                                                         ? neonGreen.withValues(
                                                             alpha: 0.12)
-                                                        : Colors.white
+                                                        : textColor
                                                             .withValues(
                                                                 alpha: 0.06),
                                                     borderRadius:
                                                         BorderRadius.only(
                                                       topLeft:
-                                                          const Radius.circular(
+                                                          Radius.circular(
                                                               18),
                                                       topRight:
-                                                          const Radius.circular(
+                                                          Radius.circular(
                                                               18),
                                                       bottomLeft:
                                                           Radius.circular(
@@ -1210,7 +1215,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                             ? neonGreen
                                                                 .withValues(
                                                                     alpha: 0.35)
-                                                            : Colors.white12,
+                                                            : textColor.withValues(alpha: .12),
                                                         width: 1.2)),
                                                 child: Column(
                                                   crossAxisAlignment: isMine
@@ -1233,7 +1238,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                                 ? neonGreen
                                                                 : Colors
                                                                     .white70),
-                                                        const SizedBox(
+                                                        SizedBox(
                                                             width: 4),
                                                         Text(
                                                             isMine
@@ -1250,25 +1255,25 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                                         .w800)),
                                                       ],
                                                     ),
-                                                    const SizedBox(height: 6),
+                                                    SizedBox(height: 6),
                                                     Row(
                                                       mainAxisSize:
                                                           MainAxisSize.min,
                                                       children: [
                                                         Text(
                                                             "${bid['price']} ₺",
-                                                            style: const TextStyle(
+                                                            style: TextStyle(
                                                                 color: Colors
                                                                     .white,
                                                                 fontSize: 18,
                                                                 fontWeight:
                                                                     FontWeight
                                                                         .w900)),
-                                                        const SizedBox(
+                                                        SizedBox(
                                                             width: 8),
                                                         Text(
                                                             "(${bid['time']} Dk)",
-                                                            style: const TextStyle(
+                                                            style: TextStyle(
                                                                 color: textGray,
                                                                 fontSize: 12,
                                                                 fontWeight:
@@ -1278,7 +1283,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                     ),
                                                     if (bid['status'] !=
                                                         null) ...[
-                                                      const SizedBox(height: 6),
+                                                      SizedBox(height: 6),
                                                       Text(bid['status'],
                                                           style: TextStyle(
                                                               color: isMine
@@ -1313,7 +1318,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                     color: panelBlack,
                                     border: Border(
                                         top: BorderSide(
-                                            color: Colors.white
+                                            color: textColor
                                                 .withValues(alpha: 0.06),
                                             width: 1.2))),
                                 child: Column(
@@ -1326,7 +1331,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                       Container(
                                           width: double.infinity,
                                           margin:
-                                              const EdgeInsets.only(bottom: 12),
+                                              EdgeInsets.only(bottom: 12),
                                           height: 50,
                                           decoration: BoxDecoration(
                                               borderRadius:
@@ -1337,7 +1342,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                     color: neonGreen.withValues(
                                                         alpha: 0.35),
                                                     blurRadius: 16,
-                                                    offset: const Offset(0, 4))
+                                                    offset: Offset(0, 4))
                                               ]),
                                           child: ElevatedButton(
                                             onPressed: isSubmitting
@@ -1424,7 +1429,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                         BorderRadius.circular(
                                                             18))),
                                             child: isSubmitting
-                                                ? const SizedBox(
+                                                ? SizedBox(
                                                     width: 22,
                                                     height: 22,
                                                     child:
@@ -1436,12 +1441,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                         MainAxisAlignment
                                                             .center,
                                                     children: [
-                                                      const Icon(
+                                                      Icon(
                                                           Icons
                                                               .handshake_rounded,
                                                           color: pureBlack,
                                                           size: 20),
-                                                      const SizedBox(width: 8),
+                                                      SizedBox(width: 8),
                                                       Text(
                                                           "Teklifi Kabul Et (${bidHistory.last['price']} ₺)",
                                                           style: TextStyle(
@@ -1472,13 +1477,13 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                               borderRadius:
                                                   BorderRadius.circular(16),
                                               border: Border.all(
-                                                  color: Colors.white
+                                                  color: textColor
                                                       .withValues(alpha: 0.12),
                                                   width: 1.2),
                                             ),
                                             child: Row(
                                               children: [
-                                                const Padding(
+                                                Padding(
                                                   padding: EdgeInsets.symmetric(
                                                       horizontal: 12),
                                                   child: Icon(
@@ -1495,8 +1500,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                       FilteringTextInputFormatter
                                                           .digitsOnly
                                                     ],
-                                                    style: const TextStyle(
-                                                        color: Colors.white,
+                                                    style: TextStyle(
+                                                        color: textColor,
                                                         fontWeight:
                                                             FontWeight.w900,
                                                         fontSize: 17),
@@ -1504,7 +1509,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                       hintText:
                                                           "Teklif Fiyatı (₺)",
                                                       hintStyle: TextStyle(
-                                                          color: Colors.white
+                                                          color: textColor
                                                               .withValues(
                                                                   alpha: 0.35),
                                                           fontSize: 13.5,
@@ -1513,7 +1518,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                       border: InputBorder.none,
                                                       isDense: true,
                                                       contentPadding:
-                                                          const EdgeInsets
+                                                          EdgeInsets
                                                               .symmetric(
                                                               vertical: 14),
                                                     ),
@@ -1525,7 +1530,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                             ),
                                           ),
                                         ),
-                                        const SizedBox(width: 10),
+                                        SizedBox(width: 10),
                                         Expanded(
                                           flex: 2,
                                           child: Container(
@@ -1544,18 +1549,18 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                               mainAxisAlignment:
                                                   MainAxisAlignment.center,
                                               children: [
-                                                const Text("Tahmini Süre",
+                                                Text("Tahmini Süre",
                                                     style: TextStyle(
                                                         color: textGray,
                                                         fontSize: 10,
                                                         fontWeight:
                                                             FontWeight.w700)),
-                                                const SizedBox(height: 2),
+                                                SizedBox(height: 2),
                                                 FittedBox(
                                                     fit: BoxFit.scaleDown,
                                                     child: Text(
                                                         "$autoTimeStr Dk",
-                                                        style: const TextStyle(
+                                                        style: TextStyle(
                                                             color: neonGreen,
                                                             fontWeight:
                                                                 FontWeight.w900,
@@ -1567,11 +1572,11 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                       ],
                                     ),
 
-                                    const SizedBox(height: 10),
+                                    SizedBox(height: 10),
                                     // HIZLI FİYAT BUTONLARI (DİNAMİK SEÇİM DURUMLU)
                                     SingleChildScrollView(
                                       scrollDirection: Axis.horizontal,
-                                      physics: const BouncingScrollPhysics(),
+                                      physics: BouncingScrollPhysics(),
                                       child: Row(
                                         children: [
                                           500,
@@ -1586,7 +1591,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                   quickVal.toString();
                                           return Padding(
                                             padding:
-                                                const EdgeInsets.only(right: 8),
+                                                EdgeInsets.only(right: 8),
                                             child: InkWell(
                                               onTap: () {
                                                 HapticFeedback.selectionClick();
@@ -1597,23 +1602,23 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                               borderRadius:
                                                   BorderRadius.circular(12),
                                               child: AnimatedContainer(
-                                                duration: const Duration(
+                                                duration: Duration(
                                                     milliseconds: 200),
                                                 padding:
-                                                    const EdgeInsets.symmetric(
+                                                    EdgeInsets.symmetric(
                                                         horizontal: 14,
                                                         vertical: 8),
                                                 decoration: BoxDecoration(
                                                   color: isChipSelected
                                                       ? neonGreen
-                                                      : Colors.white.withValues(
+                                                      : textColor.withValues(
                                                           alpha: 0.05),
                                                   borderRadius:
                                                       BorderRadius.circular(12),
                                                   border: Border.all(
                                                       color: isChipSelected
                                                           ? neonGreen
-                                                          : Colors.white
+                                                          : textColor
                                                               .withValues(
                                                                   alpha: 0.1),
                                                       width: 1.2),
@@ -1626,7 +1631,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                                           0.3),
                                                               blurRadius: 10,
                                                               offset:
-                                                                  const Offset(
+                                                                  Offset(
                                                                       0, 2))
                                                         ]
                                                       : [],
@@ -1635,7 +1640,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                     style: TextStyle(
                                                         color: isChipSelected
                                                             ? pureBlack
-                                                            : Colors.white,
+                                                            : textColor,
                                                         fontWeight:
                                                             isChipSelected
                                                                 ? FontWeight
@@ -1650,7 +1655,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                       ),
                                     ),
 
-                                    const SizedBox(height: 14),
+                                    SizedBox(height: 14),
                                     // VAZGEÇ VE TEKLİFİ İLET BUTONLARI
                                     Row(
                                       children: [
@@ -1723,14 +1728,14 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                 padding: EdgeInsets.zero,
                                               ),
                                               child: isSubmitting
-                                                  ? const SizedBox(
+                                                  ? SizedBox(
                                                       width: 20,
                                                       height: 20,
                                                       child:
                                                           CircularProgressIndicator(
                                                               color: alertRed,
                                                               strokeWidth: 2.5))
-                                                  : const Row(
+                                                  : Row(
                                                       mainAxisAlignment:
                                                           MainAxisAlignment
                                                               .center,
@@ -1752,7 +1757,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                             ),
                                           ),
                                         ),
-                                        const SizedBox(width: 10),
+                                        SizedBox(width: 10),
                                         Expanded(
                                           flex: 2,
                                           child: Container(
@@ -1768,7 +1773,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                               alpha: 0.35),
                                                       blurRadius: 16,
                                                       offset:
-                                                          const Offset(0, 4))
+                                                          Offset(0, 4))
                                                 ]),
                                             child: ElevatedButton(
                                               onPressed: isSubmitting
@@ -1984,14 +1989,14 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                           BorderRadius.circular(
                                                               16))),
                                               child: isSubmitting
-                                                  ? const SizedBox(
+                                                  ? SizedBox(
                                                       width: 22,
                                                       height: 22,
                                                       child:
                                                           CircularProgressIndicator(
                                                               color: pureBlack,
                                                               strokeWidth: 3))
-                                                  : const Row(
+                                                  : Row(
                                                       mainAxisAlignment:
                                                           MainAxisAlignment
                                                               .center,
@@ -2032,7 +2037,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
       dialogPollingTimer?.cancel();
       countdownTimer?.cancel();
       if (mounted) setState(() => _isModalOpen = false);
-      Future.delayed(const Duration(milliseconds: 500), () {
+      Future.delayed(Duration(milliseconds: 500), () {
         priceController.dispose();
         scrollController.dispose();
       });
@@ -2109,7 +2114,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
       await pusher.connect();
     } catch (e) {
       debugPrint("Pusher error: $e");
-      Future.delayed(const Duration(seconds: 3), () {
+      Future.delayed(Duration(seconds: 3), () {
         if (mounted && isOnline) {
           _isPusherInitialized = false;
           _initWebSocket();
@@ -2215,7 +2220,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
       final response = await _httpClient
           .get(Uri.parse(
               "$baseUrl?action=get_provider_active_bids&provider_id=${widget.providerId}&_t=$ts"))
-          .timeout(const Duration(seconds: 5));
+          .timeout(Duration(seconds: 5));
 
       if (response.statusCode == 200 && mounted) {
         final data = json.decode(response.body);
@@ -2305,15 +2310,15 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
 
   void _initNotifications() async {
     if (kIsWeb || flutterLocalNotificationsPlugin == null) return;
-    const AndroidInitializationSettings initializationSettingsAndroid =
+    AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
-    const DarwinInitializationSettings initializationSettingsIOS =
+    DarwinInitializationSettings initializationSettingsIOS =
         DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
-    const InitializationSettings initializationSettings =
+    InitializationSettings initializationSettings =
         InitializationSettings(
             android: initializationSettingsAndroid,
             iOS: initializationSettingsIOS);
@@ -2322,7 +2327,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
 
   Future<void> _showLocalNotification(String title, String body) async {
     if (kIsWeb || flutterLocalNotificationsPlugin == null) return;
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+    AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
       'new_job_channel',
       'Yeni İş Bildirimleri',
@@ -2334,13 +2339,13 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
       enableVibration: true,
       color: alertRed,
     );
-    const DarwinNotificationDetails iOSPlatformChannelSpecifics =
+    DarwinNotificationDetails iOSPlatformChannelSpecifics =
         DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
     );
-    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+    NotificationDetails platformChannelSpecifics = NotificationDetails(
         android: androidPlatformChannelSpecifics,
         iOS: iOSPlatformChannelSpecifics);
 
@@ -2537,7 +2542,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
 
       Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 15),
+        timeLimit: Duration(seconds: 15),
       ).then((fastPos) {
         if (mounted) {
           _updatePositionInternal(fastPos, isFirst: currentPosition == null);
@@ -2554,7 +2559,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
 
       late LocationSettings locationSettings;
       if (kIsWeb) {
-        locationSettings = const LocationSettings(
+        locationSettings = LocationSettings(
           accuracy: LocationAccuracy.medium,
           distanceFilter: 2,
         );
@@ -2563,8 +2568,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
           accuracy: LocationAccuracy.high,
           distanceFilter: 2,
           forceLocationManager: false,
-          intervalDuration: const Duration(seconds: 2),
-          foregroundNotificationConfig: const ForegroundNotificationConfig(
+          intervalDuration: Duration(seconds: 2),
+          foregroundNotificationConfig: ForegroundNotificationConfig(
             notificationText: "Uygulama arka planda çağrıları dinliyor.",
             notificationTitle: "Oto TAG Aktif",
             enableWakeLock: true,
@@ -2580,7 +2585,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
           showBackgroundLocationIndicator: true,
         );
       } else {
-        locationSettings = const LocationSettings(
+        locationSettings = LocationSettings(
           accuracy: LocationAccuracy.high,
           distanceFilter: 2,
         );
@@ -2699,7 +2704,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
     if (!mounted) return;
     final size = MediaQuery.sizeOf(context);
     final Color activeColor =
-        isNewJob ? const Color(0xFFF59E0B) : (isError ? alertRed : neonGreen);
+        isNewJob ? Color(0xFFF59E0B) : (isError ? alertRed : neonGreen);
 
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -2707,7 +2712,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
         content: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: activeColor.withValues(alpha: 0.18),
                 shape: BoxShape.circle,
@@ -2724,12 +2729,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                 size: 20,
               ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(
               child: Text(
                 message,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: textColor,
                   fontWeight: FontWeight.w700,
                   fontSize: 13.5,
                   letterSpacing: 0.2,
@@ -2753,7 +2758,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
               BorderSide(color: activeColor.withValues(alpha: 0.4), width: 1.2),
         ),
         elevation: 20,
-        duration: const Duration(seconds: 3),
+        duration: Duration(seconds: 3),
       ),
     );
     if (mounted) {
@@ -2768,8 +2773,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
     HapticFeedback.heavyImpact();
     SystemSound.play(SystemSoundType.alert);
     Future.delayed(
-        const Duration(milliseconds: 300), () => HapticFeedback.heavyImpact());
-    Future.delayed(const Duration(milliseconds: 600),
+        Duration(milliseconds: 300), () => HapticFeedback.heavyImpact());
+    Future.delayed(Duration(milliseconds: 600),
         () => SystemSound.play(SystemSoundType.alert));
   }
 
@@ -2994,7 +2999,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
       feedbackTitle = "Gözlem ve Başlangıç Süreci";
       feedbackMessage =
           "İlk 45 gün koruma altındasınız. Ceza veya iş kotası uygulanmaz; tüm çağrılar ekranınıza öncelikle düşer.";
-      statusColor = const Color(0xFF00E5FF);
+      statusColor = Color(0xFF00E5FF);
       statusIcon = Icons.shield_rounded;
       tierBadgeText = "YENİ ÜYE KORUMASI";
       nextTierNote = "Kalan Koruma: $graceDaysLeft Gün";
@@ -3010,7 +3015,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
       feedbackTitle = "Standart Usta Seviyesi";
       feedbackMessage =
           "Performansınız dengeli. Puanınızı 4.5 üzerine taşıyarak VIP önceliğe yükselebilirsiniz.";
-      statusColor = const Color(0xFF38BDF8);
+      statusColor = Color(0xFF38BDF8);
       statusIcon = Icons.thumb_up_rounded;
       tierBadgeText = "STANDART DAĞITIM";
       final diff = (4.5 - providerRating).clamp(0.0, 5.0);
@@ -3019,7 +3024,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
       feedbackTitle = "Gecikmeli Dağıtım";
       feedbackMessage =
           "Puanınız 3.5 altına indi. Yeni işler 15 sn gecikmeli iletilir ve günlük kota 5 iştir.";
-      statusColor = const Color(0xFFF59E0B);
+      statusColor = Color(0xFFF59E0B);
       statusIcon = Icons.warning_amber_rounded;
       tierBadgeText = "KOTA: GÜNDE 5 İŞ";
       final diff = (3.5 - providerRating).clamp(0.0, 5.0);
@@ -3101,15 +3106,15 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                   decoration: BoxDecoration(
                     color: panelBlack.withValues(alpha: 0.94),
                     borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(32)),
+                        BorderRadius.vertical(top: Radius.circular(32)),
                     border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.08),
+                        color: textColor.withValues(alpha: 0.08),
                         width: 1.2),
                     boxShadow: [
                       BoxShadow(
                           color: pureBlack.withValues(alpha: 0.9),
                           blurRadius: 40,
-                          offset: const Offset(0, -10)),
+                          offset: Offset(0, -10)),
                       BoxShadow(
                           color: statusColor.withValues(alpha: 0.08),
                           blurRadius: 30,
@@ -3124,12 +3129,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const SizedBox(width: 36),
+                            SizedBox(width: 36),
                             Container(
                               width: 36,
                               height: 4,
                               decoration: BoxDecoration(
-                                color: Colors.white24,
+                                color: textColor.withValues(alpha: .24),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                             ),
@@ -3140,21 +3145,21 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                               },
                               borderRadius: BorderRadius.circular(20),
                               child: Container(
-                                padding: const EdgeInsets.all(6),
+                                padding: EdgeInsets.all(6),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.06),
+                                  color: textColor.withValues(alpha: 0.06),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.close_rounded,
-                                    color: Colors.white60, size: 18),
+                                child: Icon(Icons.close_rounded,
+                                    color: textColor.withValues(alpha: .60), size: 18),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 10),
+                        SizedBox(height: 10),
                         Flexible(
                           child: SingleChildScrollView(
-                            physics: const BouncingScrollPhysics(),
+                            physics: BouncingScrollPhysics(),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
@@ -3182,7 +3187,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                         CrossAxisAlignment.start,
                                     children: [
                                       Container(
-                                        padding: const EdgeInsets.all(10),
+                                        padding: EdgeInsets.all(10),
                                         decoration: BoxDecoration(
                                           color: statusColor.withValues(
                                               alpha: 0.15),
@@ -3195,7 +3200,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                             color: statusColor,
                                             size: isSmallScreen ? 20 : 22),
                                       ),
-                                      const SizedBox(width: 12),
+                                      SizedBox(width: 12),
                                       Expanded(
                                         child: Column(
                                           crossAxisAlignment:
@@ -3204,7 +3209,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                             Row(
                                               children: [
                                                 Container(
-                                                  padding: const EdgeInsets
+                                                  padding: EdgeInsets
                                                       .symmetric(
                                                       horizontal: 8,
                                                       vertical: 3),
@@ -3228,18 +3233,18 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                 ),
                                               ],
                                             ),
-                                            const SizedBox(height: 6),
+                                            SizedBox(height: 6),
                                             Text(
                                               feedbackTitle,
                                               style: TextStyle(
                                                 fontSize:
                                                     isSmallScreen ? 15 : 17,
                                                 fontWeight: FontWeight.w900,
-                                                color: Colors.white,
+                                                color: textColor,
                                                 letterSpacing: -0.3,
                                               ),
                                             ),
-                                            const SizedBox(height: 4),
+                                            SizedBox(height: 4),
                                             Text(
                                               feedbackMessage,
                                               style: TextStyle(
@@ -3256,16 +3261,16 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                     ],
                                   ),
                                 ),
-                                const SizedBox(height: 12),
+                                SizedBox(height: 12),
 
                                 Container(
-                                  padding: const EdgeInsets.symmetric(
+                                  padding: EdgeInsets.symmetric(
                                       horizontal: 14, vertical: 10),
                                   decoration: BoxDecoration(
                                     color: pureBlack,
                                     borderRadius: BorderRadius.circular(18),
                                     border: Border.all(
-                                        color: Colors.white
+                                        color: textColor
                                             .withValues(alpha: 0.06)),
                                   ),
                                   child: Row(
@@ -3273,13 +3278,13 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                       Expanded(
                                         child: Column(
                                           children: [
-                                            const Text("Günlük Kota",
+                                            Text("Günlük Kota",
                                                 style: TextStyle(
                                                     color: textGray,
                                                     fontSize: 10,
                                                     fontWeight:
                                                         FontWeight.w600)),
-                                            const SizedBox(height: 3),
+                                            SizedBox(height: 3),
                                             FittedBox(
                                               fit: BoxFit.scaleDown,
                                               child: Text(
@@ -3291,7 +3296,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                           dailyJobsCount >=
                                                               maxDailyJobs)
                                                       ? alertRed
-                                                      : Colors.white,
+                                                      : textColor,
                                                   fontWeight: FontWeight.w900,
                                                   fontSize: 13,
                                                 ),
@@ -3303,17 +3308,17 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                       Container(
                                           width: 1,
                                           height: 24,
-                                          color: Colors.white12),
+                                          color: textColor.withValues(alpha: .12)),
                                       Expanded(
                                         child: Column(
                                           children: [
-                                            const Text("İletim Hızı",
+                                            Text("İletim Hızı",
                                                 style: TextStyle(
                                                     color: textGray,
                                                     fontSize: 10,
                                                     fontWeight:
                                                         FontWeight.w600)),
-                                            const SizedBox(height: 3),
+                                            SizedBox(height: 3),
                                             FittedBox(
                                               fit: BoxFit.scaleDown,
                                               child: Text(
@@ -3335,22 +3340,22 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                       Container(
                                           width: 1,
                                           height: 24,
-                                          color: Colors.white12),
+                                          color: textColor.withValues(alpha: .12)),
                                       Expanded(
                                         child: Column(
                                           children: [
-                                            const Text("Dağıtım Sırası",
+                                            Text("Dağıtım Sırası",
                                                 style: TextStyle(
                                                     color: textGray,
                                                     fontSize: 10,
                                                     fontWeight:
                                                         FontWeight.w600)),
-                                            const SizedBox(height: 3),
+                                            SizedBox(height: 3),
                                             FittedBox(
                                               fit: BoxFit.scaleDown,
                                               child: Text(
                                                 algorithmTier.toUpperCase(),
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                   color: Color(0xFFF59E0B),
                                                   fontWeight: FontWeight.w900,
                                                   fontSize: 13,
@@ -3363,16 +3368,16 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                     ],
                                   ),
                                 ),
-                                const SizedBox(height: 12),
+                                SizedBox(height: 12),
 
                                 Container(
-                                  padding: const EdgeInsets.symmetric(
+                                  padding: EdgeInsets.symmetric(
                                       horizontal: 16, vertical: 12),
                                   decoration: BoxDecoration(
                                     color: pureBlack,
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
-                                        color: Colors.white
+                                        color: textColor
                                             .withValues(alpha: 0.06)),
                                   ),
                                   child: Column(
@@ -3385,13 +3390,13 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              const Text("Memnuniyet Puanı",
+                                              Text("Memnuniyet Puanı",
                                                   style: TextStyle(
                                                       color: textGray,
                                                       fontWeight:
                                                           FontWeight.w700,
                                                       fontSize: 11)),
-                                              const SizedBox(height: 2),
+                                              SizedBox(height: 2),
                                               Text(nextTierNote,
                                                   style: TextStyle(
                                                       color: statusColor,
@@ -3403,15 +3408,15 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                           Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              const Icon(Icons.star_rounded,
+                                              Icon(Icons.star_rounded,
                                                   color: Color(0xFFF59E0B),
                                                   size: 20),
-                                              const SizedBox(width: 4),
+                                              SizedBox(width: 4),
                                               Text(
                                                 providerRating
                                                     .toStringAsFixed(1),
-                                                style: const TextStyle(
-                                                    color: Colors.white,
+                                                style: TextStyle(
+                                                    color: textColor,
                                                     fontWeight: FontWeight.w900,
                                                     fontSize: 17),
                                               ),
@@ -3419,21 +3424,21 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                           ),
                                         ],
                                       ),
-                                      const SizedBox(height: 10),
+                                      SizedBox(height: 10),
                                       ClipRRect(
                                         borderRadius: BorderRadius.circular(6),
                                         child: LinearProgressIndicator(
                                           value: (providerRating / 5.0)
                                               .clamp(0.0, 1.0),
                                           minHeight: 6,
-                                          backgroundColor: Colors.white
+                                          backgroundColor: textColor
                                               .withValues(alpha: 0.06),
                                           valueColor:
                                               AlwaysStoppedAnimation<Color>(
                                                   statusColor),
                                         ),
                                       ),
-                                      const SizedBox(height: 6),
+                                      SizedBox(height: 6),
                                       Row(
                                         mainAxisAlignment:
                                             MainAxisAlignment.spaceBetween,
@@ -3446,7 +3451,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                   fontWeight: FontWeight.w700)),
                                           Text("3.0 Kısıt",
                                               style: TextStyle(
-                                                  color: const Color(0xFFF59E0B)
+                                                  color: Color(0xFFF59E0B)
                                                       .withValues(alpha: 0.7),
                                                   fontSize: 9,
                                                   fontWeight: FontWeight.w700)),
@@ -3456,7 +3461,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                       alpha: 0.7),
                                                   fontSize: 9,
                                                   fontWeight: FontWeight.w700)),
-                                          const Text("5.0 Zirve",
+                                          Text("5.0 Zirve",
                                               style: TextStyle(
                                                   color: neonGreen,
                                                   fontSize: 9,
@@ -3466,16 +3471,16 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                     ],
                                   ),
                                 ),
-                                const SizedBox(height: 12),
+                                SizedBox(height: 12),
 
                                 // Periyot Seçim Filtresi (Haftalık / Aylık / Yıllık)
                                 Container(
-                                  padding: const EdgeInsets.all(4),
+                                  padding: EdgeInsets.all(4),
                                   decoration: BoxDecoration(
                                     color: pureBlack,
                                     borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
-                                        color: Colors.white
+                                        color: textColor
                                             .withValues(alpha: 0.08)),
                                   ),
                                   child: Row(
@@ -3488,9 +3493,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                 selectedPeriod = 'weekly');
                                           },
                                           child: AnimatedContainer(
-                                            duration: const Duration(
+                                            duration: Duration(
                                                 milliseconds: 200),
-                                            padding: const EdgeInsets.symmetric(
+                                            padding: EdgeInsets.symmetric(
                                                 vertical: 8),
                                             decoration: BoxDecoration(
                                               color: selectedPeriod == 'weekly'
@@ -3533,9 +3538,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                 selectedPeriod = 'monthly');
                                           },
                                           child: AnimatedContainer(
-                                            duration: const Duration(
+                                            duration: Duration(
                                                 milliseconds: 200),
-                                            padding: const EdgeInsets.symmetric(
+                                            padding: EdgeInsets.symmetric(
                                                 vertical: 8),
                                             decoration: BoxDecoration(
                                               color: selectedPeriod == 'monthly'
@@ -3578,9 +3583,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                 selectedPeriod = 'yearly');
                                           },
                                           child: AnimatedContainer(
-                                            duration: const Duration(
+                                            duration: Duration(
                                                 milliseconds: 200),
-                                            padding: const EdgeInsets.symmetric(
+                                            padding: EdgeInsets.symmetric(
                                                 vertical: 8),
                                             decoration: BoxDecoration(
                                               color: selectedPeriod == 'yearly'
@@ -3618,7 +3623,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                     ],
                                   ),
                                 ),
-                                const SizedBox(height: 10),
+                                SizedBox(height: 10),
 
                                 Row(
                                   children: [
@@ -3627,11 +3632,11 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                         "Değerlendirme",
                                         reviewsCount.toDouble(),
                                         Icons.forum_rounded,
-                                        const Color(0xFF00E5FF),
+                                        Color(0xFF00E5FF),
                                         subText: "Yorumlar",
                                       ),
                                     ),
-                                    const SizedBox(width: 10),
+                                    SizedBox(width: 10),
                                     Expanded(
                                       child: _buildPerformanceStatItem(
                                         "Tamamlanan",
@@ -3643,7 +3648,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 10),
+                                SizedBox(height: 10),
                                 Row(
                                   children: [
                                     Expanded(
@@ -3651,34 +3656,34 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                         "Memnuniyet",
                                         satisfactionPercent,
                                         Icons.verified_user_rounded,
-                                        const Color(0xFFF59E0B),
+                                        Color(0xFFF59E0B),
                                         isPercentage: true,
                                         subText: "Müşteri Oranı",
                                       ),
                                     ),
-                                    const SizedBox(width: 10),
+                                    SizedBox(width: 10),
                                     Expanded(
                                       child: _buildPerformanceStatItem(
                                         activeRevenueTitle,
                                         activeRevenue,
                                         Icons.account_balance_wallet_rounded,
-                                        const Color(0xFFB388FF),
+                                        Color(0xFFB388FF),
                                         isCurrency: true,
                                         subText: "Kazanç",
                                       ),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 14),
+                                SizedBox(height: 14),
 
                                 Container(
-                                  padding: const EdgeInsets.symmetric(
+                                  padding: EdgeInsets.symmetric(
                                       horizontal: 14, vertical: 12),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.02),
+                                    color: textColor.withValues(alpha: 0.02),
                                     borderRadius: BorderRadius.circular(18),
                                     border: Border.all(
-                                        color: Colors.white
+                                        color: textColor
                                             .withValues(alpha: 0.05)),
                                   ),
                                   child: Column(
@@ -3687,28 +3692,28 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                     children: [
                                       Row(
                                         children: [
-                                          const Icon(
+                                          Icon(
                                               Icons.tips_and_updates_rounded,
                                               color: Color(0xFFF59E0B),
                                               size: 14),
-                                          const SizedBox(width: 6),
+                                          SizedBox(width: 6),
                                           Text(
                                             "VIP Usta İpuçları",
                                             style: TextStyle(
-                                                color: Colors.white70,
+                                                color: textColor.withValues(alpha: .70),
                                                 fontWeight: FontWeight.w800,
                                                 fontSize:
                                                     isSmallScreen ? 11 : 12),
                                           ),
                                         ],
                                       ),
-                                      const SizedBox(height: 8),
+                                      SizedBox(height: 8),
                                       _buildTipRow(Icons.timer_outlined,
                                           "İlk 30 saniye içinde teklif iletin."),
-                                      const SizedBox(height: 4),
+                                      SizedBox(height: 4),
                                       _buildTipRow(Icons.star_border_rounded,
                                           "İş sonu müşteriden 5 yıldız rica edin."),
-                                      const SizedBox(height: 4),
+                                      SizedBox(height: 4),
                                       _buildTipRow(Icons.cancel_outlined,
                                           "Onaylanan çağrıyı iptal etmemeye özen gösterin."),
                                     ],
@@ -3718,15 +3723,15 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                             ),
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         Container(
                           width: double.infinity,
                           height: 46,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(16),
-                            color: Colors.white.withValues(alpha: 0.05),
+                            color: textColor.withValues(alpha: 0.05),
                             border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.1)),
+                                color: textColor.withValues(alpha: 0.1)),
                           ),
                           child: TextButton(
                             onPressed: () {
@@ -3737,10 +3742,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16)),
                             ),
-                            child: const Text(
+                            child: Text(
                               "Kapat",
                               style: TextStyle(
-                                  color: Colors.white70,
+                                  color: textColor.withValues(alpha: .70),
                                   fontWeight: FontWeight.w800,
                                   fontSize: 14),
                             ),
@@ -3765,11 +3770,11 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(icon, color: textGray, size: 13),
-        const SizedBox(width: 6),
+        SizedBox(width: 6),
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(
+            style: TextStyle(
                 color: textGray,
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
@@ -3791,11 +3796,11 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
     String? subText,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+      padding: EdgeInsets.symmetric(vertical: 12, horizontal: 12),
       decoration: BoxDecoration(
         color: pureBlack,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3803,14 +3808,14 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(6),
+                padding: EdgeInsets.all(6),
                 decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.12),
                     shape: BoxShape.circle),
                 child: Icon(icon, color: color, size: 14),
               ),
               if (subText != null) ...[
-                const SizedBox(width: 6),
+                SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     subText,
@@ -3825,10 +3830,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
               ],
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           TweenAnimationBuilder<double>(
             tween: Tween<double>(begin: 0, end: endValue),
-            duration: const Duration(milliseconds: 1400),
+            duration: Duration(milliseconds: 1400),
             curve: Curves.easeOutQuart,
             builder: (context, value, child) {
               String displayVal;
@@ -3855,12 +3860,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
               );
             },
           ),
-          const SizedBox(height: 2),
+          SizedBox(height: 2),
           Text(
             title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 11, fontWeight: FontWeight.w700, color: textGray),
           ),
         ],
@@ -3891,7 +3896,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                         right: 24),
                     decoration: BoxDecoration(
                         color: panelBlack.withValues(alpha: 0.96),
-                        borderRadius: const BorderRadius.vertical(
+                        borderRadius: BorderRadius.vertical(
                             top: Radius.circular(32)),
                         border: Border.all(
                             color: neonGreen.withValues(alpha: 0.3),
@@ -3903,20 +3908,20 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                             width: 48,
                             height: 6,
                             decoration: BoxDecoration(
-                                color: Colors.white24,
+                                color: textColor.withValues(alpha: .24),
                                 borderRadius: BorderRadius.circular(10))),
-                        const SizedBox(height: 24),
+                        SizedBox(height: 24),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Row(
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.all(10),
+                                  padding: EdgeInsets.all(10),
                                   decoration: BoxDecoration(
                                     color: _isScheduleActive
                                         ? neonGreen.withValues(alpha: 0.15)
-                                        : Colors.white.withValues(alpha: 0.05),
+                                        : textColor.withValues(alpha: 0.05),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(Icons.schedule_rounded,
@@ -3925,21 +3930,21 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                           : textGray,
                                       size: 24),
                                 ),
-                                const SizedBox(width: 12),
+                                SizedBox(width: 12),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text("Mesai Planlayıcı",
+                                    Text("Mesai Planlayıcı",
                                         style: TextStyle(
-                                            color: Colors.white,
+                                            color: textColor,
                                             fontWeight: FontWeight.w900,
                                             fontSize: 18)),
-                                    const SizedBox(height: 4),
+                                    SizedBox(height: 4),
                                     Text(
                                       _isScheduleActive
                                           ? "Otomatik vardiya devrede"
                                           : "Belirli saatlerde radarı aç",
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                           color: textGray,
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600),
@@ -3953,7 +3958,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                               activeTrackColor:
                                   neonGreen.withValues(alpha: 0.5),
                               thumbColor:
-                                  const WidgetStatePropertyAll(neonGreen),
+                                  WidgetStatePropertyAll(neonGreen),
                               onChanged: (val) {
                                 HapticFeedback.selectionClick();
                                 setModalState(() => _isScheduleActive = val);
@@ -3967,7 +3972,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                           ],
                         ),
                         if (_isScheduleActive) ...[
-                          const SizedBox(height: 24),
+                          SizedBox(height: 24),
                           Row(
                             children: [
                               Expanded(
@@ -3987,7 +3992,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                   },
                                   borderRadius: BorderRadius.circular(18),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(
+                                    padding: EdgeInsets.symmetric(
                                         horizontal: 14, vertical: 16),
                                     decoration: BoxDecoration(
                                       color: pureBlack,
@@ -3999,21 +4004,21 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                     ),
                                     child: Column(
                                       children: [
-                                        const Icon(Icons.wb_sunny_rounded,
+                                        Icon(Icons.wb_sunny_rounded,
                                             color: neonGreen, size: 24),
-                                        const SizedBox(height: 8),
-                                        const Text("Başlangıç",
+                                        SizedBox(height: 8),
+                                        Text("Başlangıç",
                                             style: TextStyle(
                                                 color: textGray,
                                                 fontSize: 12,
                                                 fontWeight: FontWeight.w700)),
-                                        const SizedBox(height: 4),
+                                        SizedBox(height: 4),
                                         Text(
                                           _plannedStartTime != null
                                               ? _plannedStartTime!
                                                   .format(context)
                                               : "Seçiniz",
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                               color: neonGreen,
                                               fontWeight: FontWeight.w900,
                                               fontSize: 18),
@@ -4023,7 +4028,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 16),
+                              SizedBox(width: 16),
                               Expanded(
                                 child: InkWell(
                                   onTap: () async {
@@ -4040,7 +4045,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                   },
                                   borderRadius: BorderRadius.circular(18),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(
+                                    padding: EdgeInsets.symmetric(
                                         horizontal: 14, vertical: 16),
                                     decoration: BoxDecoration(
                                       color: pureBlack,
@@ -4052,20 +4057,20 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                     ),
                                     child: Column(
                                       children: [
-                                        const Icon(Icons.nightlight_round,
+                                        Icon(Icons.nightlight_round,
                                             color: alertRed, size: 24),
-                                        const SizedBox(height: 8),
-                                        const Text("Bitiş",
+                                        SizedBox(height: 8),
+                                        Text("Bitiş",
                                             style: TextStyle(
                                                 color: textGray,
                                                 fontSize: 12,
                                                 fontWeight: FontWeight.w700)),
-                                        const SizedBox(height: 4),
+                                        SizedBox(height: 4),
                                         Text(
                                           _plannedEndTime != null
                                               ? _plannedEndTime!.format(context)
                                               : "Seçiniz",
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                               color: alertRed,
                                               fontWeight: FontWeight.w900,
                                               fontSize: 18),
@@ -4078,18 +4083,18 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                             ],
                           ),
                         ],
-                        const SizedBox(height: 32),
+                        SizedBox(height: 32),
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
                             onPressed: () => Navigator.pop(context),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: neonGreen,
-                              padding: const EdgeInsets.symmetric(vertical: 18),
+                              padding: EdgeInsets.symmetric(vertical: 18),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(20)),
                             ),
-                            child: const Text("Kapat",
+                            child: Text("Kapat",
                                 style: TextStyle(
                                     color: pureBlack,
                                     fontSize: 16,
@@ -4135,36 +4140,36 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
         useSafeArea: true,
         isScrollControlled: true,
         backgroundColor: panelBlack,
-        shape: const RoundedRectangleBorder(
+        shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
         builder: (context) => SingleChildScrollView(
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const SizedBox(height: 16),
-              const Text('İş araçların',
+              SizedBox(height: 16),
+              Text('İş araçların',
                   style: TextStyle(
-                      color: Colors.white,
+                      color: textColor,
                       fontSize: 20,
                       fontWeight: FontWeight.w700)),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               ListTile(
-                  leading: const Icon(Icons.schedule_rounded, color: neonGreen),
-                  title: const Text('Mesai planı'),
-                  subtitle: const Text('Çalışma saatlerini düzenle'),
+                  leading: Icon(Icons.schedule_rounded, color: neonGreen),
+                  title: Text('Mesai planı'),
+                  subtitle: Text('Çalışma saatlerini düzenle'),
                   onTap: () => Navigator.pop(context, 3)),
               ListTile(
                   leading:
-                      const Icon(Icons.car_repair_rounded, color: neonGreen),
-                  title: const Text('Arıza tespit'),
-                  subtitle: const Text('Arıza kodları ve OBD bağlantısı'),
+                      Icon(Icons.car_repair_rounded, color: neonGreen),
+                  title: Text('Arıza tespit'),
+                  subtitle: Text('Arıza kodları ve OBD bağlantısı'),
                   onTap: () => Navigator.pop(context, 5)),
               ListTile(
-                  leading: const Icon(Icons.workspace_premium_outlined,
+                  leading: Icon(Icons.workspace_premium_outlined,
                       color: neonGreen),
-                  title: const Text('Üyelik ve ödeme'),
+                  title: Text('Üyelik ve ödeme'),
                   subtitle:
-                      const Text('Aylık planını ve satın alımlarını yönet'),
+                      Text('Aylık planını ve satın alımlarını yönet'),
                   onTap: () => Navigator.pop(context, 7)),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
             ])));
     if (!mounted) return;
     if (action == 3) _showSchedulePanel();
@@ -4172,7 +4177,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
       Navigator.push(
           context,
           MaterialPageRoute(
-              builder: (_) => const DiagnosticScreen(userType: 'provider')));
+              builder: (_) => DiagnosticScreen(userType: 'provider')));
     }
     if (action == 7) _showSubscriptionRequiredSheet();
   }
@@ -4185,19 +4190,19 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
       await AppSession.clear();
       if (!kIsWeb) {
         try {
-          await OneSignal.logout().timeout(const Duration(seconds: 5));
+          await OneSignal.logout().timeout(Duration(seconds: 5));
         } catch (_) {}
       }
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
+        MaterialPageRoute(builder: (_) => RoleSelectionScreen()),
         (_) => false,
       );
     } catch (_) {
       if (!mounted) return;
       setState(() => _isLoggingOut = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Oturum kapatılamadı. Tekrar deneyin.')),
+        SnackBar(content: Text('Oturum kapatılamadı. Tekrar deneyin.')),
       );
     }
   }
@@ -4216,8 +4221,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
 
   @override
   Widget build(BuildContext context) {
-    const Color bgColor = pureBlack;
-    const Color cardColor = panelBlack;
+    Color bgColor = pureBlack;
+    Color cardColor = panelBlack;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -4338,7 +4343,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
 
                                           if (_pageController.hasClients) {
                                             _pageController.animateToPage(i,
-                                                duration: const Duration(
+                                                duration: Duration(
                                                     milliseconds: 400),
                                                 curve: Curves.fastOutSlowIn);
                                           }
@@ -4402,7 +4407,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                   markers: {
                                     if (providerPos != null)
                                       gmaps.Marker(
-                                        markerId: const gmaps.MarkerId(
+                                        markerId: gmaps.MarkerId(
                                             'provider_current_location'),
                                         position: gmaps.LatLng(
                                             providerPos.latitude,
@@ -4412,9 +4417,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                 .BitmapDescriptor.hueGreen),
                                         rotation: _animatedHeading.value,
                                         flat: true,
-                                        anchor: const Offset(0.5, 0.5),
+                                        anchor: Offset(0.5, 0.5),
                                         zIndexInt: 10,
-                                        infoWindow: const gmaps.InfoWindow(
+                                        infoWindow: gmaps.InfoWindow(
                                           title: "Konumunuz (Aktif Usta)",
                                           snippet:
                                               "Çağrılar bu konuma göre taranıyor",
@@ -4432,7 +4437,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                             gmaps.BitmapDescriptor
                                                 .defaultMarkerWithHue(gmaps
                                                     .BitmapDescriptor.hueAzure),
-                                        anchor: const Offset(0.5, 0.92),
+                                        anchor: Offset(0.5, 0.92),
                                         zIndexInt: 20,
                                         onTap: () {
                                           HapticFeedback.selectionClick();
@@ -4468,7 +4473,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
 
                                           if (_pageController.hasClients) {
                                             _pageController.animateToPage(i,
-                                                duration: const Duration(
+                                                duration: Duration(
                                                     milliseconds: 400),
                                                 curve: Curves.fastOutSlowIn);
                                           }
@@ -4485,7 +4490,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                   circles: {
                                     if (providerPos != null)
                                       gmaps.Circle(
-                                        circleId: const gmaps.CircleId(
+                                        circleId: gmaps.CircleId(
                                             'provider_search_radius'),
                                         center: gmaps.LatLng(
                                             providerPos.latitude,
@@ -4529,20 +4534,20 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                           right: 16,
                           child: Center(
                             child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 520),
+                              constraints: BoxConstraints(maxWidth: 520),
                               child: Material(
                                 color: panelBlack,
                                 borderRadius: BorderRadius.circular(18),
                                 child: Padding(
-                                  padding: const EdgeInsets.all(14),
+                                  padding: EdgeInsets.all(14),
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(_jobFeedIssue!,
-                                          style: const TextStyle(
-                                              color: Colors.white)),
+                                          style: TextStyle(
+                                              color: textColor)),
                                       TextButton.icon(
                                         onPressed: () async {
                                           if (currentPosition == null) {
@@ -4551,8 +4556,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                           await _fetchNearbyJobs(
                                               radius: _searchRadius.toInt());
                                         },
-                                        icon: const Icon(Icons.refresh),
-                                        label: const Text('Yeniden kontrol et'),
+                                        icon: Icon(Icons.refresh),
+                                        label: Text('Yeniden kontrol et'),
                                       ),
                                     ],
                                   ),
@@ -4568,7 +4573,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                           child: Center(
                               child: ConstrainedBox(
                                   constraints:
-                                      const BoxConstraints(maxWidth: 760),
+                                      BoxConstraints(maxWidth: 760),
                                   child: ProviderStatusHeader(
                                       service:
                                           _getServiceName(providerServiceType),
@@ -4600,7 +4605,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                   border: Border.all(
                                       color: neonGreen.withValues(alpha: 0.4),
                                       width: 1.5),
-                                  boxShadow: const [
+                                  boxShadow: [
                                     BoxShadow(
                                         color: pureBlack,
                                         blurRadius: 15,
@@ -4610,7 +4615,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                 child: Column(
                                   children: [
                                     Padding(
-                                      padding: const EdgeInsets.only(top: 12),
+                                      padding: EdgeInsets.only(top: 12),
                                       child: Icon(Icons.radar_rounded,
                                           color: neonGreen,
                                           size: isSmallScreen ? 20 : 24),
@@ -4623,7 +4628,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                           min: 1,
                                           max: 50,
                                           activeColor: neonGreen,
-                                          inactiveColor: Colors.white
+                                          inactiveColor: textColor
                                               .withValues(alpha: 0.2),
                                           onChanged: (val) {
                                             setState(() {
@@ -4633,7 +4638,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                           onChangeEnd: (val) {
                                             HapticFeedback.selectionClick();
                                             Future.delayed(
-                                                const Duration(
+                                                Duration(
                                                     milliseconds: 500), () {
                                               if (mounted && isOnline) {
                                                 _fetchNearbyJobs(
@@ -4649,10 +4654,10 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                     ),
                                     Padding(
                                       padding:
-                                          const EdgeInsets.only(bottom: 12),
+                                          EdgeInsets.only(bottom: 12),
                                       child: Text("${_searchRadius.toInt()}",
                                           style: TextStyle(
-                                              color: Colors.white,
+                                              color: textColor,
                                               fontWeight: FontWeight.w900,
                                               fontSize:
                                                   isSmallScreen ? 12 : 14)),
@@ -4669,7 +4674,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                             ? bottomInset + jobCardHeight + 104
                             : bottomInset + (isSmallScreen ? 90 : 102),
                         child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
+                          duration: Duration(milliseconds: 300),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(24),
                             child: BackdropFilter(
@@ -4682,7 +4687,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                   border: Border.all(
                                       color: neonGreen.withValues(alpha: 0.3),
                                       width: 1.5),
-                                  boxShadow: const [
+                                  boxShadow: [
                                     BoxShadow(
                                         color: pureBlack,
                                         blurRadius: 20,
@@ -4695,7 +4700,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                         valueListenable: _mapRotationNotifier,
                                         builder: (context, rotation, child) {
                                           if (rotation == 0.0) {
-                                            return const SizedBox.shrink();
+                                            return SizedBox.shrink();
                                           }
                                           return Column(
                                             children: [
@@ -4723,7 +4728,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                                   .latitude,
                                                               currentPosition!
                                                                   .longitude)
-                                                          : const LatLng(
+                                                          : LatLng(
                                                               39.92, 32.85));
                                                   if (defaultTargetPlatform ==
                                                           TargetPlatform
@@ -4750,7 +4755,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                               Container(
                                                   width: 24,
                                                   height: 2.0,
-                                                  color: Colors.white
+                                                  color: textColor
                                                       .withValues(alpha: 0.2)),
                                             ],
                                           );
@@ -4785,7 +4790,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                         ),
                       ),
                       AnimatedPositioned(
-                        duration: const Duration(milliseconds: 500),
+                        duration: Duration(milliseconds: 500),
                         curve: Curves.easeOutExpo,
                         bottom: jobCardVisible ? (bottomInset + 84) : -350,
                         left: _isJobCardExpanded
@@ -4796,7 +4801,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                             : MediaQuery.of(context).size.width / 2 - 80,
                         height: jobCardHeight,
                         child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 400),
+                          duration: Duration(milliseconds: 400),
                           transitionBuilder:
                               (Widget child, Animation<double> animation) {
                             return ScaleTransition(
@@ -4806,12 +4811,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                           },
                           child: _isJobCardExpanded
                               ? Stack(
-                                  key: const ValueKey('expanded_card'),
+                                  key: ValueKey('expanded_card'),
                                   clipBehavior: Clip.none,
                                   children: [
                                     PageView.builder(
                                       controller: _pageController,
-                                      physics: const BouncingScrollPhysics(),
+                                      physics: BouncingScrollPhysics(),
                                       itemCount: isOnline ? jobList.length : 0,
                                       onPageChanged: (index) {
                                         HapticFeedback.selectionClick();
@@ -4829,7 +4834,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                       },
                                       itemBuilder: (context, index) {
                                         if (jobList.isEmpty) {
-                                          return const SizedBox.shrink();
+                                          return SizedBox.shrink();
                                         }
                                         final job = jobList[index];
                                         final String serviceType =
@@ -4877,7 +4882,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                               () => _isJobCardExpanded = false);
                                         },
                                         child: Container(
-                                          padding: const EdgeInsets.all(8),
+                                          padding: EdgeInsets.all(8),
                                           decoration: BoxDecoration(
                                             color: panelBlack,
                                             shape: BoxShape.circle,
@@ -4892,7 +4897,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                                   blurRadius: 10)
                                             ],
                                           ),
-                                          child: const Icon(
+                                          child: Icon(
                                               Icons.keyboard_arrow_down_rounded,
                                               color: neonGreen,
                                               size: 22),
@@ -4902,7 +4907,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                   ],
                                 )
                               : GestureDetector(
-                                  key: const ValueKey('collapsed_bubble'),
+                                  key: ValueKey('collapsed_bubble'),
                                   onTap: () {
                                     HapticFeedback.selectionClick();
                                     setState(() => _isJobCardExpanded = true);
@@ -4918,7 +4923,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                             color: neonGreen.withValues(
                                                 alpha: 0.3),
                                             blurRadius: 15,
-                                            offset: const Offset(0, 4)),
+                                            offset: Offset(0, 4)),
                                       ],
                                     ),
                                     child: Row(
@@ -4926,30 +4931,30 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                           MainAxisAlignment.center,
                                       children: [
                                         Container(
-                                          padding: const EdgeInsets.all(6),
+                                          padding: EdgeInsets.all(6),
                                           decoration: BoxDecoration(
                                             color:
                                                 alertRed.withValues(alpha: 0.2),
                                             shape: BoxShape.circle,
                                           ),
-                                          child: const Icon(
+                                          child: Icon(
                                               Icons
                                                   .notifications_active_rounded,
                                               color: alertRed,
                                               size: 18),
                                         ),
-                                        const SizedBox(width: 8),
+                                        SizedBox(width: 8),
                                         Text(
                                           "${jobList.length} Yeni İş",
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                               color: neonGreen,
                                               fontWeight: FontWeight.w900,
                                               fontSize: 15),
                                         ),
-                                        const SizedBox(width: 8),
-                                        const Icon(
+                                        SizedBox(width: 8),
+                                        Icon(
                                             Icons.keyboard_arrow_up_rounded,
-                                            color: Colors.white54,
+                                            color: textGray,
                                             size: 20),
                                       ],
                                     ),

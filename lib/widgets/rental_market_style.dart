@@ -11,7 +11,7 @@ const rentalBorder = AppConstants.borderColor;
 ThemeData rentalTheme() => appTheme();
 
 class RentalTag extends StatelessWidget {
-  RentalTag(this.text, {super.key, this.icon, this.accent = false});
+  const RentalTag(this.text, {super.key, this.icon, this.accent = false});
   final String text;
   final IconData? icon;
   final bool accent;
@@ -45,7 +45,7 @@ class RentalTag extends StatelessWidget {
 }
 
 class RentalVehicleMedia extends StatelessWidget {
-  RentalVehicleMedia(
+  const RentalVehicleMedia(
       {super.key,
       required this.photo,
       this.label = 'Kiralık',
@@ -117,7 +117,7 @@ class RentalVehicleMedia extends StatelessWidget {
 }
 
 class RentalListingCard extends StatelessWidget {
-  RentalListingCard(
+  const RentalListingCard(
       {super.key,
       required this.car,
       required this.days,

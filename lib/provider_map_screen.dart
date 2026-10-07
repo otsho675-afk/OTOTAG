@@ -34,7 +34,7 @@ import 'main.dart' show RoleSelectionScreen;
 class ProviderMapScreen extends StatefulWidget {
   final int providerId;
   final bool initialOnline;
-  ProviderMapScreen(
+  const ProviderMapScreen(
       {super.key, required this.providerId, this.initialOnline = true});
 
   @override

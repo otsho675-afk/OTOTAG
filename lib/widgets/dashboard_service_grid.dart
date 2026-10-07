@@ -16,6 +16,14 @@ class DashboardServiceGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       LayoutBuilder(builder: (context, constraints) {
+        final theme = Theme.of(context);
+        final scheme = theme.colorScheme;
+        final isLight = theme.brightness == Brightness.light;
+        final surface = scheme.surface;
+        final elevated = scheme.surfaceContainerHighest;
+        final onSurface = scheme.onSurface;
+        final muted = onSurface.withValues(alpha: .58);
+        final border = scheme.outlineVariant;
         final columns = constraints.maxWidth >= 1000
             ? 5
             : constraints.maxWidth >= 680
@@ -46,16 +54,16 @@ class DashboardServiceGrid extends StatelessWidget {
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: .24),
+                                color: Colors.black.withValues(alpha: isLight ? .07 : .24),
                                 blurRadius: 20,
                                 offset: const Offset(0, 9),
                               ),
                             ],
                           ),
                           child: AppInteractiveSurface(
-                            color: AppConstants.cardColor,
+                            color: surface,
                             side: BorderSide(
-                              color: Colors.white.withValues(alpha: .065),
+                              color: onSurface.withValues(alpha: isLight ? .10 : .065),
                             ),
                             borderRadius: BorderRadius.circular(20),
                             onTap: () => onSelected(services[index]),
@@ -68,9 +76,8 @@ class DashboardServiceGrid extends StatelessWidget {
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
                                         colors: [
-                                          AppConstants.cardElevated
-                                              .withValues(alpha: .86),
-                                          AppConstants.cardColor,
+                                          elevated.withValues(alpha: isLight ? .98 : .86),
+                                          surface,
                                         ],
                                       ),
                                     ),
@@ -166,8 +173,8 @@ class DashboardServiceGrid extends StatelessWidget {
                                         '${services[index]['name']}',
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: AppConstants.textColor,
+                                        style: TextStyle(
+                                          color: onSurface,
                                           fontWeight: FontWeight.w800,
                                           fontSize: 13.5,
                                           height: 1.12,

@@ -100,7 +100,7 @@ class TurkishPlateFormatter extends TextInputFormatter {
 
 class CustomerDashboardScreen extends StatefulWidget {
   final int customerId;
-  CustomerDashboardScreen({super.key, required this.customerId});
+  const CustomerDashboardScreen({super.key, required this.customerId});
 
   @override
   State<CustomerDashboardScreen> createState() =>

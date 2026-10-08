@@ -25,11 +25,13 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 class CustomerMapScreen extends StatefulWidget {
   final int customerId;
   final String initialService;
+  final String? initialProblem;
 
   const CustomerMapScreen({
     super.key,
     required this.customerId,
     required this.initialService,
+    this.initialProblem,
   });
 
   @override
@@ -114,6 +116,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
     googleApiKey = AppConstants.googleMapsKey;
     WidgetsBinding.instance.addObserver(this);
     selectedService = widget.initialService;
+    if (widget.initialProblem?.trim().isNotEmpty == true) {
+      problemController.text = widget.initialProblem!.trim();
+    }
     _generateSmartSuggestion();
 
     _radarPulseController = AnimationController(

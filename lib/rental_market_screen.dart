@@ -649,7 +649,7 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
             SizedBox(width: 10),
             Expanded(
                 child: Text(
-                    'SİMÜLASYON: Şu anda bu şehirde uygun gerçek rent a car ilanı bulunmuyor. Aşağıdaki araç sınıfları ve fiyatlar gerçek firma/ilan değildir; yalnızca tahmini piyasa örneğidir.',
+                    'Şu anda bu şehirde uygun gerçek rent a car ilanı bulunmuyor. Aşağıdaki araç sınıfları ve fiyatlar gerçek firma/ilan değildir; tahmini piyasa seçenekleridir.',
                     style: TextStyle(
                         color: Colors.white, height: 1.5, fontSize: 13))),
           ])),
@@ -685,7 +685,7 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                     decoration: BoxDecoration(
                         color: AppConstants.primaryColor.withValues(alpha: .1),
                         borderRadius: BorderRadius.circular(999)),
-                    child: const Text('SİMÜLASYON',
+                    child: const Text('TAHMİNİ',
                         style: TextStyle(
                             color: AppConstants.primaryColor,
                             fontSize: 10,

@@ -81,6 +81,18 @@ class _GrowthAnalyticsScreenState extends State<GrowthAnalyticsScreen> {
         .whereType<Map>()
         .map((e) => Map<String, dynamic>.from(e))
         .toList();
+    final usage = _data['active_usage'] is Map
+        ? _data['active_usage'] as Map
+        : const {};
+    final customerUsage = usage['customer'] is Map
+        ? usage['customer'] as Map
+        : const {};
+    final providerUsage = usage['provider'] is Map
+        ? usage['provider'] as Map
+        : const {};
+    int activeCount(Map values, String key) =>
+        int.tryParse('${values[key] ?? 0}') ?? 0;
+
 
     return Scaffold(
       appBar: AppBar(
@@ -137,6 +149,39 @@ class _GrowthAnalyticsScreenState extends State<GrowthAnalyticsScreen> {
                 _metric('Davet Dönüşümü',
                     '${_double('referral_conversion').toStringAsFixed(1)}%',
                     Icons.group_add_rounded),
+              ],
+            ),
+            const SizedBox(height: 24),
+            const Text('Gerçek aktif hesaplar',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 6),
+            const Text(
+              'Yeni güvenli günlük ölçüm. Veriler bu sürüm sunucuya alındıktan sonra birikir; önceki günler tahmin edilmez.',
+              style: TextStyle(color: Colors.grey, fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _metric('Müşteri • bugün',
+                    activeCount(customerUsage, 'daily').toString(),
+                    Icons.person_outline_rounded),
+                _metric('Müşteri • 7 gün',
+                    activeCount(customerUsage, 'weekly').toString(),
+                    Icons.date_range_outlined),
+                _metric('Müşteri • 30 gün',
+                    activeCount(customerUsage, 'monthly').toString(),
+                    Icons.calendar_month_outlined),
+                _metric('Usta • bugün',
+                    activeCount(providerUsage, 'daily').toString(),
+                    Icons.engineering_outlined),
+                _metric('Usta • 7 gün',
+                    activeCount(providerUsage, 'weekly').toString(),
+                    Icons.date_range_outlined),
+                _metric('Usta • 30 gün',
+                    activeCount(providerUsage, 'monthly').toString(),
+                    Icons.calendar_month_outlined),
               ],
             ),
             const SizedBox(height: 24),

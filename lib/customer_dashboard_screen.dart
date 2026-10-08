@@ -1,4 +1,5 @@
 import 'services/vehicle_deadline.dart';
+import 'services/daily_engagement_service.dart';
 import 'rental_market_screen.dart';
 import 'rental_booking_screen.dart';
 import 'widgets/dashboard_service_grid.dart';
@@ -555,6 +556,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
   @override
   void initState() {
     super.initState();
+    DailyEngagementService.record(userId: widget.customerId, role: 'customer');
     _dayTicker = CalendarDayTicker(() {
       if (mounted) setState(() {});
     });
@@ -1012,6 +1014,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
       _adScrollTimer?.cancel();
     } else if (state == AppLifecycleState.resumed) {
       _foreground = true;
+    DailyEngagementService.record(userId: widget.customerId, role: 'customer');
       _startTimers();
       _startAdTimer();
       _fetchAllDataConcurrently();

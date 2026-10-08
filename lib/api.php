@@ -1613,14 +1613,14 @@ switch ($action) {
                     WHERE user_type = 'provider' AND is_suspended = 0 AND status = 'active' 
                     AND service_category = ? AND TRIM(city)=TRIM(?) AND (subscription_end_date>NOW() OR DATE_ADD(created_at,INTERVAL 30 DAY)>NOW())
                     AND (ST_Distance_Sphere(point(lng, lat), point(?, ?)) / 1000) <= 50 
-                    ORDER BY EXISTS(
+                    ORDER BY CASE WHEN ?=1 THEN EXISTS(
                         SELECT 1 FROM favorite_providers f
                         WHERE f.customer_id=? AND f.provider_id=users.id
-                    ) DESC,
+                    ) ELSE 0 END DESC,
                     (ST_Distance_Sphere(point(lng, lat), point(?, ?))) ASC, rating DESC 
                     LIMIT 50
                 ");
-                $nearbyStmt->execute([$service_type, $city, $lng, $lat, $customer_id, $lng, $lat]);
+                $nearbyStmt->execute([$service_type, $city, $lng, $lat, $preferFavorites, $customer_id, $lng, $lat]);
                 $nearbyProviders = $nearbyStmt->fetchAll(PDO::FETCH_COLUMN);
 
                 if (!empty($nearbyProviders)) {
@@ -3983,7 +3983,9 @@ switch ($action) {
                 AND NOT EXISTS (SELECT 1 FROM bids WHERE bids.job_id = j.id AND bids.provider_id = :pid)
                 HAVING distance <= search_radius AND distance <= :req_rad
                 ORDER BY j.is_emergency DESC,
-                EXISTS(SELECT 1 FROM favorite_providers f WHERE f.customer_id=j.customer_id AND f.provider_id=:pid2) DESC,
+                CASE WHEN j.prefer_favorites=1 THEN
+                    EXISTS(SELECT 1 FROM favorite_providers f WHERE f.customer_id=j.customer_id AND f.provider_id=:pid2)
+                ELSE 0 END DESC,
                 distance ASC
                 LIMIT 50
             ";

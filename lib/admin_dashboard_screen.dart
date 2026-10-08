@@ -3603,6 +3603,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           Text('30 Günlük Büyüme', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
         ]),
         const SizedBox(height: 14),
+        const Text('Bugün',
+            style: TextStyle(color: Color(0xFF00FFA3), fontSize: 12, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          _growthChip('Yeni üye', n('new_users_today')),
+          _growthChip('Talep', n('jobs_today')),
+          _growthChip('Tamamlanan', n('completed_today')),
+        ]),
+        const SizedBox(height: 12),
+        const Text('Son 30 Gün',
+            style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 8),
         Wrap(spacing: 8, runSpacing: 8, children: [
           _growthChip('Yeni üye', n('new_users_30d')),
           _growthChip('Talep', n('jobs_30d')),

@@ -433,6 +433,9 @@ function growthAdminAnalytics($pdo) {
     ensureReferralSchema($pdo);
 
     $summary=$pdo->query("SELECT
+        (SELECT COUNT(*) FROM users WHERE DATE(created_at)=CURRENT_DATE()) new_users_today,
+        (SELECT COUNT(*) FROM jobs WHERE DATE(created_at)=CURRENT_DATE()) jobs_today,
+        (SELECT COUNT(*) FROM jobs WHERE status='completed' AND DATE(created_at)=CURRENT_DATE()) completed_today,
         (SELECT COUNT(*) FROM users WHERE created_at>=DATE_SUB(NOW(),INTERVAL 30 DAY)) new_users_30d,
         (SELECT COUNT(*) FROM jobs WHERE created_at>=DATE_SUB(NOW(),INTERVAL 30 DAY)) jobs_30d,
         (SELECT COUNT(*) FROM jobs WHERE status='completed' AND created_at>=DATE_SUB(NOW(),INTERVAL 30 DAY)) completed_30d,

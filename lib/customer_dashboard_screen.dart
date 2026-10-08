@@ -582,12 +582,13 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
 
     if (!shouldShow || alreadyDone || !mounted) return;
 
-    await prefs.setBool(doneKey, true);
-    await prefs.remove(showKey);
-
     await Future.delayed(const Duration(milliseconds: 700));
     if (!mounted) return;
     await _showFirstTimeExperience();
+    if (!mounted) return;
+    // Record completion only after the welcome flow has actually been shown.
+    await prefs.setBool(doneKey, true);
+    await prefs.remove(showKey);
   }
 
   Future<void> _showFirstTimeExperience() async {

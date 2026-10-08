@@ -1,4 +1,5 @@
 import 'services/adaptive_polling.dart';
+import 'services/daily_engagement_service.dart';
 import 'services/provider_job_feed.dart';
 import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
@@ -21,6 +22,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'job_tracking_screen.dart';
 import 'profile_screen.dart';
+import 'referral_screen.dart';
 import 'provider_bids_screen.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
@@ -149,6 +151,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
   @override
   void initState() {
     super.initState();
+    DailyEngagementService.record(userId: widget.providerId, role: 'provider');
     isOnline = widget.initialOnline;
     googleApiKey = AppConstants.googleMapsKey;
 
@@ -478,10 +481,28 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
       'serviceType': serviceType,
     };
 
-    final TextEditingController priceController =
-        TextEditingController(text: _lastBidPrice);
+    final parsedDistance =
+        double.tryParse(distance.replaceAll(',', '.')) ?? 0.0;
+    final hour = DateTime.now().hour;
+    final nightMultiplier = (hour >= 22 || hour < 7) ? 1.18 : 1.0;
+    final pricingRule = switch (serviceType) {
+      'tow' => (base: 950.0, km: 70.0),
+      'tire' => (base: 450.0, km: 35.0),
+      'wash' => (base: 280.0, km: 15.0),
+      _ => (base: 700.0, km: 45.0),
+    };
+    final recommendedPrice =
+        (((pricingRule.base + parsedDistance * pricingRule.km) *
+                        nightMultiplier) /
+                    10)
+                .round() *
+            10;
+    final TextEditingController priceController = TextEditingController(
+        text: _lastBidPrice.isNotEmpty
+            ? _lastBidPrice
+            : recommendedPrice.toString());
     int autoMinutes =
-        ((double.tryParse(distance.replaceAll(',', '.')) ?? 0.0) * 2.5).ceil() +
+        (parsedDistance * 2.5).ceil() +
             5;
     final String autoTimeStr = autoMinutes.toString();
 
@@ -687,6 +708,25 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                             color: Colors.white24,
                                             borderRadius:
                                                 BorderRadius.circular(10)),
+                                      ),
+                                    ),
+                                    Container(
+                                      width: double.infinity,
+                                      margin: const EdgeInsets.only(bottom: 10),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 9),
+                                      decoration: BoxDecoration(
+                                        color: neonGreen.withValues(alpha: .08),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                            color: neonGreen.withValues(alpha: .2)),
+                                      ),
+                                      child: Text(
+                                        'Akıllı fiyat önerisi: $recommendedPrice ₺ • $autoMinutes dk',
+                                        style: const TextStyle(
+                                            color: neonGreen,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700),
                                       ),
                                     ),
                                     Row(
@@ -2146,7 +2186,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
       _slideController.stop();
       _mapMoveController?.stop();
     } else if (state == AppLifecycleState.resumed) {
-      _compassStream?.resume();
+
+    DailyEngagementService.record(userId: widget.providerId, role: 'provider');      _compassStream?.resume();
       if (isOnline) {
         _positionStream?.resume();
         _startJobRefreshTimer();
@@ -4164,6 +4205,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                   subtitle:
                       const Text('Aylık planını ve satın alımlarını yönet'),
                   onTap: () => Navigator.pop(context, 7)),
+              ListTile(
+                  leading:
+                      const Icon(Icons.card_giftcard_rounded, color: neonGreen),
+                  title: const Text('Arkadaşını davet et'),
+                  subtitle: const Text('Davet kodun ve OTO TAG Puanların'),
+                  onTap: () => Navigator.pop(context, 8)),
               const SizedBox(height: 12),
             ])));
     if (!mounted) return;
@@ -4175,6 +4222,13 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
               builder: (_) => const DiagnosticScreen(userType: 'provider')));
     }
     if (action == 7) _showSubscriptionRequiredSheet();
+    if (action == 8) {
+      Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) => ReferralScreen(
+                  userId: widget.providerId, userType: 'provider')));
+    }
   }
 
   Future<void> _quickLogout() async {

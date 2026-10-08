@@ -892,6 +892,8 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 require_once __DIR__.'/registration_rules.php';
 require_once __DIR__.'/service_matching.php';
+require_once __DIR__.'/referral_rewards.php';
+require_once __DIR__.'/growth_features.php';
 require_once __DIR__.'/map_routing.php';
 require_once __DIR__ . '/oauth_verification.php';
 require_once __DIR__ . '/api_authorization.php';
@@ -909,6 +911,64 @@ require_once __DIR__ . '/rentacar_api.php';
 handleRentalAction($pdo, $action, $method);
 
 switch ($action) {
+    case 'get_reward_catalog':
+        if ($method!=='GET') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
+        $actor=authenticateRequest();
+        ensureGrowthSchema($pdo);
+        $stmt=$pdo->prepare('SELECT reward_points FROM users WHERE id=?'); $stmt->execute([$actor['user_id']]);
+        sendResponse(200,['status'=>'success','reward_points'=>(int)$stmt->fetchColumn(),'items'=>growthRewardCatalog($actor['user_type'])]);
+        break;
+    case 'redeem_reward':
+        if ($method!=='POST') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
+        $actor=authenticateRequest();
+        try { sendResponse(200,growthRedeemReward($pdo,(int)$actor['user_id'],trim($_POST['reward_code'] ?? ''))); }
+        catch (InvalidArgumentException $e) { sendResponse(422,['status'=>'error','message'=>$e->getMessage()]); }
+        break;
+    case 'get_price_quote':
+        if ($method!=='GET') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
+        authenticateRequest();
+        $service=trim($_GET['service_type'] ?? 'mechanic');
+        $distance=(float)($_GET['distance_km'] ?? 0);
+        sendResponse(200,['status'=>'success','quote'=>growthPriceQuote($service,$distance,$_GET['hour'] ?? null)]);
+        break;
+    case 'get_favorite_providers':
+        if ($method!=='GET') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
+        $actor=authenticateRequest();
+        if($actor['user_type']!=='customer') sendResponse(403,['status'=>'error','message'=>'Müşteri hesabı gereklidir.']);
+        sendResponse(200,['status'=>'success','providers'=>growthFavoriteList($pdo,(int)$actor['user_id'])]);
+        break;
+    case 'toggle_favorite_provider':
+        if ($method!=='POST') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
+        $actor=authenticateRequest();
+        if($actor['user_type']!=='customer') sendResponse(403,['status'=>'error','message'=>'Müşteri hesabı gereklidir.']);
+        try {
+            $favorite=growthToggleFavorite($pdo,(int)$actor['user_id'],(int)($_POST['provider_id'] ?? 0));
+            sendResponse(200,['status'=>'success','favorite'=>$favorite]);
+        } catch(InvalidArgumentException $e) { sendResponse(422,['status'=>'error','message'=>$e->getMessage()]); }
+        break;
+    case 'record_daily_active':
+        if ($method!=='POST') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
+        // Identity and role MUST come from the verified access token.
+        $actor=authenticateRequest();
+        try {
+            growthRecordDailyActive($pdo,$actor);
+            sendResponse(200,['status'=>'success']);
+        } catch (InvalidArgumentException $e) {
+            sendResponse(422,['status'=>'error','message'=>$e->getMessage()]);
+        }
+        break;
+    case 'growth_analytics':
+        if ($method!=='GET') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
+        $actor=authenticateRequest();
+        if($actor['user_type']!=='admin') sendResponse(403,['status'=>'error','message'=>'Yönetici yetkisi gereklidir.']);
+        sendResponse(200,['status'=>'success','analytics'=>growthAnalytics($pdo)]);
+        break;
+    case 'get_referral_summary':
+        if ($method!=='GET') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
+        $userId=(int)($_GET['user_id'] ?? 0);
+        if ($userId<=0) sendResponse(400,['status'=>'error','message'=>'Kullanıcı bilgisi eksik.']);
+        sendResponse(200,referralSummary($pdo,$userId));
+        break;
     case 'get_my_subscriptions':
         if ($method!=='GET') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
         require_once __DIR__.'/subscription_summary.php';
@@ -1589,8 +1649,23 @@ switch ($action) {
                 sendResponse(403, ["status" => "error", "message" => "Devam eden bir işiniz mevcut."]);
             }
 
-            $stmt = $pdo->prepare("INSERT INTO jobs (customer_id, service_type, latitude, longitude, match_code, problem_description, city, search_radius, status, issue_photo, issue_audio) VALUES (?, ?, ?, ?, ?, ?, ?, 50, 'searching', ?, ?)");
-            $stmt->execute([$customer_id, $service_type, $lat, $lng, $match_code, $problem_description, $city, $issue_photo, $issue_audio]);
+            ensureGrowthSchema($pdo);
+            $favoriteStmt=$pdo->prepare("SELECT u.id
+                FROM favorite_providers f
+                JOIN users u ON u.id=f.provider_id
+                WHERE f.customer_id=?
+                AND u.user_type='provider' AND u.status='active'
+                AND COALESCE(u.is_suspended,0)=0
+                AND u.service_category=?
+                AND TRIM(u.city)=TRIM(?)
+                AND (u.subscription_end_date>NOW() OR DATE_ADD(u.created_at,INTERVAL 30 DAY)>NOW())
+                ORDER BY u.rating DESC,u.id ASC LIMIT 1");
+            $favoriteStmt->execute([$customer_id,$service_type,$city]);
+            $preferredProviderId=$favoriteStmt->fetchColumn();
+            if(!$preferredProviderId) $preferredProviderId=null;
+
+            $stmt = $pdo->prepare("INSERT INTO jobs (customer_id, service_type, latitude, longitude, match_code, problem_description, city, search_radius, status, issue_photo, issue_audio, preferred_provider_id) VALUES (?, ?, ?, ?, ?, ?, ?, 50, 'searching', ?, ?, ?)");
+            $stmt->execute([$customer_id, $service_type, $lat, $lng, $match_code, $problem_description, $city, $issue_photo, $issue_audio, $preferredProviderId]);
             $new_job_id = $pdo->lastInsertId();
 
             try {
@@ -1610,7 +1685,17 @@ switch ($action) {
                 if (!empty($nearbyProviders)) {
                     $title = "Bölgenizde Yeni İş!";
                     $message = "Yakınınızda yeni bir " . strtoupper($service_type) . " talebi var. Hemen teklif verin!";
-                    sendOneSignalPush($nearbyProviders, $title, $message, ['type' => 'new_job', 'job_id' => (string)$new_job_id]);
+                    if($preferredProviderId) {
+                        sendOneSignalPush([(string)$preferredProviderId],
+                            "Favori Müşterinizden Talep!",
+                            "Favorinizdeki müşteri size öncelikli bir talep gönderdi.",
+                            ['type'=>'favorite_job','job_id'=>(string)$new_job_id]);
+                        $nearbyProviders=array_values(array_filter($nearbyProviders,
+                            fn($id)=>(int)$id!==(int)$preferredProviderId));
+                    }
+                    if(!empty($nearbyProviders)) {
+                        sendOneSignalPush($nearbyProviders, $title, $message, ['type' => 'new_job', 'job_id' => (string)$new_job_id]);
+                    }
                 }
             } catch (Exception $pushEx) {}
 
@@ -2237,6 +2322,8 @@ switch ($action) {
         $oauth_provider = trim($_POST['oauth_provider'] ?? '');
         $oauth_id = trim($_POST['oauth_id'] ?? '');
         $email = trim($_POST['email'] ?? '');
+        $referral_code = strtoupper(trim($_POST['referral_code'] ?? ''));
+        $inviterId = null;
         $hasRegistrationPassword=$password!=='';
 
 @file_put_contents(
@@ -2268,6 +2355,12 @@ switch ($action) {
             }
             if ($password!=='' && strlen($password)<6) throw new InvalidArgumentException('Şifre en az 6 karakter olmalı.');
         } catch (InvalidArgumentException $e) { sendResponse(422,['status'=>'error','message'=>$e->getMessage()]); }
+
+        try {
+            $inviterId = referralResolveInviter($pdo,$referral_code);
+        } catch (InvalidArgumentException $e) {
+            sendResponse(422,['status'=>'error','message'=>$e->getMessage()]);
+        }
 
         @file_put_contents(
             __DIR__ . '/register_request.log',
@@ -2653,9 +2746,12 @@ switch ($action) {
         );
 
         try {
+            $pdo->beginTransaction();
             $stmt = $pdo->prepare("INSERT INTO users (name, email, phone, password, user_type, service_category, iban, tow_plate, map_link, city, status, is_premium, tax_plate, driver_license, vehicle_photo, equipment_photo, tracking_code, ip_address, oauth_provider, oauth_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([$name, !empty($email) ? $email : null, $clean_phone, $hashed_password, $user_type, $service_category, $iban, $tow_plate ?: null, !empty($map_link) ? $map_link : null, $city, $status, $tax_plate, $driver_license, $vehicle_photo, $equipment_photo, $tracking_code, $user_ip, !empty($oauth_provider) ? $oauth_provider : null, !empty($oauth_id) ? $oauth_id : null]);
             $newUserId = $pdo->lastInsertId();
+            referralAttachNewUser($pdo,(int)$newUserId,$inviterId);
+            $pdo->commit();
             $jwtToken = generateJWT($newUserId, $user_type);
             sendResponse(201, [
                 "status" => "success", 
@@ -3917,6 +4013,7 @@ switch ($action) {
                 ]);
             }
             
+            ensureGrowthSchema($pdo);
             // 350K Optimizasyonu: Haritayı karelere bölen Bounding Box. Geometri hesaplama yükünü %99 azaltır.
             $lat_range = $requested_radius / 111.045;
             $lng_range = $requested_radius / (111.045 * max(0.01,abs(cos(deg2rad($provider_lat)))));
@@ -3937,14 +4034,21 @@ switch ($action) {
                 AND j.latitude BETWEEN (:lat2 - :lat_range1) AND (:lat3 + :lat_range2)
                 AND j.longitude BETWEEN (:lng2 - :lng_range1) AND (:lng3 + :lng_range2)
                 AND j.created_at <= (NOW() - INTERVAL :delay SECOND)
+                AND (
+                    j.preferred_provider_id IS NULL
+                    OR j.preferred_provider_id = :pid_pref
+                    OR j.created_at <= (NOW() - INTERVAL 15 SECOND)
+                )
                 AND NOT EXISTS (SELECT 1 FROM bids WHERE bids.job_id = j.id AND bids.provider_id = :pid)
                 HAVING distance <= search_radius AND distance <= :req_rad
-                ORDER BY distance ASC
+                ORDER BY (j.preferred_provider_id = :pid_order) DESC, distance ASC
                 LIMIT 50
             ";
             $stmt = $pdo->prepare($sql);
             $stmt->bindValue(':service_type', $provCategory, PDO::PARAM_STR);
             $stmt->bindValue(':provider_city',$provData['city']);
+            $stmt->bindValue(':pid_pref',$provider_id,PDO::PARAM_INT);
+            $stmt->bindValue(':pid_order',$provider_id,PDO::PARAM_INT);
             $stmt->bindValue(':lng1', $provider_lng);
             $stmt->bindValue(':lat1', $provider_lat);
             $stmt->bindValue(':lat2', $provider_lat);
@@ -4123,11 +4227,31 @@ switch ($action) {
                     $provider['badges'] = $badges;
                 }
             }
-            $jobStatusCheck = $pdo->prepare("SELECT status FROM jobs WHERE id = ?");
+            $jobStatusCheck = $pdo->prepare("SELECT * FROM jobs WHERE id = ?");
             $jobStatusCheck->execute([$job_id]);
-            $currentJobStatus = $jobStatusCheck->fetchColumn();
+            $currentJob = $jobStatusCheck->fetch(PDO::FETCH_ASSOC);
+            $currentJobStatus = $currentJob['status'] ?? null;
+            $simulationFallback = null;
+            $providerScan = null;
+            if ($user_type !== 'provider' && $currentJobStatus === 'searching') {
+                $eligibleProviders = serviceEligibleRealProviders($pdo, $currentJob, 100);
+                $providerScan = [
+                    'eligible_count' => count($eligibleProviders),
+                    'search_radius' => (float)($currentJob['search_radius'] ?? 50),
+                    'real_provider_available' => !empty($eligibleProviders),
+                ];
+                if (empty($bids)) {
+                    $simulationFallback = serviceSimulationFallback($pdo, $currentJob);
+                }
+            }
             
-            sendResponse(200, ["status" => "success", "job_status" => $currentJobStatus, "bids" => $bids]);
+            sendResponse(200, [
+                "status" => "success",
+                "job_status" => $currentJobStatus,
+                "bids" => $bids,
+                "provider_scan" => $providerScan,
+                "simulation_fallback" => $simulationFallback
+            ]);
         } catch (Exception $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             sendResponse(500, ["status" => "error", "message" => "Teklifler çekilirken hata: " . $e->getMessage()]);
@@ -4256,7 +4380,7 @@ switch ($action) {
         authenticateRequest($customerId);
         try {
             $pdo->beginTransaction();
-            $jobStmt=$pdo->prepare('SELECT id, customer_id, provider_id, status, service_type FROM jobs WHERE id=? AND customer_id=? FOR UPDATE');
+            $jobStmt=$pdo->prepare('SELECT * FROM jobs WHERE id=? AND customer_id=? FOR UPDATE');
             $jobStmt->execute([$jobId,$customerId]);
             $job=$jobStmt->fetch(PDO::FETCH_ASSOC);
             if (!$job || $job['service_type']==='rentacar') {
@@ -4271,6 +4395,19 @@ switch ($action) {
             if ((int)$bidStmt->fetchColumn() > 0) {
                 $pdo->commit();
                 sendResponse(200,['status'=>'success','job_status'=>'searching','expired'=>false]);
+            }
+            $createdAt=!empty($job['created_at']) ? strtotime((string)$job['created_at']) : false;
+            if ($createdAt!==false) {
+                $elapsed=max(0,time()-$createdAt);
+                if ($elapsed<60) {
+                    $pdo->commit();
+                    sendResponse(200,[
+                        'status'=>'success',
+                        'job_status'=>'searching',
+                        'expired'=>false,
+                        'retry_after'=>60-$elapsed
+                    ]);
+                }
             }
             $pdo->prepare("UPDATE jobs SET status='cancelled' WHERE id=? AND status='searching'")->execute([$jobId]);
             $pdo->commit();
@@ -4333,6 +4470,7 @@ switch ($action) {
         
         if ($job && strtolower($job['status']) === 'customer_paid') {
             $pdo->prepare("UPDATE jobs SET status = 'completed' WHERE id = ?")->execute([$job_id]);
+            referralRewardForCompletedJob($pdo,(int)$job_id);
 
             try {
                 if (!empty($job['customer_id'])) {
@@ -4426,9 +4564,14 @@ switch ($action) {
             }
         }
 
-        $stmt = $pdo->prepare("SELECT name, service_category FROM users WHERE id = ? AND user_type = 'provider'");
+        ensureGrowthSchema($pdo);
+        $stmt = $pdo->prepare("SELECT id,name,service_category,user_type,status,is_suspended,tax_plate,driver_license,tow_plate,map_link FROM users WHERE id = ? AND user_type = 'provider'");
         $stmt->execute([$provider_id]);
         $provider = $stmt->fetch();
+        if ($provider) {
+            $provider['verified'] = growthProviderVerification($provider);
+            unset($provider['status'],$provider['is_suspended'],$provider['tax_plate'],$provider['driver_license'],$provider['tow_plate'],$provider['map_link']);
+        }
         if (!$provider) sendResponse(404, ["status" => "error", "message" => "Usta bulunamadı."]);
 
         $ratingsStmt = $pdo->prepare("SELECT r.rating, r.comment, DATE_FORMAT(r.created_at, '%d.%m.%Y') AS date, u.name as customer_name FROM ratings r JOIN users u ON r.customer_id = u.id WHERE r.provider_id = ? AND r.comment IS NOT NULL AND TRIM(r.comment) != '' ORDER BY r.created_at DESC LIMIT 50");
@@ -4441,11 +4584,35 @@ switch ($action) {
 
         $completedStmt = $pdo->prepare("SELECT COUNT(*) FROM jobs WHERE provider_id=? AND status='completed'");
         $completedStmt->execute([$provider_id]);
+        $completedJobs=(int)$completedStmt->fetchColumn();
+
+        $assignedStmt=$pdo->prepare("SELECT COUNT(*) total,
+            SUM(status='cancelled') cancelled,
+            MAX(created_at) last_job_at
+            FROM jobs WHERE provider_id=?");
+        $assignedStmt->execute([$provider_id]);
+        $assigned=$assignedStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        $assignedTotal=(int)($assigned['total'] ?? 0);
+        $cancelled=(int)($assigned['cancelled'] ?? 0);
+
+        $responseStmt=$pdo->prepare("SELECT AVG(TIMESTAMPDIFF(MINUTE,j.created_at,b.created_at)) avg_response_min,
+            MAX(b.created_at) last_bid_at
+            FROM bids b JOIN jobs j ON j.id=b.job_id
+            WHERE b.provider_id=? AND b.created_at>=DATE_SUB(NOW(),INTERVAL 90 DAY)");
+        $responseStmt->execute([$provider_id]);
+        $responseStats=$responseStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
         $profilePayload = [
             "status" => "success", 
             "provider" => $provider, 
-            "stats" => ["average" => $stats['avg_rating'] ?? "0.0", "total" => $stats['total_reviews'] ?? 0,
-                "completed_jobs" => (int)$completedStmt->fetchColumn()],
+            "stats" => [
+                "average" => $stats['avg_rating'] ?? "0.0",
+                "total" => $stats['total_reviews'] ?? 0,
+                "completed_jobs" => $completedJobs,
+                "avg_response_min" => round((float)($responseStats['avg_response_min'] ?? 0),1),
+                "cancellation_rate" => $assignedTotal>0 ? round($cancelled*100/$assignedTotal,1) : 0,
+                "last_active" => $responseStats['last_bid_at'] ?? ($assigned['last_job_at'] ?? null)
+            ],
             "reviews" => $ratings
         ];
         if ($redis) {

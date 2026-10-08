@@ -330,10 +330,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     await tester.tap(find.text('Araç Ekle'));
-    await tester.pumpAndSettle();
+    // The firm dashboard refreshes in the background; don't wait for
+    // perpetual refresh frames when only the editor entrance is needed.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Yeni Kiralık Araç Ekle'), findsOneWidget);
     tester.view.viewInsets = const FakeViewPadding(bottom: 300);
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     expect(tester.takeException(), isNull);
     tester.view.resetViewInsets();
     await tester.pumpWidget(const SizedBox.shrink());

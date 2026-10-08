@@ -280,6 +280,7 @@ function handleRentalAction($pdo, $action, $method) {
     $actor = $adminBooking ? 'admin' : ($role === 'customer' ? 'customer' : 'company');
     $uploaded = [];
     $plateLock = null;
+    $completedReferralJobId = null;
     $stage='schema';
     try {
         if (!function_exists('mb_substr') || !function_exists('mb_strlen')) throw new RentalServerException('RENTAL_PHP_MBSTRING','Sunucuda PHP mbstring uzantısı etkin değil. Yönetici aaPanel üzerinden sitenin PHP sürümünde mbstring uzantısını etkinleştirmeli.');
@@ -566,6 +567,7 @@ function handleRentalAction($pdo, $action, $method) {
             if ($actor!=='company' || $bid['status']!=='accepted' || !$bid['job_id']) { $pdo->rollBack(); rentalFail(409,'Tamamlanabilecek bir kiralama bulunamadı.'); }
             if (empty($bid['agreement_at'])) { $pdo->rollBack(); rentalFail(409,'Önce Anlaştık adımını onaylayın.'); }
             $pdo->prepare("UPDATE jobs SET status='completed' WHERE id=? AND service_type='rentacar'")->execute([$bid['job_id']]);
+            $completedReferralJobId=(int)$bid['job_id'];
             $pdo->prepare("UPDATE rentacar_bids SET status='completed',offer_version=offer_version+1 WHERE id=?")->execute([$bidId]);
             $pdo->prepare("UPDATE rentacar_listings SET status='active',listing_version=listing_version+1 WHERE id=?")->execute([$listingId]);
             rentalEvent($pdo,'completed',['company_id'=>$listing['company_id'],'customer_id'=>$bid['customer_id'],'listing_id'=>$listingId,'bid_id'=>$bidId,'job_id'=>$bid['job_id'],'city'=>$listing['city']]);
@@ -594,7 +596,9 @@ function handleRentalAction($pdo, $action, $method) {
                 $pdo->commit(); sendResponse(200,$result);
             }
         }
-        $pdo->commit(); sendResponse(200,['status'=>'success','message'=>'İşlem tamamlandı.']);
+        $pdo->commit();
+        if ($completedReferralJobId) referralRewardForCompletedJob($pdo,$completedReferralJobId);
+        sendResponse(200,['status'=>'success','message'=>'İşlem tamamlandı.']);
     } catch (InvalidArgumentException $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         foreach ($uploaded as $path) if ($path) deletePhysicalFile($path);

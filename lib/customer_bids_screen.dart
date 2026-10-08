@@ -38,6 +38,10 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
   final _live = RealtimeClient();
   late final AdaptivePolling _polling;
   List<Map<String, dynamic>> _bids = [];
+  Map<String, dynamic>? _simulationFallback;
+  Map<String, dynamic>? _providerScan;
+  final Map<String, int> _estimateOverrides = {};
+  final Map<String, int> _estimateUserOffers = {};
   String? _error, _status;
   bool _loading = true, _fetching = false, _busy = false, _dialog = false;
   bool _foreground = true, _covered = false, _navigating = false;
@@ -121,8 +125,21 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
           .where((b) =>
               rentalId(b['bid_id']) > 0 && rentalId(b['provider_id']) > 0)
           .toList();
+      final rawSimulation = data['simulation_fallback'];
+      final simulation = rawSimulation is Map
+          ? Map<String, dynamic>.from(rawSimulation)
+          : null;
+      final rawScan = data['provider_scan'];
+      final providerScan =
+          rawScan is Map ? Map<String, dynamic>.from(rawScan) : null;
       setState(() {
         _bids = bids;
+        _simulationFallback = bids.isEmpty ? simulation : null;
+        _providerScan = bids.isEmpty ? providerScan : null;
+        if (bids.isNotEmpty) {
+          _estimateOverrides.clear();
+          _estimateUserOffers.clear();
+        }
         _status = data['job_status'];
         _error = null;
         _loading = false;
@@ -149,7 +166,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
 
   void _startUnansweredTimer() {
     if (_expiryAttempted || _unansweredTimer != null) return;
-    _unansweredTimer = Timer(const Duration(seconds: 20), () {
+    _unansweredTimer = Timer(const Duration(seconds: 60), () {
       _unansweredTimer = null;
       if (_active) unawaited(_expireUnansweredSearch());
     });
@@ -169,6 +186,11 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
           widget.jobId, widget.customerId);
       if (!mounted) return;
       _status = result['job_status']?.toString() ?? _status;
+      if (_status == 'cancelled' && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Şu anda uygun sağlayıcı bulunamadı. Talep otomatik olarak kapatıldı.')));
+      }
       _routeFromStatus();
       if (_active) await _load();
     } catch (_) {
@@ -395,14 +417,22 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
                                                     : _busy
                                                         ? 'İşleminiz doğrulanıyor'
                                                         : list.isEmpty
-                                                            ? 'Usta teklifleri bekleniyor'
+                                                            ? (_providerScan != null
+                                                                ? '${_providerScan!['eligible_count'] ?? 0} uygun sağlayıcı taranıyor'
+                                                                : (_simulationFallback != null
+                                                                    ? 'Yakındaki seçenekler'
+                                                                    : 'Usta teklifleri bekleniyor'))
                                                             : '${list.length} teklif geldi',
                                                 message: _error != null
                                                     ? 'Son alınan teklifler korunuyor. İşlem yapmadan önce yenileyin.'
                                                     : _busy
                                                         ? 'Güncel talep ve teklif durumu kontrol ediliyor.'
                                                         : list.isEmpty
-                                                            ? 'Talebiniz açık. Gelen teklifleri burada karşılaştırabilir, uygun ustayı seçebilirsiniz.'
+                                                            ? (_providerScan != null
+                                                                ? '${_providerScan!['search_radius'] ?? 50} km alan kontrol ediliyor. Gerçek teklif geldiğinde bu ekran otomatik güncellenir.'
+                                                                : (_simulationFallback != null
+                                                                    ? 'Mesafe ve hizmet türüne göre hesaplanan seçenekleri inceleyebilir, kendi teklif tutarınızı girebilirsiniz.'
+                                                                    : 'Talebiniz açık. Gelen teklifleri burada karşılaştırabilir, uygun ustayı seçebilirsiniz.'))
                                                             : 'Fiyatı, ustanın puanını ve tahmini varış süresini inceleyin. Seçim sizin.',
                                                 icon: _error != null
                                                     ? Icons.wifi_off_rounded
@@ -468,13 +498,16 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
                                             if (!_loading &&
                                                 list.isEmpty &&
                                                 _error == null)
-                                              const Padding(
-                                                  padding: EdgeInsets.symmetric(
-                                                      vertical: 30),
-                                                  child: Text(
-                                                      'Henüz teklif yok. Yeni teklifler otomatik olarak görünecek.',
-                                                      textAlign:
-                                                          TextAlign.center)),
+                                              _simulationFallback != null
+                                                  ? _simulationPanel()
+                                                  : const Padding(
+                                                      padding:
+                                                          EdgeInsets.symmetric(
+                                                              vertical: 30),
+                                                      child: Text(
+                                                          'Henüz teklif yok. Yeni teklifler otomatik olarak görünecek.',
+                                                          textAlign:
+                                                              TextAlign.center)),
                                           ]))))),
                           SliverPadding(
                               padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
@@ -488,6 +521,134 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
                         ]))),
           ])),
         ));
+  }
+
+  Future<void> _counterEstimate(Map<String, dynamic> point) async {
+    if (_busy || _dialog) return;
+    _dialog = true;
+    final amount = await showDialog<String>(
+        context: context, builder: (_) => const _CounterOfferDialog());
+    _dialog = false;
+    if (!mounted || amount == null) return;
+
+    final cents = rentalCents(amount);
+    if (cents == null) return;
+    final requested = (cents / 100).round();
+    final suggested = int.tryParse('${point['suggested_price']}') ??
+        int.tryParse('${point['estimate_low']}') ??
+        requested;
+    final low = int.tryParse('${point['estimate_low']}') ?? suggested;
+    final high = int.tryParse('${point['estimate_high']}') ?? suggested;
+
+    int response =
+        (((requested * .65 + suggested * .35) / 10).round() * 10);
+    final minResponse = (low * .85).round();
+    final maxResponse = (high * 1.05).round();
+    response = response.clamp(minResponse, maxResponse).toInt();
+
+    final id = point['id']?.toString() ?? '';
+    if (id.isEmpty) return;
+    setState(() {
+      _estimateUserOffers[id] = requested;
+      _estimateOverrides[id] = response;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+            'Teklif tutarınız aramaya dahil edildi. Tahmini tutar güncellendi.')));
+  }
+
+  Widget _simulationPanel() {
+    final fallback = _simulationFallback;
+    if (fallback == null) return const SizedBox.shrink();
+    final points = (fallback['points'] as List? ?? const [])
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+
+    return Padding(
+        padding: const EdgeInsets.only(top: 18, bottom: 4),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          for (final point in points)
+            Builder(builder: (context) {
+              final id = point['id']?.toString() ?? '';
+              final suggested =
+                  int.tryParse('${point['suggested_price']}') ?? 0;
+              final shownPrice = _estimateOverrides[id] ?? suggested;
+              final userOffer = _estimateUserOffers[id];
+              return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  elevation: 0,
+                  child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(children: [
+                              const CircleAvatar(
+                                  child: Icon(Icons.build_outlined)),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                  child: Text(
+                                      point['label']?.toString() ??
+                                          'Yakındaki seçenek',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium)),
+                              Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 9, vertical: 5),
+                                  decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(999),
+                                      border: Border.all(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .outlineVariant)),
+                                  child: Text('Tahmini',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall)),
+                            ]),
+                            const SizedBox(height: 18),
+                            Wrap(
+                                spacing: 16,
+                                runSpacing: 8,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  Text(
+                                      shownPrice > 0
+                                          ? '${rentalPrice(shownPrice * 100)} ₺'
+                                          : 'Fiyat hesaplanıyor',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineSmall
+                                          ?.copyWith(
+                                              fontWeight: FontWeight.w700)),
+                                  Text(
+                                      '${point['distance_km'] ?? '-'} km'),
+                                  Text(
+                                      'Tahmini ${point['estimated_time'] ?? '-'} dk'),
+                                ]),
+                            if (userOffer != null) ...[
+                              const SizedBox(height: 10),
+                              Text(
+                                  'Teklifiniz: ${rentalPrice(userOffer * 100)} ₺ · Güncel tahmin: ${rentalPrice(shownPrice * 100)} ₺',
+                                  style:
+                                      Theme.of(context).textTheme.bodyMedium),
+                            ],
+                            const SizedBox(height: 14),
+                            Wrap(spacing: 8, runSpacing: 8, children: [
+                              FilledButton.icon(
+                                  onPressed: _busy
+                                      ? null
+                                      : () => _counterEstimate(point),
+                                  icon: const Icon(Icons.local_offer_outlined),
+                                  label: Text(userOffer == null
+                                      ? 'Teklif ver'
+                                      : 'Teklifi güncelle')),
+                            ]),
+                          ])));
+            }),
+        ]));
   }
 
   Widget _offerCard(Map<String, dynamic> bid) {

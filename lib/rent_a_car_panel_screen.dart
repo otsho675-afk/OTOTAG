@@ -15,6 +15,7 @@ import 'diagnostic_screen.dart';
 import 'rental_booking_screen.dart';
 import 'rentacar_company_profile_screen.dart';
 import 'rental_history_screen.dart';
+import 'referral_screen.dart';
 import 'services/app_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
@@ -390,13 +391,15 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.spaceBetween,
                 children: [
                   const PremiumStatusPill(
                     'OTO TAG BUSINESS',
                     icon: Icons.verified_rounded,
                   ),
-                  const Spacer(),
                   PremiumStatusPill(
                     _canWork ? 'OPERASYON AKTİF' : 'YENİLEME GEREKİYOR',
                     icon: _canWork
@@ -741,11 +744,14 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                           children: [
                             Image.asset('assets/images/logo.png', height: 24),
                             const SizedBox(width: 9),
-                            const Column(
+                            const Flexible(
+                              child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text('OTO TAG BUSINESS',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                         color: AppConstants.primaryColor,
                                         fontWeight: FontWeight.w900,
@@ -753,11 +759,14 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                                         letterSpacing: 1.15)),
                                 SizedBox(height: 1),
                                 Text('Rent A Car',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                         fontWeight: FontWeight.w800,
                                         fontSize: 16,
                                         letterSpacing: -.2)),
                               ],
+                              ),
                             ),
                           ],
                         ),
@@ -766,6 +775,18 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                       foregroundColor: Colors.white,
                       automaticallyImplyLeading: false,
                       actions: [
+                        IconButton(
+                            tooltip: 'Arkadaşını davet et',
+                            onPressed: _busy
+                                ? null
+                                : () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => ReferralScreen(
+                                            userId: widget.companyId,
+                                            userType: 'rentacar'))),
+                            icon: const Icon(Icons.card_giftcard_rounded,
+                                color: AppConstants.primaryColor)),
                         IconButton(
                             tooltip: 'Kiralama geçmişi',
                             onPressed: _busy ? null : _history,

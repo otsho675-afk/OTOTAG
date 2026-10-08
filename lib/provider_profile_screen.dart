@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:ui';
+import 'services/app_session.dart';
+import 'services/authenticated_http_client.dart';
 
 class ProviderProfileScreen extends StatefulWidget {
   final int providerId;
@@ -20,7 +22,11 @@ class ProviderProfileScreen extends StatefulWidget {
 class _ProviderProfileScreenState extends State<ProviderProfileScreen>
     with TickerProviderStateMixin {
   late final http.Client _httpClient = widget.client ?? http.Client();
+  late final AuthenticatedHttpClient _authClient =
+      AuthenticatedHttpClient(http.Client());
   final Duration _apiTimeout = const Duration(seconds: 15);
+  bool _favorite = false;
+  bool _favoriteBusy = false;
 
   bool isLoading = true;
   bool hasError = false;
@@ -28,6 +34,9 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
   List<Map<String, dynamic>> reviews = [];
   int completedJobs = 0;
   double providerRating = 5.0;
+  double avgResponseMinutes = 0;
+  double cancellationRate = 0;
+  String? lastActive;
 
   final String baseUrl = AppConstants.baseUrl;
   late AnimationController _listAnimController;
@@ -47,11 +56,13 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
         vsync: this, duration: const Duration(milliseconds: 900));
 
     _fetchProviderData();
+    _loadFavoriteState();
   }
 
   @override
   void dispose() {
     if (widget.client == null) _httpClient.close();
+    _authClient.close();
     _listAnimController.dispose();
     super.dispose();
   }
@@ -85,6 +96,11 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
           profile = provider;
           providerRating = double.tryParse('${stats['average'] ?? 5}') ?? 5.0;
           completedJobs = int.tryParse('${stats['completed_jobs'] ?? 0}') ?? 0;
+          avgResponseMinutes =
+              double.tryParse('${stats['avg_response_min'] ?? 0}') ?? 0;
+          cancellationRate =
+              double.tryParse('${stats['cancellation_rate'] ?? 0}') ?? 0;
+          lastActive = stats['last_active']?.toString();
           reviews = rawReviews is List
               ? rawReviews
                   .whereType<Map>()
@@ -111,6 +127,55 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
           hasError = true;
         });
       }
+    }
+  }
+
+  Future<void> _loadFavoriteState() async {
+    if (AppSession.userType != 'customer') return;
+    try {
+      final uri = Uri.parse(baseUrl)
+          .replace(queryParameters: {'action': 'get_favorite_providers'});
+      final response =
+          await _authClient.get(uri).timeout(const Duration(seconds: 10));
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (response.statusCode == 200 &&
+          data is Map &&
+          data['providers'] is List &&
+          mounted) {
+        final ids = (data['providers'] as List)
+            .whereType<Map>()
+            .map((e) => int.tryParse('${e['id']}'))
+            .whereType<int>()
+            .toSet();
+        setState(() => _favorite = ids.contains(widget.providerId));
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (_favoriteBusy || AppSession.userType != 'customer') return;
+    setState(() => _favoriteBusy = true);
+    try {
+      final uri = Uri.parse(baseUrl)
+          .replace(queryParameters: {'action': 'toggle_favorite_provider'});
+      final response = await _authClient.post(uri,
+          body: {'provider_id': widget.providerId.toString()}).timeout(
+        const Duration(seconds: 10),
+      );
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (response.statusCode == 200 &&
+          data is Map &&
+          data['status'] == 'success' &&
+          mounted) {
+        setState(() => _favorite = data['favorite'] == true);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(_favorite
+              ? 'Usta favorilerine eklendi.'
+              : 'Usta favorilerinden çıkarıldı.'),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _favoriteBusy = false);
     }
   }
 
@@ -157,6 +222,63 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
               color: goldAccent.withValues(alpha: 0.4), size: size);
         }
       }),
+    );
+  }
+
+  Widget _buildPerformanceMeta() {
+    String activeLabel = 'Yeni';
+    final parsed = DateTime.tryParse(lastActive ?? '');
+    if (parsed != null) {
+      final diff = DateTime.now().difference(parsed.toLocal());
+      if (diff.inMinutes < 60) {
+        activeLabel = '${diff.inMinutes.clamp(1, 59)} dk önce';
+      } else if (diff.inHours < 24) {
+        activeLabel = '${diff.inHours} sa önce';
+      } else {
+        activeLabel = '${diff.inDays} gün önce';
+      }
+    }
+
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _performanceChip(
+          Icons.speed_rounded,
+          avgResponseMinutes > 0
+              ? 'Ort. yanıt ${avgResponseMinutes.toStringAsFixed(0)} dk'
+              : 'Yanıt verisi yeni',
+        ),
+        _performanceChip(
+          Icons.event_busy_rounded,
+          'İptal %${cancellationRate.toStringAsFixed(0)}',
+        ),
+        _performanceChip(
+          Icons.online_prediction_rounded,
+          'Son aktif: $activeLabel',
+        ),
+      ],
+    );
+  }
+
+  Widget _performanceChip(IconData icon, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+      decoration: BoxDecoration(
+        color: surfaceBlack,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 15, color: neonGreen),
+        const SizedBox(width: 6),
+        Text(text,
+            style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 11,
+                fontWeight: FontWeight.w700)),
+      ]),
     );
   }
 
@@ -515,6 +637,28 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
           ),
         ),
         actions: [
+          if (AppSession.userType == 'customer')
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: IconButton(
+                tooltip: _favorite ? 'Favoriden çıkar' : 'Favoriye ekle',
+                onPressed: _favoriteBusy ? null : _toggleFavorite,
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                      color: panelBlack.withValues(alpha: 0.8),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white10)),
+                  child: Icon(
+                    _favorite
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
+                    size: 16,
+                    color: _favorite ? Colors.redAccent : Colors.white,
+                  ),
+                ),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: IconButton(
@@ -645,6 +789,8 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                                               ),
                                       ),
                                     ),
+                                    const SizedBox(height: 18),
+                                    _buildPerformanceMeta(),
                                     const SizedBox(height: 32),
                                     SlideTransition(
                                       position: Tween<Offset>(
@@ -825,11 +971,16 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.verified_rounded, color: neonGreen, size: 16),
-                const SizedBox(width: 6),
+                if (profile['verified'] == true) ...[
+                  const Icon(Icons.verified_rounded,
+                      color: neonGreen, size: 16),
+                  const SizedBox(width: 6),
+                ],
                 Text(
-                  _getServiceTypeName(profile['service_category'])
-                      .toUpperCase(),
+                  profile['verified'] == true
+                      ? 'DOĞRULANMIŞ • ${_getServiceTypeName(profile['service_category']).toUpperCase()}'
+                      : _getServiceTypeName(profile['service_category'])
+                          .toUpperCase(),
                   style: const TextStyle(
                       color: neonGreen,
                       fontWeight: FontWeight.w900,

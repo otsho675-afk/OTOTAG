@@ -55,6 +55,106 @@ function serviceOfferIsCurrent($bid, $input) {
          (int)$input['offer_version'] === (int)$bid['negotiation_count']);
 }
 
+
+function serviceEligibleRealProviders($pdo,$job,$limit=1) {
+    if (!$job || ($job['status'] ?? '')!=='searching' || ($job['service_type'] ?? '')==='rentacar') return [];
+    $city=trim((string)($job['city'] ?? ''));
+    $service=trim((string)($job['service_type'] ?? ''));
+    if ($city==='' || $service==='') return [];
+    $stmt=$pdo->prepare("SELECT * FROM users
+        WHERE user_type='provider' AND status='active' AND COALESCE(is_suspended,0)=0
+        AND service_category=? AND LOWER(TRIM(city))=LOWER(TRIM(?))
+        AND lat IS NOT NULL AND lng IS NOT NULL AND NOT (lat=0 AND lng=0)
+        ORDER BY id ASC LIMIT 100");
+    $stmt->execute([$service,$city]);
+    $radius=min(50,max(1,(float)($job['search_radius'] ?? 50)));
+    $eligible=[];
+    while ($provider=$stmt->fetch(PDO::FETCH_ASSOC)) {
+        if (!businessSubscriptionStatus($provider)['can_work']) continue;
+        try {
+            if (serviceDistanceKm($provider['lat'],$provider['lng'],$job['latitude'],$job['longitude'])>$radius) continue;
+        } catch (Throwable $e) { continue; }
+        // Do not advertise a busy provider as available.
+        $busy=$pdo->prepare("SELECT id FROM jobs WHERE provider_id=? AND id<>? AND status IN ('matched','accepted','approved','in_progress','customer_paid') LIMIT 1");
+        $busy->execute([$provider['id'],$job['id']]);
+        if ($busy->fetchColumn()) continue;
+        $provider['_distance_km']=serviceDistanceKm($provider['lat'],$provider['lng'],$job['latitude'],$job['longitude']);
+        $eligible[]=$provider;
+    }
+    // Prefer the geographically closest eligible, currently idle providers.
+    usort($eligible,static function($a,$b) {
+        return ($a['_distance_km'] <=> $b['_distance_km']) ?: ((int)$a['id'] <=> (int)$b['id']);
+    });
+    $eligible=array_slice($eligible,0,max(1,(int)$limit));
+    foreach ($eligible as &$provider) unset($provider['_distance_km']);
+    unset($provider);
+    return $eligible;
+}
+
+function serviceSimulationFallback($pdo,$job) {
+    if (!$job || ($job['status'] ?? '')!=='searching' || ($job['service_type'] ?? '')==='rentacar') return null;
+    if (serviceEligibleRealProviders($pdo,$job,1)) return null;
+
+    try {
+        $lat=serviceCoordinate($job['latitude'] ?? null);
+        $lng=serviceCoordinate($job['longitude'] ?? null,false);
+    } catch (Throwable $e) { return null; }
+
+    $service=(string)($job['service_type'] ?? 'mechanic');
+    $pricing=[
+        'mechanic'=>['base'=>700,'km'=>55],
+        'tow'=>['base'=>950,'km'=>75],
+        'tire'=>['base'=>450,'km'=>40],
+        'wash'=>['base'=>280,'km'=>22],
+    ];
+    $rule=$pricing[$service] ?? $pricing['mechanic'];
+    $jobId=(int)($job['id'] ?? 0);
+    $radius=min(8.0,max(2.0,(float)($job['search_radius'] ?? 8)));
+    $cos=max(0.2,cos(deg2rad($lat)));
+    $points=[];
+
+    for ($i=1;$i<=3;$i++) {
+        $seed=(int)sprintf('%u',crc32($jobId.'|'.$service.'|'.($job['city'] ?? '').'|'.$i));
+        $distance=min($radius,1.2+(($seed % 58)/10));
+        $angle=deg2rad(($seed >> 5) % 360);
+        $pointLat=$lat+((cos($angle)*$distance)/111.0);
+        $pointLng=$lng+((sin($angle)*$distance)/(111.0*$cos));
+
+        $priceJitter=((($seed >> 9)%17)-8)/100;
+        $suggested=(int)(round((($rule['base']+($distance*$rule['km']))*(1+$priceJitter))/10)*10);
+        $low=(int)(floor(($suggested*0.90)/10)*10);
+        $high=(int)(ceil(($suggested*1.10)/10)*10);
+
+        $trafficJitter=(($seed >> 13)%5);
+        $eta=(int)ceil(($distance/25.0)*60)+4+$trafficJitter;
+        $eta=max(6,min(35,$eta));
+
+        $points[]=[
+            'id'=>'est-'.$jobId.'-'.$i,
+            'label'=>'Yakındaki seçenek '.$i,
+            'latitude'=>round($pointLat,6),
+            'longitude'=>round($pointLng,6),
+            'distance_km'=>round($distance,1),
+            'estimated_time'=>$eta,
+            'suggested_price'=>$suggested,
+            'estimate_low'=>$low,
+            'estimate_high'=>$high,
+            'estimated'=>true,
+        ];
+    }
+
+    usort($points,function($a,$b){ return $a['distance_km'] <=> $b['distance_km']; });
+
+    return [
+        'active'=>true,
+        'mode'=>'estimated_fallback',
+        'service_type'=>$service,
+        'city'=>(string)($job['city'] ?? ''),
+        'real_provider_available'=>false,
+        'points'=>$points,
+    ];
+}
+
 function serviceAcceptOffer($pdo, $actor, $input) {
     $jobId=(int)($input['job_id'] ?? 0); $bidId=(int)($input['bid_id'] ?? 0);
     $providerId=(int)($input['provider_id'] ?? 0);

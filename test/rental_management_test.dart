@@ -112,7 +112,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(RentACarPanelScreen), findsOneWidget);
     expect(AppSession.userId, 10);
-    await tester.tap(find.widgetWithText(TextButton, 'Çıkış'));
+    await tester.tap(find.byTooltip('Hızlı çıkış'));
     await tester.pump(const Duration(milliseconds: 500));
     await tester.pump(const Duration(seconds: 6));
     await tester.pump(const Duration(milliseconds: 500));
@@ -330,7 +330,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Düzenle'));
     await tester.tap(find.text('Düzenle'));
-    await tester.pumpAndSettle();
+    // The firm panel has a live refresh loop. Advance only the sheet
+    // entrance transition instead of waiting for every animation to stop.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Fiat'), findsOneWidget);
     expect(find.text('Egea'), findsOneWidget);
     expect(find.text('2024'), findsWidgets);
@@ -340,7 +343,8 @@ void main() {
     await tester.enterText(price, '950,50');
     await tester.ensureVisible(find.text('Değişiklikleri kaydet'));
     await tester.tap(find.text('Değişiklikleri kaydet'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     expect(mutation!.url.queryParameters['action'], 'update_rentacar_listing');
     expect(mutation!.body, contains('name="listing_version"\r\n\r\n4'));
     expect(mutation!.body, contains('name="daily_price"\r\n\r\n950.50'));
@@ -369,10 +373,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byTooltip('Aracı sil'));
     await tester.tap(find.byTooltip('Aracı sil'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     expect(mutation, isNull);
     await tester.tap(find.text('Aracı kaldır'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     expect(mutation!.url.queryParameters['action'], 'delete_rentacar_listing');
     expect(mutation!.bodyFields, {'listing_id': '1', 'listing_version': '4'});
     expect(find.text('Fiat Egea'), findsNothing);

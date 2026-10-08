@@ -137,7 +137,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     reduced.value = true;
     await tester.pumpAndSettle();
-    expect(find.text('Hoş Geldiniz'), findsOneWidget);
+    expect(find.text('Nasıl devam etmek istiyorsun?'), findsOneWidget);
     expect(tester.binding.hasScheduledFrame, isFalse);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
@@ -169,7 +169,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 3));
       await tester.pumpAndSettle();
-      expect(find.text('Hoş Geldiniz'), findsOneWidget);
+      expect(find.text('Nasıl devam etmek istiyorsun?'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
       debugDefaultTargetPlatformOverride = null;

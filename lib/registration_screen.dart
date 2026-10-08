@@ -13,6 +13,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'customer_dashboard_screen.dart';
 import 'provider_map_screen.dart';
@@ -164,6 +165,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final TextEditingController _ibanController = TextEditingController();
   final TextEditingController _plateController = TextEditingController();
   final TextEditingController _mapLinkController = TextEditingController();
+  final TextEditingController _referralController = TextEditingController();
 
   final FocusNode _nameFocus = FocusNode();
   final FocusNode _phoneFocus = FocusNode();
@@ -171,12 +173,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final FocusNode _ibanFocus = FocusNode();
   final FocusNode _plateFocus = FocusNode();
   final FocusNode _mapLinkFocus = FocusNode();
+  final FocusNode _referralFocus = FocusNode();
 
   String _selectedService = '';
   String? _selectedCity;
   bool isRegistering = false;
   bool _obscurePassword = true;
-
   String? _currentOauthProvider;
   String? _currentOauthId;
   String? _currentOauthToken;
@@ -240,9 +242,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       _effectiveIsRentACar ? 'rentacar' : _normalizedUserType;
 
   int get _stepCount {
-    if (_isCustomer) return 2;
-    if (_isProvider) return 4;
-    if (_isRentACar) return 3;
+    if (_isCustomer) return 1;
+    if (_isProvider) return 3;
+    if (_isRentACar) return 2;
     return 1;
   }
 
@@ -255,14 +257,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   String get _roleTitle {
     if (!_hasValidUserType) return 'Kayıt Ekranı Hatası';
-    if (_isCustomer) return 'Müşteri Hesabı';
+    if (_isCustomer) return 'Kullanıcı Hesabı';
     if (_effectiveIsRentACar) return 'Rent A Car Firma Hesabı';
     return 'Usta Hesabı';
   }
 
   String get _roleBadge {
     if (!_hasValidUserType) return 'HATA';
-    if (_isCustomer) return 'MÜŞTERİ';
+    if (_isCustomer) return 'KULLANICI';
     if (_effectiveIsRentACar) return 'RENT A CAR';
     return 'USTA';
   }
@@ -283,14 +285,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   List<String> get _stepTitles {
     if (_isProvider) {
       return _selectedRentACar
-          ? const ['Hizmet', 'Firma', 'Konum & IBAN', 'Belgeler']
-          : const ['Hizmet', 'Hesap', 'Bölge & IBAN', 'Belgeler'];
+          ? const ['Hizmet', 'Firma & Bölge', 'Belgeler']
+          : const ['Hizmet', 'Hesap & Bölge', 'Belgeler'];
     }
     if (_isRentACar) {
-      return const ['Firma', 'Bölge & IBAN', 'Belgeler'];
+      return const ['Firma & Bölge', 'Belgeler'];
     }
     if (_isCustomer) {
-      return const ['Hesap', 'Şehir'];
+      return const ['Hızlı Kayıt'];
     }
     return const ['Hesap Türü'];
   }
@@ -343,40 +345,45 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             isError: true);
         return;
       }
+
+      if (_isCustomer &&
+          (_selectedCity == null || _selectedCity!.isEmpty)) {
+        _showCustomSnackBar('Lütfen bulunduğunuz şehri seçiniz.',
+            isError: true);
+        return;
+      }
     }
 
-    if (_currentStep == basicInfoStepIndex + 1) {
+    if (!_isCustomer && _currentStep == basicInfoStepIndex) {
       if (_selectedCity == null || _selectedCity!.isEmpty) {
         _showCustomSnackBar('Lütfen bulunduğunuz şehri seçiniz.',
             isError: true);
         return;
       }
 
-      if (!_isCustomer) {
-        if (_effectiveIsRentACar) {
-          if (_mapLinkController.text.trim().isEmpty) {
-            _showCustomSnackBar('Firma harita linki zorunludur.',
-                isError: true);
-            return;
-          }
-        } else {
-          final cleanPlate = _plateController.text.trim().toUpperCase();
-          if (cleanPlate.isEmpty || cleanPlate.length < 5) {
-            _showCustomSnackBar(
-                'Lütfen geçerli bir araç/çekici plakası giriniz.',
-                isError: true);
-            return;
-          }
-        }
-
-        final cleanIban =
-            _ibanController.text.replaceAll(' ', '').toUpperCase();
-        if (cleanIban.length != 26 || !cleanIban.startsWith('TR')) {
-          _showCustomSnackBar(
-              'Lütfen geçerli bir 26 haneli TR IBAN numarası giriniz.',
+      if (_effectiveIsRentACar) {
+        if (_mapLinkController.text.trim().isEmpty) {
+          _showCustomSnackBar('Firma harita linki zorunludur.',
               isError: true);
           return;
         }
+      } else {
+        final cleanPlate = _plateController.text.trim().toUpperCase();
+        if (cleanPlate.isEmpty || cleanPlate.length < 5) {
+          _showCustomSnackBar(
+              'Lütfen geçerli bir araç/çekici plakası giriniz.',
+              isError: true);
+          return;
+        }
+      }
+
+      final cleanIban =
+          _ibanController.text.replaceAll(' ', '').toUpperCase();
+      if (cleanIban.length != 26 || !cleanIban.startsWith('TR')) {
+        _showCustomSnackBar(
+            'Lütfen geçerli bir 26 haneli TR IBAN numarası giriniz.',
+            isError: true);
+        return;
       }
     }
 
@@ -512,6 +519,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       _ibanFocus,
       _plateFocus,
       _mapLinkFocus,
+      _referralFocus,
     ]) {
       node.addListener(_handleFocusChange);
     }
@@ -530,6 +538,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       _ibanFocus,
       _plateFocus,
       _mapLinkFocus,
+      _referralFocus,
     ]) {
       node.removeListener(_handleFocusChange);
     }
@@ -540,12 +549,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     _ibanController.dispose();
     _plateController.dispose();
     _mapLinkController.dispose();
+    _referralController.dispose();
     _nameFocus.dispose();
     _phoneFocus.dispose();
     _passwordFocus.dispose();
     _ibanFocus.dispose();
     _plateFocus.dispose();
     _mapLinkFocus.dispose();
+    _referralFocus.dispose();
     super.dispose();
   }
 
@@ -1056,6 +1067,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         request.fields['oauth_id'] = _currentOauthId ?? '';
         request.fields['oauth_token'] = _currentOauthToken ?? '';
         request.fields['email'] = _currentOauthEmail ?? '';
+        request.fields['referral_code'] = _referralController.text.trim().toUpperCase();
 
         if (_selectedService == 'wash' && _isProvider) {
           request.files.add(http.MultipartFile.fromBytes(
@@ -1092,6 +1104,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             "oauth_id": _currentOauthId ?? '',
             "oauth_token": _currentOauthToken ?? '',
             "email": _currentOauthEmail ?? '',
+            "referral_code": _referralController.text.trim().toUpperCase(),
           },
         ).timeout(_apiTimeout);
         await _handleResponse(response.body, response.statusCode);
@@ -1238,6 +1251,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           await AppSession.save(Map<String, dynamic>.from(data));
           if (!mounted) return;
           int userId = int.parse(data['user_id'].toString());
+          if (responseUserType == 'customer') {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('show_customer_welcome_$userId', true);
+          }
+          if (!mounted) return;
           Navigator.pushReplacement(context, MaterialPageRoute(
             builder: (context) {
               if (responseUserType == 'customer') {
@@ -1583,6 +1601,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
+  Widget _buildBusinessAccountStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildBasicInfoStep(),
+        const SizedBox(height: 26),
+        _buildProviderLocationAndVehicleStep(),
+      ],
+    );
+  }
+
   Widget _buildCurrentStepContent() {
     if (!_hasValidUserType) {
       return _buildInvalidRoleCard();
@@ -1590,16 +1619,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
     if (_isProvider) {
       if (_currentStep == 0) return _buildProviderServiceStep();
-      if (_currentStep == 1) return _buildBasicInfoStep();
-      if (_currentStep == 2) return _buildProviderLocationAndVehicleStep();
-      if (_currentStep == 3) return _buildProviderDocumentsStep();
-    } else if (_isRentACar) {
-      if (_currentStep == 0) return _buildBasicInfoStep();
-      if (_currentStep == 1) return _buildProviderLocationAndVehicleStep();
+      if (_currentStep == 1) return _buildBusinessAccountStep();
       if (_currentStep == 2) return _buildProviderDocumentsStep();
+    } else if (_isRentACar) {
+      if (_currentStep == 0) return _buildBusinessAccountStep();
+      if (_currentStep == 1) return _buildProviderDocumentsStep();
     } else if (_isCustomer) {
-      if (_currentStep == 0) return _buildBasicInfoStep();
-      if (_currentStep == 1) return _buildCustomerLocationStep();
+      return _buildBasicInfoStep();
     }
 
     return _buildInvalidRoleCard();
@@ -1853,19 +1879,36 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             textInputAction: TextInputAction.done,
             onEditingComplete: () => FocusScope.of(context).unfocus(),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCustomerLocationStep() {
-    return KeyedSubtree(
-      key: const ValueKey('step_customer_loc'),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader("Bölge & Konum Seçimi", Icons.map_rounded),
-          _buildCitySelectorTile(),
+          const SizedBox(height: 14),
+          _buildGlassTextField(
+            controller: _referralController,
+            focusNode: _referralFocus,
+            label: "Davet Kodu (Opsiyonel)",
+            icon: Icons.card_giftcard_rounded,
+            isPasswordField: false,
+            type: TextInputType.text,
+            capitalization: TextCapitalization.characters,
+            textInputAction: TextInputAction.done,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9-]')),
+              LengthLimitingTextInputFormatter(10),
+            ],
+            onEditingComplete: () => FocusScope.of(context).unfocus(),
+          ),
+          if (_isCustomer) ...[
+            const SizedBox(height: 18),
+            _buildSectionHeader("Bulunduğun Şehir", Icons.location_city_rounded),
+            _buildCitySelectorTile(),
+            const SizedBox(height: 8),
+            Text(
+              "Şehrini yalnızca sana yakın usta ve hizmetleri göstermek için kullanıyoruz.",
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.48),
+                fontSize: 11,
+                height: 1.4,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -2316,10 +2359,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                                 strokeWidth: 2.6,
                                               ),
                                             )
-                                          : Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
+                                          : FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
                                                 Text(
                                                   _currentStep ==
                                                           _stepCount - 1
@@ -2344,7 +2390,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                                           .arrow_forward_rounded,
                                                   size: 19,
                                                 ),
-                                              ],
+                                                ],
+                                              ),
                                             ),
                                     ),
                                   ),

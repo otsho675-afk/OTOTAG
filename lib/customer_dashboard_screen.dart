@@ -1,4 +1,5 @@
 import 'services/vehicle_deadline.dart';
+import 'services/daily_engagement_service.dart';
 import 'rental_market_screen.dart';
 import 'rental_booking_screen.dart';
 import 'widgets/dashboard_service_grid.dart';
@@ -20,6 +21,7 @@ import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'customer_map_screen.dart';
 import 'customer_bids_screen.dart';
 import 'profile_screen.dart';
+import 'referral_screen.dart';
 import 'vehicle_panel_screen.dart';
 import 'diagnostic_screen.dart';
 import 'job_tracking_screen.dart';
@@ -113,12 +115,14 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
   late PageController _vehiclePageController;
   final PageController _adPageController =
       PageController(viewportFraction: 1.0);
+  final ScrollController _dashboardScrollController = ScrollController();
+  final GlobalKey _servicesKey = GlobalKey();
+  int _navIndex = 0;
 
   bool isLoading = true;
   bool _fetchingAllData = false;
   bool _foreground = true;
   bool isSaving = false;
-  bool isFirstTime = false;
 
   int? activeJobId;
   String? activeJobStatus;
@@ -540,11 +544,19 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
       'color': _primaryColor,
       'gradient': [_cardColor, _bgColor]
     },
+    {
+      'id': 'emergency',
+      'name': 'ACİL YARDIM',
+      'icon': Icons.sos_rounded,
+      'color': _dangerColor,
+      'gradient': [_cardColor, _bgColor]
+    },
   ];
 
   @override
   void initState() {
     super.initState();
+    DailyEngagementService.record(userId: widget.customerId, role: 'customer');
     _dayTicker = CalendarDayTicker(() {
       if (mounted) setState(() {});
     });
@@ -563,142 +575,218 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
     if (!kIsWeb) {}
   }
 
-  Future<void> _checkFirstTimeTutorial() async {
-    if (vehicles.isNotEmpty) return;
+  Future<void> _checkFirstTimeExperience() async {
     final prefs = await SharedPreferences.getInstance();
-    bool hasSeenTutorial = prefs.getBool('has_seen_vehicle_tutorial') ?? false;
+    final showKey = 'show_customer_welcome_${widget.customerId}';
+    final doneKey = 'customer_welcome_done_v3_${widget.customerId}';
+    final shouldShow = prefs.getBool(showKey) ?? false;
+    final alreadyDone = prefs.getBool(doneKey) ?? false;
 
-    if (!hasSeenTutorial) {
-      if (mounted) {
-        setState(() {
-          isFirstTime = true;
-        });
-      }
-      Future.delayed(const Duration(seconds: 1), () {
-        if (mounted) _showAnimatedTutorial();
-      });
-    }
+    if (!shouldShow || alreadyDone || !mounted) return;
+
+    await Future.delayed(const Duration(milliseconds: 700));
+    if (!mounted) return;
+    await _showFirstTimeExperience();
+    if (!mounted) return;
+    // Record completion only after the welcome flow has actually been shown.
+    await prefs.setBool(doneKey, true);
+    await prefs.remove(showKey);
   }
 
-  void _showAnimatedTutorial() {
-    showGeneralDialog(
+  Future<void> _showFirstTimeExperience() async {
+    await showModalBottomSheet<void>(
       context: context,
-      barrierDismissible: false,
-      barrierLabel: 'Öğretici',
-      barrierColor: Colors.black.withValues(alpha: 0.8),
-      transitionDuration: const Duration(milliseconds: 500),
-      pageBuilder: (context, anim1, anim2) {
-        return const SizedBox();
-      },
-      transitionBuilder: (context, anim1, anim2, child) {
-        return ScaleTransition(
-          scale: CurvedAnimation(parent: anim1, curve: Curves.easeOutBack),
-          child: AlertDialog(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            content: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: const Color(0xFF111115),
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: const Color(0xFF00FFA3), width: 1.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF00FFA3).withValues(alpha: 0.2),
-                    blurRadius: 40,
-                    spreadRadius: 10,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: .72),
+      builder: (sheetContext) {
+        Widget feature(IconData icon, String title, String text) => Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: _primaryColor.withValues(alpha: .10),
+                      borderRadius: BorderRadius.circular(13),
+                      border: Border.all(
+                        color: _primaryColor.withValues(alpha: .18),
+                      ),
+                    ),
+                    child: Icon(icon, color: _primaryColor, size: 21),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14,
+                            )),
+                        const SizedBox(height: 3),
+                        Text(text,
+                            style: const TextStyle(
+                              color: Colors.white54,
+                              fontSize: 11.5,
+                              height: 1.4,
+                            )),
+                      ],
+                    ),
                   ),
                 ],
               ),
+            );
+
+        return SafeArea(
+          top: false,
+          child: Container(
+            margin: const EdgeInsets.all(14),
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF101216),
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(
+                color: _primaryColor.withValues(alpha: .18),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: .38),
+                  blurRadius: 36,
+                  offset: const Offset(0, 18),
+                )
+              ],
+            ),
+            child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  ScaleTransition(
-                    scale: CurvedAnimation(
-                        parent: anim1,
-                        curve:
-                            const Interval(0.5, 1.0, curve: Curves.elasticOut)),
+                  Center(
                     child: Container(
-                      padding: const EdgeInsets.all(16),
+                      width: 42,
+                      height: 4,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF00FFA3).withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(99),
                       ),
-                      child: const Icon(Icons.directions_car_rounded,
-                          color: Color(0xFF00FFA3), size: 48),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    "İlk Aracınızı Ekleyin",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    "Garajınız şu an boş görünüyor. Hemen bir araç ekleyerek muayene, sigorta ve bakım takiplerinizi yapmaya başlayabilirsiniz.",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                      height: 1.5,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setBool('has_seen_vehicle_tutorial', true);
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                          _showVehicleDialog();
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF00FFA3),
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: _primaryColor.withValues(alpha: .10),
+                          borderRadius: BorderRadius.circular(17),
                         ),
-                        elevation: 0,
+                        child: const Icon(Icons.waving_hand_rounded,
+                            color: _primaryColor, size: 27),
                       ),
-                      child: const Text(
-                        "Araç Ekle",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.5,
+                      const SizedBox(width: 13),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('OTO TAG’a hoş geldin',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 20,
+                                  letterSpacing: -.4,
+                                )),
+                            SizedBox(height: 4),
+                            Text(
+                              'Kısaca nerede ne var gösterelim. Bu tanıtım yalnızca bir kez görünür.',
+                              style: TextStyle(
+                                color: Colors.white54,
+                                fontSize: 11.5,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
+                  feature(Icons.flash_on_rounded, 'Hızlı Hizmet',
+                      'Tamirci, çekici, lastikçi, yıkama ve acil yardıma ana ekrandan ulaş.'),
+                  feature(Icons.storefront_rounded, 'Pazar',
+                      'Yedek parça ilanlarını tek yerde gör ve ihtiyacına göre ara.'),
+                  feature(Icons.directions_car_rounded, 'Garaj',
+                      'Araç, muayene, sigorta ve bakım bilgilerini düzenli takip et.'),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: _primaryColor.withValues(alpha: .075),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: _primaryColor.withValues(alpha: .15),
+                      ),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.card_giftcard_rounded,
+                            color: _primaryColor, size: 24),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Arkadaşını davet et, puan kazan',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 13,
+                                  )),
+                              SizedBox(height: 3),
+                              Text(
+                                'Davet kodunu paylaş; ödül puanlarını Puan Mağazası’nda kullan.',
+                                style: TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 10.8,
+                                  height: 1.35,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: () async {
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setBool('has_seen_vehicle_tutorial', true);
-                      if (context.mounted) {
-                        Navigator.pop(context);
-                      }
+                  const SizedBox(height: 18),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(sheetContext),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _primaryColor,
+                      foregroundColor: Colors.black,
+                      minimumSize: const Size.fromHeight(50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: const Text('Uygulamayı Keşfet',
+                        style: TextStyle(fontWeight: FontWeight.w900)),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.pop(sheetContext);
+                      Future.microtask(_openReferral);
                     },
-                    child: const Text(
-                      "Daha Sonra",
-                      style: TextStyle(
-                        color: Colors.white54,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    icon: const Icon(Icons.card_giftcard_rounded, size: 18),
+                    label: const Text('Arkadaşını Davet Et'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: _primaryColor,
                     ),
-                  )
+                  ),
                 ],
               ),
             ),
@@ -889,7 +977,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
       if (mounted) {
         setState(() => isLoading = false);
         _startAdTimer();
-        _checkFirstTimeTutorial();
+        _checkFirstTimeExperience();
       }
     }
   }
@@ -926,6 +1014,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
       _adScrollTimer?.cancel();
     } else if (state == AppLifecycleState.resumed) {
       _foreground = true;
+    DailyEngagementService.record(userId: widget.customerId, role: 'customer');
       _startTimers();
       _startAdTimer();
       _fetchAllDataConcurrently();
@@ -941,6 +1030,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
     _fadeController.dispose();
     _vehiclePageController.dispose();
     _adPageController.dispose();
+    _dashboardScrollController.dispose();
     selectedVehicleIndex.dispose();
     currentAdIndex.dispose();
     super.dispose();
@@ -1647,6 +1737,29 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
     );
   }
 
+  Future<void> _confirmLogout() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Çıkış yap'),
+        content: const Text('Hesabınızdan çıkış yapmak istiyor musunuz?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Çıkış yap'),
+          ),
+        ],
+      ),
+    );
+    if (shouldLogout == true && mounted) {
+      await _performLogout();
+    }
+  }
+
   Future<void> _performLogout() async {
     _adScrollTimer?.cancel();
 
@@ -1702,87 +1815,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
         }
       }
     }
-  }
-
-  void _showLogoutDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: AlertDialog(
-          backgroundColor: _cardColor,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-              side: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.1), width: 1.5)),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                    color: _dangerColor.withValues(alpha: 0.15),
-                    shape: BoxShape.circle),
-                child: const Icon(Icons.power_settings_new_rounded,
-                    color: _dangerColor, size: 24),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text("Çıkış Yap",
-                    style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        fontSize: 20,
-                        letterSpacing: -0.5),
-                    overflow: TextOverflow.ellipsis),
-              ),
-            ],
-          ),
-          content: const Text(
-              "Hesabınızdan güvenli bir şekilde çıkış yapmak istediğinize emin misiniz?",
-              style: TextStyle(
-                  color: _subtitleColor,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  height: 1.4)),
-          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              style: TextButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12))),
-              child: const Text("İptal",
-                  style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white54,
-                      fontSize: 14)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _dangerColor,
-                elevation: 0,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              onPressed: () async {
-                Navigator.of(ctx).pop();
-                await _performLogout();
-              },
-              child: const Text("Çıkış Yap",
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 14)),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Future<void> _fetchVehicles(
@@ -3123,7 +3155,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
               Row(
                 children: [
                   const PremiumStatusPill(
-                    'OTO TAG  •  MÜŞTERİ MERKEZİ',
+                    'OTO TAG  •  KULLANICI MERKEZİ',
                     icon: Icons.verified_rounded,
                   ),
                   const Spacer(),
@@ -3359,6 +3391,131 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
     );
   }
 
+  void _openReferral() {
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ReferralScreen(
+          userId: widget.customerId,
+          userType: 'customer',
+        ),
+      ),
+    ).then((_) {
+      if (mounted) setState(() => _navIndex = 0);
+    });
+  }
+
+  Future<void> _openMarket() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SparePartsMarketScreen(
+          currentUserId: widget.customerId,
+          currentUserType: 'customer',
+          userCity: userCity,
+        ),
+      ),
+    );
+    if (mounted) setState(() => _navIndex = 0);
+  }
+
+  Future<void> _openProfile() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProfileScreen(
+          userId: widget.customerId,
+          userType: 'customer',
+        ),
+      ),
+    );
+    if (mounted) setState(() => _navIndex = 0);
+  }
+
+  void _scrollHome() {
+    if (!_dashboardScrollController.hasClients) return;
+    _dashboardScrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 420),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  void _scrollServices() {
+    final target = _servicesKey.currentContext;
+    if (target == null) return;
+    Scrollable.ensureVisible(
+      target,
+      duration: const Duration(milliseconds: 420),
+      curve: Curves.easeOutCubic,
+      alignment: .08,
+    );
+  }
+
+  void _handleBottomNavigation(int index) {
+    HapticFeedback.selectionClick();
+    setState(() => _navIndex = index);
+    switch (index) {
+      case 0:
+        _scrollHome();
+        break;
+      case 1:
+        _scrollServices();
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) setState(() => _navIndex = 0);
+        });
+        break;
+      case 2:
+        _openMarket();
+        break;
+      case 3:
+        _openReferral();
+        break;
+      case 4:
+        _openProfile();
+        break;
+    }
+  }
+
+  Widget _buildBottomNavigation() {
+    return NavigationBar(
+      selectedIndex: _navIndex,
+      onDestinationSelected: _handleBottomNavigation,
+      backgroundColor: const Color(0xFF090B0E),
+      indicatorColor: _primaryColor.withValues(alpha: .14),
+      height: 70,
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home_rounded),
+          label: 'Ana Sayfa',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.flash_on_outlined),
+          selectedIcon: Icon(Icons.flash_on_rounded),
+          label: 'Hizmetler',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.storefront_outlined),
+          selectedIcon: Icon(Icons.storefront_rounded),
+          label: 'Pazar',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.card_giftcard_outlined),
+          selectedIcon: Icon(Icons.card_giftcard_rounded),
+          label: 'Davet',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.person_outline_rounded),
+          selectedIcon: Icon(Icons.person_rounded),
+          label: 'Profil',
+        ),
+      ],
+    );
+  }
+
   Widget _buildResponsiveContent(BuildContext context) {
     final Size size = MediaQuery.sizeOf(context);
     final double horizontalPadding = size.width > 600 ? 32.0 : 16.0;
@@ -3377,105 +3534,63 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
         autofocus: true,
         child: Scaffold(
           backgroundColor: _bgColor,
-          extendBodyBehindAppBar: true,
+          extendBodyBehindAppBar: false,
           appBar: AppBar(
-            title: Image.asset('assets/images/logo.png',
-                height: 28, fit: BoxFit.contain),
-            backgroundColor: Colors.transparent,
+            automaticallyImplyLeading: false,
+            title: Image.asset(
+              'assets/images/logo.png',
+              height: 28,
+              fit: BoxFit.contain,
+            ),
+            backgroundColor: _bgColor.withValues(alpha: .94),
             elevation: 0,
             centerTitle: true,
-            leadingWidth: 64,
-            iconTheme: const IconThemeData(color: _textColor),
-            leading: IconButton(
-              tooltip: 'Çıkış Yap',
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: _dangerColor.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.power_settings_new_rounded,
-                    color: _dangerColor, size: 20),
-              ),
-              onPressed: _showLogoutDialog,
-            ),
             actions: [
-              IconButton(
-                  tooltip: 'Geçmiş işlerim',
-                  onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => ProfileScreen(
-                              userId: widget.customerId,
-                              userType: 'customer',
-                              showHistory: true))),
-                  icon: const Icon(Icons.history_rounded, color: _textColor)),
               Stack(
                 alignment: Alignment.center,
                 children: [
                   IconButton(
-                    icon: Icon(Icons.notifications_rounded,
-                        color: unreadCount > 0 ? _primaryColor : _textColor,
-                        size: 26),
+                    tooltip: 'Bildirimler',
                     onPressed: _showNotificationsDialog,
+                    icon: Icon(
+                      Icons.notifications_none_rounded,
+                      color: unreadCount > 0 ? _primaryColor : Colors.white70,
+                    ),
                   ),
                   if (unreadCount > 0)
                     Positioned(
                       right: 8,
                       top: 8,
                       child: Container(
-                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(minWidth: 16),
+                        height: 16,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
                         decoration: BoxDecoration(
-                            color: _dangerColor,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: _bgColor, width: 2)),
+                          color: _dangerColor,
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        alignment: Alignment.center,
                         child: Text(
-                            unreadCount > 9 ? "9+" : unreadCount.toString(),
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w900)),
+                          unreadCount > 9 ? '9+' : '$unreadCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
                       ),
-                    )
+                    ),
                 ],
               ),
-              Padding(
-                padding: const EdgeInsets.only(right: 12.0, left: 4.0),
-                child: GestureDetector(
-                  onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => ProfileScreen(
-                              userId: widget.customerId,
-                              userType: 'customer'))),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: _primaryColor.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.person_rounded,
-                        color: _primaryColor, size: 20),
-                  ),
-                ),
-              )
-            ],
-            flexibleSpace: ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: _bgColor.withValues(alpha: 0.84),
-                    border: Border(
-                      bottom: BorderSide(
-                        color: Colors.white.withValues(alpha: 0.055),
-                      ),
-                    ),
-                  ),
-                ),
+              IconButton(
+                tooltip: 'Çıkış yap',
+                onPressed: _confirmLogout,
+                icon: const Icon(Icons.logout_rounded, color: Colors.white70),
               ),
-            ),
+              const SizedBox(width: 6),
+            ],
           ),
+          bottomNavigationBar: _buildBottomNavigation(),
           body: isLoading
               ? const Center(
                   child: CircularProgressIndicator(
@@ -3510,6 +3625,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                             backgroundColor: _cardColor,
                             onRefresh: _fetchAllDataConcurrently,
                             child: SingleChildScrollView(
+                              controller: _dashboardScrollController,
                               physics: const AlwaysScrollableScrollPhysics(),
                               padding: EdgeInsets.symmetric(
                                   horizontal: horizontalPadding,
@@ -3633,7 +3749,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                             'İhtiyacınızı seçin, yakınınızdaki uygun işletmeyle eşleşin.',
                                       ),
                                       const SizedBox(height: 16),
-                                      _buildServiceCards(context, constraints),
+                                      KeyedSubtree(
+                                        key: _servicesKey,
+                                        child: _buildServiceCards(context, constraints),
+                                      ),
                                       const SizedBox(height: 32),
                                       PremiumSectionHeading(
                                         title: 'Garajım',
@@ -3731,6 +3850,15 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
           } else {
             if (service['id'] == 'rentacar') {
               _showRentACarFilterDialog(context);
+            } else if (service['id'] == 'emergency') {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => CustomerMapScreen(
+                          customerId: widget.customerId,
+                          initialService: 'tow',
+                          initialProblem:
+                              'Acil yol yardım talebi. Araç hareket edemiyor.')));
             } else {
               Navigator.push(
                   context,

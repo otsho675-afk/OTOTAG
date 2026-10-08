@@ -145,9 +145,56 @@ function growthToggleFavorite($pdo,$customerId,$providerId) {
     return true;
 }
 
+// One row per verified account and server calendar day. No location, device ID or
+// message content is stored; counters start accumulating after deployment.
+function ensureEngagementSchema($pdo) {
+    apiSchemaMigration($pdo,'engagement_daily_v1',function() use($pdo) {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS engagement_daily (
+            user_id INT NOT NULL,
+            user_type VARCHAR(20) NOT NULL,
+            active_date DATE NOT NULL,
+            PRIMARY KEY(user_id,active_date),
+            KEY idx_engagement_date_role(active_date,user_type,user_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    });
+}
+
+function growthRecordDailyActive($pdo,$actor) {
+    if (!in_array($actor['user_type'] ?? '', ['customer','provider','rentacar'],true)
+        || (int)($actor['user_id'] ?? 0)<=0) {
+        throw new InvalidArgumentException('Geçersiz hesap.');
+    }
+    ensureEngagementSchema($pdo);
+    $stmt=$pdo->prepare("INSERT INTO engagement_daily(user_id,user_type,active_date)
+        VALUES (?,?,CURRENT_DATE())
+        ON DUPLICATE KEY UPDATE user_type=VALUES(user_type)");
+    $stmt->execute([(int)$actor['user_id'],(string)$actor['user_type']]);
+}
+
+function growthActiveUsage($pdo) {
+    ensureEngagementSchema($pdo);
+    $stmt=$pdo->query("SELECT user_type,
+        COUNT(DISTINCT CASE WHEN active_date=CURRENT_DATE() THEN user_id END) AS daily,
+        COUNT(DISTINCT CASE WHEN active_date>=DATE_SUB(CURRENT_DATE(),INTERVAL 6 DAY) THEN user_id END) AS weekly,
+        COUNT(DISTINCT user_id) AS monthly
+        FROM engagement_daily
+        WHERE active_date BETWEEN DATE_SUB(CURRENT_DATE(),INTERVAL 29 DAY) AND CURRENT_DATE()
+        GROUP BY user_type");
+    $counts=['customer'=>['daily'=>0,'weekly'=>0,'monthly'=>0],
+             'provider'=>['daily'=>0,'weekly'=>0,'monthly'=>0],
+             'rentacar'=>['daily'=>0,'weekly'=>0,'monthly'=>0]];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $role=(string)$row['user_type'];
+        if (!array_key_exists($role,$counts)) continue;
+        foreach (['daily','weekly','monthly'] as $window) $counts[$role][$window]=(int)$row[$window];
+    }
+    return $counts;
+}
+
 function growthAnalytics($pdo) {
     ensureGrowthSchema($pdo);
     ensureReferralSchema($pdo);
+    $activeUsage=growthActiveUsage($pdo);
     $todayUsers=(int)$pdo->query("SELECT COUNT(*) FROM users WHERE created_at>=CURDATE()")->fetchColumn();
     $todayJobs=(int)$pdo->query("SELECT COUNT(*) FROM jobs WHERE created_at>=CURDATE()")->fetchColumn();
     $completed30=(int)$pdo->query("SELECT COUNT(*) FROM jobs WHERE status='completed' AND created_at>=DATE_SUB(NOW(),INTERVAL 30 DAY)")->fetchColumn();
@@ -165,6 +212,7 @@ function growthAnalytics($pdo) {
     $daily=$pdo->query("SELECT DATE(created_at) day,COUNT(*) total FROM users WHERE created_at>=DATE_SUB(CURDATE(),INTERVAL 13 DAY) GROUP BY DATE(created_at) ORDER BY day")->fetchAll(PDO::FETCH_ASSOC);
     return [
         'today_users'=>$todayUsers,
+        'active_usage'=>$activeUsage,
         'today_jobs'=>$todayJobs,
         'open_jobs'=>$openJobs,
         'active_providers'=>$activeProviders,

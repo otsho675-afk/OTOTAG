@@ -65,6 +65,14 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       tester.view.resetViewInsets();
+      // Preserve the full render diagnostics when a compact layout overflows,
+      // while still letting the original test binding fail the test.
+      final originalErrorHandler = FlutterError.onError;
+      FlutterError.onError = (details) {
+        debugPrint('REGISTRATION_LAYOUT_DIAGNOSTIC: ${details.toString()}');
+        originalErrorHandler?.call(details);
+      };
+      addTearDown(() => FlutterError.onError = originalErrorHandler);
       await tester.pumpWidget(MaterialApp(
           theme: appTheme(),
           home: const RegistrationScreen(

@@ -13,6 +13,10 @@ function ensureGrowthSchema($pdo) {
                 $pdo->exec("ALTER TABLE users ADD COLUMN `$column` $definition");
             }
         }
+        // Existing active business accounts already passed the legacy admin
+        // approval flow, so preserve that trust state during migration.
+        $pdo->exec("UPDATE users SET is_verified=1
+            WHERE user_type IN ('provider','rentacar') AND status='active'");
 
         $jobColumns=$pdo->query("SHOW COLUMNS FROM jobs")->fetchAll(PDO::FETCH_COLUMN);
         $jobDefs=[

@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import 'core/constants/app_constants.dart';
 import 'services/authenticated_http_client.dart';
+import 'reward_store_screen.dart';
 
 class ReferralScreen extends StatefulWidget {
   const ReferralScreen({
@@ -193,6 +194,14 @@ class _ReferralScreenState extends State<ReferralScreen> {
                           onPressed: _copyInviteText,
                           icon: const Icon(Icons.ios_share_rounded),
                           label: const Text('Davet Mesajını Kopyala'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const RewardStoreScreen())),
+                          icon: const Icon(Icons.redeem_rounded),
+                          label: const Text('Puan Mağazası'),
                         ),
                       ],
                     )

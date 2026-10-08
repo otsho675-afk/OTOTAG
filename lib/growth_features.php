@@ -5,9 +5,15 @@ function ensureGrowthSchema($pdo) {
         $columns=$pdo->query("SHOW COLUMNS FROM users")->fetchAll(PDO::FETCH_COLUMN);
         $defs=[
             'phone_verified'=>"TINYINT(1) NOT NULL DEFAULT 0",
+            'firebase_uid'=>"VARCHAR(128) NULL",
         ];
         foreach($defs as $col=>$def) {
             if(!in_array($col,$columns,true)) $pdo->exec("ALTER TABLE users ADD COLUMN `$col` $def");
+        }
+        $indexes=$pdo->query("SHOW INDEX FROM users")->fetchAll(PDO::FETCH_ASSOC);
+        $indexNames=array_column($indexes,'Key_name');
+        if(!in_array('idx_users_firebase_uid',$indexNames,true)) {
+            $pdo->exec("CREATE UNIQUE INDEX idx_users_firebase_uid ON users(firebase_uid)");
         }
         $jobColumns=$pdo->query("SHOW COLUMNS FROM jobs")->fetchAll(PDO::FETCH_COLUMN);
         if(!in_array('preferred_provider_id',$jobColumns,true)) {
@@ -186,6 +192,69 @@ function growthAnalytics($pdo) {
         'top_cities'=>$city,
         'daily_registrations'=>$daily,
     ];
+}
+
+function growthFirebasePhoneE164($phone) {
+    $clean=registrationPhone($phone);
+    if (!preg_match('/^05[0-9]{9}$/D',$clean)) {
+        throw new InvalidArgumentException('SMS doğrulaması için cep telefonu numarası gereklidir.');
+    }
+    return '+90'.substr($clean,1);
+}
+
+function growthVerifyFirebasePhoneToken($idToken,$expectedPhone) {
+    $idToken=trim((string)$idToken);
+    if ($idToken==='') {
+        throw new InvalidArgumentException('Telefon numaranızı Firebase SMS ile doğrulayın.');
+    }
+
+    $apiKey=serverConfig(
+        'FIREBASE_WEB_API_KEY',
+        'AIzaSyB1EmNB9O24q9J2v8u8Wi59Igp2wPX0bVk'
+    );
+    if ($apiKey==='') {
+        throw new RuntimeException('Firebase doğrulama anahtarı sunucuda tanımlı değil.');
+    }
+
+    $url='https://identitytoolkit.googleapis.com/v1/accounts:lookup?key='.rawurlencode($apiKey);
+    $payload=json_encode(['idToken'=>$idToken],JSON_UNESCAPED_SLASHES);
+    $ch=curl_init($url);
+    curl_setopt_array($ch,[
+        CURLOPT_RETURNTRANSFER=>true,
+        CURLOPT_POST=>true,
+        CURLOPT_TIMEOUT=>10,
+        CURLOPT_CONNECTTIMEOUT=>5,
+        CURLOPT_HTTPHEADER=>['Content-Type: application/json'],
+        CURLOPT_POSTFIELDS=>$payload,
+    ]);
+    $body=curl_exec($ch);
+    $http=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);
+    $curlError=curl_error($ch);
+    curl_close($ch);
+
+    if ($body===false || $http<200 || $http>=300) {
+        error_log('Firebase phone token lookup failed: HTTP '.$http.' '.$curlError);
+        throw new InvalidArgumentException('Firebase telefon doğrulaması geçersiz veya süresi dolmuş.');
+    }
+
+    $json=json_decode($body,true);
+    $user=$json['users'][0] ?? null;
+    if (!$user || !empty($user['disabled'])) {
+        throw new InvalidArgumentException('Firebase telefon hesabı kullanılamıyor.');
+    }
+
+    $firebasePhone=trim((string)($user['phoneNumber'] ?? ''));
+    $expected=growthFirebasePhoneE164($expectedPhone);
+    if ($firebasePhone==='' || !hash_equals($expected,$firebasePhone)) {
+        throw new InvalidArgumentException('Doğrulanan telefon numarası kayıt numarasıyla eşleşmiyor.');
+    }
+
+    $uid=trim((string)($user['localId'] ?? ''));
+    if ($uid==='') {
+        throw new InvalidArgumentException('Firebase kullanıcı doğrulaması tamamlanamadı.');
+    }
+
+    return ['uid'=>$uid,'phone'=>$firebasePhone];
 }
 
 function growthSmsConfigured() {

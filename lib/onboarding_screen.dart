@@ -31,6 +31,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
   ];
 
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   Future<void> _finish() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('ototag_onboarding_seen', true);

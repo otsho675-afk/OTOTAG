@@ -80,6 +80,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
   String _currentAddress = "Hedef Konum Aranıyor...";
   bool _isAddressLoading = false;
   String _smartSuggestion = "";
+  bool _preferFavorites = true;
 
   final ValueNotifier<double> _mapRotationNotifier = ValueNotifier(0.0);
   double _currentZoom = 16.0;
@@ -920,7 +921,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
           "problem_description": problemController.text.trim(),
           "city": customerCity,
           "is_emergency": widget.emergency ? "1" : "0",
-          "prefer_favorites": "1",
+          "prefer_favorites": _preferFavorites ? "1" : "0",
         },
       );
 
@@ -1775,6 +1776,37 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                   ],
                                                                 ),
                                                               ),
+                                                            Container(
+                                                              margin: const EdgeInsets.only(bottom: 14),
+                                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                                              decoration: BoxDecoration(
+                                                                color: Colors.white.withValues(alpha: .035),
+                                                                borderRadius: BorderRadius.circular(14),
+                                                                border: Border.all(color: Colors.white.withValues(alpha: .07)),
+                                                              ),
+                                                              child: Row(children: [
+                                                                const Icon(Icons.favorite_rounded, color: neonGreen, size: 19),
+                                                                const SizedBox(width: 9),
+                                                                const Expanded(
+                                                                  child: Column(
+                                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                                    children: [
+                                                                      Text('Favori ustalarımı önceliklendir',
+                                                                          style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w800)),
+                                                                      SizedBox(height: 2),
+                                                                      Text('Uygun favorilerin varsa talebin önce onlara öne çıkarılır.',
+                                                                          style: TextStyle(color: textGray, fontSize: 10.5)),
+                                                                    ],
+                                                                  ),
+                                                                ),
+                                                                Switch.adaptive(
+                                                                  value: _preferFavorites,
+                                                                  onChanged: (value) => setState(() => _preferFavorites = value),
+                                                                  activeTrackColor: neonGreen,
+                                                                  activeThumbColor: pureBlack,
+                                                                ),
+                                                              ]),
+                                                            ),
                                                             SizedBox(
                                                               height: 105,
                                                               child: ListView

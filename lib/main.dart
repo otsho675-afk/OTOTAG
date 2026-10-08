@@ -31,6 +31,8 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/app_motion.dart';
 import 'core/theme/premium_surfaces.dart';
 import 'widgets/app_update_gate.dart';
+import 'onboarding_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -355,6 +357,13 @@ class _SplashScreenState extends State<SplashScreen>
           _nextScreen = RentACarPanelScreen(companyId: userId);
         } else if (userType == 'admin') {
           _nextScreen = const AdminDashboardScreen();
+        }
+      } else {
+        final prefs = await SharedPreferences.getInstance();
+        final seen = prefs.getBool('onboarding_seen_v2') ?? false;
+        if (!seen) {
+          _nextScreen = const OnboardingScreen(
+              nextScreen: RoleSelectionScreen());
         }
       }
     } catch (e) {

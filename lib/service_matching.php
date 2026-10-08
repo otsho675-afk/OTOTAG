@@ -113,25 +113,25 @@ function serviceSimulationFallback($pdo,$job) {
         $high=max($low+100,(int)round($baseHigh*(1+$spread/120)));
         $points[]=[
             'id'=>'sim-'.$jobId.'-'.$i,
-            'label'=>'Bölgesel örnek nokta '.$i,
+            'label'=>'Yakındaki tahmini seçenek '.$i,
             'latitude'=>round($pointLat,6),
             'longitude'=>round($pointLng,6),
             'distance_km'=>round($distance,1),
             'estimated_time'=>7+(($seed >> 13)%27),
             'estimate_low'=>$low,
             'estimate_high'=>$high,
-            'simulated'=>true,
+            'estimated'=>true,
         ];
     }
 
     return [
         'active'=>true,
-        'mode'=>'simulation',
+        'mode'=>'estimated_fallback',
         'service_type'=>$service,
         'city'=>(string)($job['city'] ?? ''),
         'real_provider_available'=>false,
         'points'=>$points,
-        'disclosure'=>'Simülasyon: Bu noktalar ve fiyatlar gerçek usta teklifi değildir. Bölgede uygun gerçek sağlayıcı görünür görünmez bu alan otomatik kapanır.',
+        'disclosure'=>'Bu kartlar gerçek sağlayıcı teklifi değildir; bölgesel tahmini seçeneklerdir. Uygun gerçek sağlayıcı bulunduğunda otomatik olarak kaldırılır.',
     ];
 }
 

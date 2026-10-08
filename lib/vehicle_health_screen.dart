@@ -90,7 +90,7 @@ class _VehicleHealthScreenState extends State<VehicleHealthScreen> {
       if (remaining <= 0) score -= 25;
       else if (remaining <= 1000) score -= 10;
     }
-    return score.clamp(0, 100);
+    return score.clamp(0, 100).toInt();
   }
 
   @override

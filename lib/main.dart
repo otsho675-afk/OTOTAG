@@ -22,6 +22,7 @@ import 'provider_map_screen.dart';
 import 'login_screen.dart' show LoginScreen;
 import 'package:quick_actions/quick_actions.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'services/app_session.dart';
 import 'services/authenticated_http_client.dart';
 import 'services/platform_http_client.dart';
@@ -31,6 +32,7 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/app_motion.dart';
 import 'core/theme/premium_surfaces.dart';
 import 'widgets/app_update_gate.dart';
+import 'onboarding_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -355,6 +357,11 @@ class _SplashScreenState extends State<SplashScreen>
           _nextScreen = RentACarPanelScreen(companyId: userId);
         } else if (userType == 'admin') {
           _nextScreen = const AdminDashboardScreen();
+        }
+      } else {
+        final prefs = await SharedPreferences.getInstance();
+        if (prefs.getBool('ototag_onboarding_seen') != true) {
+          _nextScreen = const OnboardingScreen();
         }
       }
     } catch (e) {

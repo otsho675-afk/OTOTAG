@@ -123,7 +123,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
   bool _fetchingAllData = false;
   bool _foreground = true;
   bool isSaving = false;
-  bool isFirstTime = false;
 
   int? activeJobId;
   String? activeJobStatus;
@@ -3211,7 +3210,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
               Row(
                 children: [
                   const PremiumStatusPill(
-                    'OTO TAG  •  MÜŞTERİ MERKEZİ',
+                    'OTO TAG  •  KULLANICI MERKEZİ',
                     icon: Icons.verified_rounded,
                   ),
                   const Spacer(),
@@ -3590,7 +3589,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
         autofocus: true,
         child: Scaffold(
           backgroundColor: _bgColor,
-          extendBodyBehindAppBar: true,
+          extendBodyBehindAppBar: false,
           appBar: AppBar(
             automaticallyImplyLeading: false,
             title: Image.asset(

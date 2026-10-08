@@ -21,7 +21,6 @@ import 'customer_map_screen.dart';
 import 'customer_bids_screen.dart';
 import 'profile_screen.dart';
 import 'referral_screen.dart';
-import 'favorite_providers_screen.dart';
 import 'vehicle_panel_screen.dart';
 import 'diagnostic_screen.dart';
 import 'job_tracking_screen.dart';
@@ -729,12 +728,12 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                         color: _primaryColor.withValues(alpha: .15),
                       ),
                     ),
-                    child: Row(
+                    child: const Row(
                       children: [
-                        const Icon(Icons.card_giftcard_rounded,
+                        Icon(Icons.card_giftcard_rounded,
                             color: _primaryColor, size: 24),
-                        const SizedBox(width: 12),
-                        const Expanded(
+                        SizedBox(width: 12),
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -1789,87 +1788,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
         }
       }
     }
-  }
-
-  void _showLogoutDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: AlertDialog(
-          backgroundColor: _cardColor,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-              side: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.1), width: 1.5)),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                    color: _dangerColor.withValues(alpha: 0.15),
-                    shape: BoxShape.circle),
-                child: const Icon(Icons.power_settings_new_rounded,
-                    color: _dangerColor, size: 24),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text("Çıkış Yap",
-                    style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        fontSize: 20,
-                        letterSpacing: -0.5),
-                    overflow: TextOverflow.ellipsis),
-              ),
-            ],
-          ),
-          content: const Text(
-              "Hesabınızdan güvenli bir şekilde çıkış yapmak istediğinize emin misiniz?",
-              style: TextStyle(
-                  color: _subtitleColor,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  height: 1.4)),
-          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              style: TextButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12))),
-              child: const Text("İptal",
-                  style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white54,
-                      fontSize: 14)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _dangerColor,
-                elevation: 0,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              onPressed: () async {
-                Navigator.of(ctx).pop();
-                await _performLogout();
-              },
-              child: const Text("Çıkış Yap",
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 14)),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Future<void> _fetchVehicles(

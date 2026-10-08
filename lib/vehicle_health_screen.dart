@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'core/constants/app_constants.dart';
 import 'services/authenticated_http_client.dart';
 import 'services/vehicle_deadline.dart';
+import 'diagnostic_screen.dart';
 
 class VehicleHealthScreen extends StatefulWidget {
   const VehicleHealthScreen({super.key, required this.customerId});
@@ -100,6 +101,18 @@ class _VehicleHealthScreenState extends State<VehicleHealthScreen> {
       backgroundColor: AppConstants.bgColor,
       foregroundColor: Colors.white,
       surfaceTintColor: Colors.transparent,
+      actions: [
+        IconButton(
+          tooltip: 'OBD Arıza Tespit',
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const DiagnosticScreen(userType: 'customer'),
+            ),
+          ),
+          icon: const Icon(Icons.settings_input_component_rounded),
+        ),
+      ],
     ),
     body: RefreshIndicator(
       onRefresh: _load,

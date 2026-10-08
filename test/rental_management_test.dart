@@ -112,7 +112,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(RentACarPanelScreen), findsOneWidget);
     expect(AppSession.userId, 10);
-    await tester.tap(find.widgetWithText(TextButton, 'Çıkış'));
+    await tester.tap(find.byTooltip('Hızlı çıkış'));
     await tester.pump(const Duration(milliseconds: 500));
     await tester.pump(const Duration(seconds: 6));
     await tester.pump(const Duration(milliseconds: 500));

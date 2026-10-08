@@ -36,6 +36,8 @@ void main() {
       saves++;
       return null;
     });
+    // The production dialog prefills current KM; clear it to test an empty input.
+    await tester.enterText(find.byType(TextFormField), '');
     await tester.tap(find.text('Kilometreyi Güncelle'));
     await tester.pumpAndSettle();
     expect(find.text('Güncel kilometreyi girin.'), findsOneWidget);
@@ -73,7 +75,9 @@ void main() {
       saves++;
       return completion.future;
     });
-    await tester.enterText(find.byType(TextFormField), '100000');
+    // Saving an unchanged odometer value is invalid; exercise pending state
+    // with a valid increase instead.
+    await tester.enterText(find.byType(TextFormField), '100001');
     await tester.tap(find.text('Kilometreyi Güncelle'));
     await tester.pump();
     await tester.tap(find.text('Kaydediliyor…'));

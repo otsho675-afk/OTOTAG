@@ -22,8 +22,12 @@ class DailyEngagementService {
     final key = '$role:$userId';
     final last = _recorded[key];
     // Throttle repeat launches/resumes in this process. The server is idempotent
-    // by account and server date; the short retry window handles clock zones.
-    if (last != null && DateTime.now().difference(last) < const Duration(hours: 12)) {
+    // by account and server date. Record again on each new local calendar day.
+    final now = DateTime.now();
+    if (last != null &&
+        last.year == now.year &&
+        last.month == now.month &&
+        last.day == now.day) {
       return;
     }
     if (!_inFlight.add(key)) return;

@@ -67,3 +67,11 @@ Mevcut referral migrasyonları ayrıca korunur.
 - Puan harcama işlemleri DB transaction ile yapılır.
 - Aynı davet ödülü bir kez verilir.
 - Tahmini eşleşmeler referral ödülü üretmez.
+
+## Araç push worker
+
+Uygulama kapalıyken de araç hatırlatmalarının gönderilebilmesi için aaPanel Cron'a 30 dakikada bir şu komut eklenebilir:
+
+    php /www/wwwroot/eliteagency.sbs/growth_reminder_worker.php
+
+Worker sigorta, muayene, MTV ve bakım kilometresi uyarılarını tekilleştirir ve mevcut OneSignal outbox kuyruğunu kullanır.

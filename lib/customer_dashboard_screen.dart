@@ -542,6 +542,13 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
       'color': _primaryColor,
       'gradient': [_cardColor, _bgColor]
     },
+    {
+      'id': 'emergency',
+      'name': 'ACİL YARDIM',
+      'icon': Icons.sos_rounded,
+      'color': _dangerColor,
+      'gradient': [_cardColor, _bgColor]
+    },
   ];
 
   @override
@@ -3752,6 +3759,15 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
           } else {
             if (service['id'] == 'rentacar') {
               _showRentACarFilterDialog(context);
+            } else if (service['id'] == 'emergency') {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => CustomerMapScreen(
+                          customerId: widget.customerId,
+                          initialService: 'tow',
+                          initialProblem:
+                              'Acil yol yardım talebi. Araç hareket edemiyor.')));
             } else {
               Navigator.push(
                   context,

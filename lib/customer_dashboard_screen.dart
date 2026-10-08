@@ -22,6 +22,7 @@ import 'customer_bids_screen.dart';
 import 'profile_screen.dart';
 import 'referral_screen.dart';
 import 'vehicle_panel_screen.dart';
+import 'vehicle_health_screen.dart';
 import 'diagnostic_screen.dart';
 import 'job_tracking_screen.dart';
 import 'spare_parts_market.dart';
@@ -3402,6 +3403,15 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
             ),
             actions: [
               IconButton(
+                  tooltip: 'Araç sağlık merkezi',
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => VehicleHealthScreen(
+                              customerId: widget.customerId))),
+                  icon: const Icon(Icons.health_and_safety_outlined,
+                      color: _primaryColor)),
+              IconButton(
                   tooltip: 'Arkadaşını davet et',
                   onPressed: () => Navigator.push(
                       context,
@@ -3719,7 +3729,63 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
   }
 
   Widget _buildServiceCards(BuildContext context, BoxConstraints constraints) {
-    return DashboardServiceGrid(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            if (activeJobId != null) {
+              _showTopSnackBar(
+                  "Devam eden bir işleminiz var. Lütfen önce onu tamamlayın.",
+                  isError: true);
+              return;
+            }
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => CustomerMapScreen(
+                  customerId: widget.customerId,
+                  initialService: 'tow',
+                  emergency: true,
+                ),
+              ),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            decoration: BoxDecoration(
+              color: _dangerColor.withValues(alpha: .10),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: _dangerColor.withValues(alpha: .38)),
+            ),
+            child: const Row(children: [
+              CircleAvatar(
+                backgroundColor: _dangerColor,
+                child: Icon(Icons.sos_rounded, color: Colors.white),
+              ),
+              SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('ACİL YOL YARDIM',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: .4)),
+                    SizedBox(height: 3),
+                    Text('Tek dokunuşla konumunu gönder ve çekici/yol yardımı ara.',
+                        style: TextStyle(color: Colors.white60, fontSize: 12)),
+                  ],
+                ),
+              ),
+              Icon(Icons.arrow_forward_rounded, color: Colors.white70),
+            ]),
+          ),
+        ),
+        const SizedBox(height: 14),
+        DashboardServiceGrid(
         services: services,
         onSelected: (service) {
           _sendTelemetry(
@@ -3751,7 +3817,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                           initialService: service['id'])));
             }
           }
-        });
+        }),
+      ],
+    );
   }
 
   Widget _buildEmptyVehiclesCard(

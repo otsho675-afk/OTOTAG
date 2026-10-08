@@ -28,6 +28,10 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
   List<Map<String, dynamic>> reviews = [];
   int completedJobs = 0;
   double providerRating = 5.0;
+  bool isVerified = false;
+  double cancellationRate = 0;
+  int? averageResponseSeconds;
+  String? lastActiveAt;
 
   final String baseUrl = AppConstants.baseUrl;
   late AnimationController _listAnimController;
@@ -85,6 +89,10 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
           profile = provider;
           providerRating = double.tryParse('${stats['average'] ?? 5}') ?? 5.0;
           completedJobs = int.tryParse('${stats['completed_jobs'] ?? 0}') ?? 0;
+          isVerified = stats['is_verified'] == true || stats['is_verified']?.toString() == '1';
+          cancellationRate = double.tryParse('${stats['cancellation_rate'] ?? 0}') ?? 0;
+          averageResponseSeconds = int.tryParse('${stats['average_response_seconds'] ?? ''}');
+          lastActiveAt = stats['last_active_at']?.toString();
           reviews = rawReviews is List
               ? rawReviews
                   .whereType<Map>()
@@ -645,6 +653,8 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                                               ),
                                       ),
                                     ),
+                                    const SizedBox(height: 16),
+                                    _buildPerformanceStrip(),
                                     const SizedBox(height: 32),
                                     SlideTransition(
                                       position: Tween<Offset>(
@@ -825,11 +835,15 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.verified_rounded, color: neonGreen, size: 16),
+                Icon(
+                  isVerified ? Icons.verified_rounded : _getServiceIcon(profile['service_category']),
+                  color: neonGreen,
+                  size: 16,
+                ),
                 const SizedBox(width: 6),
                 Text(
-                  _getServiceTypeName(profile['service_category'])
-                      .toUpperCase(),
+                  (isVerified ? 'OTO TAG DOĞRULANDI · ' : '') +
+                      _getServiceTypeName(profile['service_category']).toUpperCase(),
                   style: const TextStyle(
                       color: neonGreen,
                       fontWeight: FontWeight.w900,
@@ -859,6 +873,59 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
       ),
     );
   }
+
+  Widget _buildPerformanceStrip() {
+    final response = averageResponseSeconds == null
+        ? '—'
+        : averageResponseSeconds! < 60
+            ? averageResponseSeconds.toString() + ' sn'
+            : (averageResponseSeconds! / 60).round().toString() + ' dk';
+    final last = lastActiveAt == null || lastActiveAt!.isEmpty
+        ? 'Bilinmiyor'
+        : lastActiveAt!;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: panelBlack,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withValues(alpha: .06)),
+      ),
+      child: Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        alignment: WrapAlignment.spaceBetween,
+        children: [
+          _metricPill(Icons.bolt_rounded, 'Yanıt', response),
+          _metricPill(Icons.cancel_outlined, 'İptal', cancellationRate.toStringAsFixed(1) + '%'),
+          _metricPill(Icons.schedule_rounded, 'Son aktif', last),
+        ],
+      ),
+    );
+  }
+
+  Widget _metricPill(IconData icon, String label, String value) => Container(
+    constraints: const BoxConstraints(minWidth: 120),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    decoration: BoxDecoration(
+      color: surfaceBlack,
+      borderRadius: BorderRadius.circular(15),
+    ),
+    child: Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(icon, size: 18, color: neonGreen),
+      const SizedBox(width: 8),
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: const TextStyle(color: textGray, fontSize: 10)),
+        const SizedBox(height: 2),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 145),
+          child: Text(value,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
+        ),
+      ]),
+    ]),
+  );
 
   Widget _buildReviewsSection(bool isSmallScreen) {
     return Column(

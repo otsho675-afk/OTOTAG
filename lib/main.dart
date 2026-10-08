@@ -457,348 +457,221 @@ class _SplashScreenState extends State<SplashScreen>
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    final size = MediaQuery.sizeOf(context);
+  void _openLogin(BuildContext context, String userType) {
+    HapticFeedback.selectionClick();
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => LoginScreen(userType: userType)),
+    );
+  }
 
-    return Scaffold(
-      backgroundColor: AppConstants.bgColor,
-      body: PremiumScene(
-        accentStrength: 1.05,
-        child: Stack(
-        children: [
-          Positioned(
-            top: -size.width * .42,
-            right: -size.width * .34,
-            child: IgnorePointer(
-              child: Container(
-                width: size.width * 1.25,
-                height: size.width * 1.25,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppConstants.primaryColor.withValues(alpha: .11),
-                      Colors.transparent,
-                    ],
-                    stops: const [.0, .70],
-                  ),
-                ),
-              ),
+  Widget _roleButton(
+    BuildContext context, {
+    required String userType,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: () => _openLogin(context, userType),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+          decoration: BoxDecoration(
+            color: AppConstants.cardColor.withValues(alpha: .92),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: AppConstants.primaryColor.withValues(alpha: .14),
             ),
           ),
-          Positioned(
-            bottom: -size.width * .55,
-            left: -size.width * .45,
-            child: IgnorePointer(
-              child: Container(
-                width: size.width,
-                height: size.width,
+          child: Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      Colors.white.withValues(alpha: .025),
-                      Colors.transparent,
-                    ],
+                  color: AppConstants.primaryColor.withValues(alpha: .10),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppConstants.primaryColor.withValues(alpha: .18),
                   ),
                 ),
+                child: Icon(icon,
+                    color: AppConstants.primaryColor, size: 27),
               ),
-            ),
-          ),
-          SafeArea(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 540),
-                child: AppEntrance(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(22, 28, 22, 30),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Center(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 24, vertical: 18),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  AppConstants.cardElevated.withValues(alpha: .94),
-                                  AppConstants.cardColor.withValues(alpha: .82),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(24),
-                              border: Border.all(
-                                color: AppConstants.primaryColor.withValues(alpha: .14),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: .30),
-                                  blurRadius: 28,
-                                  offset: const Offset(0, 14),
-                                ),
-                              ],
-                            ),
-                            child: Image.asset(
-                              'assets/images/logo.png',
-                              cacheWidth: (84 *
-                                      MediaQuery.of(context).devicePixelRatio)
-                                  .round(),
-                              height: 64,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(
-                                Icons.directions_car_rounded,
-                                color: AppConstants.primaryColor,
-                                size: 64,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 34),
-                        const Text(
-                          'OTO TAG',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: AppConstants.primaryColor,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 2.8,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        const Text(
-                          'Aracınızın dijital merkezi',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w900,
-                            color: AppConstants.textColor,
-                            letterSpacing: -.8,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        const Text(
-                          'Yol yardımı, bakım, parça ve kiralama süreçlerine kurumsal OTO TAG deneyimiyle ulaşın.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppConstants.mutedColor,
-                            fontWeight: FontWeight.w500,
-                            height: 1.5,
-                          ),
-                        ),
-                        const SizedBox(height: 38),
-                        const Text(
-                          'OTO TAG HESAP TÜRÜ',
-                          style: TextStyle(
-                            color: AppConstants.subtleTextColor,
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.25,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        _buildRoleButton(
-                          context: context,
-                          title: 'Hizmet Almak İstiyorum',
-                          subtitle: 'Yol yardımı, servis, parça ve kiralama hizmetlerine ulaş',
-                          badge: 'MÜŞTERİ',
-                          icon: Icons.person_search_rounded,
-                          userType: 'customer',
-                        ),
-                        const SizedBox(height: 14),
-                        _buildRoleButton(
-                          context: context,
-                          title: 'Hizmet Vermek İstiyorum',
-                          subtitle: 'Usta ve servis taleplerini görün, teklif verin ve operasyonunuzu yönetin',
-                          badge: 'HİZMET SAĞLAYICI',
-                          icon: Icons.engineering_rounded,
-                          userType: 'provider',
-                          isSecondary: true,
-                        ),
-                        const SizedBox(height: 14),
-                        _buildRoleButton(
-                          context: context,
-                          title: 'Rent A Car Firmasıyım',
-                          subtitle: 'Filo, ilan, teklif ve kiralama süreçlerini firma panelinden yönetin',
-                          badge: 'RENTA CAR BUSINESS',
-                          icon: Icons.car_rental_rounded,
-                          userType: 'rentacar',
-                          isSecondary: true,
-                        ),
-                        const SizedBox(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.verified_user_outlined,
-                                color: AppConstants.primaryColor
-                                    .withValues(alpha: .72),
-                                size: 15),
-                            const SizedBox(width: 7),
-                            const Flexible(
-                              child: Text(
-                                'Güvenli eşleşme  •  Konum bazlı hizmet  •  Hızlı teklif',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: AppConstants.subtleTextColor,
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: AppConstants.textColor,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -.25,
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 5),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppConstants.subtleTextColor,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
+              const SizedBox(width: 10),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: AppConstants.primaryColor.withValues(alpha: .08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.arrow_forward_rounded,
+                  color: AppConstants.primaryColor,
+                  size: 19,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
       ),
     );
   }
 
-  Widget _buildRoleButton({
-    required BuildContext context,
-    required String title,
-    required String subtitle,
-    required String badge,
-    required IconData icon,
-    required String userType,
-    bool isSecondary = false,
-  }) {
-    return AppInteractiveSurface(
-      onTap: () {
-        if (!kIsWeb) HapticFeedback.selectionClick();
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => LoginScreen(userType: userType)),
-        );
-      },
-      borderRadius: BorderRadius.circular(20),
-      color: AppConstants.cardColor,
-      side: BorderSide(
-        color: isSecondary
-            ? AppConstants.borderColor
-            : AppConstants.primaryColor.withValues(alpha: .28),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: -42,
-            right: -34,
-            child: Container(
-              width: 118,
-              height: 118,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppConstants.primaryColor.withValues(
-                        alpha: isSecondary ? .035 : .075),
-                    Colors.transparent,
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppConstants.bgColor,
+      body: PremiumScene(
+        accentStrength: .95,
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 92,
+                        height: 92,
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: AppConstants.cardElevated,
+                          borderRadius: BorderRadius.circular(26),
+                          border: Border.all(
+                            color: AppConstants.primaryColor.withValues(alpha: .18),
+                          ),
+                        ),
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.directions_car_rounded,
+                            color: AppConstants.primaryColor,
+                            size: 44,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'OTO TAG',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppConstants.primaryColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 2.8,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Nasıl devam etmek istiyorsun?',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppConstants.textColor,
+                        fontSize: 27,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -.8,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Sadece giriş türünü seç. Geri kalan her şey ilgili panelde sade şekilde gösterilir.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppConstants.subtleTextColor,
+                        fontSize: 12,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    _roleButton(
+                      context,
+                      userType: 'customer',
+                      title: 'Kullanıcı Girişi',
+                      subtitle: 'Yol yardım, servis, parça, araç kiralama ve araç takibi.',
+                      icon: Icons.person_rounded,
+                    ),
+                    const SizedBox(height: 12),
+                    _roleButton(
+                      context,
+                      userType: 'provider',
+                      title: 'Usta Girişi',
+                      subtitle: 'Talepleri gör, teklif ver ve işlerini yönet.',
+                      icon: Icons.engineering_rounded,
+                    ),
+                    const SizedBox(height: 12),
+                    _roleButton(
+                      context,
+                      userType: 'rentacar',
+                      title: 'Rent A Car Girişi',
+                      subtitle: 'Filo, ilan, teklif ve kiralama süreçlerini yönet.',
+                      icon: Icons.car_rental_rounded,
+                    ),
+                    const SizedBox(height: 22),
+                    const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.shield_outlined,
+                            size: 13, color: AppConstants.subtleTextColor),
+                        SizedBox(width: 7),
+                        Flexible(
+                          child: Text(
+                            'Güvenli giriş • Konum bazlı hizmet • OTO TAG',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: AppConstants.subtleTextColor,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(17),
-            child: Row(
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        AppConstants.primaryColor.withValues(alpha: .17),
-                        AppConstants.primaryColor.withValues(alpha: .06),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppConstants.primaryColor.withValues(alpha: .20),
-                    ),
-                  ),
-                  child: Icon(icon,
-                      size: 27, color: AppConstants.primaryColor),
-                ),
-                const SizedBox(width: 15),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppConstants.primaryColor
-                              .withValues(alpha: .09),
-                          borderRadius: BorderRadius.circular(7),
-                        ),
-                        child: Text(
-                          badge,
-                          style: const TextStyle(
-                            color: AppConstants.primaryColor,
-                            fontSize: 8.5,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: .75,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 7),
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: AppConstants.textColor,
-                          letterSpacing: -.25,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        subtitle,
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          height: 1.35,
-                          fontWeight: FontWeight.w500,
-                          color: AppConstants.mutedColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: .035),
-                    borderRadius: BorderRadius.circular(11),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: .06),
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.arrow_forward_rounded,
-                    color: AppConstants.primaryColor,
-                    size: 18,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -165,10 +165,10 @@ void main() {
           home: const DiagnosticScreen(userType: 'rentacar')));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      await tester.tap(find.text('Gerçek Soket (ELM327)'));
+      await tester.tap(find.text('Canlı OBD'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      await tester.tap(find.byTooltip('Cihaz ve Bağlantı Rehberi'));
+      await tester.tap(find.byTooltip('Cihaz ve bağlantı rehberi'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());

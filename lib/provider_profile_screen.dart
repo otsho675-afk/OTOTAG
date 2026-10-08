@@ -825,11 +825,16 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.verified_rounded, color: neonGreen, size: 16),
-                const SizedBox(width: 6),
+                if (profile['verified'] == true) ...[
+                  const Icon(Icons.verified_rounded,
+                      color: neonGreen, size: 16),
+                  const SizedBox(width: 6),
+                ],
                 Text(
-                  _getServiceTypeName(profile['service_category'])
-                      .toUpperCase(),
+                  profile['verified'] == true
+                      ? 'DOĞRULANMIŞ • ${_getServiceTypeName(profile['service_category']).toUpperCase()}'
+                      : _getServiceTypeName(profile['service_category'])
+                          .toUpperCase(),
                   style: const TextStyle(
                       color: neonGreen,
                       fontWeight: FontWeight.w900,

@@ -10,6 +10,7 @@ import 'services/adaptive_polling.dart';
 import 'services/realtime_client.dart';
 import 'services/rental_service.dart' show rentalCents, rentalPrice, rentalId;
 import 'services/service_offer_service.dart';
+import 'services/authenticated_http_client.dart';
 import 'services/live_activity_service.dart';
 import 'widgets/matching_status_card.dart';
 import 'provider_profile_screen.dart';
@@ -37,6 +38,7 @@ class CustomerBidsScreen extends StatefulWidget {
 class _CustomerBidsScreenState extends State<CustomerBidsScreen>
     with WidgetsBindingObserver {
   late final _service = widget.service ?? ServiceOfferService();
+  final _growthClient = AuthenticatedHttpClient(http.Client());
   final _live = RealtimeClient();
   late final AdaptivePolling _polling;
   List<Map<String, dynamic>> _bids = [];
@@ -113,6 +115,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
     if (!_navigating) unawaited(LiveActivityService().endTracking());
     unawaited(_live.dispose());
     if (widget.service == null) _service.dispose();
+    _growthClient.close();
     super.dispose();
   }
 
@@ -280,7 +283,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
         'action': 'get_favorite_providers',
         'user_id': widget.customerId.toString(),
       });
-      final response = await http.get(uri);
+      final response = await _growthClient.get(uri);
       final data = jsonDecode(utf8.decode(response.bodyBytes));
       if (!mounted || response.statusCode != 200 || data is! Map) return;
       final providers = (data['providers'] as List? ?? const []).whereType<Map>();
@@ -295,7 +298,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
   Future<void> _toggleFavorite(int providerId) async {
     if (providerId <= 0 || _busy) return;
     try {
-      final response = await http.post(
+      final response = await _growthClient.post(
         Uri.parse(AppConstants.baseUrl + '?action=toggle_favorite_provider'),
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: {

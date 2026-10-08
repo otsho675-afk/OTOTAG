@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:ui';
+import 'services/app_session.dart';
+import 'services/authenticated_http_client.dart';
 
 class ProviderProfileScreen extends StatefulWidget {
   final int providerId;
@@ -20,7 +22,11 @@ class ProviderProfileScreen extends StatefulWidget {
 class _ProviderProfileScreenState extends State<ProviderProfileScreen>
     with TickerProviderStateMixin {
   late final http.Client _httpClient = widget.client ?? http.Client();
+  late final AuthenticatedHttpClient _authClient =
+      AuthenticatedHttpClient(http.Client());
   final Duration _apiTimeout = const Duration(seconds: 15);
+  bool _favorite = false;
+  bool _favoriteBusy = false;
 
   bool isLoading = true;
   bool hasError = false;
@@ -47,11 +53,13 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
         vsync: this, duration: const Duration(milliseconds: 900));
 
     _fetchProviderData();
+    _loadFavoriteState();
   }
 
   @override
   void dispose() {
     if (widget.client == null) _httpClient.close();
+    _authClient.close();
     _listAnimController.dispose();
     super.dispose();
   }
@@ -111,6 +119,55 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
           hasError = true;
         });
       }
+    }
+  }
+
+  Future<void> _loadFavoriteState() async {
+    if (AppSession.userType != 'customer') return;
+    try {
+      final uri = Uri.parse(baseUrl)
+          .replace(queryParameters: {'action': 'get_favorite_providers'});
+      final response =
+          await _authClient.get(uri).timeout(const Duration(seconds: 10));
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (response.statusCode == 200 &&
+          data is Map &&
+          data['providers'] is List &&
+          mounted) {
+        final ids = (data['providers'] as List)
+            .whereType<Map>()
+            .map((e) => int.tryParse('${e['id']}'))
+            .whereType<int>()
+            .toSet();
+        setState(() => _favorite = ids.contains(widget.providerId));
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (_favoriteBusy || AppSession.userType != 'customer') return;
+    setState(() => _favoriteBusy = true);
+    try {
+      final uri = Uri.parse(baseUrl)
+          .replace(queryParameters: {'action': 'toggle_favorite_provider'});
+      final response = await _authClient.post(uri,
+          body: {'provider_id': widget.providerId.toString()}).timeout(
+        const Duration(seconds: 10),
+      );
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (response.statusCode == 200 &&
+          data is Map &&
+          data['status'] == 'success' &&
+          mounted) {
+        setState(() => _favorite = data['favorite'] == true);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(_favorite
+              ? 'Usta favorilerine eklendi.'
+              : 'Usta favorilerinden çıkarıldı.'),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _favoriteBusy = false);
     }
   }
 
@@ -515,6 +572,28 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
           ),
         ),
         actions: [
+          if (AppSession.userType == 'customer')
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: IconButton(
+                tooltip: _favorite ? 'Favoriden çıkar' : 'Favoriye ekle',
+                onPressed: _favoriteBusy ? null : _toggleFavorite,
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                      color: panelBlack.withValues(alpha: 0.8),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white10)),
+                  child: Icon(
+                    _favorite
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
+                    size: 16,
+                    color: _favorite ? Colors.redAccent : Colors.white,
+                  ),
+                ),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: IconButton(

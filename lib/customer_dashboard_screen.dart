@@ -20,6 +20,7 @@ import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'customer_map_screen.dart';
 import 'customer_bids_screen.dart';
 import 'profile_screen.dart';
+import 'referral_screen.dart';
 import 'vehicle_panel_screen.dart';
 import 'diagnostic_screen.dart';
 import 'job_tracking_screen.dart';
@@ -3400,6 +3401,16 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
               onPressed: _showLogoutDialog,
             ),
             actions: [
+              IconButton(
+                  tooltip: 'Arkadaşını davet et',
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => ReferralScreen(
+                              userId: widget.customerId,
+                              userType: 'customer'))),
+                  icon: const Icon(Icons.card_giftcard_rounded,
+                      color: _primaryColor)),
               IconButton(
                   tooltip: 'Geçmiş işlerim',
                   onPressed: () => Navigator.push(

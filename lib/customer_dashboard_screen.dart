@@ -3786,7 +3786,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                             fontWeight: FontWeight.w900,
                             letterSpacing: .4)),
                     SizedBox(height: 3),
-                    Text('Tek dokunuşla konumunu gönder ve çekici/yol yardımı ara.',
+                    Text('Acil talep ekranını aç; konumun otomatik seçilsin ve hızlıca yardım iste.',
                         style: TextStyle(color: Colors.white60, fontSize: 12)),
                   ],
                 ),

@@ -13,6 +13,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'customer_dashboard_screen.dart';
 import 'provider_map_screen.dart';
@@ -256,14 +257,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   String get _roleTitle {
     if (!_hasValidUserType) return 'Kayıt Ekranı Hatası';
-    if (_isCustomer) return 'Müşteri Hesabı';
+    if (_isCustomer) return 'Kullanıcı Hesabı';
     if (_effectiveIsRentACar) return 'Rent A Car Firma Hesabı';
     return 'Usta Hesabı';
   }
 
   String get _roleBadge {
     if (!_hasValidUserType) return 'HATA';
-    if (_isCustomer) return 'MÜŞTERİ';
+    if (_isCustomer) return 'KULLANICI';
     if (_effectiveIsRentACar) return 'RENT A CAR';
     return 'USTA';
   }
@@ -1250,6 +1251,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           await AppSession.save(Map<String, dynamic>.from(data));
           if (!mounted) return;
           int userId = int.parse(data['user_id'].toString());
+          if (responseUserType == 'customer') {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('show_customer_welcome_$userId', true);
+          }
+          if (!mounted) return;
           Navigator.pushReplacement(context, MaterialPageRoute(
             builder: (context) {
               if (responseUserType == 'customer') {

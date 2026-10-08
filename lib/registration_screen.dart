@@ -533,6 +533,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       _ibanFocus,
       _plateFocus,
       _mapLinkFocus,
+      _referralFocus,
     ]) {
       node.removeListener(_handleFocusChange);
     }

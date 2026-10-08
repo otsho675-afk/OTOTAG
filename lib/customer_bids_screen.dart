@@ -413,7 +413,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
                                                         ? 'Güncel talep ve teklif durumu kontrol ediliyor.'
                                                         : list.isEmpty
                                                             ? (_simulationFallback != null
-                                                                ? 'Şu anda uygun gerçek sağlayıcı bulunamadı. Aşağıdaki noktalar yalnızca OTO TAG simülasyonudur; gerçek sağlayıcı görünür görünmez otomatik olarak kaldırılır.'
+                                                                ? 'Şu anda uygun gerçek sağlayıcı bulunamadı. Aşağıdaki kartlar bölgesel tahmini seçeneklerdir; gerçek sağlayıcı görünür görünmez otomatik olarak kaldırılır.'
                                                                 : 'Talebiniz açık. Gelen teklifleri burada karşılaştırabilir, uygun ustayı seçebilirsiniz.')
                                                             : 'Fiyatı, ustanın puanını ve tahmini varış süresini inceleyin. Seçim sizin.',
                                                 icon: _error != null
@@ -535,7 +535,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
                 Expanded(
                     child: Text(
                         fallback['disclosure']?.toString() ??
-                            'Simülasyon: Aşağıdaki bilgiler gerçek usta teklifi değildir.',
+                            'Bu bilgiler gerçek usta teklifi değildir; tahmini bölgesel seçenektir.',
                         style: Theme.of(context)
                             .textTheme
                             .bodyMedium
@@ -562,7 +562,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
                                     style: Theme.of(context)
                                         .textTheme
                                         .titleMedium)),
-                            const Chip(label: Text('SİMÜLASYON')),
+                            const Chip(label: Text('TAHMİNİ')),
                           ]),
                           const SizedBox(height: 12),
                           Wrap(spacing: 14, runSpacing: 8, children: [
@@ -580,7 +580,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
                         ]))),
           const SizedBox(height: 4),
           Text(
-              'Gerçek bir usta teklif gönderdiğinde bu simülasyon kartları otomatik olarak kapanır ve yalnızca gerçek teklif görünür.',
+              'Gerçek bir usta teklif gönderdiğinde bu tahmini kartlar otomatik olarak kapanır ve yalnızca gerçek teklif görünür.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall),
         ]));

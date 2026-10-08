@@ -243,8 +243,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   int get _stepCount {
     if (_isCustomer) return 1;
-    if (_isProvider) return 4;
-    if (_isRentACar) return 3;
+    if (_isProvider) return 3;
+    if (_isRentACar) return 2;
     return 1;
   }
 
@@ -285,11 +285,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   List<String> get _stepTitles {
     if (_isProvider) {
       return _selectedRentACar
-          ? const ['Hizmet', 'Firma', 'Konum & IBAN', 'Belgeler']
-          : const ['Hizmet', 'Hesap', 'Bölge & IBAN', 'Belgeler'];
+          ? const ['Hizmet', 'Firma & Bölge', 'Belgeler']
+          : const ['Hizmet', 'Hesap & Bölge', 'Belgeler'];
     }
     if (_isRentACar) {
-      return const ['Firma', 'Bölge & IBAN', 'Belgeler'];
+      return const ['Firma & Bölge', 'Belgeler'];
     }
     if (_isCustomer) {
       return const ['Hızlı Kayıt'];
@@ -354,38 +354,36 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       }
     }
 
-    if (_currentStep == basicInfoStepIndex + 1) {
+    if (!_isCustomer && _currentStep == basicInfoStepIndex) {
       if (_selectedCity == null || _selectedCity!.isEmpty) {
         _showCustomSnackBar('Lütfen bulunduğunuz şehri seçiniz.',
             isError: true);
         return;
       }
 
-      if (!_isCustomer) {
-        if (_effectiveIsRentACar) {
-          if (_mapLinkController.text.trim().isEmpty) {
-            _showCustomSnackBar('Firma harita linki zorunludur.',
-                isError: true);
-            return;
-          }
-        } else {
-          final cleanPlate = _plateController.text.trim().toUpperCase();
-          if (cleanPlate.isEmpty || cleanPlate.length < 5) {
-            _showCustomSnackBar(
-                'Lütfen geçerli bir araç/çekici plakası giriniz.',
-                isError: true);
-            return;
-          }
-        }
-
-        final cleanIban =
-            _ibanController.text.replaceAll(' ', '').toUpperCase();
-        if (cleanIban.length != 26 || !cleanIban.startsWith('TR')) {
-          _showCustomSnackBar(
-              'Lütfen geçerli bir 26 haneli TR IBAN numarası giriniz.',
+      if (_effectiveIsRentACar) {
+        if (_mapLinkController.text.trim().isEmpty) {
+          _showCustomSnackBar('Firma harita linki zorunludur.',
               isError: true);
           return;
         }
+      } else {
+        final cleanPlate = _plateController.text.trim().toUpperCase();
+        if (cleanPlate.isEmpty || cleanPlate.length < 5) {
+          _showCustomSnackBar(
+              'Lütfen geçerli bir araç/çekici plakası giriniz.',
+              isError: true);
+          return;
+        }
+      }
+
+      final cleanIban =
+          _ibanController.text.replaceAll(' ', '').toUpperCase();
+      if (cleanIban.length != 26 || !cleanIban.startsWith('TR')) {
+        _showCustomSnackBar(
+            'Lütfen geçerli bir 26 haneli TR IBAN numarası giriniz.',
+            isError: true);
+        return;
       }
     }
 
@@ -1598,6 +1596,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
+  Widget _buildBusinessAccountStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildBasicInfoStep(),
+        const SizedBox(height: 26),
+        _buildProviderLocationAndVehicleStep(),
+      ],
+    );
+  }
+
   Widget _buildCurrentStepContent() {
     if (!_hasValidUserType) {
       return _buildInvalidRoleCard();
@@ -1605,13 +1614,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
     if (_isProvider) {
       if (_currentStep == 0) return _buildProviderServiceStep();
-      if (_currentStep == 1) return _buildBasicInfoStep();
-      if (_currentStep == 2) return _buildProviderLocationAndVehicleStep();
-      if (_currentStep == 3) return _buildProviderDocumentsStep();
-    } else if (_isRentACar) {
-      if (_currentStep == 0) return _buildBasicInfoStep();
-      if (_currentStep == 1) return _buildProviderLocationAndVehicleStep();
+      if (_currentStep == 1) return _buildBusinessAccountStep();
       if (_currentStep == 2) return _buildProviderDocumentsStep();
+    } else if (_isRentACar) {
+      if (_currentStep == 0) return _buildBusinessAccountStep();
+      if (_currentStep == 1) return _buildProviderDocumentsStep();
     } else if (_isCustomer) {
       return _buildBasicInfoStep();
     }

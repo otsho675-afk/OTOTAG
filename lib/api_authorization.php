@@ -14,7 +14,7 @@ function apiJob($pdo,$jobId,$auth,$allowBidder=false) {
     return $job;
 }
 function authorizeApiAction($pdo,$action,$method) {
-    $public=['login','auth_user','register','oauth_login','admin_login','check_status','get_app_config','get_ads','log_telemetry','send_phone_otp','verify_phone_otp'];
+    $public=['login','auth_user','register','oauth_login','admin_login','check_status','get_app_config','get_ads','log_telemetry'];
     if (in_array($action,$public,true)) return;
     $auth=authenticateRequest(); $input=$method==='GET' ? $_GET : $_POST;
     if ($auth['user_type']==='admin' && in_array($action,['get_rentacar_booking','get_rentacar_company_profile','pusher_auth'],true)) return;

@@ -3895,6 +3895,7 @@ switch ($action) {
 
     case 'get_pending_jobs':
         if ($method !== 'GET') sendResponse(405, ["status" => "error", "message" => "Geçersiz metod."]);
+        ensureGrowthSchema($pdo);
         
         $provider_lat = isset($_GET['lat']) ? (float)str_replace(',', '.', $_GET['lat']) : 0.0;
         $provider_lng = isset($_GET['lng']) ? (float)str_replace(',', '.', $_GET['lng']) : 0.0;
@@ -4053,6 +4054,7 @@ switch ($action) {
 
     case 'get_bids':
         if ($method !== 'GET') sendResponse(405, ["status" => "error", "message" => "Geçersiz metod."]);
+        ensureGrowthSchema($pdo);
         $job_id = $_GET['job_id'] ?? null;
         $user_type = $_GET['user_type'] ?? 'customer'; 
         $provider_id = $_GET['provider_id'] ?? null; 

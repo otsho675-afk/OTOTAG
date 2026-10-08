@@ -41,7 +41,7 @@ function authorizeApiAction($pdo,$action,$method) {
         if (!$pdo->query("SHOW COLUMNS FROM users LIKE '$column'")->fetch()) $pdo->exec("ALTER TABLE users ADD COLUMN `$column` DATETIME NULL");
     }
     $ownUser=['get_my_subscriptions','check_active_job','update_location','check_unread_messages','mark_read','check_obd_subscription','activate_obd_subscription','activate_premium',
-        'get_user_purchases','get_notifications','mark_notif_read','delete_notification','clear_all_notifications','get_profile','get_referral_summary','get_reward_catalog','redeem_reward','get_favorite_providers','toggle_favorite_provider','link_oauth',
+        'get_user_purchases','get_notifications','mark_notif_read','delete_notification','clear_all_notifications','get_profile','get_referral_summary','link_oauth',
         'unlink_oauth','update_profile','delete_account','get_history','delete_history','change_password','send_feedback','trigger_sos'];
     if (in_array($action,$ownUser,true)) apiOwn($input['user_id'] ?? null,$auth);
     if (in_array($action,['check_provider_subscription','renew_provider_subscription'],true)) {

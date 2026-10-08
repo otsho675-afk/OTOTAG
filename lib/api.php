@@ -4068,6 +4068,7 @@ switch ($action) {
                 $stmt = $pdo->prepare("
                     SELECT b.id as bid_id, b.amount, IFNULL(b.estimated_time, 30) as estimated_time, b.provider_note, b.negotiation_count, b.last_bidder, b.status, 
                     u.name as provider_name, u.id as provider_id, u.rating as average_rating, u.reviews_count as review_count,
+                    COALESCE(u.is_verified,0) as is_verified,
                     u.created_at as provider_created_at,
                     IFNULL(u.service_category, 'mechanic') as provider_service_category,
                     IFNULL(u.is_id_verified, 1) as is_id_verified,

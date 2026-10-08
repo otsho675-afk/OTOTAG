@@ -61,7 +61,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final _pendingReads = <String, Future<Map<String, dynamic>>>{};
   final _loadingSections = <int>{};
   static const _sectionRequests = <int, List<String>>{
-    0: ['admin_dashboard', 'get_tickets'],
+    0: ['admin_dashboard', 'admin_growth_analytics', 'get_tickets'],
     1: ['admin_dashboard'],
     2: ['get_all_users'],
     3: ['admin_dashboard', 'get_part_listings'],
@@ -72,7 +72,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     'admin_dashboard': 'Sistem özeti', 'get_all_users': 'Üyeler',
     'get_tickets': 'Destek talepleri', 'get_ads': 'Reklamlar',
     'admin_get_purchases': 'Satın alımlar',
-    'admin_get_telemetry_stats': 'Analiz', 'get_part_listings': 'Parça ilanları',
+    'admin_get_telemetry_stats': 'Analiz', 'admin_growth_analytics': 'Büyüme analizi', 'get_part_listings': 'Parça ilanları',
   };
   
   List recentJobs = [];
@@ -90,6 +90,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   List<dynamic> allPurchases = [];
   Map<String, dynamic> purchaseStats = {};
+
+  Map<String, dynamic> growthAnalyticsSummary = {};
+  List<dynamic> growthTopCities = [];
+  List<dynamic> growthServices = [];
 
   Map<String, dynamic> telemetrySummary = {};
   List<dynamic> topClickedButtons = [];
@@ -169,6 +173,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     'get_part_listings' => _fetchPartListings(),
     'admin_get_purchases' => _fetchPurchases(),
     'admin_get_telemetry_stats' => _fetchTelemetryStats(),
+    'admin_growth_analytics' => _fetchGrowthAnalytics(),
     _ => Future<void>.value(),
   };
 
@@ -178,7 +183,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     try {
       // Initially request only the dashboard and support queue. Refresh previously
       // opened datasets after mutations, so a hidden section is never loaded early.
-      final actions = {'admin_dashboard', 'get_tickets', ..._loadedActions};
+      final actions = {'admin_dashboard', 'admin_growth_analytics', 'get_tickets', ..._loadedActions};
       await Future.wait(actions.map(_fetchAction));
     } finally {
       if (mounted) setState(() { _refreshing = false; isLoading = false; });
@@ -197,6 +202,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (mounted) setState(() => _loadingSections.remove(index));
     }
   }
+
+  Future<void> _fetchGrowthAnalytics() => _loadData('admin_growth_analytics', (data) {
+    growthAnalyticsSummary = data['summary'] is Map
+        ? Map<String, dynamic>.from(data['summary'])
+        : {};
+    growthTopCities = data['top_cities'] is List ? List.from(data['top_cities']) : [];
+    growthServices = data['services'] is List ? List.from(data['services']) : [];
+  });
 
   Future<void> _fetchTelemetryStats() => _loadData('admin_get_telemetry_stats', (data) {
     telemetrySummary = data['summary'] is Map ? Map<String, dynamic>.from(data['summary']) : {};
@@ -3564,7 +3577,77 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     onJob: (job) => _showJobDetailsDialog(job, cardColor),
     onTicket: (ticket) => _showTicketDetailsDialog(ticket, cardColor),
     serviceLabel: _translateServiceType, statusLabel: _translateStatus,
-    footer: _buildLowPerformanceAlerts(cardColor),
+    footer: Column(children: [
+      _buildGrowthAnalytics(cardColor),
+      const SizedBox(height: 12),
+      _buildLowPerformanceAlerts(cardColor),
+    ]),
+  );
+
+  Widget _buildGrowthAnalytics(Color cardColor) {
+    if (growthAnalyticsSummary.isEmpty) return const SizedBox.shrink();
+    int n(String key) => int.tryParse((growthAnalyticsSummary[key] ?? 0).toString()) ?? 0;
+    final completion = growthAnalyticsSummary['completion_rate']?.toString() ?? '0';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFF00FFA3).withValues(alpha: .22)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Row(children: [
+          Icon(Icons.insights_rounded, color: Color(0xFF00FFA3)),
+          SizedBox(width: 8),
+          Text('30 Günlük Büyüme', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+        ]),
+        const SizedBox(height: 14),
+        const Text('Bugün',
+            style: TextStyle(color: Color(0xFF00FFA3), fontSize: 12, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          _growthChip('Yeni üye', n('new_users_today')),
+          _growthChip('Talep', n('jobs_today')),
+          _growthChip('Tamamlanan', n('completed_today')),
+        ]),
+        const SizedBox(height: 12),
+        const Text('Son 30 Gün',
+            style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          _growthChip('Yeni üye', n('new_users_30d')),
+          _growthChip('Talep', n('jobs_30d')),
+          _growthChip('Tamamlanan', n('completed_30d')),
+          _growthChip('İptal', n('cancelled_30d')),
+          _growthChip('Aktif usta', n('active_providers')),
+          _growthChip('Davet', n('referrals_30d')),
+          _growthChip('Favori', n('favorites_total')),
+          _growthChip('Puan yükü', n('points_outstanding')),
+        ]),
+        const SizedBox(height: 12),
+        Text('Tamamlanma oranı: ' + completion + '%',
+            style: const TextStyle(fontWeight: FontWeight.w700)),
+        if (growthTopCities.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Text('En aktif şehir: ' +
+              ((growthTopCities.first as Map)['city']?.toString() ?? '-') +
+              ' · ' + ((growthTopCities.first as Map)['jobs']?.toString() ?? '0') + ' talep',
+              style: const TextStyle(fontSize: 12, color: Colors.white60)),
+        ],
+      ]),
+    );
+  }
+
+  Widget _growthChip(String label, int value) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: .05),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: Colors.white.withValues(alpha: .07)),
+    ),
+    child: Text(label + ': ' + value.toString(),
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
   );
 
   Widget _buildPendingTab(Color cardColor) {

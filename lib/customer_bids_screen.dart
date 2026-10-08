@@ -2,12 +2,15 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_motion.dart';
 import 'services/adaptive_polling.dart';
 import 'services/realtime_client.dart';
 import 'services/rental_service.dart' show rentalCents, rentalPrice, rentalId;
 import 'services/service_offer_service.dart';
+import 'services/authenticated_http_client.dart';
 import 'services/live_activity_service.dart';
 import 'widgets/matching_status_card.dart';
 import 'provider_profile_screen.dart';
@@ -35,10 +38,13 @@ class CustomerBidsScreen extends StatefulWidget {
 class _CustomerBidsScreenState extends State<CustomerBidsScreen>
     with WidgetsBindingObserver {
   late final _service = widget.service ?? ServiceOfferService();
+  final _growthClient = AuthenticatedHttpClient(http.Client());
   final _live = RealtimeClient();
   late final AdaptivePolling _polling;
   List<Map<String, dynamic>> _bids = [];
   Map<String, dynamic>? _simulationFallback;
+  Map<String, dynamic>? _matchingStatus;
+  final Set<int> _favorites = <int>{};
   final Map<String, int> _estimateOverrides = {};
   final Map<String, int> _estimateUserOffers = {};
   String? _error, _status;
@@ -64,6 +70,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
         offerAmount: 'Talep #${widget.jobId}',
         statusText: 'Gelen teklifler bekleniyor'));
     unawaited(_load());
+    unawaited(_loadFavorites());
     _polling.start(immediately: false);
     if (widget.enableRealtime && !kIsWeb) unawaited(_connect());
   }
@@ -108,6 +115,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
     if (!_navigating) unawaited(LiveActivityService().endTracking());
     unawaited(_live.dispose());
     if (widget.service == null) _service.dispose();
+    _growthClient.close();
     super.dispose();
   }
 
@@ -128,9 +136,14 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
       final simulation = rawSimulation is Map
           ? Map<String, dynamic>.from(rawSimulation)
           : null;
+      final rawMatching = data['matching_status'];
+      final matching = rawMatching is Map
+          ? Map<String, dynamic>.from(rawMatching)
+          : null;
       setState(() {
         _bids = bids;
         _simulationFallback = bids.isEmpty ? simulation : null;
+        _matchingStatus = matching;
         if (bids.isNotEmpty) {
           _estimateOverrides.clear();
           _estimateUserOffers.clear();
@@ -262,6 +275,46 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
         }
       }
     }
+  }
+
+  Future<void> _loadFavorites() async {
+    try {
+      final uri = Uri.parse(AppConstants.baseUrl).replace(queryParameters: {
+        'action': 'get_favorite_providers',
+        'user_id': widget.customerId.toString(),
+      });
+      final response = await _growthClient.get(uri);
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (!mounted || response.statusCode != 200 || data is! Map) return;
+      final providers = (data['providers'] as List? ?? const []).whereType<Map>();
+      setState(() {
+        _favorites
+          ..clear()
+          ..addAll(providers.map((e) => rentalId(e['id'])).where((id) => id > 0));
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _toggleFavorite(int providerId) async {
+    if (providerId <= 0 || _busy) return;
+    try {
+      final response = await _growthClient.post(
+        Uri.parse(AppConstants.baseUrl + '?action=toggle_favorite_provider'),
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: {
+          'customer_id': widget.customerId.toString(),
+          'provider_id': providerId.toString(),
+        },
+      );
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      if (!mounted || response.statusCode != 200 || data is! Map) return;
+      final favorite = data['favorite'] == true;
+      setState(() {
+        if (favorite) { _favorites.add(providerId); } else { _favorites.remove(providerId); }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(favorite ? 'Usta favorilerine eklendi.' : 'Usta favorilerden çıkarıldı.')));
+    } catch (_) {}
   }
 
   Future<void> _accept(Map<String, dynamic> bid) async {
@@ -423,7 +476,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
                                                         : list.isEmpty
                                                             ? (_simulationFallback != null
                                                                 ? 'Mesafe ve hizmet türüne göre hesaplanan seçenekleri inceleyebilir, kendi teklif tutarınızı girebilirsiniz.'
-                                                                : 'Talebiniz açık. Gelen teklifleri burada karşılaştırabilir, uygun ustayı seçebilirsiniz.')
+                                                                : (_matchingStatus != null
+                                                                    ? (_matchingStatus!['providers_scanned'] ?? 0).toString() + ' sağlayıcı taranıyor · ' + (_matchingStatus!['favorite_providers'] ?? 0).toString() + ' favori sağlayıcın uygun.'
+                                                                    : 'Talebiniz açık. Gelen teklifleri burada karşılaştırabilir, uygun ustayı seçebilirsiniz.'))
                                                             : 'Fiyatı, ustanın puanını ve tahmini varış süresini inceleyin. Seçim sizin.',
                                                 icon: _error != null
                                                     ? Icons.wifi_off_rounded
@@ -646,6 +701,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
     final cents = rentalCents('${bid['amount']}');
     final reviews = rentalId(bid['review_count']);
     final rating = double.tryParse('${bid['average_rating']}');
+    final providerId = rentalId(bid['provider_id']);
+    final verified = bid['is_verified'] == 1 || bid['is_verified'] == true || bid['is_verified']?.toString() == '1';
+    final favorite = _favorites.contains(providerId);
     final mine = bid['last_bidder'] == 'customer';
     final canRespond = !_busy &&
         _error == null &&
@@ -674,10 +732,17 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                      Text('${bid['provider_name'] ?? 'Usta'}',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleMedium),
+                                      Row(children: [
+                                        Flexible(child: Text('${bid['provider_name'] ?? 'Usta'}',
+                                            style: Theme.of(context).textTheme.titleMedium)),
+                                        if (verified) ...[
+                                          const SizedBox(width: 6),
+                                          const Tooltip(
+                                            message: 'OTO TAG Doğrulandı',
+                                            child: Icon(Icons.verified_rounded, size: 18, color: AppConstants.primaryColor),
+                                          ),
+                                        ],
+                                      ]),
                                       const SizedBox(height: 4),
                                       Text(reviews > 0 &&
                                               rating != null &&
@@ -685,6 +750,12 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
                                           ? '${rating.toStringAsFixed(1)} / 5 · $reviews değerlendirme'
                                           : 'Henüz değerlendirme yok'),
                                     ])),
+                                IconButton(
+                                  tooltip: favorite ? 'Favorilerden çıkar' : 'Favori ustam yap',
+                                  onPressed: providerId > 0 ? () => _toggleFavorite(providerId) : null,
+                                  icon: Icon(favorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                                      color: favorite ? Colors.redAccent : null),
+                                ),
                               ]),
                           const SizedBox(height: 18),
                           Wrap(

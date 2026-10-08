@@ -25,11 +25,13 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 class CustomerMapScreen extends StatefulWidget {
   final int customerId;
   final String initialService;
+  final bool emergency;
 
   const CustomerMapScreen({
     super.key,
     required this.customerId,
     required this.initialService,
+    this.emergency = false,
   });
 
   @override
@@ -78,6 +80,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
   String _currentAddress = "Hedef Konum Aranıyor...";
   bool _isAddressLoading = false;
   String _smartSuggestion = "";
+  bool _preferFavorites = true;
 
   final ValueNotifier<double> _mapRotationNotifier = ValueNotifier(0.0);
   double _currentZoom = 16.0;
@@ -114,7 +117,11 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
     googleApiKey = AppConstants.googleMapsKey;
     WidgetsBinding.instance.addObserver(this);
     selectedService = widget.initialService;
+    if (widget.emergency && problemController.text.isEmpty) {
+      problemController.text = 'ACİL YOL YARDIM';
+    }
     _generateSmartSuggestion();
+    unawaited(_loadSmartPrice());
 
     _radarPulseController = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 2000))
@@ -212,10 +219,31 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
     }
   }
 
+  Future<void> _loadSmartPrice() async {
+    try {
+      final uri = Uri.parse(baseUrl).replace(queryParameters: {
+        'action': 'get_smart_price',
+        'service_type': selectedService,
+        'distance_km': '5',
+      });
+      final response = await _httpClient.get(uri).timeout(const Duration(seconds: 8));
+      final data = json.decode(response.body);
+      if (!mounted || response.statusCode != 200 || data is! Map || data['status'] != 'success') return;
+      setState(() {
+        _smartSuggestion = '5 km civarı için tahmini fiyat: ' +
+            (data['low'] ?? '-').toString() + '–' +
+            (data['high'] ?? '-').toString() +
+            ' ₺ · Ortalama varış ' +
+            (data['estimated_minutes'] ?? '-').toString() + ' dk';
+      });
+    } catch (_) {}
+  }
+
   void _changeSelectedService(String newServiceId) {
     if (selectedService == newServiceId) return;
     HapticFeedback.lightImpact();
     setState(() => selectedService = newServiceId);
+    unawaited(_loadSmartPrice());
   }
 
   @override
@@ -316,6 +344,13 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
 
   Future<void> _checkVehicleReminders() async {
     try {
+      try {
+        final reminderUri = Uri.parse(baseUrl).replace(queryParameters: {
+          'action': 'sync_vehicle_reminders',
+          'user_id': widget.customerId.toString(),
+        });
+        await _httpClient.get(reminderUri).timeout(const Duration(seconds: 8));
+      } catch (_) {}
       // Yüksek trafikte kopmaları engellemek için timeout süresi artırıldı ve bağlantı havuza alındı
       final response = await _httpClient.get(
           Uri.parse(
@@ -885,6 +920,8 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
           "longitude": selectedLng.toString(),
           "problem_description": problemController.text.trim(),
           "city": customerCity,
+          "is_emergency": widget.emergency ? "1" : "0",
+          "prefer_favorites": _preferFavorites ? "1" : "0",
         },
       );
 
@@ -1739,6 +1776,37 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                   ],
                                                                 ),
                                                               ),
+                                                            Container(
+                                                              margin: const EdgeInsets.only(bottom: 14),
+                                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                                              decoration: BoxDecoration(
+                                                                color: Colors.white.withValues(alpha: .035),
+                                                                borderRadius: BorderRadius.circular(14),
+                                                                border: Border.all(color: Colors.white.withValues(alpha: .07)),
+                                                              ),
+                                                              child: Row(children: [
+                                                                const Icon(Icons.favorite_rounded, color: neonGreen, size: 19),
+                                                                const SizedBox(width: 9),
+                                                                const Expanded(
+                                                                  child: Column(
+                                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                                    children: [
+                                                                      Text('Favori ustalarımı önceliklendir',
+                                                                          style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w800)),
+                                                                      SizedBox(height: 2),
+                                                                      Text('Uygun favorilerin varsa talebin önce onlara öne çıkarılır.',
+                                                                          style: TextStyle(color: textGray, fontSize: 10.5)),
+                                                                    ],
+                                                                  ),
+                                                                ),
+                                                                Switch.adaptive(
+                                                                  value: _preferFavorites,
+                                                                  onChanged: (value) => setState(() => _preferFavorites = value),
+                                                                  activeTrackColor: neonGreen,
+                                                                  activeThumbColor: pureBlack,
+                                                                ),
+                                                              ]),
+                                                            ),
                                                             SizedBox(
                                                               height: 105,
                                                               child: ListView

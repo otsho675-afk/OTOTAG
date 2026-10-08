@@ -485,6 +485,30 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
         ((double.tryParse(distance.replaceAll(',', '.')) ?? 0.0) * 2.5).ceil() +
             5;
     final String autoTimeStr = autoMinutes.toString();
+    final smartDistance =
+        double.tryParse(distance.replaceAll(',', '.')) ?? 0.0;
+    final smartRules = <String, List<double>>{
+      'mechanic': [700, 55],
+      'tow': [950, 75],
+      'tire': [450, 40],
+      'wash': [280, 22],
+    };
+    final smartRule = smartRules[serviceType] ?? smartRules['mechanic']!;
+    final hour = DateTime.now().hour;
+    final multiplier = (hour >= 22 || hour < 6)
+        ? 1.15
+        : (hour >= 16 && hour <= 20 ? 1.08 : 1.0);
+    final suggestedPrice =
+        (((smartRule[0] + smartDistance * smartRule[1]) * multiplier) / 10)
+                .round() *
+            10;
+    final quickPrices = <int>{
+      ((suggestedPrice * .85) / 10).round() * 10,
+      suggestedPrice,
+      ((suggestedPrice * 1.10) / 10).round() * 10,
+      ((suggestedPrice * 1.25) / 10).round() * 10,
+    }.where((value) => value > 0).toList()
+      ..sort();
 
     final ScrollController scrollController = ScrollController();
     bool isSubmitting = false;
@@ -1574,14 +1598,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                       scrollDirection: Axis.horizontal,
                                       physics: const BouncingScrollPhysics(),
                                       child: Row(
-                                        children: [
-                                          500,
-                                          750,
-                                          1000,
-                                          1500,
-                                          2000,
-                                          2500
-                                        ].map((quickVal) {
+                                        children: quickPrices.map((quickVal) {
                                           final bool isChipSelected =
                                               priceController.text.trim() ==
                                                   quickVal.toString();
@@ -1650,6 +1667,21 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                         }).toList(),
                                       ),
                                     ),
+                                    const SizedBox(height: 8),
+                                    Row(children: [
+                                      const Icon(Icons.auto_awesome_rounded,
+                                          color: neonGreen, size: 16),
+                                      const SizedBox(width: 7),
+                                      Expanded(
+                                        child: Text(
+                                          'Akıllı öneri: $suggestedPrice ₺ · Mesafe, hizmet ve saat yoğunluğuna göre hesaplandı.',
+                                          style: const TextStyle(
+                                              color: textGray,
+                                              fontSize: 11.5,
+                                              height: 1.35),
+                                        ),
+                                      ),
+                                    ]),
 
                                     const SizedBox(height: 14),
                                     // VAZGEÇ VE TEKLİFİ İLET BUTONLARI

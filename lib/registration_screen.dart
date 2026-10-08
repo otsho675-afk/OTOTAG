@@ -5,6 +5,7 @@ import 'core/constants/app_constants.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async';
 import 'services/app_session.dart';
 import 'dart:ui';
 import 'dart:io';
@@ -178,6 +179,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   String? _selectedCity;
   bool isRegistering = false;
   bool _obscurePassword = true;
+  bool _smsRequired = false;
+  bool _smsConfigured = false;
+  bool _phoneVerified = false;
+  bool _verifyingPhone = false;
+  String? _phoneVerificationToken;
+  String? _verifiedPhone;
 
   String? _currentOauthProvider;
   String? _currentOauthId;
@@ -336,6 +343,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       if (!RegExp(r'^(?:0|90)?[2-5][0-9]{9}$').hasMatch(rawPhone)) {
         _showCustomSnackBar('Lütfen geçerli bir telefon numarası giriniz.',
             isError: true);
+        return;
+      }
+      if (_smsRequired &&
+          (!_phoneVerified || _verifiedPhone != _normalizedPhoneForVerification())) {
+        _showCustomSnackBar('Telefon numaranızı SMS koduyla doğrulayın.', isError: true);
         return;
       }
 
@@ -511,6 +523,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     _currentOauthId = widget.oauthId;
     _currentOauthToken = widget.oauthToken;
     _currentOauthEmail = widget.oauthEmail;
+    unawaited(_loadGrowthConfig());
 
     for (final node in [
       _nameFocus,
@@ -558,6 +571,105 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     _mapLinkFocus.dispose();
     _referralFocus.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadGrowthConfig() async {
+    try {
+      final response = await http
+          .get(Uri.parse(baseUrl + '?action=get_growth_config'))
+          .timeout(const Duration(seconds: 8));
+      final data = json.decode(response.body);
+      if (!mounted || response.statusCode != 200 || data is! Map) return;
+      setState(() {
+        _smsRequired = data['sms_verification_required'] == true;
+        _smsConfigured = data['sms_configured'] == true;
+      });
+    } catch (_) {}
+  }
+
+  String _normalizedPhoneForVerification() {
+    var raw = _phoneController.text.replaceAll(RegExp(r'\D'), '');
+    if (raw.length == 10 && raw.startsWith('5')) raw = '0' + raw;
+    return raw;
+  }
+
+  Future<void> _verifyPhone() async {
+    if (_verifyingPhone) return;
+    final phone = _normalizedPhoneForVerification();
+    if (!RegExp(r'^(?:0|90)?[2-5][0-9]{9}$').hasMatch(phone)) {
+      _showCustomSnackBar('Önce geçerli telefon numaranızı girin.', isError: true);
+      return;
+    }
+    setState(() => _verifyingPhone = true);
+    try {
+      final request = await http.post(
+        Uri.parse(baseUrl + '?action=request_phone_verification'),
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: {'phone': phone},
+      ).timeout(const Duration(seconds: 15));
+      final requestData = json.decode(request.body);
+      if (request.statusCode != 200 || requestData is! Map || requestData['status'] != 'success') {
+        throw Exception(requestData is Map
+            ? (requestData['message']?.toString() ?? 'SMS gönderilemedi.')
+            : 'SMS gönderilemedi.');
+      }
+      if (requestData['required'] == false) {
+        if (mounted) {
+          setState(() {
+            _phoneVerified = true;
+            _verifiedPhone = phone;
+          });
+        }
+        return;
+      }
+      if (!mounted) return;
+      final controller = TextEditingController();
+      final code = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Telefonunu doğrula'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: const InputDecoration(labelText: '6 haneli SMS kodu'),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Vazgeç')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, controller.text.trim()), child: const Text('Doğrula')),
+          ],
+        ),
+      );
+      controller.dispose();
+      if (code == null || code.isEmpty) return;
+      final verify = await http.post(
+        Uri.parse(baseUrl + '?action=verify_phone_code'),
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: {'phone': phone, 'code': code},
+      ).timeout(const Duration(seconds: 15));
+      final verifyData = json.decode(verify.body);
+      if (verify.statusCode != 200 || verifyData is! Map || verifyData['status'] != 'success') {
+        throw Exception(verifyData is Map
+            ? (verifyData['message']?.toString() ?? 'Kod doğrulanamadı.')
+            : 'Kod doğrulanamadı.');
+      }
+      if (!mounted) return;
+      setState(() {
+        _phoneVerified = true;
+        _verifiedPhone = phone;
+        _phoneVerificationToken = verifyData['verification_token']?.toString();
+      });
+      _showCustomSnackBar('Telefon numaranız doğrulandı.');
+    } catch (e) {
+      if (mounted) {
+        _showCustomSnackBar(e.toString().replaceFirst('Exception: ', ''), isError: true);
+      }
+    } finally {
+      if (mounted) setState(() => _verifyingPhone = false);
+    }
   }
 
   Future<void> _pickImage(String type) async {
@@ -1068,6 +1180,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         request.fields['oauth_token'] = _currentOauthToken ?? '';
         request.fields['email'] = _currentOauthEmail ?? '';
         request.fields['referral_code'] = _referralController.text.trim().toUpperCase();
+        request.fields['phone_verification_token'] = _phoneVerificationToken ?? '';
 
         if (_selectedService == 'wash' && _isProvider) {
           request.files.add(http.MultipartFile.fromBytes(
@@ -1105,6 +1218,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             "oauth_token": _currentOauthToken ?? '',
             "email": _currentOauthEmail ?? '',
             "referral_code": _referralController.text.trim().toUpperCase(),
+            "phone_verification_token": _phoneVerificationToken ?? '',
           },
         ).timeout(_apiTimeout);
         await _handleResponse(response.body, response.statusCode);
@@ -1861,6 +1975,19 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             onEditingComplete: () =>
                 FocusScope.of(context).requestFocus(_passwordFocus),
           ),
+          if (_smsRequired) ...[
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.tonalIcon(
+                onPressed: _verifyingPhone || !_smsConfigured ? null : _verifyPhone,
+                icon: Icon(_phoneVerified ? Icons.verified_rounded : Icons.sms_outlined),
+                label: Text(_phoneVerified
+                    ? 'Telefon Doğrulandı'
+                    : (_smsConfigured ? 'SMS ile Doğrula' : 'SMS Servisi Hazırlanıyor')),
+              ),
+            ),
+          ],
           const SizedBox(height: 14),
           _buildGlassTextField(
             controller: _passwordController,

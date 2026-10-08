@@ -242,7 +242,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       _effectiveIsRentACar ? 'rentacar' : _normalizedUserType;
 
   int get _stepCount {
-    if (_isCustomer) return 2;
+    if (_isCustomer) return 1;
     if (_isProvider) return 4;
     if (_isRentACar) return 3;
     return 1;
@@ -292,7 +292,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       return const ['Firma', 'Bölge & IBAN', 'Belgeler'];
     }
     if (_isCustomer) {
-      return const ['Hesap', 'Şehir'];
+      return const ['Hızlı Kayıt'];
     }
     return const ['Hesap Türü'];
   }
@@ -342,6 +342,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       if (_currentOauthId == null &&
           _passwordController.text.trim().length < 6) {
         _showCustomSnackBar('Şifreniz en az 6 karakter olmalıdır.',
+            isError: true);
+        return;
+      }
+
+      if (_isCustomer &&
+          (_selectedCity == null || _selectedCity!.isEmpty)) {
+        _showCustomSnackBar('Lütfen bulunduğunuz şehri seçiniz.',
             isError: true);
         return;
       }
@@ -1606,8 +1613,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       if (_currentStep == 1) return _buildProviderLocationAndVehicleStep();
       if (_currentStep == 2) return _buildProviderDocumentsStep();
     } else if (_isCustomer) {
-      if (_currentStep == 0) return _buildBasicInfoStep();
-      if (_currentStep == 1) return _buildCustomerLocationStep();
+      return _buildBasicInfoStep();
     }
 
     return _buildInvalidRoleCard();
@@ -1877,6 +1883,20 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             ],
             onEditingComplete: () => FocusScope.of(context).unfocus(),
           ),
+          if (_isCustomer) ...[
+            const SizedBox(height: 18),
+            _buildSectionHeader("Bulunduğun Şehir", Icons.location_city_rounded),
+            _buildCitySelectorTile(),
+            const SizedBox(height: 8),
+            Text(
+              "Şehrini yalnızca sana yakın usta ve hizmetleri göstermek için kullanıyoruz.",
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.48),
+                fontSize: 11,
+                height: 1.4,
+              ),
+            ),
+          ],
         ],
       ),
     );

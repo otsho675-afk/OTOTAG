@@ -204,23 +204,34 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
 
   void _generateSmartSuggestion() {
     final hour = DateTime.now().hour;
-    if (hour >= 23 || hour <= 5) {
-      _smartSuggestion =
-          "Gece saatlerinde genellikle 'Çekici' hizmeti öne çıkar.";
-    } else if (hour >= 7 && hour <= 10) {
-      _smartSuggestion =
-          "Sabah trafiğinde 'Akü & Elektrik' desteği gerekebilir.";
-    } else if (hour >= 16 && hour <= 19) {
-      _smartSuggestion = "Akşam trafiğinde yol yardım uzmanlarımız hazır.";
-    } else {
-      _smartSuggestion = "Bölgenizdeki uzman ustalarımız her an hazır.";
-    }
+    final night = (hour >= 22 || hour < 7) ? 1.18 : 1.0;
+    final rule = switch (selectedService) {
+      'tow' => (base: 950.0, km: 70.0, spread: .18),
+      'tire' => (base: 450.0, km: 35.0, spread: .15),
+      'wash' => (base: 280.0, km: 15.0, spread: .12),
+      _ => (base: 700.0, km: 45.0, spread: .16),
+    };
+    const typicalDistanceKm = 5.0;
+    final mid = (((rule.base + typicalDistanceKm * rule.km) * night) / 10)
+            .round() *
+        10;
+    final low = ((mid * (1 - rule.spread)) / 10).floor() * 10;
+    final high = ((mid * (1 + rule.spread)) / 10).ceil() * 10;
+
+    final timeNote = (hour >= 22 || hour < 7)
+        ? 'Gece tarifesi etkili olabilir.'
+        : 'Yoğunluk ve gerçek mesafeye göre değişebilir.';
+    _smartSuggestion =
+        'Bölgesel tahmini fiyat: $low–$high ₺ • $timeNote';
   }
 
   void _changeSelectedService(String newServiceId) {
     if (selectedService == newServiceId) return;
     HapticFeedback.lightImpact();
-    setState(() => selectedService = newServiceId);
+    setState(() {
+      selectedService = newServiceId;
+      _generateSmartSuggestion();
+    });
   }
 
   @override

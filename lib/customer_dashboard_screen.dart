@@ -1733,6 +1733,29 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
     );
   }
 
+  Future<void> _confirmLogout() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Çıkış yap'),
+        content: const Text('Hesabınızdan çıkış yapmak istiyor musunuz?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Çıkış yap'),
+          ),
+        ],
+      ),
+    );
+    if (shouldLogout == true && mounted) {
+      await _performLogout();
+    }
+  }
+
   Future<void> _performLogout() async {
     _adScrollTimer?.cancel();
 
@@ -3554,6 +3577,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                       ),
                     ),
                 ],
+              ),
+              IconButton(
+                tooltip: 'Çıkış yap',
+                onPressed: _confirmLogout,
+                icon: const Icon(Icons.logout_rounded, color: Colors.white70),
               ),
               const SizedBox(width: 6),
             ],

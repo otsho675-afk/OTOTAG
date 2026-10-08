@@ -207,6 +207,17 @@ function growthSendPhoneCode($pdo,$phone) {
     return ['status'=>'success','configured'=>true,'message'=>'Doğrulama kodu gönderildi.'];
 }
 
+function growthPhoneWasVerified($pdo,$phone) {
+    ensureGrowthSchema($pdo);
+    $phone=registrationPhone($phone);
+    $stmt=$pdo->prepare("SELECT id FROM phone_verification_codes
+        WHERE phone=? AND verified_at IS NOT NULL
+        AND verified_at>=DATE_SUB(NOW(),INTERVAL 30 MINUTE)
+        ORDER BY id DESC LIMIT 1");
+    $stmt->execute([$phone]);
+    return (bool)$stmt->fetchColumn();
+}
+
 function growthVerifyPhoneCode($pdo,$phone,$code) {
     ensureGrowthSchema($pdo);
     $phone=registrationPhone($phone);

@@ -1624,8 +1624,10 @@ switch ($action) {
                 $nearbyProviders = $nearbyStmt->fetchAll(PDO::FETCH_COLUMN);
 
                 if (!empty($nearbyProviders)) {
-                    $title = "Bölgenizde Yeni İş!";
-                    $message = "Yakınınızda yeni bir " . strtoupper($service_type) . " talebi var. Hemen teklif verin!";
+                    $title = $isEmergency ? "ACİL Yol Yardım Talebi!" : "Bölgenizde Yeni İş!";
+                    $message = $isEmergency
+                        ? "Yakınınızda acil yol yardım talebi var. Uygunsanız hemen teklif verin."
+                        : "Yakınınızda yeni bir " . strtoupper($service_type) . " talebi var. Hemen teklif verin!";
                     sendOneSignalPush($nearbyProviders, $title, $message, ['type' => 'new_job', 'job_id' => (string)$new_job_id]);
                 }
             } catch (Exception $pushEx) {}

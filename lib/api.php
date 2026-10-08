@@ -2699,6 +2699,13 @@ switch ($action) {
             FILE_APPEND
         );
 
+        $phoneVerified=growthPhoneWasVerified($pdo,$clean_phone);
+        if (growthSmsConfigured() &&
+            serverConfig('REQUIRE_PHONE_VERIFICATION','0')==='1' &&
+            !$phoneVerified) {
+            sendResponse(422,['status'=>'error','message'=>'Telefon numaranızı SMS koduyla doğrulayın.']);
+        }
+
         if ($oauth_id !== '' && !$completionUser) {
             $oauthCheck=$pdo->prepare('SELECT id FROM users WHERE oauth_provider=? AND oauth_id=? AND user_type=? LIMIT 1');
             $oauthCheck->execute([$oauth_provider,$oauth_id,$user_type]);
@@ -2709,6 +2716,7 @@ switch ($action) {
             $hash=$hasRegistrationPassword ? password_hash($password,PASSWORD_DEFAULT) : $completionUser['password'];
             $update=$pdo->prepare('UPDATE users SET name=?,email=?,phone=?,password=?,city=?,service_category=?,iban=?,tow_plate=?,map_link=?,tax_plate=?,driver_license=?,vehicle_photo=?,equipment_photo=?,status=? WHERE id=? AND oauth_provider=? AND oauth_id=?');
             $update->execute([$name,$email ?: null,$clean_phone,$hash,$city,$service_category,$iban,$tow_plate ?: null,$map_link ?: null,$tax_plate,$driver_license,$vehicle_photo,$equipment_photo,$status,$completionUser['id'],$oauth_provider,$oauth_id]);
+            if($phoneVerified) $pdo->prepare('UPDATE users SET phone_verified=1 WHERE id=?')->execute([$completionUser['id']]);
             sendResponse(200,['status'=>'success','user_id'=>$completionUser['id'],'user_type'=>$user_type,'account_status'=>$status,'token'=>generateJWT($completionUser['id'],$user_type),'tracking_code'=>$completionUser['tracking_code'] ?? null]);
         }
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
@@ -2726,6 +2734,7 @@ switch ($action) {
             $stmt = $pdo->prepare("INSERT INTO users (name, email, phone, password, user_type, service_category, iban, tow_plate, map_link, city, status, is_premium, tax_plate, driver_license, vehicle_photo, equipment_photo, tracking_code, ip_address, oauth_provider, oauth_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([$name, !empty($email) ? $email : null, $clean_phone, $hashed_password, $user_type, $service_category, $iban, $tow_plate ?: null, !empty($map_link) ? $map_link : null, $city, $status, $tax_plate, $driver_license, $vehicle_photo, $equipment_photo, $tracking_code, $user_ip, !empty($oauth_provider) ? $oauth_provider : null, !empty($oauth_id) ? $oauth_id : null]);
             $newUserId = $pdo->lastInsertId();
+            if($phoneVerified) $pdo->prepare('UPDATE users SET phone_verified=1 WHERE id=?')->execute([$newUserId]);
             referralAttachNewUser($pdo,(int)$newUserId,$inviterId);
             $pdo->commit();
             $jwtToken = generateJWT($newUserId, $user_type);

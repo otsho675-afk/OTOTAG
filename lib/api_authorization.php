@@ -14,7 +14,7 @@ function apiJob($pdo,$jobId,$auth,$allowBidder=false) {
     return $job;
 }
 function authorizeApiAction($pdo,$action,$method) {
-    $public=['login','auth_user','register','oauth_login','admin_login','check_status','get_app_config','get_ads','log_telemetry'];
+    $public=['login','auth_user','register','oauth_login','admin_login','check_status','get_app_config','get_ads','log_telemetry','get_growth_config','request_phone_verification','verify_phone_code'];
     if (in_array($action,$public,true)) return;
     $auth=authenticateRequest(); $input=$method==='GET' ? $_GET : $_POST;
     if ($auth['user_type']==='admin' && in_array($action,['get_rentacar_booking','get_rentacar_company_profile','pusher_auth'],true)) return;
@@ -23,7 +23,7 @@ function authorizeApiAction($pdo,$action,$method) {
     if ($action==='get_part_listings' && $auth['user_type']==='admin') return;
     $admin=['admin_get_app_updates','admin_publish_app_update','admin_withdraw_app_update','admin_retry_app_update_push','admin_get_purchases','admin_change_password','admin_backup_db','admin_optimize_system','admin_dashboard',
         'suspend_provider','ban_user','ban_ip','get_all_users','admin_delete_user','admin_delete_job','approve_provider','reject_provider',
-        'get_tickets','update_ticket_status','admin_delete_ticket','admin_cancel_rentacar_booking','admin_get_rental_activity','admin_get_rental_detail','get_feedbacks','admin_get_telemetry_stats','add_ad','edit_ad','delete_ad'];
+        'get_tickets','update_ticket_status','admin_delete_ticket','admin_cancel_rentacar_booking','admin_get_rental_activity','admin_get_rental_detail','get_feedbacks','admin_get_telemetry_stats','admin_growth_analytics','add_ad','edit_ad','delete_ad'];
     if (in_array($action,$admin,true)) { if ($auth['user_type']!=='admin') apiDeny('Yönetici yetkisi gereklidir.'); return; }
     // Admins do not impersonate customer/provider actions with overlapping IDs.
     if ($auth['user_type']==='admin') apiDeny();
@@ -42,8 +42,16 @@ function authorizeApiAction($pdo,$action,$method) {
     }
     $ownUser=['get_my_subscriptions','check_active_job','update_location','check_unread_messages','mark_read','check_obd_subscription','activate_obd_subscription','activate_premium',
         'get_user_purchases','get_notifications','mark_notif_read','delete_notification','clear_all_notifications','get_profile','get_referral_summary','link_oauth',
-        'unlink_oauth','update_profile','delete_account','get_history','delete_history','change_password','send_feedback','trigger_sos'];
+        'unlink_oauth','update_profile','delete_account','get_history','delete_history','change_password','send_feedback','trigger_sos','get_reward_catalog','redeem_reward_points','get_favorite_providers','sync_vehicle_reminders'];
     if (in_array($action,$ownUser,true)) apiOwn($input['user_id'] ?? null,$auth);
+    if (in_array($action,['get_smart_price'],true)) return;
+    if ($action==='toggle_favorite_provider') {
+        if ($auth['user_type']!=='customer') apiDeny('Müşteri hesabı gereklidir.');
+        apiOwn($input['customer_id'] ?? null,$auth);
+    }
+    if ($action==='get_matching_status') {
+        apiJob($pdo,$input['job_id'] ?? 0,$auth);
+    }
     if (in_array($action,['check_provider_subscription','renew_provider_subscription'],true)) {
         if (!in_array($auth['user_type'],['provider','rentacar'],true)) apiDeny('Firma veya usta hesabı gereklidir.');
         apiOwn($input['provider_id'] ?? null,$auth);

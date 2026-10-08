@@ -17,8 +17,8 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     // Verify that our counter starts at 0.
-    expect(find.text('Hizmet Almak İstiyorum'), findsOneWidget);
-    expect(find.text('Hizmet Vermek İstiyorum'), findsOneWidget);
+    expect(find.text('Kullanıcı Girişi'), findsOneWidget);
+    expect(find.text('Usta Girişi'), findsOneWidget);
 
     // Tap the '+' icon and trigger a frame.
     expect(tester.takeException(), isNull);

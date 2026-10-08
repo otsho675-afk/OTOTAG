@@ -2359,10 +2359,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                                 strokeWidth: 2.6,
                                               ),
                                             )
-                                          : Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
+                                          : FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
                                                 Text(
                                                   _currentStep ==
                                                           _stepCount - 1
@@ -2387,7 +2390,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                                           .arrow_forward_rounded,
                                                   size: 19,
                                                 ),
-                                              ],
+                                                ],
+                                              ),
                                             ),
                                     ),
                                   ),

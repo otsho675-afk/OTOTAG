@@ -391,13 +391,15 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.spaceBetween,
                 children: [
                   const PremiumStatusPill(
                     'OTO TAG BUSINESS',
                     icon: Icons.verified_rounded,
                   ),
-                  const Spacer(),
                   PremiumStatusPill(
                     _canWork ? 'OPERASYON AKTİF' : 'YENİLEME GEREKİYOR',
                     icon: _canWork
@@ -742,11 +744,14 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                           children: [
                             Image.asset('assets/images/logo.png', height: 24),
                             const SizedBox(width: 9),
-                            const Column(
+                            const Flexible(
+                              child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text('OTO TAG BUSINESS',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                         color: AppConstants.primaryColor,
                                         fontWeight: FontWeight.w900,
@@ -754,11 +759,14 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                                         letterSpacing: 1.15)),
                                 SizedBox(height: 1),
                                 Text('Rent A Car',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                         fontWeight: FontWeight.w800,
                                         fontSize: 16,
                                         letterSpacing: -.2)),
                               ],
+                              ),
                             ),
                           ],
                         ),

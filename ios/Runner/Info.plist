@@ -25,21 +25,35 @@
     <key>LSRequiresIPhoneOS</key>
     <true/>
 
-    <!-- App Store İkon Tanımı (ITMS-90713 Çözümü) -->
     <key>CFBundleIconName</key>
     <string>AppIcon</string>
-    
-    <!-- iOS ve iPad Açılış Çökmesini Önleyen Ayar -->
+
     <key>UIRequiresFullScreen</key>
     <true/>
-    
-    <!-- iPad Çoklu Ekran Çökmesini Engelleyen Scene Manifest Ayarı -->
+
+    <!-- iOS / iPadOS 27: Flutter UIScene lifecycle -->
     <key>UIApplicationSceneManifest</key>
     <dict>
         <key>UIApplicationSupportsMultipleScenes</key>
         <false/>
+        <key>UISceneConfigurations</key>
+        <dict>
+            <key>UIWindowSceneSessionRoleApplication</key>
+            <array>
+                <dict>
+                    <key>UISceneClassName</key>
+                    <string>UIWindowScene</string>
+                    <key>UISceneConfigurationName</key>
+                    <string>flutter</string>
+                    <key>UISceneDelegateClassName</key>
+                    <string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+                    <key>UISceneStoryboardFile</key>
+                    <string>Main</string>
+                </dict>
+            </array>
+        </dict>
     </dict>
-    
+
     <key>UILaunchStoryboardName</key>
     <string>LaunchScreen</string>
     <key>UIMainStoryboardFile</key>
@@ -56,22 +70,18 @@
     <true/>
     <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
-    
-    <!-- Dynamic Island ve Canlı Etkinlik İzinleri -->
+
     <key>NSSupportsLiveActivities</key>
     <true/>
     <key>NSSupportsLiveActivitiesFrequentUpdates</key>
     <true/>
-    
-    <!-- App Store Connect İhracat Uyumluluğu Uyarısı -->
+
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
 
-    <!-- Google Sign-In iOS Client ID -->
     <key>GIDClientID</key>
     <string>73273804842-u0lcirptug9aotm2m6gn27g92hftt5ud.apps.googleusercontent.com</string>
 
-    <!-- Google Sign-In URL Şeması -->
     <key>CFBundleURLTypes</key>
     <array>
         <dict>
@@ -83,24 +93,21 @@
             </array>
         </dict>
     </array>
-    
-    <!-- iOS Arka Plan Bildirim & Konum Akışı -->
+
     <key>UIBackgroundModes</key>
     <array>
         <string>fetch</string>
         <string>location</string>
         <string>remote-notification</string>
     </array>
-    
-    <!-- Konum İzinleri -->
+
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>Yol yardım talebinizi en yakın çekici ve ustalara iletmek için konumunuza ihtiyaç duyarız.</string>
     <key>NSLocationAlwaysUsageDescription</key>
     <string>İşlem devam ederken ustanın size ulaşabilmesi ve yeni iş bildirimleri alabilmeniz için konumunuz arka planda güncellenir.</string>
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
     <string>İşlem devam ederken ustanın size ulaşabilmesi ve yeni iş bildirimleri alabilmeniz için konumunuz arka planda güncellenir.</string>
-    
-    <!-- Kamera, Galeri ve Mikrofon İzinleri -->
+
     <key>NSCameraUsageDescription</key>
     <string>Aracınızın arıza durumunu veya yedek parça fotoğraflarını çekmek için kamera izni gereklidir.</string>
     <key>NSPhotoLibraryUsageDescription</key>
@@ -110,14 +117,13 @@
     <key>NSMicrophoneUsageDescription</key>
     <string>Sohbet ekranında sorunla ilgili video çekip gönderebilmeniz için mikrofon erişimi gereklidir.</string>
 
-    <!-- URL Launcher Şemaları -->
     <key>LSApplicationQueriesSchemes</key>
     <array>
-      <string>https</string>
-      <string>geo</string>
-      <string>tel</string>
-      <string>sms</string>
-      <string>mailto</string>
+        <string>https</string>
+        <string>geo</string>
+        <string>tel</string>
+        <string>sms</string>
+        <string>mailto</string>
     </array>
 </dict>
 </plist>

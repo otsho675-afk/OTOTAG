@@ -74,9 +74,20 @@ function serviceEligibleRealProviders($pdo,$job,$limit=1) {
         try {
             if (serviceDistanceKm($provider['lat'],$provider['lng'],$job['latitude'],$job['longitude'])>$radius) continue;
         } catch (Throwable $e) { continue; }
+        // Do not advertise a busy provider as available.
+        $busy=$pdo->prepare("SELECT id FROM jobs WHERE provider_id=? AND id<>? AND status IN ('matched','accepted','approved','in_progress','customer_paid') LIMIT 1");
+        $busy->execute([$provider['id'],$job['id']]);
+        if ($busy->fetchColumn()) continue;
+        $provider['_distance_km']=serviceDistanceKm($provider['lat'],$provider['lng'],$job['latitude'],$job['longitude']);
         $eligible[]=$provider;
-        if (count($eligible)>=$limit) break;
     }
+    // Prefer the geographically closest eligible, currently idle providers.
+    usort($eligible,static function($a,$b) {
+        return ($a['_distance_km'] <=> $b['_distance_km']) ?: ((int)$a['id'] <=> (int)$b['id']);
+    });
+    $eligible=array_slice($eligible,0,max(1,(int)$limit));
+    foreach ($eligible as &$provider) unset($provider['_distance_km']);
+    unset($provider);
     return $eligible;
 }
 

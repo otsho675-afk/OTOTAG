@@ -1,4 +1,5 @@
 import 'services/adaptive_polling.dart';
+import 'services/daily_engagement_service.dart';
 import 'services/provider_job_feed.dart';
 import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
@@ -150,6 +151,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
   @override
   void initState() {
     super.initState();
+    DailyEngagementService.record(userId: widget.providerId, role: 'provider');
     isOnline = widget.initialOnline;
     googleApiKey = AppConstants.googleMapsKey;
 
@@ -2184,7 +2186,8 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
       _slideController.stop();
       _mapMoveController?.stop();
     } else if (state == AppLifecycleState.resumed) {
-      _compassStream?.resume();
+
+    DailyEngagementService.record(userId: widget.providerId, role: 'provider');      _compassStream?.resume();
       if (isOnline) {
         _positionStream?.resume();
         _startJobRefreshTimer();

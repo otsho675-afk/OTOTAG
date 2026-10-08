@@ -893,6 +893,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 require_once __DIR__.'/registration_rules.php';
 require_once __DIR__.'/service_matching.php';
 require_once __DIR__.'/referral_rewards.php';
+require_once __DIR__.'/growth_features.php';
 require_once __DIR__.'/map_routing.php';
 require_once __DIR__ . '/oauth_verification.php';
 require_once __DIR__ . '/api_authorization.php';
@@ -908,6 +909,7 @@ register_shutdown_function(function() use($pdo) {
 handleAppUpdateAction($pdo, $action, $method);
 require_once __DIR__ . '/rentacar_api.php';
 handleRentalAction($pdo, $action, $method);
+handleGrowthAction($pdo, $action, $method);
 
 switch ($action) {
     case 'get_referral_summary':
@@ -1596,8 +1598,11 @@ switch ($action) {
                 sendResponse(403, ["status" => "error", "message" => "Devam eden bir işiniz mevcut."]);
             }
 
-            $stmt = $pdo->prepare("INSERT INTO jobs (customer_id, service_type, latitude, longitude, match_code, problem_description, city, search_radius, status, issue_photo, issue_audio) VALUES (?, ?, ?, ?, ?, ?, ?, 50, 'searching', ?, ?)");
-            $stmt->execute([$customer_id, $service_type, $lat, $lng, $match_code, $problem_description, $city, $issue_photo, $issue_audio]);
+            ensureGrowthSchema($pdo);
+            $preferFavorites=($_POST['prefer_favorites'] ?? '1')!=='0' ? 1 : 0;
+            $isEmergency=($_POST['is_emergency'] ?? '0')==='1' ? 1 : 0;
+            $stmt = $pdo->prepare("INSERT INTO jobs (customer_id, service_type, latitude, longitude, match_code, problem_description, city, search_radius, status, issue_photo, issue_audio,prefer_favorites,is_emergency) VALUES (?, ?, ?, ?, ?, ?, ?, 50, 'searching', ?, ?,?,?)");
+            $stmt->execute([$customer_id, $service_type, $lat, $lng, $match_code, $problem_description, $city, $issue_photo, $issue_audio,$preferFavorites,$isEmergency]);
             $new_job_id = $pdo->lastInsertId();
 
             try {
@@ -1608,10 +1613,14 @@ switch ($action) {
                     WHERE user_type = 'provider' AND is_suspended = 0 AND status = 'active' 
                     AND service_category = ? AND TRIM(city)=TRIM(?) AND (subscription_end_date>NOW() OR DATE_ADD(created_at,INTERVAL 30 DAY)>NOW())
                     AND (ST_Distance_Sphere(point(lng, lat), point(?, ?)) / 1000) <= 50 
-                    ORDER BY (ST_Distance_Sphere(point(lng, lat), point(?, ?))) ASC, rating DESC 
+                    ORDER BY EXISTS(
+                        SELECT 1 FROM favorite_providers f
+                        WHERE f.customer_id=? AND f.provider_id=users.id
+                    ) DESC,
+                    (ST_Distance_Sphere(point(lng, lat), point(?, ?))) ASC, rating DESC 
                     LIMIT 50
                 ");
-                $nearbyStmt->execute([$service_type, $city, $lng, $lat, $lng, $lat]);
+                $nearbyStmt->execute([$service_type, $city, $lng, $lat, $customer_id, $lng, $lat]);
                 $nearbyProviders = $nearbyStmt->fetchAll(PDO::FETCH_COLUMN);
 
                 if (!empty($nearbyProviders)) {
@@ -2267,6 +2276,9 @@ switch ($action) {
         try {
             if (strlen($name)<2 || strlen($name)>160) throw new InvalidArgumentException('Ad veya firma ismi 2–160 karakter olmalı.');
             $clean_phone=registrationPhone($phone); $city=registrationCity($city);
+            if (!growthValidatePhoneVerification($pdo,$clean_phone,$_POST['phone_verification_token'] ?? '')) {
+                throw new InvalidArgumentException('Telefon numaranızı SMS koduyla doğrulayın.');
+            }
             if ($user_type!=='customer') {
                 $iban=strtoupper(preg_replace('/\s+/','',$iban));
                 if (!preg_match('/^TR[0-9]{24}$/D',$iban)) throw new InvalidArgumentException('Geçerli bir TR IBAN girin.');
@@ -2653,8 +2665,8 @@ switch ($action) {
         if ($completionUser) {
             $status=$user_type==='customer' ? 'active':'pending';
             $hash=$hasRegistrationPassword ? password_hash($password,PASSWORD_DEFAULT) : $completionUser['password'];
-            $update=$pdo->prepare('UPDATE users SET name=?,email=?,phone=?,password=?,city=?,service_category=?,iban=?,tow_plate=?,map_link=?,tax_plate=?,driver_license=?,vehicle_photo=?,equipment_photo=?,status=? WHERE id=? AND oauth_provider=? AND oauth_id=?');
-            $update->execute([$name,$email ?: null,$clean_phone,$hash,$city,$service_category,$iban,$tow_plate ?: null,$map_link ?: null,$tax_plate,$driver_license,$vehicle_photo,$equipment_photo,$status,$completionUser['id'],$oauth_provider,$oauth_id]);
+            $update=$pdo->prepare('UPDATE users SET name=?,email=?,phone=?,password=?,city=?,service_category=?,iban=?,tow_plate=?,map_link=?,tax_plate=?,driver_license=?,vehicle_photo=?,equipment_photo=?,status=?,phone_verified_at=IF(?,NOW(),phone_verified_at) WHERE id=? AND oauth_provider=? AND oauth_id=?');
+            $update->execute([$name,$email ?: null,$clean_phone,$hash,$city,$service_category,$iban,$tow_plate ?: null,$map_link ?: null,$tax_plate,$driver_license,$vehicle_photo,$equipment_photo,$status,growthBoolConfig('SMS_VERIFICATION_REQUIRED',false)?1:0,$completionUser['id'],$oauth_provider,$oauth_id]);
             sendResponse(200,['status'=>'success','user_id'=>$completionUser['id'],'user_type'=>$user_type,'account_status'=>$status,'token'=>generateJWT($completionUser['id'],$user_type),'tracking_code'=>$completionUser['tracking_code'] ?? null]);
         }
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
@@ -2672,6 +2684,10 @@ switch ($action) {
             $stmt = $pdo->prepare("INSERT INTO users (name, email, phone, password, user_type, service_category, iban, tow_plate, map_link, city, status, is_premium, tax_plate, driver_license, vehicle_photo, equipment_photo, tracking_code, ip_address, oauth_provider, oauth_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([$name, !empty($email) ? $email : null, $clean_phone, $hashed_password, $user_type, $service_category, $iban, $tow_plate ?: null, !empty($map_link) ? $map_link : null, $city, $status, $tax_plate, $driver_license, $vehicle_photo, $equipment_photo, $tracking_code, $user_ip, !empty($oauth_provider) ? $oauth_provider : null, !empty($oauth_id) ? $oauth_id : null]);
             $newUserId = $pdo->lastInsertId();
+            if (growthBoolConfig('SMS_VERIFICATION_REQUIRED',false)) {
+                ensureGrowthSchema($pdo);
+                $pdo->prepare('UPDATE users SET phone_verified_at=NOW() WHERE id=?')->execute([$newUserId]);
+            }
             referralAttachNewUser($pdo,(int)$newUserId,$inviterId);
             $pdo->commit();
             $jwtToken = generateJWT($newUserId, $user_type);
@@ -3478,7 +3494,8 @@ switch ($action) {
         authenticateRequest(null, true);
         $provider_id = $_POST['provider_id'] ?? null;
         if (!$provider_id) sendResponse(400, ["status" => "error", "message" => "Eksik parametre."]);
-        $pdo->prepare("UPDATE users SET status = 'active' WHERE id = ?")->execute([$provider_id]);
+        ensureGrowthSchema($pdo);
+        $pdo->prepare("UPDATE users SET status = 'active', is_verified=1 WHERE id = ?")->execute([$provider_id]);
         sendResponse(200, ["status" => "success", "message" => "Usta onaylandı."]);
         break;
         
@@ -3957,7 +3974,9 @@ switch ($action) {
                 AND j.created_at <= (NOW() - INTERVAL :delay SECOND)
                 AND NOT EXISTS (SELECT 1 FROM bids WHERE bids.job_id = j.id AND bids.provider_id = :pid)
                 HAVING distance <= search_radius AND distance <= :req_rad
-                ORDER BY distance ASC
+                ORDER BY j.is_emergency DESC,
+                EXISTS(SELECT 1 FROM favorite_providers f WHERE f.customer_id=j.customer_id AND f.provider_id=:pid2) DESC,
+                distance ASC
                 LIMIT 50
             ";
             $stmt = $pdo->prepare($sql);
@@ -3975,6 +3994,7 @@ switch ($action) {
             $stmt->bindValue(':lng_range2', $lng_range);
             $stmt->bindValue(':delay', (int)$delaySeconds, PDO::PARAM_INT);
             $stmt->bindValue(':pid', $provider_id, PDO::PARAM_INT);
+            $stmt->bindValue(':pid2', $provider_id, PDO::PARAM_INT);
             $stmt->bindValue(':req_rad', $requested_radius);
             $stmt->execute();
             $matched_jobs = $stmt->fetchAll();
@@ -4154,7 +4174,8 @@ switch ($action) {
                 "status" => "success",
                 "job_status" => $currentJobStatus,
                 "bids" => $bids,
-                "simulation_fallback" => $simulationFallback
+                "simulation_fallback" => $simulationFallback,
+                "matching_status" => growthMatchingMeta($pdo,(int)$job_id)
             ]);
         } catch (Exception $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
@@ -4468,7 +4489,8 @@ switch ($action) {
             }
         }
 
-        $stmt = $pdo->prepare("SELECT name, service_category FROM users WHERE id = ? AND user_type = 'provider'");
+        ensureGrowthSchema($pdo);
+        $stmt = $pdo->prepare("SELECT name, service_category, is_verified FROM users WHERE id = ? AND user_type = 'provider'");
         $stmt->execute([$provider_id]);
         $provider = $stmt->fetch();
         if (!$provider) sendResponse(404, ["status" => "error", "message" => "Usta bulunamadı."]);
@@ -4483,11 +4505,12 @@ switch ($action) {
 
         $completedStmt = $pdo->prepare("SELECT COUNT(*) FROM jobs WHERE provider_id=? AND status='completed'");
         $completedStmt->execute([$provider_id]);
+        $growthMetrics=growthProviderMetrics($pdo,(int)$provider_id);
         $profilePayload = [
             "status" => "success", 
             "provider" => $provider, 
             "stats" => ["average" => $stats['avg_rating'] ?? "0.0", "total" => $stats['total_reviews'] ?? 0,
-                "completed_jobs" => (int)$completedStmt->fetchColumn()],
+                "completed_jobs" => (int)$completedStmt->fetchColumn()] + ($growthMetrics ?: []),
             "reviews" => $ratings
         ];
         if ($redis) {

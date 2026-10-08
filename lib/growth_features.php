@@ -155,6 +155,10 @@ function growthAnalytics($pdo) {
     $openJobs=(int)$pdo->query("SELECT COUNT(*) FROM jobs WHERE status='searching'")->fetchColumn();
     $activeProviders=(int)$pdo->query("SELECT COUNT(*) FROM users WHERE user_type='provider' AND status='active' AND COALESCE(is_suspended,0)=0")->fetchColumn();
     $newProviders=(int)$pdo->query("SELECT COUNT(*) FROM users WHERE user_type='provider' AND created_at>=DATE_SUB(NOW(),INTERVAL 30 DAY)")->fetchColumn();
+    // Engagement proxies based on real job activity; these are NOT login retention cohorts.
+    $requestingCustomers30=(int)$pdo->query("SELECT COUNT(DISTINCT customer_id) FROM jobs WHERE created_at>=DATE_SUB(NOW(), INTERVAL 30 DAY)")->fetchColumn();
+    $repeatCustomers90=(int)$pdo->query("SELECT COUNT(*) FROM (SELECT customer_id FROM jobs WHERE created_at>=DATE_SUB(NOW(), INTERVAL 90 DAY) GROUP BY customer_id HAVING COUNT(*)>=2) AS repeat_customers")->fetchColumn();
+    $workingProviders30=(int)$pdo->query("SELECT COUNT(DISTINCT provider_id) FROM jobs WHERE provider_id IS NOT NULL AND status IN ('matched','accepted','approved','in_progress','customer_paid','completed') AND created_at>=DATE_SUB(NOW(), INTERVAL 30 DAY)")->fetchColumn();
     $referrals=(int)$pdo->query("SELECT COUNT(*) FROM referral_rewards")->fetchColumn();
     $rewarded=(int)$pdo->query("SELECT COUNT(*) FROM referral_rewards WHERE status='rewarded'")->fetchColumn();
     $city=$pdo->query("SELECT city,COUNT(*) total FROM users WHERE city IS NOT NULL AND city<>'' GROUP BY city ORDER BY total DESC LIMIT 12")->fetchAll(PDO::FETCH_ASSOC);
@@ -165,6 +169,9 @@ function growthAnalytics($pdo) {
         'open_jobs'=>$openJobs,
         'active_providers'=>$activeProviders,
         'new_providers_30d'=>$newProviders,
+        'requesting_customers_30d'=>$requestingCustomers30,
+        'repeat_customers_90d'=>$repeatCustomers90,
+        'working_providers_30d'=>$workingProviders30,
         'completed_30d'=>$completed30,
         'cancelled_30d'=>$cancelled30,
         'completion_rate'=>($completed30+$cancelled30)>0 ? round($completed30*100/($completed30+$cancelled30),1) : 0,

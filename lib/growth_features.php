@@ -1,7 +1,7 @@
 <?php
 
 function ensureGrowthSchema($pdo) {
-    apiSchemaMigration($pdo,'growth_features_v2',function() use($pdo) {
+    apiSchemaMigration($pdo,'growth_features_v3_firebase_phone',function() use($pdo) {
         $columns=$pdo->query("SHOW COLUMNS FROM users")->fetchAll(PDO::FETCH_COLUMN);
         $defs=[
             'phone_verified'=>"TINYINT(1) NOT NULL DEFAULT 0",

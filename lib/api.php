@@ -4242,14 +4242,24 @@ switch ($action) {
             $currentJob = $jobStatusCheck->fetch(PDO::FETCH_ASSOC);
             $currentJobStatus = $currentJob['status'] ?? null;
             $simulationFallback = null;
-            if ($user_type !== 'provider' && empty($bids) && $currentJobStatus === 'searching') {
-                $simulationFallback = serviceSimulationFallback($pdo, $currentJob);
+            $providerScan = null;
+            if ($user_type !== 'provider' && $currentJobStatus === 'searching') {
+                $eligibleProviders = serviceEligibleRealProviders($pdo, $currentJob, 100);
+                $providerScan = [
+                    'eligible_count' => count($eligibleProviders),
+                    'search_radius' => (float)($currentJob['search_radius'] ?? 50),
+                    'real_provider_available' => !empty($eligibleProviders),
+                ];
+                if (empty($bids)) {
+                    $simulationFallback = serviceSimulationFallback($pdo, $currentJob);
+                }
             }
             
             sendResponse(200, [
                 "status" => "success",
                 "job_status" => $currentJobStatus,
                 "bids" => $bids,
+                "provider_scan" => $providerScan,
                 "simulation_fallback" => $simulationFallback
             ]);
         } catch (Exception $e) {

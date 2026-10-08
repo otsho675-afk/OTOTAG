@@ -164,6 +164,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final TextEditingController _ibanController = TextEditingController();
   final TextEditingController _plateController = TextEditingController();
   final TextEditingController _mapLinkController = TextEditingController();
+  final TextEditingController _referralController = TextEditingController();
 
   final FocusNode _nameFocus = FocusNode();
   final FocusNode _phoneFocus = FocusNode();
@@ -171,6 +172,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final FocusNode _ibanFocus = FocusNode();
   final FocusNode _plateFocus = FocusNode();
   final FocusNode _mapLinkFocus = FocusNode();
+  final FocusNode _referralFocus = FocusNode();
 
   String _selectedService = '';
   String? _selectedCity;
@@ -512,6 +514,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       _ibanFocus,
       _plateFocus,
       _mapLinkFocus,
+      _referralFocus,
     ]) {
       node.addListener(_handleFocusChange);
     }
@@ -540,12 +543,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     _ibanController.dispose();
     _plateController.dispose();
     _mapLinkController.dispose();
+    _referralController.dispose();
     _nameFocus.dispose();
     _phoneFocus.dispose();
     _passwordFocus.dispose();
     _ibanFocus.dispose();
     _plateFocus.dispose();
     _mapLinkFocus.dispose();
+    _referralFocus.dispose();
     super.dispose();
   }
 
@@ -1056,6 +1061,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         request.fields['oauth_id'] = _currentOauthId ?? '';
         request.fields['oauth_token'] = _currentOauthToken ?? '';
         request.fields['email'] = _currentOauthEmail ?? '';
+        request.fields['referral_code'] = _referralController.text.trim().toUpperCase();
 
         if (_selectedService == 'wash' && _isProvider) {
           request.files.add(http.MultipartFile.fromBytes(
@@ -1092,6 +1098,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             "oauth_id": _currentOauthId ?? '',
             "oauth_token": _currentOauthToken ?? '',
             "email": _currentOauthEmail ?? '',
+            "referral_code": _referralController.text.trim().toUpperCase(),
           },
         ).timeout(_apiTimeout);
         await _handleResponse(response.body, response.statusCode);
@@ -1851,6 +1858,22 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             isPasswordField: true,
             autofillHints: const [AutofillHints.newPassword],
             textInputAction: TextInputAction.done,
+            onEditingComplete: () => FocusScope.of(context).unfocus(),
+          ),
+          const SizedBox(height: 14),
+          _buildGlassTextField(
+            controller: _referralController,
+            focusNode: _referralFocus,
+            label: "Davet Kodu (Opsiyonel)",
+            icon: Icons.card_giftcard_rounded,
+            isPasswordField: false,
+            type: TextInputType.text,
+            capitalization: TextCapitalization.characters,
+            textInputAction: TextInputAction.done,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9-]')),
+              LengthLimitingTextInputFormatter(10),
+            ],
             onEditingComplete: () => FocusScope.of(context).unfocus(),
           ),
         ],

@@ -637,7 +637,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
                                       ? 'Teklif ver'
                                       : 'Teklifi güncelle')),
                             ]),
-                          ]))));
+                          ])));
             }),
         ]));
   }

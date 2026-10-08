@@ -178,6 +178,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   String? _selectedCity;
   bool isRegistering = false;
   bool _obscurePassword = true;
+  bool _phoneVerified = false;
+  bool _phoneOtpBusy = false;
 
   String? _currentOauthProvider;
   String? _currentOauthId;
@@ -1274,6 +1276,1312 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         _showCustomSnackBar('Sunucu hatası oluştu veya yanıt doğrulanamadı.',
             isError: true);
       }
+    }
+  }
+
+  Future<void> _verifyPhoneNumber() async {
+    if (_phoneOtpBusy) return;
+    final rawPhone = _phoneController.text.trim();
+    if (!RegExp(r'^(?:0|90)?[2-5][0-9]{9}
+    required TextEditingController controller,
+    required FocusNode focusNode,
+    required String label,
+    required IconData icon,
+    required bool isPasswordField,
+    TextInputType type = TextInputType.text,
+    TextCapitalization capitalization = TextCapitalization.none,
+    List<TextInputFormatter>? inputFormatters,
+    Iterable<String>? autofillHints,
+    TextInputAction textInputAction = TextInputAction.next,
+    VoidCallback? onEditingComplete,
+  }) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      decoration: BoxDecoration(
+        color: focusNode.hasFocus
+            ? Colors.white.withValues(alpha: 0.06)
+            : Colors.white.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: focusNode.hasFocus
+              ? neonGreen
+              : Colors.white.withValues(alpha: 0.05),
+          width: focusNode.hasFocus ? 1.5 : 1.0,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            obscureText: isPasswordField ? _obscurePassword : false,
+            textInputAction: textInputAction,
+            keyboardType: type,
+            textCapitalization: capitalization,
+            inputFormatters: inputFormatters,
+            autofillHints: autofillHints,
+            onEditingComplete:
+                onEditingComplete ?? () => FocusScope.of(context).nextFocus(),
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
+            decoration: InputDecoration(
+              labelText: label,
+              labelStyle: TextStyle(
+                  color: focusNode.hasFocus ? neonGreen : textGray,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500),
+              prefixIcon: Padding(
+                  padding: const EdgeInsets.only(left: 16, right: 12),
+                  child: Icon(icon,
+                      color: focusNode.hasFocus
+                          ? neonGreen
+                          : neonGreen.withValues(alpha: 0.7),
+                      size: 20)),
+              suffixIcon: isPasswordField
+                  ? Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: IconButton(
+                        splashRadius: 20,
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off_rounded
+                              : Icons.visibility_rounded,
+                          color: Colors.white54,
+                          size: 18,
+                        ),
+                        onPressed: () {
+                          HapticFeedback.selectionClick();
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
+                    )
+                  : null,
+              filled: true,
+              fillColor: Colors.transparent,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              border: InputBorder.none,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCitySelectorTile() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: _showCityPickerModal,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            child: Row(
+              children: [
+                const Icon(Icons.location_city_rounded,
+                    color: neonGreen, size: 20),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text("Bulunduğunuz Şehir",
+                          style: TextStyle(
+                              color: textGray,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 2),
+                      Text(
+                        _selectedCity ?? "Şehir Seçmek İçin Dokunun",
+                        style: TextStyle(
+                          color: _selectedCity != null
+                              ? Colors.white
+                              : Colors.white38,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.keyboard_arrow_down_rounded,
+                    color: neonGreen, size: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlassDropdown(String label, IconData icon, String? value,
+      List<DropdownMenuItem<String>> items, Function(String?) onChanged) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: DropdownButtonFormField<String>(
+            isExpanded: true,
+            initialValue: value,
+            icon:
+                const Icon(Icons.keyboard_arrow_down_rounded, color: neonGreen),
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
+            dropdownColor: panelBlack,
+            decoration: InputDecoration(
+              labelText: label,
+              labelStyle: const TextStyle(
+                  color: textGray, fontSize: 13, fontWeight: FontWeight.w500),
+              prefixIcon: Padding(
+                  padding: const EdgeInsets.only(left: 16, right: 12),
+                  child: Icon(icon, color: neonGreen, size: 20)),
+              filled: true,
+              fillColor: Colors.transparent,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              border: InputBorder.none,
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: const BorderSide(color: neonGreen, width: 1.5)),
+            ),
+            items: items,
+            onChanged: (val) {
+              HapticFeedback.selectionClick();
+              onChanged(val);
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilePicker(String title, XFile? file, String type) {
+    bool isSelected = file != null;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isSelected
+              ? neonGreen.withValues(alpha: 0.06)
+              : Colors.white.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+              color: isSelected
+                  ? neonGreen.withValues(alpha: 0.4)
+                  : Colors.white.withValues(alpha: 0.05),
+              width: 1.5),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _pickImage(type),
+            borderRadius: BorderRadius.circular(20),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+              child: Row(
+                children: [
+                  if (isSelected)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: kIsWeb
+                          ? Image.network(
+                              file.path,
+                              width: 44,
+                              height: 44,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 44,
+                                height: 44,
+                                color: neonGreen.withValues(alpha: 0.2),
+                                child: const Icon(Icons.image,
+                                    color: neonGreen, size: 20),
+                              ),
+                            )
+                          : Image.file(
+                              File(file.path),
+                              width: 44,
+                              height: 44,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 44,
+                                height: 44,
+                                color: neonGreen.withValues(alpha: 0.2),
+                                child: const Icon(Icons.image,
+                                    color: neonGreen, size: 20),
+                              ),
+                            ),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.upload_file_rounded,
+                          color: Colors.white70, size: 22),
+                    ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title,
+                            style: TextStyle(
+                                color: isSelected ? neonGreen : Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 14),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                        const SizedBox(height: 2),
+                        Text(
+                          isSelected ? file.name : "Galeriden fotoğraf seç",
+                          style: TextStyle(
+                              color: isSelected ? Colors.white70 : textGray,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (isSelected)
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded,
+                          color: alertRed, size: 20),
+                      onPressed: () => _clearImage(type),
+                      tooltip: "Kaldır",
+                    )
+                  else
+                    const Icon(Icons.add_a_photo_rounded,
+                        color: textGray, size: 18),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 12),
+      child: Row(
+        children: [
+          Icon(icon, color: neonGreen, size: 18),
+          const SizedBox(width: 8),
+          Text(title,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBusinessAccountStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildBasicInfoStep(),
+        const SizedBox(height: 26),
+        _buildProviderLocationAndVehicleStep(),
+      ],
+    );
+  }
+
+  Widget _buildCurrentStepContent() {
+    if (!_hasValidUserType) {
+      return _buildInvalidRoleCard();
+    }
+
+    if (_isProvider) {
+      if (_currentStep == 0) return _buildProviderServiceStep();
+      if (_currentStep == 1) return _buildBusinessAccountStep();
+      if (_currentStep == 2) return _buildProviderDocumentsStep();
+    } else if (_isRentACar) {
+      if (_currentStep == 0) return _buildBusinessAccountStep();
+      if (_currentStep == 1) return _buildProviderDocumentsStep();
+    } else if (_isCustomer) {
+      return _buildBasicInfoStep();
+    }
+
+    return _buildInvalidRoleCard();
+  }
+
+  Widget _buildInvalidRoleCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: alertRed.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: alertRed.withValues(alpha: 0.3)),
+      ),
+      child: const Column(
+        children: [
+          Icon(Icons.error_outline_rounded, color: alertRed, size: 34),
+          SizedBox(height: 12),
+          Text(
+            'Hesap türü tanınamadı',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          SizedBox(height: 6),
+          Text(
+            'Bu ekran müşteri, usta veya Rent A Car rolü ile açılmalıdır.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: textGray, height: 1.4),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProviderServiceStep() {
+    return KeyedSubtree(
+      key: const ValueKey('step0_service'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionHeader(
+              "Hangi hizmeti veriyorsunuz?", Icons.build_circle_outlined),
+          const SizedBox(height: 10),
+          _buildGlassDropdown("Hizmet Kategorisi Seçin", Icons.handyman_rounded,
+              _selectedService.isEmpty ? null : _selectedService, const [
+            DropdownMenuItem(
+                value: 'mechanic',
+                child: Text("Tamirci",
+                    maxLines: 1, overflow: TextOverflow.ellipsis)),
+            DropdownMenuItem(
+                value: 'tow',
+                child: Text("Çekici",
+                    maxLines: 1, overflow: TextOverflow.ellipsis)),
+            DropdownMenuItem(
+                value: 'tire',
+                child: Text("Lastikçi",
+                    maxLines: 1, overflow: TextOverflow.ellipsis)),
+            DropdownMenuItem(
+                value: 'wash',
+                child: Text("Oto Yıkama",
+                    maxLines: 1, overflow: TextOverflow.ellipsis)),
+            DropdownMenuItem(
+                value: 'rentacar',
+                child: Text("Rent A Car (Araç Kiralama)",
+                    maxLines: 1, overflow: TextOverflow.ellipsis)),
+          ], (val) {
+            setState(() {
+              _selectedService = val ?? '';
+              _taxPlate = null;
+              _driverLicense = null;
+              _vehiclePhoto = null;
+              _equipmentPhoto = null;
+              _plateController.clear();
+              _mapLinkController.clear();
+            });
+          }),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: neonGreen.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: neonGreen.withValues(alpha: 0.2)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.info_outline_rounded, color: neonGreen, size: 28),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    "Müşterilerin size ulaşabilmesi için doğru hizmet kategorisini seçmeniz önemlidir. Seçiminizi yapıp devam edin.",
+                    style: TextStyle(
+                        color: Colors.white70, fontSize: 13, height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBasicInfoStep() {
+    return KeyedSubtree(
+      key: const ValueKey('step_basic'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: kIsWeb
+                    ? GoogleLoginButton(
+                        clientId: AppConstants.googleWebClientId,
+                        onSignedIn: _googleRegistrationAccount,
+                        onError: (message) =>
+                            _showCustomSnackBar(message, isError: true))
+                    : InkWell(
+                        onTap: _socialBusy ? null : _signUpWithGoogle,
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.04),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.1)),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.g_mobiledata_rounded,
+                                  color: Colors.white, size: 28),
+                              SizedBox(width: 8),
+                              Text("Google",
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 13)),
+                            ],
+                          ),
+                        ),
+                      ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: InkWell(
+                  onTap:
+                      _appleAvailable && !_socialBusy ? _signUpWithApple : null,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.04),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.1)),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.apple_rounded,
+                            color: Colors.white, size: 20),
+                        SizedBox(width: 8),
+                        Text("Apple",
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (_currentOauthProvider != null) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: neonGreen.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: neonGreen.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                      _currentOauthProvider == 'google'
+                          ? Icons.g_mobiledata_rounded
+                          : Icons.apple_rounded,
+                      color: neonGreen,
+                      size: 20),
+                  const SizedBox(width: 8),
+                  Text("${_currentOauthProvider!.toUpperCase()} Bağlandı",
+                      style: const TextStyle(
+                          color: neonGreen,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800)),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 28),
+          _buildSectionHeader("Kişisel Bilgiler", Icons.badge_rounded),
+          _buildGlassTextField(
+            controller: _nameController,
+            focusNode: _nameFocus,
+            label: _effectiveIsRentACar ? "Firma İsmi" : "Ad Soyad",
+            icon: _effectiveIsRentACar
+                ? Icons.store_rounded
+                : Icons.person_rounded,
+            isPasswordField: false,
+            type: TextInputType.name,
+            autofillHints: const [AutofillHints.name],
+            capitalization: TextCapitalization.words,
+            onEditingComplete: () =>
+                FocusScope.of(context).requestFocus(_phoneFocus),
+          ),
+          const SizedBox(height: 14),
+          _buildGlassTextField(
+            controller: _phoneController,
+            focusNode: _phoneFocus,
+            label: "Telefon Numarası (Örn: 0535...)",
+            icon: Icons.phone_android_rounded,
+            isPasswordField: false,
+            type: TextInputType.phone,
+            autofillHints: const [AutofillHints.telephoneNumber],
+            inputFormatters: [
+              SmartPhoneFormatter(),
+              LengthLimitingTextInputFormatter(15)
+            ],
+            onEditingComplete: () =>
+                FocusScope.of(context).requestFocus(_passwordFocus),
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed:
+                  _phoneVerified || _phoneOtpBusy ? null : _verifyPhoneNumber,
+              icon: _phoneOtpBusy
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : Icon(_phoneVerified
+                      ? Icons.verified_rounded
+                      : Icons.sms_outlined),
+              label: Text(
+                  _phoneVerified ? 'Telefon doğrulandı' : 'SMS ile doğrula'),
+            ),
+          ),
+          const SizedBox(height: 6),
+          _buildGlassTextField(
+            controller: _passwordController,
+            focusNode: _passwordFocus,
+            label: _currentOauthProvider != null
+                ? "Şifre (Opsiyonel)"
+                : "Şifre (En az 6 karakter)",
+            icon: Icons.lock_outline_rounded,
+            isPasswordField: true,
+            autofillHints: const [AutofillHints.newPassword],
+            textInputAction: TextInputAction.done,
+            onEditingComplete: () => FocusScope.of(context).unfocus(),
+          ),
+          const SizedBox(height: 14),
+          _buildGlassTextField(
+            controller: _referralController,
+            focusNode: _referralFocus,
+            label: "Davet Kodu (Opsiyonel)",
+            icon: Icons.card_giftcard_rounded,
+            isPasswordField: false,
+            type: TextInputType.text,
+            capitalization: TextCapitalization.characters,
+            textInputAction: TextInputAction.done,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9-]')),
+              LengthLimitingTextInputFormatter(10),
+            ],
+            onEditingComplete: () => FocusScope.of(context).unfocus(),
+          ),
+          if (_isCustomer) ...[
+            const SizedBox(height: 18),
+            _buildSectionHeader("Bulunduğun Şehir", Icons.location_city_rounded),
+            _buildCitySelectorTile(),
+            const SizedBox(height: 8),
+            Text(
+              "Şehrini yalnızca sana yakın usta ve hizmetleri göstermek için kullanıyoruz.",
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.48),
+                fontSize: 11,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProviderLocationAndVehicleStep() {
+    return KeyedSubtree(
+      key: const ValueKey('step_provider_loc'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionHeader("Bölge & Konum Seçimi", Icons.map_rounded),
+          _buildCitySelectorTile(),
+          const SizedBox(height: 24),
+          _buildSectionHeader(
+              _effectiveIsRentACar
+                  ? "Firma Bilgileri & Banka"
+                  : "Hizmet Aracı & Banka",
+              Icons.directions_car_filled_rounded),
+          if (_effectiveIsRentACar)
+            _buildGlassTextField(
+              controller: _mapLinkController,
+              focusNode: _mapLinkFocus,
+              label: "Firma Google Harita Linki",
+              icon: Icons.map_rounded,
+              isPasswordField: false,
+              type: TextInputType.url,
+              textInputAction: TextInputAction.next,
+              onEditingComplete: () =>
+                  FocusScope.of(context).requestFocus(_ibanFocus),
+            )
+          else
+            _buildGlassTextField(
+              controller: _plateController,
+              focusNode: _plateFocus,
+              label: "Hizmet / Çekici Araç Plakası (Örn: 42 TAG 403)",
+              icon: Icons.pin_rounded,
+              isPasswordField: false,
+              type: TextInputType.text,
+              textInputAction: TextInputAction.next,
+              capitalization: TextCapitalization.characters,
+              inputFormatters: [
+                TurkishPlateFormatter(),
+                LengthLimitingTextInputFormatter(11)
+              ],
+              onEditingComplete: () =>
+                  FocusScope.of(context).requestFocus(_ibanFocus),
+            ),
+          const SizedBox(height: 14),
+          _buildGlassTextField(
+            controller: _ibanController,
+            focusNode: _ibanFocus,
+            label: "IBAN Numarası (26 Haneli Zorunlu)",
+            icon: Icons.account_balance_rounded,
+            isPasswordField: false,
+            type: TextInputType.text,
+            textInputAction: TextInputAction.done,
+            capitalization: TextCapitalization.characters,
+            inputFormatters: [
+              SmartIbanFormatter(),
+              LengthLimitingTextInputFormatter(32)
+            ],
+            onEditingComplete: () => FocusScope.of(context).unfocus(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProviderDocumentsStep() {
+    return KeyedSubtree(
+      key: const ValueKey('step_provider_docs'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionHeader(
+              _effectiveIsRentACar
+                  ? "Firma Doğrulama Belgeleri"
+                  : "Yetki ve Doğrulama Belgeleri",
+              Icons.verified_user_rounded),
+          if (_selectedService == 'wash' && !_effectiveIsRentACar) ...[
+            _buildFilePicker(
+                "Ehliyet Fotoğrafı", _driverLicense, 'driver_license'),
+            _buildFilePicker(
+                "Hizmet Aracı Fotoğrafı", _vehiclePhoto, 'vehicle_photo'),
+            _buildFilePicker(
+                "Mobil Ekipman Fotoğrafı", _equipmentPhoto, 'equipment_photo'),
+          ] else ...[
+            _buildFilePicker("Vergi Levhası", _taxPlate, 'tax_plate'),
+          ]
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    final size = media.size;
+    final isWide = size.width >= 700;
+    final compactHeight = size.height < 720;
+    final stepTitles = _stepTitles;
+    final safeStep = _currentStep
+        .clamp(0, (stepTitles.isEmpty ? 1 : stepTitles.length) - 1)
+        .toInt();
+    final progress = _stepCount <= 0
+        ? 0.0
+        : ((_currentStep + 1) / _stepCount).clamp(0.0, 1.0).toDouble();
+
+    return Scaffold(
+      backgroundColor: pureBlack,
+      resizeToAvoidBottomInset: true,
+      appBar: AppBar(
+        leading: IconButton(
+          tooltip: 'Geri',
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              size: 16,
+              color: Colors.white,
+            ),
+          ),
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            Navigator.pop(context);
+          },
+        ),
+        title: Image.asset(
+          'assets/images/logo.png',
+          height: 28,
+          errorBuilder: (_, __, ___) => const Icon(
+            Icons.car_repair_rounded,
+            color: neonGreen,
+            size: 28,
+          ),
+        ),
+        backgroundColor: pureBlack.withValues(alpha: 0.92),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+      ),
+      body: Stack(
+        children: [
+          Positioned(
+            top: -size.width * 0.35,
+            right: -size.width * 0.45,
+            child: IgnorePointer(
+              child: Container(
+                width: size.width * 1.35,
+                height: size.width * 1.35,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      neonGreen.withValues(alpha: 0.10),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.72],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isWide ? 620 : double.infinity,
+                ),
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                          18, compactHeight ? 12 : 18, 18, 12),
+                      child: Column(
+                        children: [
+                          Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.all(compactHeight ? 14 : 16),
+                            decoration: BoxDecoration(
+                              color: panelBlack.withValues(alpha: 0.92),
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.07),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.28),
+                                  blurRadius: 28,
+                                  offset: const Offset(0, 12),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: compactHeight ? 46 : 52,
+                                  height: compactHeight ? 46 : 52,
+                                  decoration: BoxDecoration(
+                                    color: neonGreen.withValues(alpha: 0.11),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color:
+                                          neonGreen.withValues(alpha: 0.24),
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    _roleIcon,
+                                    color: neonGreen,
+                                    size: compactHeight ? 24 : 28,
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              _roleTitle,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize:
+                                                    compactHeight ? 18 : 20,
+                                                fontWeight: FontWeight.w900,
+                                                letterSpacing: -0.4,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 9,
+                                              vertical: 5,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: neonGreen.withValues(
+                                                  alpha: 0.12),
+                                              borderRadius:
+                                                  BorderRadius.circular(999),
+                                              border: Border.all(
+                                                color: neonGreen.withValues(
+                                                    alpha: 0.28),
+                                              ),
+                                            ),
+                                            child: Text(
+                                              _roleBadge,
+                                              style: const TextStyle(
+                                                color: neonGreen,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w900,
+                                                letterSpacing: 0.8,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 5),
+                                      Text(
+                                        _roleSubtitle,
+                                        maxLines: compactHeight ? 1 : 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(
+                                              alpha: 0.58),
+                                          fontSize: 12,
+                                          height: 1.35,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.fromLTRB(14, 11, 14, 12),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.025),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.055),
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      'Adım ${_currentStep + 1} / $_stepCount',
+                                      style: const TextStyle(
+                                        color: neonGreen,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    Flexible(
+                                      child: Text(
+                                        stepTitles.isEmpty
+                                            ? ''
+                                            : stepTitles[safeStep],
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        textAlign: TextAlign.right,
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(
+                                              alpha: 0.72),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 9),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(999),
+                                  child: LinearProgressIndicator(
+                                    minHeight: 7,
+                                    value: progress,
+                                    backgroundColor:
+                                        Colors.white.withValues(alpha: 0.08),
+                                    valueColor:
+                                        const AlwaysStoppedAnimation<Color>(
+                                            neonGreen),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
+                        child: AutofillGroup(
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 260),
+                            switchInCurve: Curves.easeOutCubic,
+                            switchOutCurve: Curves.easeInCubic,
+                            transitionBuilder: (child, animation) =>
+                                FadeTransition(
+                              opacity: animation,
+                              child: SlideTransition(
+                                position: Tween<Offset>(
+                                  begin: const Offset(0.025, 0),
+                                  end: Offset.zero,
+                                ).animate(animation),
+                                child: child,
+                              ),
+                            ),
+                            child: _buildCurrentStepContent(),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SafeArea(
+                      top: false,
+                      minimum: const EdgeInsets.fromLTRB(18, 8, 18, 10),
+                      child: Container(
+                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+                        decoration: BoxDecoration(
+                          color: panelBlack.withValues(alpha: 0.97),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.065),
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              children: [
+                                if (_currentStep > 0) ...[
+                                  SizedBox(
+                                    width: 58,
+                                    height: 54,
+                                    child: OutlinedButton(
+                                      onPressed:
+                                          isRegistering ? null : _prevStep,
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: Colors.white,
+                                        padding: EdgeInsets.zero,
+                                        side: BorderSide(
+                                          color: Colors.white
+                                              .withValues(alpha: 0.18),
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(17),
+                                        ),
+                                      ),
+                                      child: const Icon(
+                                        Icons.arrow_back_rounded,
+                                        size: 22,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                ],
+                                Expanded(
+                                  child: SizedBox(
+                                    height: 54,
+                                    child: ElevatedButton(
+                                      onPressed: (!_hasValidUserType ||
+                                              isRegistering)
+                                          ? null
+                                          : _nextStep,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: neonGreen,
+                                        foregroundColor: Colors.black,
+                                        disabledBackgroundColor: Colors.white
+                                            .withValues(alpha: 0.08),
+                                        disabledForegroundColor:
+                                            Colors.white38,
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(17),
+                                        ),
+                                      ),
+                                      child: isRegistering
+                                          ? const SizedBox(
+                                              width: 22,
+                                              height: 22,
+                                              child:
+                                                  CircularProgressIndicator(
+                                                color: Colors.black,
+                                                strokeWidth: 2.6,
+                                              ),
+                                            )
+                                          : Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Text(
+                                                  _currentStep ==
+                                                          _stepCount - 1
+                                                      ? (_isCustomer
+                                                          ? 'Hesabı Oluştur'
+                                                          : 'Başvuruyu Gönder')
+                                                      : 'Devam Et',
+                                                  style: const TextStyle(
+                                                    fontSize: 15,
+                                                    fontWeight:
+                                                        FontWeight.w900,
+                                                    letterSpacing: -0.2,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 7),
+                                                Icon(
+                                                  _currentStep ==
+                                                          _stepCount - 1
+                                                      ? Icons
+                                                          .check_circle_rounded
+                                                      : Icons
+                                                          .arrow_forward_rounded,
+                                                  size: 19,
+                                                ),
+                                              ],
+                                            ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            TextButton(
+                              onPressed: (!_hasValidUserType || isRegistering)
+                                  ? null
+                                  : () {
+                                      HapticFeedback.selectionClick();
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => LoginScreen(
+                                            userType: _normalizedUserType,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 8,
+                                ),
+                              ),
+                              child: Text.rich(
+                                TextSpan(
+                                  text: 'Zaten hesabınız var mı? ',
+                                  style: const TextStyle(
+                                    color: textGray,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  children: [
+                                    TextSpan(
+                                      text: _effectiveIsRentACar
+                                          ? 'Firma Girişine Dön'
+                                          : (_isProvider
+                                              ? 'Usta Girişine Dön'
+                                              : 'Giriş Yap'),
+                                      style: const TextStyle(
+                                        color: neonGreen,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () async {
+                                HapticFeedback.selectionClick();
+                                final url = Uri.parse(
+                                  'https://eliteagency.sbs/gizlilik_politikasi.html',
+                                );
+                                if (await canLaunchUrl(url)) {
+                                  await launchUrl(url);
+                                }
+                              },
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 4),
+                                child: Text(
+                                  'Gizlilik Politikası ve Kullanım Koşulları',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: textGray,
+                                    decoration: TextDecoration.underline,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+}
+)
+        .hasMatch(rawPhone.replaceAll(RegExp(r'\D'), ''))) {
+      _showCustomSnackBar('Önce geçerli bir telefon numarası giriniz.',
+          isError: true);
+      return;
+    }
+
+    setState(() => _phoneOtpBusy = true);
+    try {
+      final sendResponse = await http.post(
+        Uri.parse("$baseUrl?action=send_phone_otp"),
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: {"phone": rawPhone},
+      ).timeout(_apiTimeout);
+      final sendData = jsonDecode(utf8.decode(sendResponse.bodyBytes));
+      if (sendResponse.statusCode != 200 ||
+          sendData is! Map ||
+          sendData['status'] != 'success') {
+        throw Exception(sendData is Map
+            ? sendData['message']?.toString() ?? 'Kod gönderilemedi.'
+            : 'Kod gönderilemedi.');
+      }
+      if (sendData['configured'] != true) {
+        if (mounted) {
+          _showCustomSnackBar(
+              'SMS doğrulama altyapısı hazır; SMS sağlayıcısı henüz sunucuda etkin değil.');
+        }
+        return;
+      }
+      if (!mounted) return;
+
+      final controller = TextEditingController();
+      final code = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Telefonu Doğrula'),
+          content: TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: '6 haneli SMS kodu',
+              counterText: '',
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Vazgeç')),
+            FilledButton(
+                onPressed: () =>
+                    Navigator.pop(dialogContext, controller.text.trim()),
+                child: const Text('Doğrula')),
+          ],
+        ),
+      );
+      controller.dispose();
+      if (code == null || code.length != 6) return;
+
+      final verifyResponse = await http.post(
+        Uri.parse("$baseUrl?action=verify_phone_otp"),
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: {"phone": rawPhone, "code": code},
+      ).timeout(_apiTimeout);
+      final verifyData = jsonDecode(utf8.decode(verifyResponse.bodyBytes));
+      if (verifyResponse.statusCode != 200 ||
+          verifyData is! Map ||
+          verifyData['status'] != 'success') {
+        throw Exception(verifyData is Map
+            ? verifyData['message']?.toString() ?? 'Kod doğrulanamadı.'
+            : 'Kod doğrulanamadı.');
+      }
+      if (!mounted) return;
+      setState(() => _phoneVerified = true);
+      _showCustomSnackBar('Telefon numaranız doğrulandı.');
+    } catch (e) {
+      if (mounted) {
+        _showCustomSnackBar(
+            e.toString().replaceFirst('Exception: ', ''),
+            isError: true);
+      }
+    } finally {
+      if (mounted) setState(() => _phoneOtpBusy = false);
     }
   }
 

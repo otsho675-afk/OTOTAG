@@ -4282,15 +4282,18 @@ switch ($action) {
                 $pdo->commit();
                 sendResponse(200,['status'=>'success','job_status'=>'searching','expired'=>false]);
             }
-            $simulationFallback=serviceSimulationFallback($pdo,$job);
-            if ($simulationFallback!==null) {
-                $pdo->commit();
-                sendResponse(200,[
-                    'status'=>'success',
-                    'job_status'=>'searching',
-                    'expired'=>false,
-                    'simulation_fallback'=>$simulationFallback
-                ]);
+            $createdAt=!empty($job['created_at']) ? strtotime((string)$job['created_at']) : false;
+            if ($createdAt!==false) {
+                $elapsed=max(0,time()-$createdAt);
+                if ($elapsed<60) {
+                    $pdo->commit();
+                    sendResponse(200,[
+                        'status'=>'success',
+                        'job_status'=>'searching',
+                        'expired'=>false,
+                        'retry_after'=>60-$elapsed
+                    ]);
+                }
             }
             $pdo->prepare("UPDATE jobs SET status='cancelled' WHERE id=? AND status='searching'")->execute([$jobId]);
             $pdo->commit();

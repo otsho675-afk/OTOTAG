@@ -18,6 +18,7 @@ import 'widgets/admin_update_panel.dart';
 import 'services/app_session.dart';
 import 'widgets/admin_command_palette.dart';
 import 'widgets/admin_overview_panel.dart';
+import 'growth_analytics_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -4716,6 +4717,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                   subtitle: const Text(
                       "En çok basılan butonlar, bekleme süreleri ve sorunlar",
+                      style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  trailing:
+                      const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const GrowthAnalyticsScreen())),
+                  leading: const Icon(Icons.insights_rounded,
+                      color: AppConstants.primaryColor),
+                  title: const Text("Büyüme & Dönüşüm Analizi",
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  subtitle: const Text(
+                      "Yeni üye, tamamlanan iş, iptal, şehir ve davet dönüşümü",
                       style: TextStyle(fontSize: 11, color: Colors.grey)),
                   trailing:
                       const Icon(Icons.arrow_forward_ios_rounded, size: 14),

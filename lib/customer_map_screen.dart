@@ -120,6 +120,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
       problemController.text = 'ACİL YOL YARDIM';
     }
     _generateSmartSuggestion();
+    unawaited(_loadSmartPrice());
 
     _radarPulseController = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 2000))
@@ -217,10 +218,31 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
     }
   }
 
+  Future<void> _loadSmartPrice() async {
+    try {
+      final uri = Uri.parse(baseUrl).replace(queryParameters: {
+        'action': 'get_smart_price',
+        'service_type': selectedService,
+        'distance_km': '5',
+      });
+      final response = await _httpClient.get(uri).timeout(const Duration(seconds: 8));
+      final data = json.decode(response.body);
+      if (!mounted || response.statusCode != 200 || data is! Map || data['status'] != 'success') return;
+      setState(() {
+        _smartSuggestion = '5 km civarı için tahmini fiyat: ' +
+            (data['low'] ?? '-').toString() + '–' +
+            (data['high'] ?? '-').toString() +
+            ' ₺ · Ortalama varış ' +
+            (data['estimated_minutes'] ?? '-').toString() + ' dk';
+      });
+    } catch (_) {}
+  }
+
   void _changeSelectedService(String newServiceId) {
     if (selectedService == newServiceId) return;
     HapticFeedback.lightImpact();
     setState(() => selectedService = newServiceId);
+    unawaited(_loadSmartPrice());
   }
 
   @override

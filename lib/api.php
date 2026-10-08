@@ -892,6 +892,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 require_once __DIR__.'/registration_rules.php';
 require_once __DIR__.'/service_matching.php';
+require_once __DIR__.'/referral_rewards.php';
 require_once __DIR__.'/map_routing.php';
 require_once __DIR__ . '/oauth_verification.php';
 require_once __DIR__ . '/api_authorization.php';
@@ -909,6 +910,12 @@ require_once __DIR__ . '/rentacar_api.php';
 handleRentalAction($pdo, $action, $method);
 
 switch ($action) {
+    case 'get_referral_summary':
+        if ($method!=='GET') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
+        $userId=(int)($_GET['user_id'] ?? 0);
+        if ($userId<=0) sendResponse(400,['status'=>'error','message'=>'Kullanıcı bilgisi eksik.']);
+        sendResponse(200,referralSummary($pdo,$userId));
+        break;
     case 'get_my_subscriptions':
         if ($method!=='GET') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
         require_once __DIR__.'/subscription_summary.php';
@@ -2237,6 +2244,8 @@ switch ($action) {
         $oauth_provider = trim($_POST['oauth_provider'] ?? '');
         $oauth_id = trim($_POST['oauth_id'] ?? '');
         $email = trim($_POST['email'] ?? '');
+        $referral_code = strtoupper(trim($_POST['referral_code'] ?? ''));
+        $inviterId = null;
         $hasRegistrationPassword=$password!=='';
 
 @file_put_contents(
@@ -2268,6 +2277,12 @@ switch ($action) {
             }
             if ($password!=='' && strlen($password)<6) throw new InvalidArgumentException('Şifre en az 6 karakter olmalı.');
         } catch (InvalidArgumentException $e) { sendResponse(422,['status'=>'error','message'=>$e->getMessage()]); }
+
+        try {
+            $inviterId = referralResolveInviter($pdo,$referral_code);
+        } catch (InvalidArgumentException $e) {
+            sendResponse(422,['status'=>'error','message'=>$e->getMessage()]);
+        }
 
         @file_put_contents(
             __DIR__ . '/register_request.log',
@@ -2656,6 +2671,7 @@ switch ($action) {
             $stmt = $pdo->prepare("INSERT INTO users (name, email, phone, password, user_type, service_category, iban, tow_plate, map_link, city, status, is_premium, tax_plate, driver_license, vehicle_photo, equipment_photo, tracking_code, ip_address, oauth_provider, oauth_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([$name, !empty($email) ? $email : null, $clean_phone, $hashed_password, $user_type, $service_category, $iban, $tow_plate ?: null, !empty($map_link) ? $map_link : null, $city, $status, $tax_plate, $driver_license, $vehicle_photo, $equipment_photo, $tracking_code, $user_ip, !empty($oauth_provider) ? $oauth_provider : null, !empty($oauth_id) ? $oauth_id : null]);
             $newUserId = $pdo->lastInsertId();
+            referralAttachNewUser($pdo,(int)$newUserId,$inviterId);
             $jwtToken = generateJWT($newUserId, $user_type);
             sendResponse(201, [
                 "status" => "success", 
@@ -4356,6 +4372,7 @@ switch ($action) {
         
         if ($job && strtolower($job['status']) === 'customer_paid') {
             $pdo->prepare("UPDATE jobs SET status = 'completed' WHERE id = ?")->execute([$job_id]);
+            referralRewardForCompletedJob($pdo,(int)$job_id);
 
             try {
                 if (!empty($job['customer_id'])) {

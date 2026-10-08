@@ -4023,6 +4023,7 @@ switch ($action) {
                 ]);
             }
             
+            ensureGrowthSchema($pdo);
             // 350K Optimizasyonu: Haritayı karelere bölen Bounding Box. Geometri hesaplama yükünü %99 azaltır.
             $lat_range = $requested_radius / 111.045;
             $lng_range = $requested_radius / (111.045 * max(0.01,abs(cos(deg2rad($provider_lat)))));
@@ -4043,14 +4044,21 @@ switch ($action) {
                 AND j.latitude BETWEEN (:lat2 - :lat_range1) AND (:lat3 + :lat_range2)
                 AND j.longitude BETWEEN (:lng2 - :lng_range1) AND (:lng3 + :lng_range2)
                 AND j.created_at <= (NOW() - INTERVAL :delay SECOND)
+                AND (
+                    j.preferred_provider_id IS NULL
+                    OR j.preferred_provider_id = :pid_pref
+                    OR j.created_at <= (NOW() - INTERVAL 15 SECOND)
+                )
                 AND NOT EXISTS (SELECT 1 FROM bids WHERE bids.job_id = j.id AND bids.provider_id = :pid)
                 HAVING distance <= search_radius AND distance <= :req_rad
-                ORDER BY distance ASC
+                ORDER BY (j.preferred_provider_id = :pid_order) DESC, distance ASC
                 LIMIT 50
             ";
             $stmt = $pdo->prepare($sql);
             $stmt->bindValue(':service_type', $provCategory, PDO::PARAM_STR);
             $stmt->bindValue(':provider_city',$provData['city']);
+            $stmt->bindValue(':pid_pref',$provider_id,PDO::PARAM_INT);
+            $stmt->bindValue(':pid_order',$provider_id,PDO::PARAM_INT);
             $stmt->bindValue(':lng1', $provider_lng);
             $stmt->bindValue(':lat1', $provider_lat);
             $stmt->bindValue(':lat2', $provider_lat);

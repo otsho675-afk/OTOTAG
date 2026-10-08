@@ -5,7 +5,6 @@ import 'core/constants/app_constants.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dart:async';
 import 'services/app_session.dart';
 import 'dart:ui';
 import 'dart:io';
@@ -14,7 +13,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 import 'customer_dashboard_screen.dart';
 import 'provider_map_screen.dart';
@@ -180,12 +178,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   String? _selectedCity;
   bool isRegistering = false;
   bool _obscurePassword = true;
-  bool _phoneVerified = false;
-  bool _phoneOtpBusy = false;
-  bool _phoneOtpDialogOpen = false;
-  String? _verifiedPhoneE164;
-  String? _firebaseIdToken;
-
   String? _currentOauthProvider;
   String? _currentOauthId;
   String? _currentOauthToken;
@@ -342,13 +334,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           _phoneController.text.trim().replaceAll(RegExp(r'\D'), '');
       if (!RegExp(r'^(?:0|90)?[2-5][0-9]{9}$').hasMatch(rawPhone)) {
         _showCustomSnackBar('Lütfen geçerli bir telefon numarası giriniz.',
-            isError: true);
-        return;
-      }
-
-      if (!_phoneVerified || _firebaseIdToken == null) {
-        _showCustomSnackBar(
-            'Devam etmek için telefon numaranızı Firebase SMS koduyla doğrulayın.',
             isError: true);
         return;
       }
@@ -526,8 +511,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     _currentOauthToken = widget.oauthToken;
     _currentOauthEmail = widget.oauthEmail;
 
-    _phoneController.addListener(_handlePhoneChanged);
-
     for (final node in [
       _nameFocus,
       _phoneFocus,
@@ -559,7 +542,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       node.removeListener(_handleFocusChange);
     }
 
-    _phoneController.removeListener(_handlePhoneChanged);
     _nameController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
@@ -1053,29 +1035,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       }
     }
 
-    if (!_phoneVerified ||
-        _firebaseIdToken == null ||
-        _verifiedPhoneE164 != _firebasePhoneE164()) {
-      _showCustomSnackBar(
-          'Kayıt için telefon numaranızı Firebase SMS ile doğrulayın.',
-          isError: true);
-      return;
-    }
-
-    try {
-      final firebaseUser = FirebaseAuth.instance.currentUser;
-      if (firebaseUser == null ||
-          firebaseUser.phoneNumber != _verifiedPhoneE164) {
-        throw FirebaseAuthException(
-            code: 'phone-session-missing',
-            message: 'Telefon doğrulama oturumu bulunamadı.');
-      }
-      _firebaseIdToken = await firebaseUser.getIdToken(true);
-    } on FirebaseAuthException catch (e) {
-      _showCustomSnackBar(_firebaseAuthMessage(e), isError: true);
-      return;
-    }
-
     final registrationPassword = rawPass;
     setState(() => isRegistering = true);
 
@@ -1108,7 +1067,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         request.fields['oauth_token'] = _currentOauthToken ?? '';
         request.fields['email'] = _currentOauthEmail ?? '';
         request.fields['referral_code'] = _referralController.text.trim().toUpperCase();
-        request.fields['firebase_id_token'] = _firebaseIdToken!;
 
         if (_selectedService == 'wash' && _isProvider) {
           request.files.add(http.MultipartFile.fromBytes(
@@ -1146,7 +1104,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             "oauth_token": _currentOauthToken ?? '',
             "email": _currentOauthEmail ?? '',
             "referral_code": _referralController.text.trim().toUpperCase(),
-            "firebase_id_token": _firebaseIdToken!,
           },
         ).timeout(_apiTimeout);
         await _handleResponse(response.body, response.statusCode);
@@ -1316,221 +1273,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         _showCustomSnackBar('Sunucu hatası oluştu veya yanıt doğrulanamadı.',
             isError: true);
       }
-    }
-  }
-
-  String? _firebasePhoneE164() {
-    var digits = _phoneController.text.replaceAll(RegExp(r'\D'), '');
-    if (digits.startsWith('90') && digits.length == 12) {
-      digits = digits.substring(2);
-    }
-    if (digits.length == 10) {
-      digits = '0$digits';
-    }
-    if (!RegExp(r'^05[0-9]{9}$').hasMatch(digits)) {
-      return null;
-    }
-    return '+90${digits.substring(1)}';
-  }
-
-  void _handlePhoneChanged() {
-    if (!_phoneVerified && _firebaseIdToken == null) return;
-    final current = _firebasePhoneE164();
-    if (current == _verifiedPhoneE164) return;
-    if (!mounted) return;
-    setState(() {
-      _phoneVerified = false;
-      _verifiedPhoneE164 = null;
-      _firebaseIdToken = null;
-    });
-  }
-
-  String _firebaseAuthMessage(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'invalid-phone-number':
-        return 'Geçerli bir cep telefonu numarası girin.';
-      case 'too-many-requests':
-        return 'Çok fazla SMS isteği gönderildi. Bir süre sonra tekrar deneyin.';
-      case 'quota-exceeded':
-        return 'Firebase SMS kotası doldu. Firebase kullanım planını kontrol edin.';
-      case 'billing-not-enabled':
-        return 'Gerçek Firebase SMS için Blaze faturalandırması etkin olmalı. Kod: ${e.code}';
-      case 'operation-not-allowed':
-        return 'Firebase Console içinde Telefon ile giriş henüz etkin değil.';
-      case 'unauthorized-domain':
-        return 'Bu web alan adı Firebase Authorized domains listesinde değil. Kod: ${e.code}';
-      case 'captcha-check-failed':
-        return 'reCAPTCHA doğrulaması başarısız oldu. Authorized domains ayarını kontrol edin. Kod: ${e.code}';
-      case 'invalid-app-credential':
-        return 'Firebase uygulama doğrulaması başarısız oldu. Kod: ${e.code}';
-      case 'invalid-verification-code':
-        return 'Girdiğiniz SMS kodu hatalı.';
-      case 'session-expired':
-        return 'SMS kodunun süresi doldu. Yeni kod isteyin.';
-      default:
-        final detail = e.message?.trim();
-        return detail == null || detail.isEmpty
-            ? 'Firebase telefon doğrulaması başarısız. Kod: ${e.code}'
-            : 'Firebase: ${e.code} - $detail';
-    }
-  }
-
-  Future<String?> _askFirebaseSmsCode() async {
-    if (!mounted) return null;
-    final controller = TextEditingController();
-    _phoneOtpDialogOpen = true;
-    try {
-      return await showDialog<String>(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Telefonu Doğrula'),
-          content: TextField(
-            controller: controller,
-            keyboardType: TextInputType.number,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(6),
-            ],
-            autofocus: true,
-            decoration: const InputDecoration(
-              labelText: '6 haneli Firebase SMS kodu',
-              counterText: '',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Vazgeç'),
-            ),
-            FilledButton(
-              onPressed: () =>
-                  Navigator.pop(dialogContext, controller.text.trim()),
-              child: const Text('Doğrula'),
-            ),
-          ],
-        ),
-      );
-    } finally {
-      _phoneOtpDialogOpen = false;
-      controller.dispose();
-    }
-  }
-
-  Future<void> _completeFirebasePhoneVerification(
-      UserCredential credential, String expectedPhone) async {
-    final user = credential.user;
-    if (user == null || user.phoneNumber != expectedPhone) {
-      throw FirebaseAuthException(
-        code: 'phone-number-mismatch',
-        message: 'Doğrulanan telefon numarası kayıt numarasıyla eşleşmiyor.',
-      );
-    }
-    final token = await user.getIdToken(true);
-    if (token == null || token.isEmpty) {
-      throw FirebaseAuthException(
-        code: 'missing-id-token',
-        message: 'Firebase doğrulama anahtarı alınamadı.',
-      );
-    }
-    if (!mounted) return;
-    setState(() {
-      _phoneVerified = true;
-      _verifiedPhoneE164 = expectedPhone;
-      _firebaseIdToken = token;
-    });
-    _showCustomSnackBar('Telefon numaranız Firebase ile doğrulandı.');
-  }
-
-  Future<void> _verifyPhoneNumber() async {
-    if (_phoneOtpBusy) return;
-    final phone = _firebasePhoneE164();
-    if (phone == null) {
-      _showCustomSnackBar(
-          'SMS doğrulama için 05XX XXX XX XX biçiminde cep telefonu girin.',
-          isError: true);
-      return;
-    }
-
-    setState(() => _phoneOtpBusy = true);
-    final auth = FirebaseAuth.instance;
-
-    try {
-      await auth.setLanguageCode('tr');
-
-      if (kIsWeb) {
-        final confirmation = await auth.signInWithPhoneNumber(phone);
-        final code = await _askFirebaseSmsCode();
-        if (code == null || code.length != 6) return;
-        final credential = await confirmation.confirm(code);
-        await _completeFirebasePhoneVerification(credential, phone);
-        return;
-      }
-
-      final completer = Completer<UserCredential>();
-      await auth.verifyPhoneNumber(
-        phoneNumber: phone,
-        timeout: const Duration(seconds: 60),
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          try {
-            final signedIn = await auth.signInWithCredential(credential);
-            if (!completer.isCompleted) completer.complete(signedIn);
-            if (_phoneOtpDialogOpen && mounted) {
-              Navigator.of(context, rootNavigator: true).maybePop();
-            }
-          } catch (e, st) {
-            if (!completer.isCompleted) completer.completeError(e, st);
-          }
-        },
-        verificationFailed: (FirebaseAuthException e) {
-          if (!completer.isCompleted) completer.completeError(e);
-        },
-        codeSent: (String verificationId, int? resendToken) async {
-          final code = await _askFirebaseSmsCode();
-          if (code == null || code.length != 6) {
-            if (!completer.isCompleted) {
-              completer.completeError(StateError('SMS doğrulama iptal edildi.'));
-            }
-            return;
-          }
-          try {
-            final phoneCredential = PhoneAuthProvider.credential(
-              verificationId: verificationId,
-              smsCode: code,
-            );
-            final signedIn = await auth.signInWithCredential(phoneCredential);
-            if (!completer.isCompleted) completer.complete(signedIn);
-          } catch (e, st) {
-            if (!completer.isCompleted) completer.completeError(e, st);
-          }
-        },
-        codeAutoRetrievalTimeout: (_) {},
-      );
-
-      final credential =
-          await completer.future.timeout(const Duration(minutes: 2));
-      await _completeFirebasePhoneVerification(credential, phone);
-    } on FirebaseAuthException catch (e) {
-      if (mounted) {
-        _showCustomSnackBar(_firebaseAuthMessage(e), isError: true);
-      }
-    } on TimeoutException {
-      if (mounted) {
-        _showCustomSnackBar(
-            'SMS doğrulama süresi doldu. Yeni kod isteyin.',
-            isError: true);
-      }
-    } on StateError catch (e) {
-      if (mounted && e.message != 'SMS doğrulama iptal edildi.') {
-        _showCustomSnackBar(e.message, isError: true);
-      }
-    } catch (e) {
-      if (mounted) {
-        _showCustomSnackBar('Firebase telefon doğrulaması başarısız oldu.',
-            isError: true);
-      }
-    } finally {
-      if (mounted) setState(() => _phoneOtpBusy = false);
     }
   }
 
@@ -2118,26 +1860,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             onEditingComplete: () =>
                 FocusScope.of(context).requestFocus(_passwordFocus),
           ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed:
-                  _phoneVerified || _phoneOtpBusy ? null : _verifyPhoneNumber,
-              icon: _phoneOtpBusy
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                  : Icon(_phoneVerified
-                      ? Icons.verified_rounded
-                      : Icons.sms_outlined),
-              label: Text(_phoneVerified
-                  ? 'Firebase ile doğrulandı'
-                  : 'Firebase SMS ile doğrula'),
-            ),
-          ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 14),
           _buildGlassTextField(
             controller: _passwordController,
             focusNode: _passwordFocus,

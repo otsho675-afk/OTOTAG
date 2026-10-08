@@ -9,6 +9,12 @@ function ensureGrowthSchema($pdo) {
         foreach($defs as $col=>$def) {
             if(!in_array($col,$columns,true)) $pdo->exec("ALTER TABLE users ADD COLUMN `$col` $def");
         }
+        $jobColumns=$pdo->query("SHOW COLUMNS FROM jobs")->fetchAll(PDO::FETCH_COLUMN);
+        if(!in_array('preferred_provider_id',$jobColumns,true)) {
+            $pdo->exec("ALTER TABLE jobs ADD COLUMN preferred_provider_id INT NULL");
+            $pdo->exec("CREATE INDEX idx_jobs_preferred_provider ON jobs(preferred_provider_id,status,created_at)");
+        }
+
         $pdo->exec("CREATE TABLE IF NOT EXISTS favorite_providers(
             id BIGINT AUTO_INCREMENT PRIMARY KEY,
             customer_id INT NOT NULL,

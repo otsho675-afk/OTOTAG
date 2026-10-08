@@ -1089,12 +1089,12 @@ class _LoginScreenState extends State<LoginScreen> {
     final customer = widget.userType == 'customer';
     final rentacar = widget.userType == 'rentacar';
     final title = customer
-        ? 'Müşteri Girişi'
+        ? 'Kullanıcı Girişi'
         : rentacar
             ? 'Rent A Car Firma Girişi'
             : 'Hizmet Sağlayıcı Girişi';
     final eyebrow = customer
-        ? 'OTO TAG  •  MÜŞTERİ'
+        ? 'OTO TAG  •  KULLANICI'
         : rentacar
             ? 'OTO TAG BUSINESS  •  RENT A CAR'
             : 'OTO TAG BUSINESS  •  HİZMET SAĞLAYICI';
@@ -1382,26 +1382,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           OutlinedButton.icon(
                             onPressed: isLoggingIn || _socialBusy
                                 ? null
-                                : () => Navigator.pushReplacement(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => LoginScreen(
-                                          userType:
-                                              customer ? 'provider' : 'customer',
-                                        ),
-                                      ),
-                                    ),
-                            icon: Icon(
-                              customer
-                                  ? Icons.business_center_outlined
-                                  : Icons.person_outline_rounded,
+                                : () => Navigator.maybePop(context),
+                            icon: const Icon(
+                              Icons.swap_horiz_rounded,
                               size: 19,
                             ),
-                            label: Text(
-                              customer
-                                  ? 'İşletme / firma girişine geç'
-                                  : 'Müşteri girişine geç',
-                            ),
+                            label: const Text('Giriş türünü değiştir'),
                           ),
                           const SizedBox(height: 14),
                           const Row(

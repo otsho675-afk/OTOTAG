@@ -37,7 +37,6 @@ dependencies:
   flutter_map: ^8.3.2
   latlong2: ^0.10.1
   firebase_core: ^4.15.0
-  firebase_auth: ^6.7.0
   firebase_analytics: ^12.6.0
   firebase_crashlytics: ^5.4.0
   quick_actions: ^1.1.1

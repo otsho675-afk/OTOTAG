@@ -1909,19 +1909,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  Widget _buildCustomerLocationStep() {
-    return KeyedSubtree(
-      key: const ValueKey('step_customer_loc'),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader("Bölge & Konum Seçimi", Icons.map_rounded),
-          _buildCitySelectorTile(),
-        ],
-      ),
-    );
-  }
-
   Widget _buildProviderLocationAndVehicleStep() {
     return KeyedSubtree(
       key: const ValueKey('step_provider_loc'),

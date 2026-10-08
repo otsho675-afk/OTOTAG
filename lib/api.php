@@ -4551,11 +4551,35 @@ switch ($action) {
 
         $completedStmt = $pdo->prepare("SELECT COUNT(*) FROM jobs WHERE provider_id=? AND status='completed'");
         $completedStmt->execute([$provider_id]);
+        $completedJobs=(int)$completedStmt->fetchColumn();
+
+        $assignedStmt=$pdo->prepare("SELECT COUNT(*) total,
+            SUM(status='cancelled') cancelled,
+            MAX(created_at) last_job_at
+            FROM jobs WHERE provider_id=?");
+        $assignedStmt->execute([$provider_id]);
+        $assigned=$assignedStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        $assignedTotal=(int)($assigned['total'] ?? 0);
+        $cancelled=(int)($assigned['cancelled'] ?? 0);
+
+        $responseStmt=$pdo->prepare("SELECT AVG(TIMESTAMPDIFF(MINUTE,j.created_at,b.created_at)) avg_response_min,
+            MAX(b.created_at) last_bid_at
+            FROM bids b JOIN jobs j ON j.id=b.job_id
+            WHERE b.provider_id=? AND b.created_at>=DATE_SUB(NOW(),INTERVAL 90 DAY)");
+        $responseStmt->execute([$provider_id]);
+        $responseStats=$responseStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
         $profilePayload = [
             "status" => "success", 
             "provider" => $provider, 
-            "stats" => ["average" => $stats['avg_rating'] ?? "0.0", "total" => $stats['total_reviews'] ?? 0,
-                "completed_jobs" => (int)$completedStmt->fetchColumn()],
+            "stats" => [
+                "average" => $stats['avg_rating'] ?? "0.0",
+                "total" => $stats['total_reviews'] ?? 0,
+                "completed_jobs" => $completedJobs,
+                "avg_response_min" => round((float)($responseStats['avg_response_min'] ?? 0),1),
+                "cancellation_rate" => $assignedTotal>0 ? round($cancelled*100/$assignedTotal,1) : 0,
+                "last_active" => $responseStats['last_bid_at'] ?? ($assigned['last_job_at'] ?? null)
+            ],
             "reviews" => $ratings
         ];
         if ($redis) {

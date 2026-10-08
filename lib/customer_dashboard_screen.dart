@@ -21,6 +21,7 @@ import 'customer_map_screen.dart';
 import 'customer_bids_screen.dart';
 import 'profile_screen.dart';
 import 'referral_screen.dart';
+import 'favorite_providers_screen.dart';
 import 'vehicle_panel_screen.dart';
 import 'diagnostic_screen.dart';
 import 'job_tracking_screen.dart';
@@ -3401,6 +3402,15 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
               onPressed: _showLogoutDialog,
             ),
             actions: [
+              IconButton(
+                  tooltip: 'Favori ustalarım',
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              const FavoriteProvidersScreen())),
+                  icon: const Icon(Icons.favorite_rounded,
+                      color: Colors.redAccent)),
               IconButton(
                   tooltip: 'Arkadaşını davet et',
                   onPressed: () => Navigator.push(

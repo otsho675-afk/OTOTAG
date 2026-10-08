@@ -2724,11 +2724,26 @@ switch ($action) {
             FILE_APPEND
         );
 
-        $phoneVerified=growthPhoneWasVerified($pdo,$clean_phone);
-        if (growthSmsConfigured() &&
-            serverConfig('REQUIRE_PHONE_VERIFICATION','0')==='1' &&
-            !$phoneVerified) {
-            sendResponse(422,['status'=>'error','message'=>'Telefon numaranızı SMS koduyla doğrulayın.']);
+        try {
+            $firebaseIdentity=growthVerifyFirebasePhoneToken(
+                $_POST['firebase_id_token'] ?? '',
+                $clean_phone
+            );
+            $firebaseUid=$firebaseIdentity['uid'];
+            $phoneVerified=true;
+        } catch (InvalidArgumentException $e) {
+            sendResponse(422,['status'=>'error','message'=>$e->getMessage()]);
+        } catch (Throwable $e) {
+            error_log('Firebase phone verification failed: '.$e->getMessage());
+            sendResponse(503,['status'=>'error','message'=>'Telefon doğrulama servisine ulaşılamadı. Tekrar deneyin.']);
+        }
+
+        $firebaseUidCheck=$pdo->prepare('SELECT id FROM users WHERE firebase_uid=? LIMIT 1');
+        $firebaseUidCheck->execute([$firebaseUid]);
+        $firebaseUidOwner=$firebaseUidCheck->fetchColumn();
+        if ($firebaseUidOwner &&
+            (!$completionUser || (int)$firebaseUidOwner!==(int)$completionUser['id'])) {
+            sendResponse(409,['status'=>'error','message'=>'Bu Firebase telefon hesabı başka bir OTO TAG hesabına bağlı.']);
         }
 
         if ($oauth_id !== '' && !$completionUser) {
@@ -2739,9 +2754,8 @@ switch ($action) {
         if ($completionUser) {
             $status=$user_type==='customer' ? 'active':'pending';
             $hash=$hasRegistrationPassword ? password_hash($password,PASSWORD_DEFAULT) : $completionUser['password'];
-            $update=$pdo->prepare('UPDATE users SET name=?,email=?,phone=?,password=?,city=?,service_category=?,iban=?,tow_plate=?,map_link=?,tax_plate=?,driver_license=?,vehicle_photo=?,equipment_photo=?,status=? WHERE id=? AND oauth_provider=? AND oauth_id=?');
-            $update->execute([$name,$email ?: null,$clean_phone,$hash,$city,$service_category,$iban,$tow_plate ?: null,$map_link ?: null,$tax_plate,$driver_license,$vehicle_photo,$equipment_photo,$status,$completionUser['id'],$oauth_provider,$oauth_id]);
-            if($phoneVerified) $pdo->prepare('UPDATE users SET phone_verified=1 WHERE id=?')->execute([$completionUser['id']]);
+            $update=$pdo->prepare('UPDATE users SET name=?,email=?,phone=?,password=?,city=?,service_category=?,iban=?,tow_plate=?,map_link=?,tax_plate=?,driver_license=?,vehicle_photo=?,equipment_photo=?,status=?,phone_verified=1,firebase_uid=? WHERE id=? AND oauth_provider=? AND oauth_id=?');
+            $update->execute([$name,$email ?: null,$clean_phone,$hash,$city,$service_category,$iban,$tow_plate ?: null,$map_link ?: null,$tax_plate,$driver_license,$vehicle_photo,$equipment_photo,$status,$firebaseUid,$completionUser['id'],$oauth_provider,$oauth_id]);
             sendResponse(200,['status'=>'success','user_id'=>$completionUser['id'],'user_type'=>$user_type,'account_status'=>$status,'token'=>generateJWT($completionUser['id'],$user_type),'tracking_code'=>$completionUser['tracking_code'] ?? null]);
         }
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
@@ -2756,10 +2770,9 @@ switch ($action) {
 
         try {
             $pdo->beginTransaction();
-            $stmt = $pdo->prepare("INSERT INTO users (name, email, phone, password, user_type, service_category, iban, tow_plate, map_link, city, status, is_premium, tax_plate, driver_license, vehicle_photo, equipment_photo, tracking_code, ip_address, oauth_provider, oauth_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$name, !empty($email) ? $email : null, $clean_phone, $hashed_password, $user_type, $service_category, $iban, $tow_plate ?: null, !empty($map_link) ? $map_link : null, $city, $status, $tax_plate, $driver_license, $vehicle_photo, $equipment_photo, $tracking_code, $user_ip, !empty($oauth_provider) ? $oauth_provider : null, !empty($oauth_id) ? $oauth_id : null]);
+            $stmt = $pdo->prepare("INSERT INTO users (name, email, phone, password, user_type, service_category, iban, tow_plate, map_link, city, status, is_premium, tax_plate, driver_license, vehicle_photo, equipment_photo, tracking_code, ip_address, oauth_provider, oauth_id, phone_verified, firebase_uid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)");
+            $stmt->execute([$name, !empty($email) ? $email : null, $clean_phone, $hashed_password, $user_type, $service_category, $iban, $tow_plate ?: null, !empty($map_link) ? $map_link : null, $city, $status, $tax_plate, $driver_license, $vehicle_photo, $equipment_photo, $tracking_code, $user_ip, !empty($oauth_provider) ? $oauth_provider : null, !empty($oauth_id) ? $oauth_id : null, $firebaseUid]);
             $newUserId = $pdo->lastInsertId();
-            if($phoneVerified) $pdo->prepare('UPDATE users SET phone_verified=1 WHERE id=?')->execute([$newUserId]);
             referralAttachNewUser($pdo,(int)$newUserId,$inviterId);
             $pdo->commit();
             $jwtToken = generateJWT($newUserId, $user_type);

@@ -1353,17 +1353,25 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         return 'Çok fazla SMS isteği gönderildi. Bir süre sonra tekrar deneyin.';
       case 'quota-exceeded':
         return 'Firebase SMS kotası doldu. Firebase kullanım planını kontrol edin.';
+      case 'billing-not-enabled':
+        return 'Gerçek Firebase SMS için Blaze faturalandırması etkin olmalı. Kod: ${e.code}';
       case 'operation-not-allowed':
         return 'Firebase Console içinde Telefon ile giriş henüz etkin değil.';
+      case 'unauthorized-domain':
+        return 'Bu web alan adı Firebase Authorized domains listesinde değil. Kod: ${e.code}';
       case 'captcha-check-failed':
+        return 'reCAPTCHA doğrulaması başarısız oldu. Authorized domains ayarını kontrol edin. Kod: ${e.code}';
       case 'invalid-app-credential':
-        return 'Firebase uygulama doğrulaması başarısız oldu. Firebase ayarlarını kontrol edin.';
+        return 'Firebase uygulama doğrulaması başarısız oldu. Kod: ${e.code}';
       case 'invalid-verification-code':
         return 'Girdiğiniz SMS kodu hatalı.';
       case 'session-expired':
         return 'SMS kodunun süresi doldu. Yeni kod isteyin.';
       default:
-        return e.message ?? 'Telefon doğrulanamadı.';
+        final detail = e.message?.trim();
+        return detail == null || detail.isEmpty
+            ? 'Firebase telefon doğrulaması başarısız. Kod: ${e.code}'
+            : 'Firebase: ${e.code} - $detail';
     }
   }
 

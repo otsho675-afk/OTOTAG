@@ -1650,8 +1650,23 @@ switch ($action) {
                 sendResponse(403, ["status" => "error", "message" => "Devam eden bir işiniz mevcut."]);
             }
 
-            $stmt = $pdo->prepare("INSERT INTO jobs (customer_id, service_type, latitude, longitude, match_code, problem_description, city, search_radius, status, issue_photo, issue_audio) VALUES (?, ?, ?, ?, ?, ?, ?, 50, 'searching', ?, ?)");
-            $stmt->execute([$customer_id, $service_type, $lat, $lng, $match_code, $problem_description, $city, $issue_photo, $issue_audio]);
+            ensureGrowthSchema($pdo);
+            $favoriteStmt=$pdo->prepare("SELECT u.id
+                FROM favorite_providers f
+                JOIN users u ON u.id=f.provider_id
+                WHERE f.customer_id=?
+                AND u.user_type='provider' AND u.status='active'
+                AND COALESCE(u.is_suspended,0)=0
+                AND u.service_category=?
+                AND TRIM(u.city)=TRIM(?)
+                AND (u.subscription_end_date>NOW() OR DATE_ADD(u.created_at,INTERVAL 30 DAY)>NOW())
+                ORDER BY u.rating DESC,u.id ASC LIMIT 1");
+            $favoriteStmt->execute([$customer_id,$service_type,$city]);
+            $preferredProviderId=$favoriteStmt->fetchColumn();
+            if(!$preferredProviderId) $preferredProviderId=null;
+
+            $stmt = $pdo->prepare("INSERT INTO jobs (customer_id, service_type, latitude, longitude, match_code, problem_description, city, search_radius, status, issue_photo, issue_audio, preferred_provider_id) VALUES (?, ?, ?, ?, ?, ?, ?, 50, 'searching', ?, ?, ?)");
+            $stmt->execute([$customer_id, $service_type, $lat, $lng, $match_code, $problem_description, $city, $issue_photo, $issue_audio, $preferredProviderId]);
             $new_job_id = $pdo->lastInsertId();
 
             try {
@@ -1671,7 +1686,17 @@ switch ($action) {
                 if (!empty($nearbyProviders)) {
                     $title = "Bölgenizde Yeni İş!";
                     $message = "Yakınınızda yeni bir " . strtoupper($service_type) . " talebi var. Hemen teklif verin!";
-                    sendOneSignalPush($nearbyProviders, $title, $message, ['type' => 'new_job', 'job_id' => (string)$new_job_id]);
+                    if($preferredProviderId) {
+                        sendOneSignalPush([(string)$preferredProviderId],
+                            "Favori Müşterinizden Talep!",
+                            "Favorinizdeki müşteri size öncelikli bir talep gönderdi.",
+                            ['type'=>'favorite_job','job_id'=>(string)$new_job_id]);
+                        $nearbyProviders=array_values(array_filter($nearbyProviders,
+                            fn($id)=>(int)$id!==(int)$preferredProviderId));
+                    }
+                    if(!empty($nearbyProviders)) {
+                        sendOneSignalPush($nearbyProviders, $title, $message, ['type' => 'new_job', 'job_id' => (string)$new_job_id]);
+                    }
                 }
             } catch (Exception $pushEx) {}
 

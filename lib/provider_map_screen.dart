@@ -21,6 +21,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'job_tracking_screen.dart';
 import 'profile_screen.dart';
+import 'referral_screen.dart';
 import 'provider_bids_screen.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
@@ -4164,6 +4165,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                   subtitle:
                       const Text('Aylık planını ve satın alımlarını yönet'),
                   onTap: () => Navigator.pop(context, 7)),
+              ListTile(
+                  leading:
+                      const Icon(Icons.card_giftcard_rounded, color: neonGreen),
+                  title: const Text('Arkadaşını davet et'),
+                  subtitle: const Text('Davet kodun ve OTO TAG Puanların'),
+                  onTap: () => Navigator.pop(context, 8)),
               const SizedBox(height: 12),
             ])));
     if (!mounted) return;
@@ -4175,6 +4182,13 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
               builder: (_) => const DiagnosticScreen(userType: 'provider')));
     }
     if (action == 7) _showSubscriptionRequiredSheet();
+    if (action == 8) {
+      Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) => ReferralScreen(
+                  userId: widget.providerId, userType: 'provider')));
+    }
   }
 
   Future<void> _quickLogout() async {

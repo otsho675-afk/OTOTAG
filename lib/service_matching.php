@@ -90,13 +90,13 @@ function serviceSimulationFallback($pdo,$job) {
     } catch (Throwable $e) { return null; }
 
     $service=(string)($job['service_type'] ?? 'mechanic');
-    $priceBands=[
-        'mechanic'=>[900,1700],
-        'tow'=>[1200,2600],
-        'tire'=>[550,1200],
-        'wash'=>[350,900],
+    $pricing=[
+        'mechanic'=>['base'=>700,'km'=>55],
+        'tow'=>['base'=>950,'km'=>75],
+        'tire'=>['base'=>450,'km'=>40],
+        'wash'=>['base'=>280,'km'=>22],
     ];
-    [$baseLow,$baseHigh]=$priceBands[$service] ?? $priceBands['mechanic'];
+    $rule=$pricing[$service] ?? $pricing['mechanic'];
     $jobId=(int)($job['id'] ?? 0);
     $radius=min(8.0,max(2.0,(float)($job['search_radius'] ?? 8)));
     $cos=max(0.2,cos(deg2rad($lat)));
@@ -104,25 +104,35 @@ function serviceSimulationFallback($pdo,$job) {
 
     for ($i=1;$i<=3;$i++) {
         $seed=(int)sprintf('%u',crc32($jobId.'|'.$service.'|'.($job['city'] ?? '').'|'.$i));
-        $distance=min($radius,1.4+(($seed % 53)/10));
+        $distance=min($radius,1.2+(($seed % 58)/10));
         $angle=deg2rad(($seed >> 5) % 360);
         $pointLat=$lat+((cos($angle)*$distance)/111.0);
         $pointLng=$lng+((sin($angle)*$distance)/(111.0*$cos));
-        $spread=(($seed >> 9)%21)-10;
-        $low=max(100,(int)round($baseLow*(1+$spread/100)));
-        $high=max($low+100,(int)round($baseHigh*(1+$spread/120)));
+
+        $priceJitter=((($seed >> 9)%17)-8)/100;
+        $suggested=(int)(round((($rule['base']+($distance*$rule['km']))*(1+$priceJitter))/10)*10);
+        $low=(int)(floor(($suggested*0.90)/10)*10);
+        $high=(int)(ceil(($suggested*1.10)/10)*10);
+
+        $trafficJitter=(($seed >> 13)%5);
+        $eta=(int)ceil(($distance/25.0)*60)+4+$trafficJitter;
+        $eta=max(6,min(35,$eta));
+
         $points[]=[
-            'id'=>'sim-'.$jobId.'-'.$i,
-            'label'=>'Yakındaki tahmini seçenek '.$i,
+            'id'=>'est-'.$jobId.'-'.$i,
+            'label'=>'Yakındaki seçenek '.$i,
             'latitude'=>round($pointLat,6),
             'longitude'=>round($pointLng,6),
             'distance_km'=>round($distance,1),
-            'estimated_time'=>7+(($seed >> 13)%27),
+            'estimated_time'=>$eta,
+            'suggested_price'=>$suggested,
             'estimate_low'=>$low,
             'estimate_high'=>$high,
             'estimated'=>true,
         ];
     }
+
+    usort($points,function($a,$b){ return $a['distance_km'] <=> $b['distance_km']; });
 
     return [
         'active'=>true,
@@ -131,7 +141,6 @@ function serviceSimulationFallback($pdo,$job) {
         'city'=>(string)($job['city'] ?? ''),
         'real_provider_available'=>false,
         'points'=>$points,
-        'disclosure'=>'Bu kartlar gerçek sağlayıcı teklifi değildir; bölgesel tahmini seçeneklerdir. Uygun gerçek sağlayıcı bulunduğunda otomatik olarak kaldırılır.',
     ];
 }
 

@@ -39,6 +39,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
   late final AdaptivePolling _polling;
   List<Map<String, dynamic>> _bids = [];
   Map<String, dynamic>? _simulationFallback;
+  Map<String, dynamic>? _providerScan;
   final Map<String, int> _estimateOverrides = {};
   final Map<String, int> _estimateUserOffers = {};
   String? _error, _status;
@@ -128,9 +129,13 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
       final simulation = rawSimulation is Map
           ? Map<String, dynamic>.from(rawSimulation)
           : null;
+      final rawScan = data['provider_scan'];
+      final providerScan =
+          rawScan is Map ? Map<String, dynamic>.from(rawScan) : null;
       setState(() {
         _bids = bids;
         _simulationFallback = bids.isEmpty ? simulation : null;
+        _providerScan = bids.isEmpty ? providerScan : null;
         if (bids.isNotEmpty) {
           _estimateOverrides.clear();
           _estimateUserOffers.clear();
@@ -412,18 +417,22 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
                                                     : _busy
                                                         ? 'İşleminiz doğrulanıyor'
                                                         : list.isEmpty
-                                                            ? (_simulationFallback != null
-                                                                ? 'Yakındaki seçenekler'
-                                                                : 'Usta teklifleri bekleniyor')
+                                                            ? (_providerScan != null
+                                                                ? '${_providerScan!['eligible_count'] ?? 0} uygun sağlayıcı taranıyor'
+                                                                : (_simulationFallback != null
+                                                                    ? 'Yakındaki seçenekler'
+                                                                    : 'Usta teklifleri bekleniyor'))
                                                             : '${list.length} teklif geldi',
                                                 message: _error != null
                                                     ? 'Son alınan teklifler korunuyor. İşlem yapmadan önce yenileyin.'
                                                     : _busy
                                                         ? 'Güncel talep ve teklif durumu kontrol ediliyor.'
                                                         : list.isEmpty
-                                                            ? (_simulationFallback != null
-                                                                ? 'Mesafe ve hizmet türüne göre hesaplanan seçenekleri inceleyebilir, kendi teklif tutarınızı girebilirsiniz.'
-                                                                : 'Talebiniz açık. Gelen teklifleri burada karşılaştırabilir, uygun ustayı seçebilirsiniz.')
+                                                            ? (_providerScan != null
+                                                                ? '${_providerScan!['search_radius'] ?? 50} km alan kontrol ediliyor. Gerçek teklif geldiğinde bu ekran otomatik güncellenir.'
+                                                                : (_simulationFallback != null
+                                                                    ? 'Mesafe ve hizmet türüne göre hesaplanan seçenekleri inceleyebilir, kendi teklif tutarınızı girebilirsiniz.'
+                                                                    : 'Talebiniz açık. Gelen teklifleri burada karşılaştırabilir, uygun ustayı seçebilirsiniz.'))
                                                             : 'Fiyatı, ustanın puanını ve tahmini varış süresini inceleyin. Seçim sizin.',
                                                 icon: _error != null
                                                     ? Icons.wifi_off_rounded

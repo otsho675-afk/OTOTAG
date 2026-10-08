@@ -36,11 +36,11 @@ void main() {
       saves++;
       return null;
     });
-    await tester.tap(find.text('Kaydet'));
+    await tester.tap(find.text('Kilometreyi Güncelle'));
     await tester.pumpAndSettle();
     expect(find.text('Güncel kilometreyi girin.'), findsOneWidget);
     await tester.enterText(find.byType(TextFormField), '99999');
-    await tester.tap(find.text('Kaydet'));
+    await tester.tap(find.text('Kilometreyi Güncelle'));
     await tester.pumpAndSettle();
     expect(
         find.text('Kilometre kayıtlı değerden küçük olamaz.'), findsOneWidget);
@@ -55,12 +55,12 @@ void main() {
       return fail ? 'Sunucuya ulaşılamadı.' : null;
     });
     await tester.enterText(find.byType(TextFormField), '100250');
-    await tester.tap(find.text('Kaydet'));
+    await tester.tap(find.text('Kilometreyi Güncelle'));
     await tester.pumpAndSettle();
     expect(savedKm, 100250);
     expect(find.text('Sunucuya ulaşılamadı.'), findsOneWidget);
     fail = false;
-    await tester.tap(find.text('Kaydet'));
+    await tester.tap(find.text('Kilometreyi Güncelle'));
     await tester.pumpAndSettle();
     expect(find.byType(VehicleKilometerUpdateDialog), findsNothing);
   });
@@ -74,7 +74,7 @@ void main() {
       return completion.future;
     });
     await tester.enterText(find.byType(TextFormField), '100000');
-    await tester.tap(find.text('Kaydet'));
+    await tester.tap(find.text('Kilometreyi Güncelle'));
     await tester.pump();
     await tester.tap(find.text('Kaydediliyor…'));
     await tester.tap(find.text('Vazgeç'));

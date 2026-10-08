@@ -893,6 +893,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 require_once __DIR__.'/registration_rules.php';
 require_once __DIR__.'/service_matching.php';
 require_once __DIR__.'/referral_rewards.php';
+require_once __DIR__.'/growth_features.php';
 require_once __DIR__.'/map_routing.php';
 require_once __DIR__ . '/oauth_verification.php';
 require_once __DIR__ . '/api_authorization.php';
@@ -910,6 +911,59 @@ require_once __DIR__ . '/rentacar_api.php';
 handleRentalAction($pdo, $action, $method);
 
 switch ($action) {
+    case 'get_reward_catalog':
+        if ($method!=='GET') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
+        $actor=authenticateRequest();
+        ensureGrowthSchema($pdo);
+        $stmt=$pdo->prepare('SELECT reward_points FROM users WHERE id=?'); $stmt->execute([$actor['user_id']]);
+        sendResponse(200,['status'=>'success','reward_points'=>(int)$stmt->fetchColumn(),'items'=>growthRewardCatalog($actor['user_type'])]);
+        break;
+    case 'redeem_reward':
+        if ($method!=='POST') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
+        $actor=authenticateRequest();
+        try { sendResponse(200,growthRedeemReward($pdo,(int)$actor['user_id'],trim($_POST['reward_code'] ?? ''))); }
+        catch (InvalidArgumentException $e) { sendResponse(422,['status'=>'error','message'=>$e->getMessage()]); }
+        break;
+    case 'get_price_quote':
+        if ($method!=='GET') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
+        authenticateRequest();
+        $service=trim($_GET['service_type'] ?? 'mechanic');
+        $distance=(float)($_GET['distance_km'] ?? 0);
+        sendResponse(200,['status'=>'success','quote'=>growthPriceQuote($service,$distance,$_GET['hour'] ?? null)]);
+        break;
+    case 'get_favorite_providers':
+        if ($method!=='GET') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
+        $actor=authenticateRequest();
+        if($actor['user_type']!=='customer') sendResponse(403,['status'=>'error','message'=>'Müşteri hesabı gereklidir.']);
+        sendResponse(200,['status'=>'success','providers'=>growthFavoriteList($pdo,(int)$actor['user_id'])]);
+        break;
+    case 'toggle_favorite_provider':
+        if ($method!=='POST') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
+        $actor=authenticateRequest();
+        if($actor['user_type']!=='customer') sendResponse(403,['status'=>'error','message'=>'Müşteri hesabı gereklidir.']);
+        try {
+            $favorite=growthToggleFavorite($pdo,(int)$actor['user_id'],(int)($_POST['provider_id'] ?? 0));
+            sendResponse(200,['status'=>'success','favorite'=>$favorite]);
+        } catch(InvalidArgumentException $e) { sendResponse(422,['status'=>'error','message'=>$e->getMessage()]); }
+        break;
+    case 'growth_analytics':
+        if ($method!=='GET') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
+        $actor=authenticateRequest();
+        if($actor['user_type']!=='admin') sendResponse(403,['status'=>'error','message'=>'Yönetici yetkisi gereklidir.']);
+        sendResponse(200,['status'=>'success','analytics'=>growthAnalytics($pdo)]);
+        break;
+    case 'send_phone_otp':
+        if ($method!=='POST') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
+        try { sendResponse(200,growthSendPhoneCode($pdo,$_POST['phone'] ?? '')); }
+        catch(Throwable $e) { sendResponse(503,['status'=>'error','message'=>$e->getMessage()]); }
+        break;
+    case 'verify_phone_otp':
+        if ($method!=='POST') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
+        try {
+            growthVerifyPhoneCode($pdo,$_POST['phone'] ?? '',$_POST['code'] ?? '');
+            sendResponse(200,['status'=>'success','message'=>'Telefon doğrulandı.']);
+        } catch(InvalidArgumentException $e) { sendResponse(422,['status'=>'error','message'=>$e->getMessage()]); }
+        break;
     case 'get_referral_summary':
         if ($method!=='GET') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
         $userId=(int)($_GET['user_id'] ?? 0);
@@ -4468,9 +4522,14 @@ switch ($action) {
             }
         }
 
-        $stmt = $pdo->prepare("SELECT name, service_category FROM users WHERE id = ? AND user_type = 'provider'");
+        ensureGrowthSchema($pdo);
+        $stmt = $pdo->prepare("SELECT id,name,service_category,user_type,status,is_suspended,tax_plate,driver_license,tow_plate,map_link FROM users WHERE id = ? AND user_type = 'provider'");
         $stmt->execute([$provider_id]);
         $provider = $stmt->fetch();
+        if ($provider) {
+            $provider['verified'] = growthProviderVerification($provider);
+            unset($provider['status'],$provider['is_suspended'],$provider['tax_plate'],$provider['driver_license'],$provider['tow_plate'],$provider['map_link']);
+        }
         if (!$provider) sendResponse(404, ["status" => "error", "message" => "Usta bulunamadı."]);
 
         $ratingsStmt = $pdo->prepare("SELECT r.rating, r.comment, DATE_FORMAT(r.created_at, '%d.%m.%Y') AS date, u.name as customer_name FROM ratings r JOIN users u ON r.customer_id = u.id WHERE r.provider_id = ? AND r.comment IS NOT NULL AND TRIM(r.comment) != '' ORDER BY r.created_at DESC LIMIT 50");

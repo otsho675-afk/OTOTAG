@@ -946,6 +946,17 @@ switch ($action) {
             sendResponse(200,['status'=>'success','favorite'=>$favorite]);
         } catch(InvalidArgumentException $e) { sendResponse(422,['status'=>'error','message'=>$e->getMessage()]); }
         break;
+    case 'record_daily_active':
+        if ($method!=='POST') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
+        // Identity and role MUST come from the verified access token.
+        $actor=authenticateRequest();
+        try {
+            growthRecordDailyActive($pdo,$actor);
+            sendResponse(200,['status'=>'success']);
+        } catch (InvalidArgumentException $e) {
+            sendResponse(422,['status'=>'error','message'=>$e->getMessage()]);
+        }
+        break;
     case 'growth_analytics':
         if ($method!=='GET') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
         $actor=authenticateRequest();

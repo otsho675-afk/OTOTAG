@@ -952,18 +952,6 @@ switch ($action) {
         if($actor['user_type']!=='admin') sendResponse(403,['status'=>'error','message'=>'Yönetici yetkisi gereklidir.']);
         sendResponse(200,['status'=>'success','analytics'=>growthAnalytics($pdo)]);
         break;
-    case 'send_phone_otp':
-        if ($method!=='POST') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
-        try { sendResponse(200,growthSendPhoneCode($pdo,$_POST['phone'] ?? '')); }
-        catch(Throwable $e) { sendResponse(503,['status'=>'error','message'=>$e->getMessage()]); }
-        break;
-    case 'verify_phone_otp':
-        if ($method!=='POST') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
-        try {
-            growthVerifyPhoneCode($pdo,$_POST['phone'] ?? '',$_POST['code'] ?? '');
-            sendResponse(200,['status'=>'success','message'=>'Telefon doğrulandı.']);
-        } catch(InvalidArgumentException $e) { sendResponse(422,['status'=>'error','message'=>$e->getMessage()]); }
-        break;
     case 'get_referral_summary':
         if ($method!=='GET') sendResponse(405,['status'=>'error','message'=>'Geçersiz metod.']);
         $userId=(int)($_GET['user_id'] ?? 0);

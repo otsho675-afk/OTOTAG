@@ -1282,7 +1282,94 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   Future<void> _verifyPhoneNumber() async {
     if (_phoneOtpBusy) return;
     final rawPhone = _phoneController.text.trim();
-    if (!RegExp(r'^(?:0|90)?[2-5][0-9]{9}
+    final digits = rawPhone.replaceAll(RegExp(r'\\D'), '');
+    if (!RegExp(r'^(?:0|90)?[2-5][0-9]{9}$').hasMatch(digits)) {
+      _showCustomSnackBar('Önce geçerli bir telefon numarası giriniz.',
+          isError: true);
+      return;
+    }
+
+    setState(() => _phoneOtpBusy = true);
+    try {
+      final sendResponse = await http.post(
+        Uri.parse("$baseUrl?action=send_phone_otp"),
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: {"phone": rawPhone},
+      ).timeout(_apiTimeout);
+      final sendData = jsonDecode(utf8.decode(sendResponse.bodyBytes));
+      if (sendResponse.statusCode != 200 ||
+          sendData is! Map ||
+          sendData['status'] != 'success') {
+        throw Exception(sendData is Map
+            ? sendData['message']?.toString() ?? 'Kod gönderilemedi.'
+            : 'Kod gönderilemedi.');
+      }
+      if (sendData['configured'] != true) {
+        if (mounted) {
+          _showCustomSnackBar(
+              'SMS doğrulama altyapısı hazır; SMS sağlayıcısı henüz sunucuda etkin değil.');
+        }
+        return;
+      }
+      if (!mounted) return;
+
+      final controller = TextEditingController();
+      final code = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Telefonu Doğrula'),
+          content: TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: '6 haneli SMS kodu',
+              counterText: '',
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Vazgeç')),
+            FilledButton(
+                onPressed: () =>
+                    Navigator.pop(dialogContext, controller.text.trim()),
+                child: const Text('Doğrula')),
+          ],
+        ),
+      );
+      controller.dispose();
+      if (code == null || code.length != 6) return;
+
+      final verifyResponse = await http.post(
+        Uri.parse("$baseUrl?action=verify_phone_otp"),
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: {"phone": rawPhone, "code": code},
+      ).timeout(_apiTimeout);
+      final verifyData = jsonDecode(utf8.decode(verifyResponse.bodyBytes));
+      if (verifyResponse.statusCode != 200 ||
+          verifyData is! Map ||
+          verifyData['status'] != 'success') {
+        throw Exception(verifyData is Map
+            ? verifyData['message']?.toString() ?? 'Kod doğrulanamadı.'
+            : 'Kod doğrulanamadı.');
+      }
+      if (!mounted) return;
+      setState(() => _phoneVerified = true);
+      _showCustomSnackBar('Telefon numaranız doğrulandı.');
+    } catch (e) {
+      if (mounted) {
+        _showCustomSnackBar(
+            e.toString().replaceFirst('Exception: ', ''),
+            isError: true);
+      }
+    } finally {
+      if (mounted) setState(() => _phoneOtpBusy = false);
+    }
+  }
+  Widget _buildGlassTextField({
     required TextEditingController controller,
     required FocusNode focusNode,
     required String label,

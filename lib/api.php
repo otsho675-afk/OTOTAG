@@ -2662,11 +2662,14 @@ switch ($action) {
             $oauthCheck->execute([$oauth_provider,$oauth_id,$user_type]);
             if ($oauthCheck->fetch()) sendResponse(409,['status'=>'error','message'=>'Bu sosyal hesap zaten kayıtlı. Giriş ekranını kullanın.']);
         }
+        ensureReferralSchema($pdo);
+        ensureGrowthSchema($pdo);
         if ($completionUser) {
             $status=$user_type==='customer' ? 'active':'pending';
             $hash=$hasRegistrationPassword ? password_hash($password,PASSWORD_DEFAULT) : $completionUser['password'];
             $update=$pdo->prepare('UPDATE users SET name=?,email=?,phone=?,password=?,city=?,service_category=?,iban=?,tow_plate=?,map_link=?,tax_plate=?,driver_license=?,vehicle_photo=?,equipment_photo=?,status=?,phone_verified_at=IF(?,NOW(),phone_verified_at) WHERE id=? AND oauth_provider=? AND oauth_id=?');
             $update->execute([$name,$email ?: null,$clean_phone,$hash,$city,$service_category,$iban,$tow_plate ?: null,$map_link ?: null,$tax_plate,$driver_license,$vehicle_photo,$equipment_photo,$status,growthBoolConfig('SMS_VERIFICATION_REQUIRED',false)?1:0,$completionUser['id'],$oauth_provider,$oauth_id]);
+            referralAttachNewUser($pdo,(int)$completionUser['id'],$inviterId);
             sendResponse(200,['status'=>'success','user_id'=>$completionUser['id'],'user_type'=>$user_type,'account_status'=>$status,'token'=>generateJWT($completionUser['id'],$user_type),'tracking_code'=>$completionUser['tracking_code'] ?? null]);
         }
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);

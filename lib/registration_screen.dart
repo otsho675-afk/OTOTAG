@@ -1282,7 +1282,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   Future<void> _verifyPhoneNumber() async {
     if (_phoneOtpBusy) return;
     final rawPhone = _phoneController.text.trim();
-    final digits = rawPhone.replaceAll(RegExp(r'\\D'), '');
+    final digits = rawPhone.replaceAll(RegExp(r'\D'), '');
     if (!RegExp(r'^(?:0|90)?[2-5][0-9]{9}$').hasMatch(digits)) {
       _showCustomSnackBar('Önce geçerli bir telefon numarası giriniz.',
           isError: true);

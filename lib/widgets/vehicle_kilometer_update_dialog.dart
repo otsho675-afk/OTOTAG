@@ -509,6 +509,11 @@ class _VehicleKilometerUpdateDialogState
                         ),
                       ),
                     ),
+                    const SizedBox(height: 6),
+                    TextButton(
+                      onPressed: _isSaving ? null : () => Navigator.of(context).pop(false),
+                      child: const Text('Vazgeç'),
+                    ),
                   ],
                 ),
               ),

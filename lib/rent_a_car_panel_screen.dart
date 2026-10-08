@@ -15,6 +15,7 @@ import 'diagnostic_screen.dart';
 import 'rental_booking_screen.dart';
 import 'rentacar_company_profile_screen.dart';
 import 'rental_history_screen.dart';
+import 'referral_screen.dart';
 import 'services/app_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
@@ -766,6 +767,18 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                       foregroundColor: Colors.white,
                       automaticallyImplyLeading: false,
                       actions: [
+                        IconButton(
+                            tooltip: 'Arkadaşını davet et',
+                            onPressed: _busy
+                                ? null
+                                : () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => ReferralScreen(
+                                            userId: widget.companyId,
+                                            userType: 'rentacar'))),
+                            icon: const Icon(Icons.card_giftcard_rounded,
+                                color: AppConstants.primaryColor)),
                         IconButton(
                             tooltip: 'Kiralama geçmişi',
                             onPressed: _busy ? null : _history,

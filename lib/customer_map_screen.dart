@@ -25,11 +25,13 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 class CustomerMapScreen extends StatefulWidget {
   final int customerId;
   final String initialService;
+  final bool emergency;
 
   const CustomerMapScreen({
     super.key,
     required this.customerId,
     required this.initialService,
+    this.emergency = false,
   });
 
   @override
@@ -114,6 +116,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
     googleApiKey = AppConstants.googleMapsKey;
     WidgetsBinding.instance.addObserver(this);
     selectedService = widget.initialService;
+    if (widget.emergency && problemController.text.isEmpty) {
+      problemController.text = 'ACİL YOL YARDIM';
+    }
     _generateSmartSuggestion();
 
     _radarPulseController = AnimationController(
@@ -316,6 +321,13 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
 
   Future<void> _checkVehicleReminders() async {
     try {
+      try {
+        final reminderUri = Uri.parse(baseUrl).replace(queryParameters: {
+          'action': 'sync_vehicle_reminders',
+          'user_id': widget.customerId.toString(),
+        });
+        await _httpClient.get(reminderUri).timeout(const Duration(seconds: 8));
+      } catch (_) {}
       // Yüksek trafikte kopmaları engellemek için timeout süresi artırıldı ve bağlantı havuza alındı
       final response = await _httpClient.get(
           Uri.parse(
@@ -885,6 +897,8 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
           "longitude": selectedLng.toString(),
           "problem_description": problemController.text.trim(),
           "city": customerCity,
+          "is_emergency": widget.emergency ? "1" : "0",
+          "prefer_favorites": "1",
         },
       );
 

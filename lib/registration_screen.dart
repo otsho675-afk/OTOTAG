@@ -588,7 +588,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   String _normalizedPhoneForVerification() {
-    var raw = _phoneController.text.replaceAll(RegExp(r'\\D'), '');
+    var raw = _phoneController.text.replaceAll(RegExp(r'\D'), '');
     if (raw.length == 10 && raw.startsWith('5')) raw = '0' + raw;
     return raw;
   }

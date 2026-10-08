@@ -639,11 +639,6 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
                             ]),
                           ]))));
             }),
-          const SizedBox(height: 2),
-          Text(
-              'Fiyat ve süreler tahminidir. Gerçek sağlayıcı teklifi geldiğinde ekran otomatik olarak güncellenir.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall),
         ]));
   }
 

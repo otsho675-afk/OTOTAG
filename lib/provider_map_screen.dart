@@ -479,10 +479,28 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
       'serviceType': serviceType,
     };
 
-    final TextEditingController priceController =
-        TextEditingController(text: _lastBidPrice);
+    final parsedDistance =
+        double.tryParse(distance.replaceAll(',', '.')) ?? 0.0;
+    final hour = DateTime.now().hour;
+    final nightMultiplier = (hour >= 22 || hour < 7) ? 1.18 : 1.0;
+    final pricingRule = switch (serviceType) {
+      'tow' => (base: 950.0, km: 70.0),
+      'tire' => (base: 450.0, km: 35.0),
+      'wash' => (base: 280.0, km: 15.0),
+      _ => (base: 700.0, km: 45.0),
+    };
+    final recommendedPrice =
+        (((pricingRule.base + parsedDistance * pricingRule.km) *
+                        nightMultiplier) /
+                    10)
+                .round() *
+            10;
+    final TextEditingController priceController = TextEditingController(
+        text: _lastBidPrice.isNotEmpty
+            ? _lastBidPrice
+            : recommendedPrice.toString());
     int autoMinutes =
-        ((double.tryParse(distance.replaceAll(',', '.')) ?? 0.0) * 2.5).ceil() +
+        (parsedDistance * 2.5).ceil() +
             5;
     final String autoTimeStr = autoMinutes.toString();
 
@@ -688,6 +706,25 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                             color: Colors.white24,
                                             borderRadius:
                                                 BorderRadius.circular(10)),
+                                      ),
+                                    ),
+                                    Container(
+                                      width: double.infinity,
+                                      margin: const EdgeInsets.only(bottom: 10),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 9),
+                                      decoration: BoxDecoration(
+                                        color: neonGreen.withValues(alpha: .08),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                            color: neonGreen.withValues(alpha: .2)),
+                                      ),
+                                      child: Text(
+                                        'Akıllı fiyat önerisi: $recommendedPrice ₺ • $autoMinutes dk',
+                                        style: const TextStyle(
+                                            color: neonGreen,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700),
                                       ),
                                     ),
                                     Row(

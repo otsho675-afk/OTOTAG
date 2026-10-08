@@ -561,8 +561,19 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
       if (mounted) _fetchAllDataConcurrently();
     });
     _startTimers();
+    unawaited(_syncVehiclePushReminders());
 
     if (!kIsWeb) {}
+  }
+
+  Future<void> _syncVehiclePushReminders() async {
+    try {
+      final uri = Uri.parse(baseUrl).replace(queryParameters: {
+        'action': 'sync_vehicle_reminders',
+        'user_id': widget.customerId.toString(),
+      });
+      await _httpClient.get(uri).timeout(const Duration(seconds: 8));
+    } catch (_) {}
   }
 
   Future<void> _checkFirstTimeTutorial() async {

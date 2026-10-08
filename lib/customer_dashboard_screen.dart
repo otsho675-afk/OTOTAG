@@ -3429,6 +3429,40 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
     if (mounted) setState(() => _navIndex = 0);
   }
 
+  Future<void> _openEmergencyAssistance() async {
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Acil yol yardımı'),
+        content: const Text(
+          'Aracınız güvenli bir yerdeyse çekici talebi oluşturabilirsiniz. '
+          'Yaralanma, yangın veya hayati tehlike varsa önce 112\'yi arayın. '
+          'Devam etmek istiyor musunuz?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Yol yardımı iste'),
+          ),
+        ],
+      ),
+    );
+    if (accepted != true || !mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CustomerMapScreen(
+          customerId: widget.customerId,
+          initialService: 'tow',
+          initialProblem: 'Acil yol yardım talebi. Araç hareket edemiyor.',
+        ),
+      ),
+    );
+  }
+
   void _scrollHome() {
     if (!_dashboardScrollController.hasClients) return;
     _dashboardScrollController.animateTo(
@@ -3635,6 +3669,20 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                         CrossAxisAlignment.stretch,
                                     children: [
                                       _buildTopSection(),
+                                      const SizedBox(height: 12),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: FilledButton.icon(
+                                          onPressed: _openEmergencyAssistance,
+                                          icon: const Icon(Icons.sos_rounded),
+                                          label: const Text('ACİL YOL YARDIMI'),
+                                          style: FilledButton.styleFrom(
+                                            backgroundColor: const Color(0xFFB3261E),
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(vertical: 16),
+                                          ),
+                                        ),
+                                      ),
                                       const SizedBox(height: 24),
                                       _buildSparePartsBanner(context),
                                       const SizedBox(height: 32),

@@ -1,20 +1,7 @@
 <?php
 
 function ensureGrowthSchema($pdo) {
-    apiSchemaMigration($pdo,'growth_features_v3_firebase_phone',function() use($pdo) {
-        $columns=$pdo->query("SHOW COLUMNS FROM users")->fetchAll(PDO::FETCH_COLUMN);
-        $defs=[
-            'phone_verified'=>"TINYINT(1) NOT NULL DEFAULT 0",
-            'firebase_uid'=>"VARCHAR(128) NULL",
-        ];
-        foreach($defs as $col=>$def) {
-            if(!in_array($col,$columns,true)) $pdo->exec("ALTER TABLE users ADD COLUMN `$col` $def");
-        }
-        $indexes=$pdo->query("SHOW INDEX FROM users")->fetchAll(PDO::FETCH_ASSOC);
-        $indexNames=array_column($indexes,'Key_name');
-        if(!in_array('idx_users_firebase_uid',$indexNames,true)) {
-            $pdo->exec("CREATE UNIQUE INDEX idx_users_firebase_uid ON users(firebase_uid)");
-        }
+    apiSchemaMigration($pdo,'growth_features_v4_no_phone_verification',function() use($pdo) {
         $jobColumns=$pdo->query("SHOW COLUMNS FROM jobs")->fetchAll(PDO::FETCH_COLUMN);
         if(!in_array('preferred_provider_id',$jobColumns,true)) {
             $pdo->exec("ALTER TABLE jobs ADD COLUMN preferred_provider_id INT NULL");
@@ -38,17 +25,6 @@ function ensureGrowthSchema($pdo) {
             points_spent INT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             KEY idx_reward_redemptions_user(user_id,created_at)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
-        $pdo->exec("CREATE TABLE IF NOT EXISTS phone_verification_codes(
-            id BIGINT AUTO_INCREMENT PRIMARY KEY,
-            phone VARCHAR(24) NOT NULL,
-            code_hash CHAR(64) NOT NULL,
-            attempts INT NOT NULL DEFAULT 0,
-            expires_at DATETIME NOT NULL,
-            verified_at DATETIME NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            KEY idx_phone_verification(phone,expires_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     });
 }
@@ -192,120 +168,4 @@ function growthAnalytics($pdo) {
         'top_cities'=>$city,
         'daily_registrations'=>$daily,
     ];
-}
-
-function growthFirebasePhoneE164($phone) {
-    $clean=registrationPhone($phone);
-    if (!preg_match('/^05[0-9]{9}$/D',$clean)) {
-        throw new InvalidArgumentException('SMS doğrulaması için cep telefonu numarası gereklidir.');
-    }
-    return '+90'.substr($clean,1);
-}
-
-function growthVerifyFirebasePhoneToken($idToken,$expectedPhone) {
-    $idToken=trim((string)$idToken);
-    if ($idToken==='') {
-        throw new InvalidArgumentException('Telefon numaranızı Firebase SMS ile doğrulayın.');
-    }
-
-    $apiKey=serverConfig(
-        'FIREBASE_WEB_API_KEY',
-        'AIzaSyB1EmNB9O24q9J2v8u8Wi59Igp2wPX0bVk'
-    );
-    if ($apiKey==='') {
-        throw new RuntimeException('Firebase doğrulama anahtarı sunucuda tanımlı değil.');
-    }
-
-    $url='https://identitytoolkit.googleapis.com/v1/accounts:lookup?key='.rawurlencode($apiKey);
-    $payload=json_encode(['idToken'=>$idToken],JSON_UNESCAPED_SLASHES);
-    $ch=curl_init($url);
-    curl_setopt_array($ch,[
-        CURLOPT_RETURNTRANSFER=>true,
-        CURLOPT_POST=>true,
-        CURLOPT_TIMEOUT=>10,
-        CURLOPT_CONNECTTIMEOUT=>5,
-        CURLOPT_HTTPHEADER=>['Content-Type: application/json'],
-        CURLOPT_POSTFIELDS=>$payload,
-    ]);
-    $body=curl_exec($ch);
-    $http=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);
-    $curlError=curl_error($ch);
-    curl_close($ch);
-
-    if ($body===false || $http<200 || $http>=300) {
-        error_log('Firebase phone token lookup failed: HTTP '.$http.' '.$curlError);
-        throw new InvalidArgumentException('Firebase telefon doğrulaması geçersiz veya süresi dolmuş.');
-    }
-
-    $json=json_decode($body,true);
-    $user=$json['users'][0] ?? null;
-    if (!$user || !empty($user['disabled'])) {
-        throw new InvalidArgumentException('Firebase telefon hesabı kullanılamıyor.');
-    }
-
-    $firebasePhone=trim((string)($user['phoneNumber'] ?? ''));
-    $expected=growthFirebasePhoneE164($expectedPhone);
-    if ($firebasePhone==='' || !hash_equals($expected,$firebasePhone)) {
-        throw new InvalidArgumentException('Doğrulanan telefon numarası kayıt numarasıyla eşleşmiyor.');
-    }
-
-    $uid=trim((string)($user['localId'] ?? ''));
-    if ($uid==='') {
-        throw new InvalidArgumentException('Firebase kullanıcı doğrulaması tamamlanamadı.');
-    }
-
-    return ['uid'=>$uid,'phone'=>$firebasePhone];
-}
-
-function growthSmsConfigured() {
-    return serverConfig('SMS_PROVIDER')!=='' && serverConfig('SMS_API_URL')!=='' && serverConfig('SMS_API_TOKEN')!=='';
-}
-
-function growthSendPhoneCode($pdo,$phone) {
-    ensureGrowthSchema($pdo);
-    $phone=registrationPhone($phone);
-    $code=(string)random_int(100000,999999);
-    $hash=hash('sha256',$phone.'|'.$code.'|'.serverConfig('JWT_SECRET'));
-    $pdo->prepare('DELETE FROM phone_verification_codes WHERE phone=? OR expires_at<NOW()')->execute([$phone]);
-    $pdo->prepare('INSERT INTO phone_verification_codes(phone,code_hash,expires_at) VALUES (?,?,DATE_ADD(NOW(),INTERVAL 5 MINUTE))')->execute([$phone,$hash]);
-
-    if(!growthSmsConfigured()) {
-        return ['status'=>'success','configured'=>false,'message'=>'SMS doğrulama altyapısı hazır. SMS sağlayıcı bilgileri henüz tanımlı değil.'];
-    }
-    $url=serverConfig('SMS_API_URL');
-    $token=serverConfig('SMS_API_TOKEN');
-    $payload=json_encode(['to'=>$phone,'message'=>'OTO TAG doğrulama kodunuz: '.$code]);
-    $ch=curl_init($url);
-    curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_POST=>true,CURLOPT_TIMEOUT=>8,CURLOPT_HTTPHEADER=>['Authorization: Bearer '.$token,'Content-Type: application/json'],CURLOPT_POSTFIELDS=>$payload]);
-    curl_exec($ch); $http=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE); curl_close($ch);
-    if($http<200 || $http>=300) throw new RuntimeException('SMS gönderilemedi.');
-    return ['status'=>'success','configured'=>true,'message'=>'Doğrulama kodu gönderildi.'];
-}
-
-function growthPhoneWasVerified($pdo,$phone) {
-    ensureGrowthSchema($pdo);
-    $phone=registrationPhone($phone);
-    $stmt=$pdo->prepare("SELECT id FROM phone_verification_codes
-        WHERE phone=? AND verified_at IS NOT NULL
-        AND verified_at>=DATE_SUB(NOW(),INTERVAL 30 MINUTE)
-        ORDER BY id DESC LIMIT 1");
-    $stmt->execute([$phone]);
-    return (bool)$stmt->fetchColumn();
-}
-
-function growthVerifyPhoneCode($pdo,$phone,$code) {
-    ensureGrowthSchema($pdo);
-    $phone=registrationPhone($phone);
-    $stmt=$pdo->prepare('SELECT * FROM phone_verification_codes WHERE phone=? AND verified_at IS NULL AND expires_at>NOW() ORDER BY id DESC LIMIT 1');
-    $stmt->execute([$phone]); $row=$stmt->fetch(PDO::FETCH_ASSOC);
-    if(!$row) throw new InvalidArgumentException('Kod süresi dolmuş. Yeni kod isteyin.');
-    if((int)$row['attempts']>=5) throw new InvalidArgumentException('Çok fazla deneme yapıldı.');
-    $hash=hash('sha256',$phone.'|'.trim((string)$code).'|'.serverConfig('JWT_SECRET'));
-    if(!hash_equals($row['code_hash'],$hash)) {
-        $pdo->prepare('UPDATE phone_verification_codes SET attempts=attempts+1 WHERE id=?')->execute([$row['id']]);
-        throw new InvalidArgumentException('Doğrulama kodu hatalı.');
-    }
-    $pdo->prepare('UPDATE phone_verification_codes SET verified_at=NOW() WHERE id=?')->execute([$row['id']]);
-    $pdo->prepare('UPDATE users SET phone_verified=1 WHERE phone=?')->execute([$phone]);
-    return true;
 }

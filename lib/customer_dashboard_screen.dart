@@ -836,8 +836,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
     showModalBottomSheet(
       context: context,
       backgroundColor: _cardColor,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      shape: RoundedRectangleBorder(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           side: BorderSide(color: AppPalette.border)),
       builder: (BuildContext builder) {
         return SafeArea(

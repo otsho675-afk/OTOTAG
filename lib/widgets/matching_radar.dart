@@ -168,6 +168,24 @@ class _RadarPainter extends CustomPainter {
       canvas.drawLine(center,
           Offset(center.dx + math.cos(angle) * radius,
               center.dy + math.sin(angle) * radius), arm);
+      // An unmistakably moving arc, legible in both day and night themes.
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        angle - math.pi / 3,
+        math.pi / 3,
+        false,
+        Paint()
+          ..color = color.withValues(alpha: light ? .76 : .88)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3.2
+          ..strokeCap = StrokeCap.round,
+      );
+      canvas.drawCircle(
+        Offset(center.dx + math.cos(angle) * radius,
+            center.dy + math.sin(angle) * radius),
+        4.2,
+        Paint()..color = color.withValues(alpha: .9),
+      );
 
       final pulse = (motion.value * 2) % 1;
       canvas.drawCircle(

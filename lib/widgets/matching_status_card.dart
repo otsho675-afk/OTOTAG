@@ -61,7 +61,32 @@ class MatchingStatusCard extends StatelessWidget {
                           .textTheme
                           .titleLarge
                           ?.copyWith(fontWeight: FontWeight.w700)))),
-          const SizedBox(height: 8),
+          const SizedBox(height: 11),
+          Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 15,
+                  height: 15,
+                  child: AppMotion.reduced(context)
+                      ? Icon(Icons.radar_rounded, size: 15, color: accent)
+                      : CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: accent,
+                        ),
+                ),
+                const SizedBox(width: 9),
+                Text('Tarama devam ediyor',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: accent,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
           Center(child: Text(message,
               textAlign: TextAlign.center,
               style: Theme.of(context)

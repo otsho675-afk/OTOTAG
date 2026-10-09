@@ -2772,32 +2772,27 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
   Widget _buildSparePartsBanner(BuildContext context) {
     final light = Theme.of(context).brightness == Brightness.light;
     final ink = Theme.of(context).colorScheme.onSurface;
-    final muted = light ? const Color(0xFF5D6E63) : Colors.white54;
-    final accent = light ? const Color(0xFF286B4B) : _primaryColor;
+    final muted = AppPalette.muted;
+    final accent = AppPalette.accent;
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: light ? [Colors.white, const Color(0xFFEEF8F1)]
-            : [const Color(0xFF15171C), const Color(0xFF0D0F13)],
-        ),
-        borderRadius: BorderRadius.circular(20),
+        color: AppPalette.surface,
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: _primaryColor.withValues(alpha: 0.18),
+          color: AppPalette.border,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: light ? .07 : .24),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
+            color: AppPalette.shadow,
+            blurRadius: 20,
+            offset: const Offset(0, 7),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           onTap: () {
             Navigator.push(
               context,
@@ -2830,24 +2825,17 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
                 child: Row(
                   children: [
                     Container(
-                      width: 50,
-                      height: 50,
+                      width: 48,
+                      height: 48,
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            _primaryColor.withValues(alpha: 0.18),
-                            _primaryColor.withValues(alpha: 0.06),
-                          ],
-                        ),
+                        color: AppPalette.accentSoft,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: _primaryColor.withValues(alpha: 0.20),
+                          color: AppPalette.accentBorder,
                         ),
                       ),
                       child: Icon(
@@ -2881,7 +2869,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Şehrinizdeki yeni ve çıkma parçaları keşfedin veya ilan verin.',
+                            'Yeni ve çıkma parçaları keşfet, ilan ver.',
                             style: TextStyle(
                               color: muted,
                                fontSize: 12,
@@ -2897,10 +2885,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                       width: 34,
                       height: 34,
                       decoration: BoxDecoration(
-                        color: light ? const Color(0xFFE2F3E7) : Colors.white.withValues(alpha: .04),
+                        color: AppPalette.accentSoft,
                         borderRadius: BorderRadius.circular(11),
                         border: Border.all(
-                          color: light ? const Color(0xFFCBE6D3) : Colors.white.withValues(alpha: 0.07),
+                          color: AppPalette.accentBorder,
                         ),
                       ),
                       child: Icon(Icons.arrow_forward_rounded, color: accent,
@@ -3073,15 +3061,13 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
 
   Widget _buildTopSection() {
     final int totalItems = ads.length + 1;
-    final screenHeight = MediaQuery.sizeOf(context).height;
+    // All carousel slides share one height and the same baseline.
     final screenWidth = MediaQuery.sizeOf(context).width;
 
     return Column(
       children: [
         SizedBox(
-          height: screenHeight * 0.18 < 166
-              ? 166
-              : (screenWidth > 800 ? 188 : screenHeight * 0.18),
+          height: screenWidth < 700 ? 196 : 206,
           child: PageView.builder(
             controller: _adPageController,
             physics: const BouncingScrollPhysics(),
@@ -3103,7 +3089,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
           ),
         ),
         if (totalItems > 1) ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           ValueListenableBuilder<int>(
             valueListenable: currentAdIndex,
             builder: (context, selectedIdx, child) {
@@ -3115,7 +3101,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                     duration:
                         AppMotion.duration(context, AppMotion.interaction),
                     margin: const EdgeInsets.symmetric(horizontal: 4),
-                    width: selectedIdx == index ? 24 : 8,
+                    width: selectedIdx == index ? 22 : 7,
                     height: 6,
                     decoration: BoxDecoration(
                       color: selectedIdx == index
@@ -3272,18 +3258,21 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
   Widget _buildAdCard(Map<String, dynamic> ad) {
     final String cleanImgUrl = _resolveImageUrl(ad['image_url']);
     final bool hasImage = cleanImgUrl.isNotEmpty;
+    final Color titleColor = hasImage ? Colors.white : AppPalette.text;
+    final Color secondaryColor = hasImage ? Colors.white.withValues(alpha: .86) : AppPalette.muted;
+    final Color actionColor = hasImage ? Colors.white : AppPalette.accent;
 
     return GestureDetector(
       onTap: () => _showAdDetailsModal(context, ad),
       child: Container(
         decoration: BoxDecoration(
-          color: _cardColor,
+          color: AppPalette.surface,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-              color: Colors.white.withValues(alpha: 0.05), width: 1.5),
+              color: AppPalette.border, width: 1),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
+                color: AppPalette.shadow,
                 blurRadius: 20,
                 offset: const Offset(0, 8))
           ],
@@ -3301,9 +3290,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        Colors.black.withValues(alpha: 0.95),
-                        Colors.black.withValues(alpha: 0.8),
-                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.90),
+                        Colors.black.withValues(alpha: 0.70),
+                        Colors.black.withValues(alpha: 0.27),
                       ],
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
@@ -3312,17 +3301,18 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                 ),
               ),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(17, 15, 17, 15),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: _primaryColor.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
+                      color: hasImage ? Colors.white.withValues(alpha: .15) : AppPalette.accentSoft,
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(color: hasImage ? Colors.white.withValues(alpha: .23) : AppPalette.accentBorder),
                     ),
                     child: Icon(Icons.campaign_rounded,
-                        color: _primaryColor, size: 24),
+                        color: actionColor, size: 24),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -3334,37 +3324,34 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                              color: _primaryColor,
-                              borderRadius: BorderRadius.circular(4)),
+                              color: hasImage ? Colors.white.withValues(alpha: .18) : AppPalette.accentSoft,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: hasImage ? Colors.white.withValues(alpha: .22) : AppPalette.accentBorder)),
                           child: Text("SPONSORLU",
                               style: TextStyle(
-                                  color: Colors.black,
+                                  color: actionColor,
                                   fontSize: 9,
                                   fontWeight: FontWeight.bold)),
                         ),
                         const SizedBox(height: 6),
                         Text(ad['title'] ?? 'Kampanya',
                             style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              color: titleColor,
                               letterSpacing: -0.5,
-                              shadows: [
-                                Shadow(color: Colors.black, blurRadius: 4)
-                              ],
+                              
                             ),
-                            maxLines: 1,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis),
                         const SizedBox(height: 4),
                         Text(ad['description'] ?? 'Detaylı bilgi için dokunun',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.white.withValues(alpha: 0.85),
+                              color: secondaryColor,
                               height: 1.3,
                               fontWeight: FontWeight.w500,
-                              shadows: const [
-                                Shadow(color: Colors.black, blurRadius: 4)
-                              ],
+                              
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis),
@@ -3373,7 +3360,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                   ),
                   const SizedBox(width: 8),
                   Icon(Icons.arrow_forward_ios_rounded,
-                      color: Colors.white54, size: 16),
+                      color: actionColor, size: 16),
                 ],
               ),
             ),
@@ -3540,10 +3527,28 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
           extendBodyBehindAppBar: false,
           appBar: AppBar(
             automaticallyImplyLeading: false,
-            title: const OtoTagBrandLogo(height: 30),
-            backgroundColor: Theme.of(context).brightness == Brightness.light ? Colors.white : _bgColor.withValues(alpha: .94),
+            titleSpacing: 14,
+            title: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const OtoTagBrandLogo(width: 32, height: 32),
+                const SizedBox(width: 7),
+                Text('OTO TAG', style: TextStyle(
+                  color: AppPalette.text,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -.65,
+                )),
+              ],
+            ),
+            backgroundColor: AppPalette.surface,
+            surfaceTintColor: Colors.transparent,
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(1),
+              child: Container(height: 1, color: AppPalette.border),
+            ),
             elevation: 0,
-            centerTitle: true,
+            centerTitle: false,
             actions: [
               const AppThemeToggleButton(),
               Stack(
@@ -3596,7 +3601,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                   child: CircularProgressIndicator(
                       color: _primaryColor, strokeWidth: 3))
               : PremiumScene(
-                  accentStrength: .82,
+                  showGrid: false,
+                  accentStrength: .16,
                   child: Stack(
                   children: [
                     Positioned(
@@ -3639,9 +3645,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                         CrossAxisAlignment.stretch,
                                     children: [
                                       _buildTopSection(),
-                                      const SizedBox(height: 24),
+                                      const SizedBox(height: 16),
                                       _buildSparePartsBanner(context),
-                                      const SizedBox(height: 32),
+                                      const SizedBox(height: 26),
                                       if (activeJobId != null) ...[
                                         Container(
                                           margin:

@@ -281,16 +281,16 @@ ThemeData appTheme() {
 
 
 ThemeData appLightTheme() {
-  const ink = Color(0xFF15231B);
-  const primary = Color(0xFF08784D);
-  const outline = Color(0xFFD8E5DA);
+  const ink = Color(0xFF19271E);
+  const primary = Color(0xFF286B4B);
+  const outline = Color(0xFFD9E4DC);
   final scheme = ColorScheme.fromSeed(
     seedColor: primary, brightness: Brightness.light,
   ).copyWith(
     primary: primary, onPrimary: Colors.white,
     secondary: primary, onSecondary: Colors.white,
     surface: Colors.white, onSurface: ink,
-    surfaceContainerHighest: const Color(0xFFECF4ED),
+    surfaceContainerHighest: const Color(0xFFEDF4EF),
     outline: outline, outlineVariant: outline,
     surfaceTint: Colors.transparent,
   );
@@ -299,8 +299,8 @@ ThemeData appLightTheme() {
     brightness: Brightness.light,
     fontFamily: 'Roboto',
     colorScheme: scheme,
-    scaffoldBackgroundColor: const Color(0xFFF6F9F6),
-    canvasColor: const Color(0xFFF6F9F6),
+    scaffoldBackgroundColor: const Color(0xFFF7F9F7),
+    canvasColor: const Color(0xFFF7F9F7),
     textTheme: ThemeData.light().textTheme.apply(
       fontFamily: 'Roboto', bodyColor: ink, displayColor: ink),
     appBarTheme: const AppBarTheme(
@@ -317,7 +317,7 @@ ThemeData appLightTheme() {
     inputDecorationTheme: InputDecorationTheme(
       filled: true, fillColor: Colors.white,
       labelStyle: const TextStyle(color: Color(0xFF52675A)),
-      hintStyle: const TextStyle(color: Color(0xFF657669)),
+      hintStyle: const TextStyle(color: Color(0xFF657568)),
       prefixIconColor: primary,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -347,7 +347,7 @@ ThemeData appLightTheme() {
       foregroundColor: ink)),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: Colors.white,
-      indicatorColor: const Color(0xFFD9F2E2),
+      indicatorColor: const Color(0xFFE3F0E7),
       labelTextStyle: WidgetStateProperty.all(
           const TextStyle(color: ink, fontSize: 11)),
       iconTheme: WidgetStateProperty.all(
@@ -362,8 +362,8 @@ ThemeData appLightTheme() {
       backgroundColor: Colors.white, modalBackgroundColor: Colors.white,
       surfaceTintColor: Colors.transparent),
     chipTheme: const ChipThemeData(
-      backgroundColor: Color(0xFFF0F6F1),
-      selectedColor: Color(0xFFD9F2E2),
+      backgroundColor: Color(0xFFF0F5F1),
+      selectedColor: Color(0xFFE3F0E7),
       side: BorderSide(color: outline),
       labelStyle: TextStyle(color: ink)),
     dividerTheme: const DividerThemeData(color: outline),

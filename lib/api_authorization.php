@@ -23,7 +23,7 @@ function authorizeApiAction($pdo,$action,$method) {
     if ($action==='get_part_listings' && $auth['user_type']==='admin') return;
     $admin=['admin_get_app_updates','admin_publish_app_update','admin_withdraw_app_update','admin_retry_app_update_push','admin_get_purchases','admin_change_password','admin_backup_db','admin_optimize_system','admin_dashboard',
         'suspend_provider','ban_user','ban_ip','get_all_users','admin_delete_user','admin_delete_job','approve_provider','reject_provider','growth_analytics',
-        'get_tickets','update_ticket_status','admin_delete_ticket','admin_cancel_rentacar_booking','admin_get_rental_activity','admin_get_rental_detail','get_feedbacks','admin_get_telemetry_stats','admin_get_user_detail','admin_update_user','admin_add_vehicle','admin_update_vehicle','admin_delete_vehicle','admin_delete_vehicle_record','add_ad','edit_ad','delete_ad'];
+        'get_tickets','update_ticket_status','admin_delete_ticket','admin_cancel_rentacar_booking','admin_get_rental_activity','admin_get_rental_detail','get_feedbacks','admin_get_telemetry_stats','admin_get_user_detail','admin_update_user','admin_add_vehicle','admin_update_vehicle','admin_delete_vehicle','admin_delete_vehicle_record','admin_update_rental_listing','admin_delete_rental_listing','add_ad','edit_ad','delete_ad'];
     if (in_array($action,$admin,true)) { if ($auth['user_type']!=='admin') apiDeny('Yönetici yetkisi gereklidir.'); return; }
     // Admins do not impersonate customer/provider actions with overlapping IDs.
     if ($auth['user_type']==='admin') apiDeny();

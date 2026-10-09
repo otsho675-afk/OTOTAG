@@ -45,7 +45,7 @@ class AdminOverviewPanel extends StatelessWidget {
   Color get _stroke => lightMode ? Color(0xFFD9E5DB) : Color(0xFF2A3D32);
   Color get _white => lightMode ? Color(0xFF15221A) : Color(0xFFF2FAF5);
   Color get _muted => lightMode ? Color(0xFF5A6A60) : Color(0xFFA1B5A7);
-  Color get _mint => lightMode ? Color(0xFF08784D) : AppConstants.primaryColor;
+  Color get _mint => lightMode ? Color(0xFF286B4B) : AppConstants.primaryColor;
 
   String _money(double value) =>
       NumberFormat.currency(locale: 'tr_TR', symbol: '₺').format(value);
@@ -241,7 +241,7 @@ class AdminOverviewPanel extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft, end: Alignment.bottomRight,
           colors: lightMode
-              ? [Color(0xFFD6F1E2), Color(0xFFEDF8F0), Colors.white]
+              ? [Color(0xFFE7F1E9), Color(0xFFEDF8F0), Colors.white]
               : [Color(0xFF1C3D2C), Color(0xFF10231A), Color(0xFF0C1812)],
         ),
         borderRadius: BorderRadius.circular(25),

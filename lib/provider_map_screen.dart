@@ -3040,7 +3040,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
       feedbackTitle = "Gözlem ve Başlangıç Süreci";
       feedbackMessage =
           "İlk 45 gün koruma altındasınız. Ceza veya iş kotası uygulanmaz; tüm çağrılar ekranınıza öncelikle düşer.";
-      statusColor = Color(0xFF00E5FF);
+      statusColor = AppPalette.light ? AppPalette.accent : const Color(0xFF00E5FF);
       statusIcon = Icons.shield_rounded;
       tierBadgeText = "YENİ ÜYE KORUMASI";
       nextTierNote = "Kalan Koruma: $graceDaysLeft Gün";
@@ -3056,7 +3056,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
       feedbackTitle = "Standart Usta Seviyesi";
       feedbackMessage =
           "Performansınız dengeli. Puanınızı 4.5 üzerine taşıyarak VIP önceliğe yükselebilirsiniz.";
-      statusColor = Color(0xFF38BDF8);
+      statusColor = AppPalette.light ? const Color(0xFF376E84) : const Color(0xFF38BDF8);
       statusIcon = Icons.thumb_up_rounded;
       tierBadgeText = "STANDART DAĞITIM";
       final diff = (4.5 - providerRating).clamp(0.0, 5.0);
@@ -3065,7 +3065,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
       feedbackTitle = "Gecikmeli Dağıtım";
       feedbackMessage =
           "Puanınız 3.5 altına indi. Yeni işler 15 sn gecikmeli iletilir ve günlük kota 5 iştir.";
-      statusColor = Color(0xFFF59E0B);
+      statusColor = AppPalette.light ? const Color(0xFF986713) : const Color(0xFFF59E0B);
       statusIcon = Icons.warning_amber_rounded;
       tierBadgeText = "KOTA: GÜNDE 5 İŞ";
       final diff = (3.5 - providerRating).clamp(0.0, 5.0);
@@ -3145,7 +3145,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                     MediaQuery.paddingOf(context).bottom + 16,
                   ),
                   decoration: BoxDecoration(
-                    color: panelBlack.withValues(alpha: 0.94),
+                    color: AppPalette.surface,
                     borderRadius:
                         const BorderRadius.vertical(top: Radius.circular(32)),
                     border: Border.all(
@@ -3153,12 +3153,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                         width: 1.2),
                     boxShadow: [
                       BoxShadow(
-                          color: pureBlack.withValues(alpha: 0.9),
-                          blurRadius: 40,
+                          color: AppPalette.shadow,
+                          blurRadius: AppPalette.light ? 14 : 40,
                           offset: Offset(0, -10)),
                       BoxShadow(
-                          color: statusColor.withValues(alpha: 0.08),
-                          blurRadius: 30,
+                          color: statusColor.withValues(alpha: AppPalette.light ? .035 : .08),
+                          blurRadius: AppPalette.light ? 10 : 30,
                           spreadRadius: -5),
                     ],
                   ),
@@ -3208,15 +3208,14 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                   padding:
                                       EdgeInsets.all(isSmallScreen ? 14 : 16),
                                   decoration: BoxDecoration(
-                                    color: pureBlack,
+                                    color: AppPalette.light ? AppPalette.surfaceAlt : pureBlack,
                                     borderRadius: BorderRadius.circular(22),
                                     border: Border.all(
-                                        color:
-                                            statusColor.withValues(alpha: 0.35),
+                                        color: statusColor.withValues(alpha: AppPalette.light ? .2 : .35),
                                         width: 1.2),
                                     gradient: LinearGradient(
                                       colors: [
-                                        statusColor.withValues(alpha: 0.12),
+                                        statusColor.withValues(alpha: AppPalette.light ? .035 : .12),
                                         Colors.transparent
                                       ],
                                       begin: Alignment.topLeft,
@@ -3308,7 +3307,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 14, vertical: 10),
                                   decoration: BoxDecoration(
-                                    color: pureBlack,
+                                    color: AppPalette.light ? AppPalette.surfaceAlt : pureBlack,
                                     borderRadius: BorderRadius.circular(18),
                                     border: Border.all(
                                         color: AppPalette.text
@@ -3349,7 +3348,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                       Container(
                                           width: 1,
                                           height: 24,
-                                          color: Colors.white12),
+                                          color: AppPalette.border),
                                       Expanded(
                                         child: Column(
                                           children: [
@@ -3381,7 +3380,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                       Container(
                                           width: 1,
                                           height: 24,
-                                          color: Colors.white12),
+                                          color: AppPalette.border),
                                       Expanded(
                                         child: Column(
                                           children: [
@@ -3415,7 +3414,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 16, vertical: 12),
                                   decoration: BoxDecoration(
-                                    color: pureBlack,
+                                    color: AppPalette.light ? AppPalette.surfaceAlt : pureBlack,
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
                                         color: AppPalette.text
@@ -3518,7 +3517,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                 Container(
                                   padding: const EdgeInsets.all(4),
                                   decoration: BoxDecoration(
-                                    color: pureBlack,
+                                    color: AppPalette.light ? AppPalette.surfaceAlt : pureBlack,
                                     borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
                                         color: AppPalette.text
@@ -3673,7 +3672,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                         "Değerlendirme",
                                         reviewsCount.toDouble(),
                                         Icons.forum_rounded,
-                                        Color(0xFF00E5FF),
+                                        AppPalette.light ? const Color(0xFF376E84) : const Color(0xFF00E5FF),
                                         subText: "Yorumlar",
                                       ),
                                     ),
@@ -3697,7 +3696,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                         "Memnuniyet",
                                         satisfactionPercent,
                                         Icons.verified_user_rounded,
-                                        Color(0xFFF59E0B),
+                                        AppPalette.light ? const Color(0xFF986713) : const Color(0xFFF59E0B),
                                         isPercentage: true,
                                         subText: "Müşteri Oranı",
                                       ),
@@ -3708,7 +3707,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                                         activeRevenueTitle,
                                         activeRevenue,
                                         Icons.account_balance_wallet_rounded,
-                                        Color(0xFFB388FF),
+                                        AppPalette.light ? const Color(0xFF7458A2) : const Color(0xFFB388FF),
                                         isCurrency: true,
                                         subText: "Kazanç",
                                       ),

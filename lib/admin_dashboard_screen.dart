@@ -3765,7 +3765,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         color: isSelected ? AppConstants.primaryColor.withValues(alpha:0.09) : (isBanned ? Colors.red.withValues(alpha:0.05) : cardColor),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(color: isSelected ? AppConstants.primaryDeep : Colors.transparent, width: 1.5),
+                          side: BorderSide(color: isSelected ? AppConstants.primaryDeep : const Color(0xFF2B4134), width: 1),
                         ),
                         clipBehavior: Clip.antiAlias,
                         child: ListTile(
@@ -3774,8 +3774,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             ? Icon(isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, color: isSelected ? AppConstants.primaryDeep : Colors.grey)
                             : CircleAvatar(
                                 radius: 20,
-                                backgroundColor: isBanned ? Colors.red.withValues(alpha:0.12) : (isCustomer ? AppConstants.primaryColor.withValues(alpha:0.12) : Colors.purple.withValues(alpha:0.12)),
-                                child: Icon(isBanned ? Icons.block : (isCustomer ? Icons.person : Icons.engineering), color: isBanned ? Colors.red : (isCustomer ? Colors.blue : Colors.purple), size: 18),
+                                backgroundColor: isBanned ? Colors.red.withValues(alpha:0.12) : AppConstants.primaryColor.withValues(alpha:0.13),
+                                child: Icon(isBanned ? Icons.block : (isCustomer ? Icons.person_outline_rounded : (isRentacar ? Icons.car_rental_outlined : Icons.handyman_outlined)), color: isBanned ? Colors.red : AppConstants.primaryColor, size: 20),
                               ),
                           title: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -3787,7 +3787,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                   overflow: TextOverflow.ellipsis,
                                 )
                               ),
-                              Text(joinedDate, style: const TextStyle(color: Colors.grey, fontSize: 10)),
+                              if (MediaQuery.sizeOf(context).width >= 640)
+                                 Text(joinedDate, style: const TextStyle(color: Colors.grey, fontSize: 10)),
                             ],
                           ),
                           subtitle: Column(
@@ -3795,8 +3796,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             children: [
                               const SizedBox(height: 3),
                               Text(user['phone']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12)),
-                              Text("Son giriş: ${user['last_login_at'] != null ? _formatDate(user['last_login_at'].toString()) : 'Henüz kaydedilmedi'} • Son hareket: ${user['last_seen_at'] != null ? _formatDate(user['last_seen_at'].toString()) : '—'}",
-                                 maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11,color:Colors.grey)),
+                              Text("Son giriş: ${user['last_login_at'] != null ? _formatDate(user['last_login_at'].toString()) : 'Henüz kaydedilmedi'}",
+                                  maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11,color:Colors.grey)),
+                               if (MediaQuery.sizeOf(context).width >= 640)
+                                 Text("Son hareket: ${user['last_seen_at'] != null ? _formatDate(user['last_seen_at'].toString()) : '—'}",
+                                    maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11,color:Colors.grey)),
+                               if (MediaQuery.sizeOf(context).width < 640)
+                                 Text("Kayıt: $joinedDate", maxLines:1,overflow:TextOverflow.ellipsis,
+                                    style:const TextStyle(fontSize:10,color:Colors.grey)),
                               if ((int.tryParse('${user['vehicle_count']}') ?? 0) > 0)
                                 Text("Kayıtlı araç: ${user['vehicle_count']}",style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)),
                               const SizedBox(height: 3),
@@ -3806,7 +3813,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 children: [
                                   Text(
                                     isCustomer ? 'Müşteri' : (isRentacar ? 'Rent a Car' : 'Usta (${_translateServiceType(user['service_category']?.toString())})'),
-                                    style: TextStyle(color: isCustomer ? Colors.blue : Colors.purple, fontSize: 11, fontWeight: FontWeight.bold)
+                                    style: const TextStyle(color: AppConstants.primaryColor, fontSize: 11, fontWeight: FontWeight.w800)
                                   ),
                                   if (isCustomer && isPremium)
                                     Container(

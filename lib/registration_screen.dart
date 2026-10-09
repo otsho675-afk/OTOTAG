@@ -2342,8 +2342,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                           ? null
                                           : _nextStep,
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: neonGreen,
-                                        foregroundColor: Colors.black,
+                                        backgroundColor: light ? const Color(0xFF08784D) : neonGreen,
+                                        foregroundColor: light ? Colors.white : Colors.black,
                                         disabledBackgroundColor: Colors.white
                                             .withValues(alpha: 0.08),
                                         disabledForegroundColor:

@@ -4423,15 +4423,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       label: Text(label,
           style: TextStyle(
             fontWeight: FontWeight.w700,
-            color: isSelected ? const Color(0xFF06291B) : color,
+            color: isSelected ? Theme.of(context).colorScheme.onPrimary : color,
             fontSize: 12,
           )),
       selected: isSelected,
-      selectedColor: const Color(0xFF00D68A),
+      selectedColor: Theme.of(context).colorScheme.primary,
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
       side: BorderSide(
           color: isSelected
-              ? const Color(0xFF00D68A)
+              ? Theme.of(context).colorScheme.primary
               : Theme.of(context).colorScheme.outlineVariant),
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(13)),

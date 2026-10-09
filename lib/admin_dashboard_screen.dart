@@ -12,6 +12,7 @@ import 'dart:ui';
 import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'login_screen.dart';
 import 'widgets/admin_workspace_shell.dart';
 import 'widgets/admin_update_panel.dart';
@@ -34,6 +35,8 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool isLoading = true;
   int _selectedIndex = 0;
+  bool _lightAdminTheme = false;
+  static const _adminThemeKey = 'oto_tag_admin_light_theme';
   final _updatesKey = GlobalKey<AdminUpdatePanelState>();
   
   String userSearchQuery = "";
@@ -125,12 +128,80 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void initState() {
     super.initState();
     _fetchAllData();
+    unawaited(_restoreAdminTheme());
     _settingsRefreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
       if (mounted && _selectedIndex == 6 && !_refreshing &&
           !_pendingReads.containsKey('get_all_users')) {
         unawaited(_fetchAllUsers());
       }
     });
+  }
+
+  Future<void> _restoreAdminTheme() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (mounted) setState(() =>
+          _lightAdminTheme = prefs.getBool(_adminThemeKey) ?? false);
+    } catch (_) {
+      // Local persistence is optional; dark remains the default.
+    }
+  }
+
+  Future<void> _toggleAdminTheme() async {
+    final value = !_lightAdminTheme;
+    setState(() => _lightAdminTheme = value);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_adminThemeKey, value);
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tema seçimi bu cihazda kaydedilemedi.')),
+      );
+    }
+  }
+
+  ThemeData get _adminTheme {
+    if (!_lightAdminTheme) return Theme.of(context);
+    const ink = Color(0xFF15211B), green = Color(0xFF08784D);
+    final scheme = ColorScheme.fromSeed(seedColor: green,
+      brightness: Brightness.light).copyWith(
+        primary: green, onPrimary: Colors.white,
+        surface: Colors.white, onSurface: ink,
+        outline: const Color(0xFFD9E4DB),
+        outlineVariant: const Color(0xFFE5EBE5),
+        surfaceContainerHighest: const Color(0xFFF3F7F4),
+        surfaceTint: Colors.transparent,
+      );
+    return ThemeData(
+      brightness: Brightness.light, useMaterial3: true,
+      colorScheme: scheme, fontFamily: 'Roboto',
+      scaffoldBackgroundColor: const Color(0xFFF6F8F6),
+      canvasColor: const Color(0xFFF6F8F6),
+      textTheme: ThemeData.light().textTheme.apply(
+        bodyColor: ink, displayColor: ink, fontFamily: 'Roboto'),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true, fillColor: Colors.white,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFD9E4DB))),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: green, width: 1.5))),
+      appBarTheme: const AppBarTheme(backgroundColor: Colors.white,
+        foregroundColor: ink, surfaceTintColor: Colors.transparent),
+      dialogTheme: DialogThemeData(backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18))),
+      dividerTheme: const DividerThemeData(color: Color(0xFFD9E4DB)),
+      chipTheme: ChipThemeData(backgroundColor: const Color(0xFFF3F7F4),
+        selectedColor: const Color(0xFFD8F2E3),
+        side: const BorderSide(color: Color(0xFFD9E4DB)),
+        labelStyle: const TextStyle(color: ink)),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(backgroundColor: green,
+            foregroundColor: Colors.white)),
+    );
   }
 
   Future<Map<String, dynamic>> _readAdminData(String action) =>
@@ -3323,15 +3394,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = !_lightAdminTheme;
     final cardColor = isDark ? const Color(0xFF142019) : Colors.white;
     final actions = _sectionRequests[_selectedIndex] ?? const <String>[];
     final firstLoad = actions.isNotEmpty && !actions.any(_loadedActions.contains);
     final hasErrors = actions.any(_loadErrors.containsKey);
-    return CallbackShortcuts(bindings: {
+    return Theme(data: _adminTheme, child: CallbackShortcuts(bindings: {
       const SingleActivator(LogicalKeyboardKey.keyK, control: true): () => unawaited(_searchManagement()),
       const SingleActivator(LogicalKeyboardKey.keyK, meta: true): () => unawaited(_searchManagement()),
     }, child: Focus(autofocus: true, child: AdminWorkspaceShell(
+      lightMode: _lightAdminTheme,
+      onToggleTheme: () => unawaited(_toggleAdminTheme()),
       selected: _selectedIndex,
       onSelect: (index) { if (!_bulkDeleting) _selectSection(index); },
       pendingCount: pendingProviders.length,
@@ -3363,7 +3436,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 },
               ))),
           ]),
-    )));
+    ))));
   }
 
   Widget _buildLowPerformanceAlerts(Color cardColor) {
@@ -3437,6 +3510,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildOverviewTab(Color cardColor, bool isDark) => AdminOverviewPanel(
+    lightMode: _lightAdminTheme,
     revenue: totalRevenue, completedJobs: totalJobs,
     customers: totalCustomers, providers: totalProviders, companies: totalCompanies,
     pending: pendingProviders.whereType<Map>().map((p) => Map<String, dynamic>.from(p)).toList(),
@@ -3609,6 +3683,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     return AdminMembersPanel(
       users: filteredUsers.map((entry) => Map<String, dynamic>.from(entry as Map)).toList(),
+      lightMode: _lightAdminTheme,
       total: allUsers.length,
       activityFetchedAt: _updatedAt['get_all_users'],
       hiddenCount: hiddenUsers.length,
@@ -4293,6 +4368,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildSettingsTab(Color cardColor, bool isDark) {
     return AdminSettingsPanel(
+      lightMode: _lightAdminTheme,
+      onThemeChanged: (v) { if (v != _lightAdminTheme) unawaited(_toggleAdminTheme()); },
       users: allUsers.whereType<Map>()
           .map((user) => Map<String, dynamic>.from(user)).toList(),
       loaded: _loadedActions.contains('get_all_users'),

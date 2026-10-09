@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
+import '../core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import '../core/constants/app_constants.dart';
 import '../services/rental_service.dart';
@@ -12,14 +14,14 @@ class RentalReputationSummary extends StatelessWidget {
     final average = double.tryParse('${reputation['average']}');
     final badge = reputation['badge'] as Map?;
     final color = badge?['id'] == 'gold'
-        ? const Color(0xFFFFD071)
+        ? Color(0xFFFFD071)
         : badge?['id'] == 'silver'
-            ? const Color(0xFFC6D6E3)
-            : const Color(0xFFDCA480);
+            ? Color(0xFFC6D6E3)
+            : Color(0xFFDCA480);
     return Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-            color: AppConstants.cardColor,
+            color: AppPalette.surface,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: rentalBorder)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -32,8 +34,8 @@ class RentalReputationSummary extends StatelessWidget {
                     average == null || count == 0
                         ? 'Henüz puan yok'
                         : '${average.toStringAsFixed(2).replaceAll('.', ',')} / 5',
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: AppPalette.text,
                         fontSize: 28,
                         fontWeight: FontWeight.bold)),
                 if (badge != null)
@@ -48,34 +50,34 @@ class RentalReputationSummary extends StatelessWidget {
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
                         Icon(Icons.workspace_premium_outlined,
                             color: color, size: 22),
-                        const SizedBox(width: 6),
+                        SizedBox(width: 6),
                         Flexible(
                             child: Text('${badge['title']}',
                                 style: TextStyle(
                                     color: color, fontWeight: FontWeight.bold)))
                       ])),
               ]),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           RentalRatingStars(rating: count > 0 ? average ?? 0 : 0, size: 30),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           Text(
               '$count değerlendirme • ${rentalId(reputation['unique_customers'])} farklı müşteri',
-              style: const TextStyle(color: rentalMuted, height: 1.5)),
-          const SizedBox(height: 10),
+              style: TextStyle(color: rentalMuted, height: 1.5)),
+          SizedBox(height: 10),
           Text(
               badge == null
                   ? 'Rozet için yeterli müşteri ve puan henüz oluşmadı.'
                   : 'Rozet puanı: ${reputation['badge_score']} / 5',
-              style: const TextStyle(
+              style: TextStyle(
                   color: rentalMuted, fontSize: 12, height: 1.5)),
           TextButton.icon(
               onPressed: () => showModalBottomSheet<void>(
                   context: context,
                   isScrollControlled: true,
-                  constraints: const BoxConstraints(maxWidth: 640),
+                  constraints: BoxConstraints(maxWidth: 640),
                   builder: (_) => Theme(
                       data: rentalTheme(),
-                      child: const SafeArea(
+                      child: SafeArea(
                           child: SingleChildScrollView(
                               padding: EdgeInsets.all(24),
                               child: Column(
@@ -84,7 +86,7 @@ class RentalReputationSummary extends StatelessWidget {
                                   children: [
                                     Text('Rozetler nasıl kazanılır?',
                                         style: TextStyle(
-                                            color: Colors.white,
+                                            color: AppPalette.text,
                                             fontSize: 22,
                                             fontWeight: FontWeight.bold)),
                                     SizedBox(height: 16),
@@ -96,15 +98,15 @@ class RentalReputationSummary extends StatelessWidget {
                                     Text(
                                         'Bronz: en az 5 farklı müşteri, rozet puanı ≥ 3,80\nGümüş: en az 10 farklı müşteri, rozet puanı ≥ 4,20\nAltın: en az 20 farklı müşteri, rozet puanı ≥ 4,50',
                                         style: TextStyle(
-                                            color: Colors.white, height: 1.8)),
+                                            color: AppPalette.text, height: 1.8)),
                                     SizedBox(height: 16),
                                     Text(
                                         'Profil ortalaması tüm kiralama puanlarını gösterir. Rozet puanında her müşterinin kendi ortalaması eşit ağırlık taşır; aynı müşterinin çok sayıda kiralaması avantaj sağlamaz. Az değerlendirmeyle yüksek rozet alınmaması için hesaba 5 adet 3 yıldızlık başlangıç ağırlığı eklenir.\n\nRozet puanı = (müşteri ortalamalarının toplamı + 15) / (farklı müşteri sayısı + 5). Karar yuvarlanmamış puandan verilir. Puan düştüğünde rozet de düşebilir. Ücretli üyelik rozet kazandırmaz.',
                                         style: TextStyle(
                                             color: rentalMuted, height: 1.6)),
                                   ]))))),
-              icon: const Icon(Icons.info_outline, size: 17),
-              label: const Text('Rozet kuralları')),
+              icon: Icon(Icons.info_outline, size: 17),
+              label: Text('Rozet kuralları')),
         ]));
   }
 }
@@ -126,7 +128,7 @@ class RentalRatingStars extends StatelessWidget {
                       alignment: Alignment.centerLeft,
                       widthFactor: fraction,
                       child: Icon(Icons.star_rounded,
-                          color: const Color(0xFFFFD071), size: size))),
+                          color: Color(0xFFFFD071), size: size))),
             ]);
           })));
 }
@@ -139,7 +141,7 @@ class RentalReviewCard extends StatelessWidget {
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-          color: AppConstants.cardColor,
+          color: AppPalette.surface,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: rentalBorder)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -149,8 +151,8 @@ class RentalReviewCard extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text('${review['reviewer_name'] ?? 'Müşteri'}',
-                  style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      color: AppPalette.text, fontWeight: FontWeight.bold)),
               Row(
                   mainAxisSize: MainAxisSize.min,
                   children: List.generate(
@@ -159,19 +161,19 @@ class RentalReviewCard extends StatelessWidget {
                           i < rentalId(review['rating'])
                               ? Icons.star_rounded
                               : Icons.star_border_rounded,
-                          color: const Color(0xFFFFD071),
+                          color: Color(0xFFFFD071),
                           size: 20))),
             ]),
-        const SizedBox(height: 8),
-        const RentalTag('Tamamlanmış kiralama',
+        SizedBox(height: 8),
+        RentalTag('Tamamlanmış kiralama',
             icon: Icons.verified_outlined, accent: true),
         if ('${review['comment'] ?? ''}'.trim().isNotEmpty) ...[
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Text('${review['comment']}',
-              style: const TextStyle(color: Colors.white70, height: 1.6))
+              style: TextStyle(color: AppPalette.muted, height: 1.6))
         ],
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         Text('${review['created_at'] ?? ''}'.split(' ').first,
-            style: const TextStyle(color: rentalMuted, fontSize: 11)),
+            style: TextStyle(color: rentalMuted, fontSize: 11)),
       ]));
 }

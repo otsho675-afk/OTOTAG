@@ -9,7 +9,7 @@ import 'chat_screen.dart';
 import 'rental_booking_screen.dart';
 import 'rental_history_screen.dart';
 import 'rentacar_company_profile_screen.dart';
-import 'core/constants/app_constants.dart';
+
 import 'core/constants/car_data.dart';
 import 'core/theme/app_motion.dart';
 import 'services/rental_service.dart';

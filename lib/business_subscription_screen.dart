@@ -1,9 +1,10 @@
+import 'core/theme/app_palette.dart';
 // ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'core/constants/app_constants.dart';
+
 import 'services/rental_service.dart';
 import 'services/subscription_store.dart';
 import 'widgets/rental_market_style.dart';
@@ -300,13 +301,13 @@ class _BusinessSubscriptionScreenState
                                       Container(
                                           padding: const EdgeInsets.all(14),
                                           decoration: BoxDecoration(
-                                              color: AppConstants.primaryColor
+                                              color: AppPalette.accent
                                                   .withValues(alpha: .1),
                                               borderRadius:
                                                   BorderRadius.circular(18)),
                                           child: Icon(
                                               Icons.workspace_premium_outlined,
-                                              color: AppConstants.primaryColor,
+                                              color: AppPalette.accent,
                                               size: 28)),
                                       SizedBox(width: 14),
                                       Expanded(
@@ -340,7 +341,7 @@ class _BusinessSubscriptionScreenState
                                 Container(
                                     padding: const EdgeInsets.all(20),
                                     decoration: BoxDecoration(
-                                        color: AppConstants.cardColor,
+                                        color: AppPalette.surface,
                                         borderRadius: BorderRadius.circular(24),
                                         border:
                                             Border.all(color: rentalBorder)),
@@ -420,7 +421,7 @@ class _BusinessSubscriptionScreenState
                                 if (_error != null)
                                   _message(_error!, Colors.redAccent),
                                 if (_notice != null)
-                                  _message(_notice!, AppConstants.primaryColor),
+                                  _message(_notice!, AppPalette.accent),
                                 FilledButton.icon(
                                     onPressed: !_store.supported ||
                                             _busy ||
@@ -499,7 +500,7 @@ class _BusinessSubscriptionScreenState
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Icon(Icons.check_circle_outline,
-            size: 19, color: AppConstants.primaryColor),
+            size: 19, color: AppPalette.accent),
         SizedBox(width: 10),
         Expanded(child: Text(text, style: TextStyle(height: 1.5)))
       ]));

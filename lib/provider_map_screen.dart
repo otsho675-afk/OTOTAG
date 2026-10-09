@@ -4277,7 +4277,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
   Widget build(BuildContext context) {
     final isLight = Theme.of(context).brightness == Brightness.light;
     final Color bgColor = isLight ? Color(0xFFF6F9F6) : pureBlack;
-    final Color cardColor = isLight ? AppPalette.text : panelBlack;
+    final Color cardColor = AppPalette.surface;
 
     return LayoutBuilder(
       builder: (context, constraints) {

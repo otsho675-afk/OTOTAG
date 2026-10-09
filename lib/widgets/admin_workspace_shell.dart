@@ -1,5 +1,6 @@
 // ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables
 import 'package:flutter/material.dart';
+import 'ototag_brand_logo.dart';
 import '../core/constants/app_constants.dart';
 
 /// OTO TAG admin console. One navigation model across phone, tablet and web.
@@ -68,7 +69,7 @@ class AdminWorkspaceShell extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft, end: Alignment.bottomRight,
             colors: lightMode
-                 ? [Color(0xFF337654), Color(0xFF286B4B)]
+                 ? [Colors.white, Color(0xFFF0F6F2)]
                  : [Color(0xFF00FFA3), Color(0xFF00A86D)],
           ),
           borderRadius: BorderRadius.circular(size * .31),
@@ -76,7 +77,9 @@ class AdminWorkspaceShell extends StatelessWidget {
             BoxShadow(color: _mint.withValues(alpha: .14), blurRadius: 18),
           ],
         ),
-        child: Icon(Icons.route_rounded, color: lightMode ? Colors.white : Color(0xFF08120E), size: size * .55),
+        child: lightMode
+            ? Center(child: OtoTagBrandLogo(height: size * .74, width: size * .74))
+            : Icon(Icons.route_rounded, color: Color(0xFF08120E), size: size * .55),
       );
 
   Widget _navTile(int index, {required bool compact, required VoidCallback onTap}) {

@@ -9,7 +9,7 @@ import 'services/rental_live_updates.dart';
 import 'widgets/rental_pickup_map.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'chat_screen.dart';
-import 'core/constants/app_constants.dart';
+
 import 'services/rental_service.dart';
 import 'widgets/rental_market_style.dart';
 import 'widgets/matching_status_card.dart';

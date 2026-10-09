@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'admin_command_palette.dart';
@@ -7,6 +8,7 @@ import '../core/constants/app_constants.dart';
 class AdminOverviewPanel extends StatelessWidget {
   const AdminOverviewPanel({
     super.key,
+    this.lightMode = false,
     required this.revenue,
     required this.completedJobs,
     required this.customers,
@@ -26,6 +28,7 @@ class AdminOverviewPanel extends StatelessWidget {
     this.footer = const SizedBox.shrink(),
   });
 
+  final bool lightMode;
   final double revenue;
   final int completedJobs, customers, providers, companies;
   final List<Map<String, dynamic>> pending, tickets, jobs;
@@ -36,13 +39,13 @@ class AdminOverviewPanel extends StatelessWidget {
   final bool dashboardReady, ticketsReady;
   final Widget footer;
 
-  static const _bg = Color(0xFF0B120F);
-  static const _card = Color(0xFF142019);
-  static const _card2 = Color(0xFF192720);
-  static const _stroke = Color(0xFF2A3D32);
-  static const _white = Color(0xFFF2FAF5);
-  static const _muted = Color(0xFFA1B5A7);
-  static const _mint = AppConstants.primaryColor;
+  Color get _bg => lightMode ? Color(0xFFF6F8F6) : Color(0xFF0B120F);
+  Color get _card => lightMode ? Colors.white : Color(0xFF142019);
+  Color get _card2 => lightMode ? Color(0xFFF0F7F2) : Color(0xFF192720);
+  Color get _stroke => lightMode ? Color(0xFFD9E5DB) : Color(0xFF2A3D32);
+  Color get _white => lightMode ? Color(0xFF15221A) : Color(0xFFF2FAF5);
+  Color get _muted => lightMode ? Color(0xFF5A6A60) : Color(0xFFA1B5A7);
+  Color get _mint => lightMode ? Color(0xFF08784D) : AppConstants.primaryColor;
 
   String _money(double value) =>
       NumberFormat.currency(locale: 'tr_TR', symbol: '₺').format(value);
@@ -55,28 +58,28 @@ class AdminOverviewPanel extends StatelessWidget {
       return ColoredBox(
         color: _bg,
         child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
+          physics: AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(horizontal, 17, horizontal, 46),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1400),
+              constraints: BoxConstraints(maxWidth: 1400),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _hero(context, pendingCount: pending.length,
                       openCount: open.length),
-                  const SizedBox(height: 13),
+                  SizedBox(height: 13),
                   _shortcutGrid(context, pendingCount: pending.length,
                       openCount: open.length),
-                  const SizedBox(height: 21),
+                  SizedBox(height: 21),
                   _sectionHeader('YÖNETİM', 'İşlem merkezi',
                       'Her yönetim aracına doğrudan erişin.'),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   _commandGrid(),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24),
                   _sectionHeader('CANLI GÖRÜNÜM', 'İşletme özeti',
                       'Veriler mevcut sunucu kayıtlarından alınır.'),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   LayoutBuilder(builder: (context, constraints) {
                     final columns = constraints.maxWidth >= 1000
                         ? 3 : constraints.maxWidth >= 290 ? 2 : 1;
@@ -114,10 +117,10 @@ class AdminOverviewPanel extends StatelessWidget {
                           () => onCommand('section:4')),
                     ]);
                   }),
-                  const SizedBox(height: 28),
+                  SizedBox(height: 28),
                   _sectionHeader('İŞ SIRASI', 'Öncelikli işlemler',
                       'Dikkat isteyen kayıtlar ve doğrudan bağlantılar.'),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   Wrap(spacing: 9, runSpacing: 9, children: [
                     _actionChip(
                       Icons.how_to_reg_outlined,
@@ -138,7 +141,7 @@ class AdminOverviewPanel extends StatelessWidget {
                           : 'Firma verisi alınamadı',
                       () => onCommand('companies')),
                   ]),
-                  const SizedBox(height: 14),
+                  SizedBox(height: 14),
                   if (pending.isNotEmpty || open.isNotEmpty)
                     LayoutBuilder(builder: (context, constraints) {
                       final sideBySide = constraints.maxWidth >= 800;
@@ -180,22 +183,22 @@ class AdminOverviewPanel extends StatelessWidget {
                           ? Row(crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Expanded(child: pendingCard),
-                                const SizedBox(width: 12),
+                                SizedBox(width: 12),
                                 Expanded(child: ticketCard),
                               ])
                           : Column(children: [
-                              pendingCard, const SizedBox(height: 12),
+                              pendingCard, SizedBox(height: 12),
                               ticketCard,
                             ]);
                     })
                   else if (dashboardReady && ticketsReady)
                     _emptyMini('Bekleyen başvuru veya açık destek talebi yok.'),
-                  const SizedBox(height: 28),
+                  SizedBox(height: 28),
                   _sectionHeader('HAREKETLER', 'Son servis talepleri',
                       'Sunucudaki en güncel 100 kaydın son 5 tanesi.',
                       action: 'Tümünü gör',
                       onTap: () => onCommand('section:3')),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   Container(
                     decoration: _surfaceDecoration(),
                     child: jobs.isEmpty
@@ -212,7 +215,7 @@ class AdminOverviewPanel extends StatelessWidget {
                               ),
                           ]),
                   ),
-                  const SizedBox(height: 18),
+                  SizedBox(height: 18),
                   footer,
                 ],
               ),
@@ -235,15 +238,17 @@ class AdminOverviewPanel extends StatelessWidget {
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft, end: Alignment.bottomRight,
-          colors: [Color(0xFF1C3D2C), Color(0xFF10231A), Color(0xFF0C1812)],
+          colors: lightMode
+              ? [Color(0xFFD6F1E2), Color(0xFFEDF8F0), Colors.white]
+              : [Color(0xFF1C3D2C), Color(0xFF10231A), Color(0xFF0C1812)],
         ),
         borderRadius: BorderRadius.circular(25),
-        border: Border.all(color: const Color(0xFF32634A)),
+        border: Border.all(color: lightMode ? Color(0xFFC5E6D1) : Color(0xFF32634A)),
         boxShadow: [
           BoxShadow(color: Colors.black.withValues(alpha: .16),
-              blurRadius: 25, offset: const Offset(0, 10)),
+              blurRadius: 25, offset: Offset(0, 10)),
         ],
       ),
       child: LayoutBuilder(builder: (context, constraints) {
@@ -261,27 +266,27 @@ class AdminOverviewPanel extends StatelessWidget {
                 decoration: BoxDecoration(
                     color: _mint.withValues(alpha: .15),
                     borderRadius: BorderRadius.circular(10)),
-                child: const Icon(Icons.tune_rounded, color: _mint, size: 18),
+                child: Icon(Icons.tune_rounded, color: _mint, size: 18),
               ),
-              const SizedBox(width: 9),
-              const Expanded(child: Text('OTO TAG   /   CONTROL CENTER',
+              SizedBox(width: 9),
+              Expanded(child: Text('OTO TAG   /   CONTROL CENTER',
                   maxLines: 1, overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 10, color: _mint,
                     fontWeight: FontWeight.w900, letterSpacing: 1.1,
                   ))),
             ]),
-            const SizedBox(height: 16),
-            const Text('Yönetim merkezi',
+            SizedBox(height: 16),
+            Text('Yönetim merkezi',
                 maxLines: 2,
                 style: TextStyle(
                   color: _white, fontSize: 27,
                   fontWeight: FontWeight.w900, letterSpacing: -.8,
                 )),
-            const SizedBox(height: 6),
-            const Text('Tüm operasyonları tek ekrandan yönetin.',
+            SizedBox(height: 6),
+            Text('Tüm operasyonları tek ekrandan yönetin.',
                 style: TextStyle(color: Color(0xFFB9D1C2), fontSize: 13)),
-            const SizedBox(height: 17),
+            SizedBox(height: 17),
             Wrap(spacing: 9, runSpacing: 9, children: [
               _heroPill(Icons.verified_user_rounded,
                   dashboardReady ? '$pendingCount başvuru' : 'Başvuru bilgisi yok',
@@ -295,32 +300,32 @@ class AdminOverviewPanel extends StatelessWidget {
         final totalPanel = Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: const Color(0xFF091C12).withValues(alpha: .74),
+            color: lightMode ? Colors.white.withValues(alpha: .82) : Color(0xFF091C12).withValues(alpha: .74),
             borderRadius: BorderRadius.circular(19),
-            border: Border.all(color: const Color(0xFF326349)),
+            border: Border.all(color: lightMode ? Color(0xFFC8E6D3) : Color(0xFF326349)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('TOPLAM ÜYE',
+              Text('TOPLAM ÜYE',
                   style: TextStyle(
                     color: _muted, fontSize: 10,
                     fontWeight: FontWeight.w800, letterSpacing: 1.3)),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               Text(dashboardReady ? NumberFormat.decimalPattern('tr_TR').format(total) : '—',
                   maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: _mint, fontSize: 34,
                     fontWeight: FontWeight.w900, letterSpacing: -1)),
-              const SizedBox(height: 4),
-              const Text('Müşteri, usta ve firmalar',
+              SizedBox(height: 4),
+              Text('Müşteri, usta ve firmalar',
                   style: TextStyle(fontSize: 11, color: _muted)),
-              const SizedBox(height: 15),
+              SizedBox(height: 15),
               SizedBox(width: double.infinity,
                 child: FilledButton.icon(
                   onPressed: () => onCommand('section:2'),
-                  icon: const Icon(Icons.arrow_forward_rounded, size: 19),
-                  label: const Text('Üyeleri yönet'),
+                  icon: Icon(Icons.arrow_forward_rounded, size: 19),
+                  label: Text('Üyeleri yönet'),
                 )),
             ],
           ),
@@ -330,12 +335,12 @@ class AdminOverviewPanel extends StatelessWidget {
           child: wide
               ? Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
                   Expanded(child: left),
-                  const SizedBox(width: 25),
+                  SizedBox(width: 25),
                   SizedBox(width: 250, child: totalPanel),
                 ])
               : Column(crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    left, const SizedBox(height: 17),
+                    left, SizedBox(height: 17),
                     totalPanel,
                   ]),
         );
@@ -360,30 +365,30 @@ class AdminOverviewPanel extends StatelessWidget {
                   borderRadius: BorderRadius.circular(7),
                   border: Border.all(color: _mint.withValues(alpha: .28)),
                 ),
-                child: const Text('OTO TAG  ·  YENİ PANEL',
+                child: Text('OTO TAG  ·  YENİ PANEL',
                   style: TextStyle(color: _mint, fontSize: 9,
                       fontWeight: FontWeight.w900, letterSpacing: .8)),
               ),
-              const SizedBox(height: 10),
-              const Text('Yönetim merkezi',
+              SizedBox(height: 10),
+              Text('Yönetim merkezi',
                   maxLines: 2,
                   style: TextStyle(color: _white, fontSize: 21,
                       fontWeight: FontWeight.w900, letterSpacing: -.6)),
-              const SizedBox(height: 4),
-              const Text('Kontrol sende. Tüm işlemler tek yerde.',
+              SizedBox(height: 4),
+              Text('Kontrol sende. Tüm işlemler tek yerde.',
                   maxLines: 2,
                   style: TextStyle(color: _muted, fontSize: 11)),
             ],
           )),
-          const SizedBox(width: 9),
+          SizedBox(width: 9),
           Container(
             width: 90, height: 110,
             alignment: Alignment.center,
             padding: const EdgeInsets.all(9),
             decoration: BoxDecoration(
-              color: const Color(0xFF081910),
+              color: lightMode ? Colors.white : Color(0xFF081910),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF326349)),
+              border: Border.all(color: lightMode ? Color(0xFFC8E6D3) : Color(0xFF326349)),
             ),
             child: Column(mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -391,10 +396,10 @@ class AdminOverviewPanel extends StatelessWidget {
                     ? NumberFormat.decimalPattern('tr_TR').format(total)
                     : '—',
                     maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: _mint, fontSize: 26,
+                    style: TextStyle(color: _mint, fontSize: 26,
                         fontWeight: FontWeight.w900)),
-                const SizedBox(height: 2),
-                const FittedBox(
+                SizedBox(height: 2),
+                FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text('TOPLAM ÜYE',
                     maxLines: 1,
@@ -405,13 +410,13 @@ class AdminOverviewPanel extends StatelessWidget {
               ]),
           ),
         ]),
-        const SizedBox(height: 13),
+        SizedBox(height: 13),
         Row(children: [
           Expanded(child: _mobileHeroLink(
               Icons.verified_outlined,
               dashboardReady ? '$pendingCount onay' : 'Onaylar',
               () => onCommand('section:1'))),
-          const SizedBox(width: 9),
+          SizedBox(width: 9),
           Expanded(child: _mobileHeroLink(
               Icons.support_agent_outlined,
               ticketsReady ? '$openCount destek' : 'Destek',
@@ -431,12 +436,12 @@ class AdminOverviewPanel extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           child: Row(children: [
             Icon(icon, color: _mint, size: 17),
-            const SizedBox(width: 7),
+            SizedBox(width: 7),
             Expanded(child: Text(title,
                 maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: _white,
+                style: TextStyle(color: _white,
                     fontSize: 11, fontWeight: FontWeight.w800))),
-            const Icon(Icons.north_east_rounded, color: _mint, size: 14),
+            Icon(Icons.north_east_rounded, color: _mint, size: 14),
           ]),
         ),
       ),
@@ -481,15 +486,15 @@ class AdminOverviewPanel extends StatelessWidget {
                       ),
                       child: Icon(shortcuts[i].$2, color: _mint, size: 18),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Expanded(child: Text(shortcuts[i].$1,
                         maxLines: 1, overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: _white,
+                        style: TextStyle(color: _white,
                             fontSize: 12, fontWeight: FontWeight.w800))),
                     if (constraints.maxWidth >= 530 &&
                         (i == 1 || i == 3))
                       Text(i == 1 ? '$pendingCount' : '$openCount',
-                          style: const TextStyle(color: _mint,
+                          style: TextStyle(color: _mint,
                               fontSize: 12, fontWeight: FontWeight.w900)),
                   ]),
                 ),
@@ -536,15 +541,15 @@ class AdminOverviewPanel extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Icon(icon, color: _mint, size: 16),
-              const SizedBox(width: 7),
+              SizedBox(width: 7),
               ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 140),
+                constraints: BoxConstraints(maxWidth: 140),
                 child: Text(label,
                   maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: _white, fontWeight: FontWeight.w800, fontSize: 11))),
-              const SizedBox(width: 7),
-              const Icon(Icons.north_east, color: _mint, size: 13),
+              SizedBox(width: 7),
+              Icon(Icons.north_east, color: _mint, size: 13),
             ]),
           ),
         ),
@@ -557,18 +562,18 @@ class AdminOverviewPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(eyebrow,
-              style: const TextStyle(color: _mint,
+              style: TextStyle(color: _mint,
                   fontSize: 10, fontWeight: FontWeight.w900,
                   letterSpacing: 1.3)),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Text(title, maxLines: 2,
-              style: const TextStyle(
+              style: TextStyle(
                 color: _white, fontSize: 19,
                 fontWeight: FontWeight.w900, letterSpacing: -.25)),
-          const SizedBox(height: 3),
+          SizedBox(height: 3),
           Text(description, maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: _muted, fontSize: 11)),
+              style: TextStyle(color: _muted, fontSize: 11)),
         ],
       )),
       if (action != null)
@@ -609,26 +614,26 @@ class AdminOverviewPanel extends StatelessWidget {
                     ),
                     child: Icon(icon, color: _mint, size: 19),
                   ),
-                  const Spacer(),
-                  const Icon(Icons.north_east_rounded,
+                  Spacer(),
+                  Icon(Icons.north_east_rounded,
                       size: 16, color: _muted),
                 ]),
-                const SizedBox(height: 14),
+                SizedBox(height: 14),
                 Text(value,
                     maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: _white, fontSize: 25,
                       fontWeight: FontWeight.w900, letterSpacing: -.55,
                     )),
-                const SizedBox(height: 5),
+                SizedBox(height: 5),
                 Text(label,
                     maxLines: 2, overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: _white, fontWeight: FontWeight.w800, fontSize: 12)),
-                const SizedBox(height: 3),
+                SizedBox(height: 3),
                 Text(caption, maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: _muted, fontSize: 10)),
+                    style: TextStyle(color: _muted, fontSize: 10)),
               ],
             ),
           ),
@@ -652,15 +657,15 @@ class AdminOverviewPanel extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Icon(icon, color: _mint, size: 18),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 169),
+              constraints: BoxConstraints(maxWidth: 169),
               child: Text(title,
                 maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   color: _white, fontSize: 12, fontWeight: FontWeight.w700))),
-            const SizedBox(width: 6),
-            const Icon(Icons.chevron_right_rounded,
+            SizedBox(width: 6),
+            Icon(Icons.chevron_right_rounded,
                 color: _muted, size: 15),
           ]),
         ),
@@ -682,9 +687,9 @@ class AdminOverviewPanel extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 15, 12, 6),
           child: Row(children: [
             Icon(icon, color: _mint, size: 20),
-            const SizedBox(width: 9),
+            SizedBox(width: 9),
             Expanded(child: Text(title,
-                style: const TextStyle(
+                style: TextStyle(
                   color: _white, fontSize: 14, fontWeight: FontWeight.w900))),
             Container(
               padding: const EdgeInsets.symmetric(
@@ -694,14 +699,14 @@ class AdminOverviewPanel extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text('$count',
-                  style: const TextStyle(color: _mint,
+                  style: TextStyle(color: _mint,
                       fontWeight: FontWeight.w900, fontSize: 12)),
             ),
-            const SizedBox(width: 3),
+            SizedBox(width: 3),
             IconButton(
               tooltip: 'Tümünü gör',
               onPressed: onAll,
-              icon: const Icon(Icons.arrow_forward_rounded,
+              icon: Icon(Icons.arrow_forward_rounded,
                   color: _muted, size: 19),
             ),
           ]),
@@ -727,25 +732,25 @@ class AdminOverviewPanel extends StatelessWidget {
             Container(
               width: 36, height: 36,
               decoration: BoxDecoration(
-                color: const Color(0xFF24372B),
+                color: Color(0xFF24372B),
                 borderRadius: BorderRadius.circular(11),
               ),
               child: Icon(icon, color: _mint, size: 19),
             ),
-            const SizedBox(width: 11),
+            SizedBox(width: 11),
             Expanded(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(name, maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: _white, fontSize: 12, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 3),
+                SizedBox(height: 3),
                 Text(info, maxLines: 2, overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: _muted, fontSize: 10)),
+                    style: TextStyle(color: _muted, fontSize: 10)),
               ],
             )),
-            const SizedBox(width: 6),
-            const Icon(Icons.chevron_right_rounded,
+            SizedBox(width: 6),
+            Icon(Icons.chevron_right_rounded,
                 color: _muted, size: 20),
           ]),
         ),
@@ -787,16 +792,16 @@ class AdminOverviewPanel extends StatelessWidget {
                         ),
                         child: Icon(icon, color: _mint, size: 19),
                       ),
-                      const Spacer(),
-                      const Icon(Icons.north_east_rounded,
+                      Spacer(),
+                      Icon(Icons.north_east_rounded,
                           color: _muted, size: 15),
                     ]),
-                    const SizedBox(height: 10),
+                    SizedBox(height: 10),
                     Text(
                       title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: _white,
                         fontWeight: FontWeight.w800,
                         fontSize: 12,
@@ -814,7 +819,7 @@ class AdminOverviewPanel extends StatelessWidget {
                     ),
                     child: Icon(icon, color: _mint, size: 22),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Expanded(child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -823,20 +828,20 @@ class AdminOverviewPanel extends StatelessWidget {
                       Text(title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: _white,
                               fontSize: 13,
                               fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(detail,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: _muted, fontSize: 10)),
                     ],
                   )),
-                  const SizedBox(width: 5),
-                  const Icon(Icons.arrow_forward_ios_rounded,
+                  SizedBox(width: 5),
+                  Icon(Icons.arrow_forward_ios_rounded,
                       color: _muted, size: 13),
                 ]),
         ),
@@ -850,11 +855,11 @@ class AdminOverviewPanel extends StatelessWidget {
       decoration: _surfaceDecoration(),
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 19),
       child: Row(children: [
-        const Icon(Icons.check_circle_outline_rounded,
+        Icon(Icons.check_circle_outline_rounded,
             color: _mint, size: 19),
-        const SizedBox(width: 10),
+        SizedBox(width: 10),
         Expanded(child: Text(message,
-            style: const TextStyle(color: _muted, fontSize: 12))),
+            style: TextStyle(color: _muted, fontSize: 12))),
       ]),
     );
 }

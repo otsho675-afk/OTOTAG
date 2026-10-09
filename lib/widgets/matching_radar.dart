@@ -39,7 +39,7 @@ class _MatchingRadarState extends State<MatchingRadar>
     final animate = widget.searching &&
         _foreground &&
         !AppMotion.reduced(context) &&
-        TickerMode.of(context);
+        TickerMode.valuesOf(context).enabled;
     if (animate && !_motion.isAnimating) _motion.repeat();
     if (!animate && _motion.isAnimating) _motion.stop();
   }

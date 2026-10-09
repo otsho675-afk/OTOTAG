@@ -770,7 +770,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                     onPressed: () => Navigator.pop(sheetContext),
                     style: FilledButton.styleFrom(
                       backgroundColor: _primaryColor,
-                      foregroundColor: Colors.black,
+                      foregroundColor: AppPalette.accentText,
                       minimumSize: const Size.fromHeight(50),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -2084,7 +2084,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                       color: _cardColor.withValues(alpha: 0.95),
                       borderRadius: BorderRadius.circular(32),
                       border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.1),
+                          color: AppPalette.border,
                           width: 1.5),
                       boxShadow: [
                         BoxShadow(
@@ -2139,7 +2139,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                           Colors.white.withValues(alpha: 0.05),
                                       shape: BoxShape.circle),
                                   child: Icon(Icons.close_rounded,
-                                      color: Colors.white70, size: 20),
+                                      color: _subtitleColor, size: 20),
                                 ),
                               ),
                             ),
@@ -2366,7 +2366,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                       },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: _primaryColor,
-                                  foregroundColor: Colors.black,
+                                  foregroundColor: AppPalette.accentText,
                                   elevation: 0,
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 18),
@@ -2584,7 +2584,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                         ),
                       ),
                       const SizedBox(height: 10),
-                      const Divider(color: AppPalette.border, height: 1),
+                      Divider(color: AppPalette.border, height: 1),
                       Expanded(
                         child: filteredItems.isEmpty
                             ? Center(
@@ -2592,7 +2592,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                   "Sonuç bulunamadı",
                                   style: TextStyle(
                                       color:
-                                          Colors.white.withValues(alpha: 0.4),
+                                          _subtitleColor,
                                       fontSize: 14),
                                 ),
                               )
@@ -2611,7 +2611,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                       style: TextStyle(
                                         color: isSelected
                                             ? _primaryColor
-                                            : Colors.white,
+                                            : _textColor,
                                         fontWeight: isSelected
                                             ? FontWeight.w900
                                             : FontWeight.w500,
@@ -2724,10 +2724,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
         ),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.03),
+            color: AppPalette.field,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-                color: Colors.white.withValues(alpha: 0.05), width: 1.5),
+                color: AppPalette.border, width: 1.5),
           ),
           child: Material(
             color: Colors.transparent,
@@ -2756,8 +2756,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: date != null
-                                  ? Colors.white
-                                  : Colors.white54)),
+                                  ? _textColor
+                                  : _subtitleColor)),
                     ),
                   ],
                 ),
@@ -2941,7 +2941,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                     color: _cardColor.withValues(alpha: 0.95),
                     borderRadius: BorderRadius.circular(28),
                     border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.1), width: 1.5),
+                        color: AppPalette.border, width: 1.5),
                     boxShadow: [
                       BoxShadow(
                           color: Colors.black.withValues(alpha: 0.6),
@@ -3048,7 +3048,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                         onPressed: () => Navigator.pop(context),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _primaryColor,
-                          foregroundColor: Colors.black,
+                          foregroundColor: AppPalette.accentText,
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
@@ -4297,13 +4297,13 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
         ? _primaryColor.withValues(alpha: 0.60)
         : accent
             ? _primaryColor.withValues(alpha: 0.30)
-            : Colors.white.withValues(alpha: 0.09);
+            : AppPalette.border;
     final Color backgroundColor = emphasized
         ? _primaryColor.withValues(alpha: 0.12)
         : accent
             ? _primaryColor.withValues(alpha: 0.08)
-            : Colors.white.withValues(alpha: 0.045);
-    final Color iconColor = emphasized || accent ? _primaryColor : Colors.white70;
+            : AppPalette.surfaceAlt;
+    final Color iconColor = emphasized || accent ? _primaryColor : AppPalette.muted;
 
     return Tooltip(
       message: tooltip,
@@ -4351,7 +4351,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
 
     if (isDate) {
       if (date == null) {
-        statusColor = Colors.white38;
+        statusColor = AppPalette.muted;
         valueText = "Yok";
       } else {
         final deadline = VehicleDeadline(date);
@@ -4368,9 +4368,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.035),
+        color: AppPalette.surfaceAlt,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        border: Border.all(color: AppPalette.border),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

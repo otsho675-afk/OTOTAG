@@ -312,22 +312,28 @@ class AdminMembersPanel extends StatelessWidget {
                       child:const Text('Sil')),
                 ])),
               const SizedBox(height:11),
-              Row(children:[
-                Expanded(child:Text('${users.length} sonuç · $total kayıt',
-                  style:const TextStyle(color:muted,fontSize:11))),
-                if(hiddenCount>0) TextButton.icon(onPressed:onRestore,
-                  icon:const Icon(Icons.visibility_outlined,size:16),
-                  label:Text('$hiddenCount gizlenen')),
-                const Icon(Icons.sort_rounded,color:muted,size:16),
-                const SizedBox(width:6),
-                DropdownButtonHideUnderline(child:DropdownButton<String>(
-                  value:sort,dropdownColor:raised,
-                  style:const TextStyle(color:white,fontSize:11),
-                  items:[for(final s in sortValues.entries)
-                    DropdownMenuItem(value:s.key,child:Text(s.value))],
-                  onChanged:(v){if(v!=null)onSort(v);},
-                )),
-              ]),
+              Wrap(
+                spacing:12,runSpacing:4,
+                alignment:WrapAlignment.spaceBetween,
+                crossAxisAlignment:WrapCrossAlignment.center,
+                children:[
+                  Text('${users.length} sonuç · $total kayıt',
+                    style:const TextStyle(color:muted,fontSize:11)),
+                  if(hiddenCount>0) TextButton.icon(onPressed:onRestore,
+                    icon:const Icon(Icons.visibility_outlined,size:16),
+                    label:Text('$hiddenCount gizlenen')),
+                  Row(mainAxisSize:MainAxisSize.min,children:[
+                    const Icon(Icons.sort_rounded,color:muted,size:16),
+                    const SizedBox(width:6),
+                    DropdownButtonHideUnderline(child:DropdownButton<String>(
+                      value:sort,dropdownColor:raised,
+                      style:const TextStyle(color:white,fontSize:11),
+                      items:[for(final s in sortValues.entries)
+                        DropdownMenuItem(value:s.key,child:Text(s.value))],
+                      onChanged:(v){if(v!=null)onSort(v);},
+                    )),
+                  ]),
+                ]),
             ]))))),
         if(users.isEmpty)
           const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(40),

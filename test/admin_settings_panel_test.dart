@@ -28,7 +28,7 @@ void main() {
     Widget panel() => MaterialApp(
       theme: ThemeData.dark(),
       home: Scaffold(body: AdminSettingsPanel(
-        users: [
+        users: const [
           {'id': 1, 'name': 'Ayşe Aktif', 'status': 'active',
             'user_type': 'customer', 'last_seen_seconds_ago': 50},
           {'id': 2, 'name': 'Mehmet Usta', 'status': 'active',

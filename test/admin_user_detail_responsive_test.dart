@@ -70,7 +70,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.textContaining('42 TEST 42'), findsOneWidget);
         expect(tester.takeException(), isNull);
-      }, () => MockClient((_) async => http.Response(jsonEncode(detail), 200)));
+      }, () => MockClient((_) async => http.Response(jsonEncode(detail), 200, headers: {'content-type': 'application/json; charset=utf-8'})));
     });
   }
 
@@ -114,9 +114,9 @@ void main() {
         return http.Response(jsonEncode({
           'status': 'error',
           'message': 'Geçici hata',
-        }), 503);
+        }), 503, headers: {'content-type': 'application/json; charset=utf-8'});
       }
-      return http.Response(jsonEncode(detail), 200);
+      return http.Response(jsonEncode(detail), 200, headers: {'content-type': 'application/json; charset=utf-8'});
     }));
   });
 }

@@ -611,7 +611,7 @@ class RoleSelectionScreen extends StatelessWidget {
                       'Nasıl devam etmek istiyorsun?',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: AppConstants.textColor,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 27,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -.8,
@@ -622,7 +622,8 @@ class RoleSelectionScreen extends StatelessWidget {
                       'Sadece giriş türünü seç. Geri kalan her şey ilgili panelde sade şekilde gösterilir.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: AppConstants.subtleTextColor,
+                        color: Theme.of(context).brightness == Brightness.light
+                          ? const Color(0xFF586C60) : AppConstants.subtleTextColor,
                         fontSize: 12,
                         height: 1.5,
                       ),

@@ -896,8 +896,10 @@ require_once __DIR__.'/referral_rewards.php';
 require_once __DIR__.'/growth_features.php';
 require_once __DIR__.'/map_routing.php';
 require_once __DIR__ . '/oauth_verification.php';
+require_once __DIR__ . '/admin_user_console.php';
 require_once __DIR__ . '/api_authorization.php';
 authorizeApiAction($pdo, $action, $method);
+handleAdminConsoleAction($pdo, $action, $method);
 require_once __DIR__ . '/app_updates.php';
 require_once __DIR__.'/notification_delivery.php';
 notificationEnsureSchema($pdo);
@@ -1493,6 +1495,7 @@ switch ($action) {
                 }
 
                 $jwtToken = generateJWT($user['id'], $user['user_type']);
+                adminConsoleTrackLogin($pdo, $user['id'], $action === 'oauth_login' ? 'oauth' : 'password');
                 sendResponse(200, [
                     "status" => "success", 
                     "user_id" => $user['id'], 
@@ -2280,6 +2283,7 @@ switch ($action) {
                 $pdo->prepare("UPDATE users SET oauth_provider = ?, oauth_id = ? WHERE id = ?")->execute([$oauth_provider, $oauth_id, $user['id']]);
 
                 $jwtToken = generateJWT($user['id'], $user['user_type']);
+                adminConsoleTrackLogin($pdo, $user['id'], $action === 'oauth_login' ? 'oauth' : 'password');
                 sendResponse(200, [
                     "status" => "success",
                     "user_id" => $user['id'],
@@ -3464,7 +3468,8 @@ switch ($action) {
     case 'get_all_users':
         if ($method !== 'GET') sendResponse(405, ["status" => "error", "message" => "Geçersiz metod."]);
         authenticateRequest(null, true);
-        $stmt = $pdo->query("SELECT id, user_type, name, phone, service_category, iban, status, is_premium, is_suspended, suspension_end_date, tax_plate, driver_license, vehicle_photo, equipment_photo, created_at, rating, reviews_count FROM users ORDER BY created_at DESC LIMIT 1500");
+        adminConsoleEnsureSchema($pdo);
+        $stmt = $pdo->query("SELECT u.id, u.user_type, u.name, u.email, u.phone, u.city, u.service_category, u.iban, u.status, u.is_premium, u.is_suspended, u.suspension_end_date, u.tax_plate, u.driver_license, u.vehicle_photo, u.equipment_photo, u.created_at, u.rating, u.reviews_count, s.last_login_at, s.last_seen_at, s.login_count, (SELECT COUNT(*) FROM vehicles v WHERE v.customer_id=u.id) AS vehicle_count FROM users u LEFT JOIN user_access_state s ON s.user_id=u.id ORDER BY u.created_at DESC LIMIT 1500");
         sendResponse(200, ["status" => "success", "users" => $stmt->fetchAll()]);
         break;
 
@@ -5105,8 +5110,9 @@ switch ($action) {
 
     case 'log_telemetry':
         if ($method !== 'POST') sendResponse(405, ["status" => "error", "message" => "Geçersiz metod."]);
-        $user_id = !empty($_POST['user_id']) ? (int)$_POST['user_id'] : null;
-        $user_type = $_POST['user_type'] ?? 'customer';
+        $telemetryActor = authenticateRequest();
+        $user_id = (int)$telemetryActor['user_id'];
+        $user_type = $telemetryActor['user_type'];
         $event_type = trim($_POST['event_type'] ?? 'button_click'); 
         $event_name = trim($_POST['event_name'] ?? '');
         $screen_name = trim($_POST['screen_name'] ?? '');

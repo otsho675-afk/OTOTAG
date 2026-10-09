@@ -27,9 +27,9 @@ class ProviderStatusHeader extends StatelessWidget {
   Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-          color: AppConstants.cardColor,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppConstants.borderColor)),
+          border: Border.all(color: Theme.of(context).dividerColor)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Container(
@@ -45,14 +45,14 @@ class ProviderStatusHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                 Text(service,
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontWeight: FontWeight.w700,
                         fontSize: 16)),
                 const SizedBox(height: 3),
                 Text(online ? 'İş almaya açıksın' : 'Şu an çevrimdışısın',
-                    style: const TextStyle(
-                        color: AppConstants.mutedColor, fontSize: 12))
+                    style: TextStyle(
+                        color: Theme.of(context).brightness == Brightness.light ? const Color(0xFF52675A) : AppConstants.mutedColor, fontSize: 12))
               ])),
           Tooltip(
             message: 'Hızlı çıkış',

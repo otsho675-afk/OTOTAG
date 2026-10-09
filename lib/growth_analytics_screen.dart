@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
+import 'core/theme/app_palette.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -44,7 +46,7 @@ class _GrowthAnalyticsScreenState extends State<GrowthAnalyticsScreen> {
       final uri = Uri.parse(AppConstants.baseUrl)
           .replace(queryParameters: {'action': 'growth_analytics'});
       final response =
-          await _client.get(uri).timeout(const Duration(seconds: 15));
+          await _client.get(uri).timeout(Duration(seconds: 15));
       final json = jsonDecode(utf8.decode(response.bodyBytes));
       if (response.statusCode != 200 ||
           json is! Map ||
@@ -73,34 +75,34 @@ class _GrowthAnalyticsScreenState extends State<GrowthAnalyticsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cities = (_data['top_cities'] as List? ?? const [])
+    final cities = (_data['top_cities'] as List? ?? [])
         .whereType<Map>()
         .map((e) => Map<String, dynamic>.from(e))
         .toList();
-    final daily = (_data['daily_registrations'] as List? ?? const [])
+    final daily = (_data['daily_registrations'] as List? ?? [])
         .whereType<Map>()
         .map((e) => Map<String, dynamic>.from(e))
         .toList();
     final usage = _data['active_usage'] is Map
         ? _data['active_usage'] as Map
-        : const {};
+        : {};
     final customerUsage = usage['customer'] is Map
         ? usage['customer'] as Map
-        : const {};
+        : {};
     final providerUsage = usage['provider'] is Map
         ? usage['provider'] as Map
-        : const {};
+        : {};
     int activeCount(Map values, String key) =>
         int.tryParse('${values[key] ?? 0}') ?? 0;
 
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Büyüme & Dönüşüm Analizi'),
+        title: Text('Büyüme & Dönüşüm Analizi'),
         actions: [
           IconButton(
               onPressed: _loading ? null : _load,
-              icon: const Icon(Icons.refresh_rounded))
+              icon: Icon(Icons.refresh_rounded))
         ],
       ),
       body: RefreshIndicator(
@@ -108,13 +110,13 @@ class _GrowthAnalyticsScreenState extends State<GrowthAnalyticsScreen> {
         child: ListView(
           padding: const EdgeInsets.all(18),
           children: [
-            if (_loading) const LinearProgressIndicator(minHeight: 2),
+            if (_loading) LinearProgressIndicator(minHeight: 2),
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.all(18),
                 child: Text(_error!,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.red)),
+                    style: TextStyle(color: Colors.red)),
               ),
             Wrap(
               spacing: 12,
@@ -151,15 +153,15 @@ class _GrowthAnalyticsScreenState extends State<GrowthAnalyticsScreen> {
                     Icons.group_add_rounded),
               ],
             ),
-            const SizedBox(height: 24),
-            const Text('Gerçek aktif hesaplar',
+            SizedBox(height: 24),
+            Text('Gerçek aktif hesaplar',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 6),
-            const Text(
+            SizedBox(height: 6),
+            Text(
               'Yeni güvenli günlük ölçüm. Veriler bu sürüm sunucuya alındıktan sonra birikir; önceki günler tahmin edilmez.',
               style: TextStyle(color: Colors.grey, fontSize: 12),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Wrap(
               spacing: 12,
               runSpacing: 12,
@@ -184,31 +186,31 @@ class _GrowthAnalyticsScreenState extends State<GrowthAnalyticsScreen> {
                     Icons.calendar_month_outlined),
               ],
             ),
-            const SizedBox(height: 24),
-            const Text('En aktif şehirler',
+            SizedBox(height: 24),
+            Text('En aktif şehirler',
                 style: TextStyle(
                     fontSize: 18, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             for (final city in cities)
               Card(
                 child: ListTile(
-                  leading: const Icon(Icons.location_city_rounded),
+                  leading: Icon(Icons.location_city_rounded),
                   title: Text(city['city']?.toString() ?? '-'),
                   trailing: Text('${city['total'] ?? 0}',
-                      style: const TextStyle(fontWeight: FontWeight.w800)),
+                      style: TextStyle(fontWeight: FontWeight.w800)),
                 ),
               ),
-            const SizedBox(height: 24),
-            const Text('Son 14 gün kayıtları',
+            SizedBox(height: 24),
+            Text('Son 14 gün kayıtları',
                 style: TextStyle(
                     fontSize: 18, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             for (final item in daily)
               Card(
                 child: ListTile(
                   title: Text(item['day']?.toString() ?? '-'),
                   trailing: Text('${item['total'] ?? 0} üye',
-                      style: const TextStyle(fontWeight: FontWeight.w800)),
+                      style: TextStyle(fontWeight: FontWeight.w800)),
                 ),
               ),
           ],
@@ -225,13 +227,13 @@ class _GrowthAnalyticsScreenState extends State<GrowthAnalyticsScreen> {
           padding: const EdgeInsets.all(18),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Icon(icon, color: AppConstants.primaryColor),
-            const SizedBox(height: 14),
+            Icon(icon, color: AppPalette.accent),
+            SizedBox(height: 14),
             Text(value,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 26, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 4),
-            Text(label, style: const TextStyle(color: Colors.grey)),
+            SizedBox(height: 4),
+            Text(label, style: TextStyle(color: Colors.grey)),
           ]),
         ),
       ),

@@ -68,11 +68,12 @@ class DashboardServiceGrid extends StatelessWidget {
                                       gradient: LinearGradient(
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
-                                        colors: [
-                                          AppConstants.cardElevated
-                                              .withValues(alpha: .86),
-                                          AppConstants.cardColor,
-                                        ],
+                                        colors: light
+                                            ? [Colors.white, const Color(0xFFF0F7F2)]
+                                            : [
+                                                AppConstants.cardElevated.withValues(alpha: .86),
+                                                AppConstants.cardColor,
+                                              ],
                                       ),
                                     ),
                                   ),
@@ -155,7 +156,7 @@ class DashboardServiceGrid extends StatelessWidget {
                                             child: Icon(
                                               services[index]['icon']
                                                   as IconData,
-                                              color: AppConstants.primaryColor,
+                                              color: light ? const Color(0xFF08784D) : AppConstants.primaryColor,
                                               size: 22,
                                             ),
                                           ),
@@ -167,8 +168,8 @@ class DashboardServiceGrid extends StatelessWidget {
                                         '${services[index]['name']}',
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: AppConstants.textColor,
+                                        style: TextStyle(
+                                          color: Theme.of(context).colorScheme.onSurface,
                                           fontWeight: FontWeight.w800,
                                           fontSize: 13.5,
                                           height: 1.12,
@@ -176,7 +177,7 @@ class DashboardServiceGrid extends StatelessWidget {
                                         ),
                                       ),
                                       const SizedBox(height: 5),
-                                      const Row(
+                                      Row(
                                         children: [
                                           Expanded(
                                             child: Text(
@@ -184,17 +185,16 @@ class DashboardServiceGrid extends StatelessWidget {
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                               style: TextStyle(
-                                                color: AppConstants
-                                                    .subtleTextColor,
+                                                color: light ? const Color(0xFF596B60) : AppConstants.subtleTextColor,
                                                 fontWeight: FontWeight.w600,
                                                 fontSize: 9.5,
                                               ),
                                             ),
                                           ),
-                                          SizedBox(width: 5),
+                                          const SizedBox(width: 5),
                                           Icon(
                                             Icons.arrow_outward_rounded,
-                                            color: AppConstants.primaryColor,
+                                            color: light ? const Color(0xFF08784D) : AppConstants.primaryColor,
                                             size: 13,
                                           ),
                                         ],

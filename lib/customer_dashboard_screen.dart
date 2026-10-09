@@ -11,6 +11,7 @@ import 'core/theme/app_motion.dart';
 import 'core/theme/premium_surfaces.dart';
 import 'core/theme/app_palette.dart';
 import 'widgets/app_theme_toggle_button.dart';
+import 'widgets/ototag_brand_logo.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -3538,11 +3539,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
           extendBodyBehindAppBar: false,
           appBar: AppBar(
             automaticallyImplyLeading: false,
-            title: Image.asset(
-              'assets/images/logo.png',
-              height: 28,
-              fit: BoxFit.contain,
-            ),
+            title: const OtoTagBrandLogo(height: 30),
             backgroundColor: Theme.of(context).brightness == Brightness.light ? Colors.white : _bgColor.withValues(alpha: .94),
             elevation: 0,
             centerTitle: true,

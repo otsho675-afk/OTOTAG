@@ -22,12 +22,13 @@ class PremiumScene extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
+    final light = Theme.of(context).brightness == Brightness.light;
     final double strength = accentStrength.clamp(0.0, 1.4).toDouble();
 
     return Stack(
       fit: StackFit.expand,
       children: [
-        const ColoredBox(color: AppConstants.bgColor),
+        ColoredBox(color: light ? const Color(0xFFF6F9F6) : AppConstants.bgColor),
         Positioned.fill(
           child: DecoratedBox(
             decoration: BoxDecoration(
@@ -35,9 +36,9 @@ class PremiumScene extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  AppConstants.bgElevated.withValues(alpha: .88),
-                  AppConstants.bgColor,
-                  const Color(0xFF020403),
+                  light ? const Color(0xFFFFFFFF) : AppConstants.bgElevated.withValues(alpha: .88),
+                  light ? const Color(0xFFF4F9F5) : AppConstants.bgColor,
+                  light ? const Color(0xFFEBF4ED) : const Color(0xFF020403),
                 ],
                 stops: const [0, .48, 1],
               ),
@@ -78,7 +79,7 @@ class PremiumScene extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    Colors.white.withValues(alpha: .025),
+                    (light ? const Color(0xFF08784D) : Colors.white).withValues(alpha: .025),
                     AppConstants.primaryColor
                         .withValues(alpha: .018 * strength),
                     Colors.transparent,
@@ -125,13 +126,14 @@ class PremiumGlassPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final borderRadius = BorderRadius.circular(radius);
+    final light = Theme.of(context).brightness == Brightness.light;
     return Container(
       margin: margin,
       decoration: BoxDecoration(
         borderRadius: borderRadius,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: .34),
+            color: Colors.black.withValues(alpha: light ? .09 : .34),
             blurRadius: 28,
             offset: const Offset(0, 14),
           ),
@@ -154,15 +156,15 @@ class PremiumGlassPanel extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  const Color(0xFF171A1F).withValues(alpha: .94),
-                  const Color(0xFF0D0F13).withValues(alpha: .91),
+                  light ? Colors.white : const Color(0xFF171A1F).withValues(alpha: .94),
+                  light ? const Color(0xFFF8FBF8) : const Color(0xFF0D0F13).withValues(alpha: .91),
                 ],
               ),
               borderRadius: borderRadius,
               border: Border.all(
                 color: accent
                     ? AppConstants.primaryColor.withValues(alpha: .22)
-                    : Colors.white.withValues(alpha: .075),
+                    : (light ? const Color(0xFFC8DDCE) : Colors.white.withValues(alpha: .075)),
               ),
             ),
             child: child,

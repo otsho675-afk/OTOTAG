@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
+import '../core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -67,7 +69,7 @@ class _RentalLocationEditorState extends State<RentalLocationEditor> {
     });
     try {
       if (!await Geolocator.isLocationServiceEnabled()) {
-        throw const RentalException('Cihazın konum hizmetini açın.');
+        throw RentalException('Cihazın konum hizmetini açın.');
       }
       var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
@@ -75,12 +77,12 @@ class _RentalLocationEditorState extends State<RentalLocationEditor> {
       }
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
-        throw const RentalException(
+        throw RentalException(
             'Konum izni verilmedi. Haritadan teslim yerini seçebilirsiniz.');
       }
       final position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high,
-          timeLimit: const Duration(seconds: 15));
+          timeLimit: Duration(seconds: 15));
       if (!mounted) return;
       _select(LatLng(position.latitude, position.longitude));
     } catch (e) {
@@ -114,7 +116,7 @@ class _RentalLocationEditorState extends State<RentalLocationEditor> {
 
   @override
   Widget build(BuildContext context) {
-    final target = _point ?? const LatLng(39.0, 35.0);
+    final target = _point ?? LatLng(39.0, 35.0);
     return Theme(
         data: rentalTheme(),
         child: PopScope(
@@ -128,33 +130,33 @@ class _RentalLocationEditorState extends State<RentalLocationEditor> {
                         child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              const Text('Araç teslim konumu',
+                              Text('Araç teslim konumu',
                                   style: TextStyle(
-                                      color: Colors.white,
+                                      color: AppPalette.text,
                                       fontSize: 22,
                                       fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 8),
+                              SizedBox(height: 8),
                               Text(
                                   '${widget.city} • Müşterinin aracı teslim alacağı firma adresini seçin.',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       color: rentalMuted, height: 1.5)),
-                              const SizedBox(height: 16),
+                              SizedBox(height: 16),
                               TextFormField(
                                   controller: _address,
                                   enabled: !_busy,
                                   minLines: 2,
                                   maxLines: 3,
                                   maxLength: 500,
-                                  decoration: const InputDecoration(
+                                  decoration: InputDecoration(
                                       labelText: 'Açık teslim adresi'),
                                   validator: (s) => (s?.trim().length ?? 0) < 8
                                       ? 'Açık teslim adresini yazın.'
                                       : null),
                               OutlinedButton.icon(
                                   onPressed: _busy ? null : _locate,
-                                  icon: const Icon(Icons.my_location),
-                                  label: const Text('Konumumu kullan')),
-                              const SizedBox(height: 12),
+                                  icon: Icon(Icons.my_location),
+                                  label: Text('Konumumu kullan')),
+                              SizedBox(height: 12),
                               ClipRRect(
                                   borderRadius: BorderRadius.circular(16),
                                   child: SizedBox(
@@ -169,12 +171,12 @@ class _RentalLocationEditorState extends State<RentalLocationEditor> {
                                                   ? null
                                                   : (lat, lng) => _select(
                                                       LatLng(lat, lng))))),
-                              const SizedBox(height: 12),
-                              const Text(
+                              SizedBox(height: 12),
+                              Text(
                                   'Haritaya dokunarak teslim noktasını seçebilirsin.',
                                   style: TextStyle(
                                       color: rentalMuted, fontSize: 12)),
-                              const SizedBox(height: 12),
+                              SizedBox(height: 12),
                               Row(children: [
                                 Expanded(
                                     child: TextFormField(
@@ -183,10 +185,10 @@ class _RentalLocationEditorState extends State<RentalLocationEditor> {
                                         keyboardType: const TextInputType
                                             .numberWithOptions(
                                             decimal: true, signed: true),
-                                        decoration: const InputDecoration(
+                                        decoration: InputDecoration(
                                             labelText: 'Enlem'),
                                         onChanged: (_) => setState(() {}))),
-                                const SizedBox(width: 10),
+                                SizedBox(width: 10),
                                 Expanded(
                                     child: TextFormField(
                                         controller: _lng,
@@ -194,12 +196,12 @@ class _RentalLocationEditorState extends State<RentalLocationEditor> {
                                         keyboardType: const TextInputType
                                             .numberWithOptions(
                                             decimal: true, signed: true),
-                                        decoration: const InputDecoration(
+                                        decoration: InputDecoration(
                                             labelText: 'Boylam'),
                                         onChanged: (_) => setState(() {}))),
                               ]),
-                              const SizedBox(height: 12),
-                              const Text(
+                              SizedBox(height: 12),
+                              Text(
                                   'Konum değişikliği yeni rezervasyonlarda geçerlidir. Mevcut rezervasyonun teslim adresi korunur.',
                                   style: TextStyle(
                                       color: rentalMuted,
@@ -210,9 +212,9 @@ class _RentalLocationEditorState extends State<RentalLocationEditor> {
                                     padding: const EdgeInsets.symmetric(
                                         vertical: 12),
                                     child: Text(_error!,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                             color: Colors.redAccent))),
-                              const SizedBox(height: 16),
+                              SizedBox(height: 16),
                               FilledButton(
                                   onPressed: _busy ? null : _save,
                                   child: Text(_busy
@@ -222,7 +224,7 @@ class _RentalLocationEditorState extends State<RentalLocationEditor> {
                                   onPressed: _busy
                                       ? null
                                       : () => Navigator.pop(context),
-                                  child: const Text('Vazgeç')),
+                                  child: Text('Vazgeç')),
                             ]))))));
   }
 }

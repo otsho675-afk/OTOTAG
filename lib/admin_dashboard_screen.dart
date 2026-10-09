@@ -199,9 +199,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           borderRadius: BorderRadius.circular(18))),
       dividerTheme: const DividerThemeData(color: Color(0xFFD9E4DB)),
       chipTheme: const ChipThemeData(backgroundColor: Color(0xFFF3F7F4),
-        selectedColor: const Color(0xFFD8F2E3),
-        side: const BorderSide(color: Color(0xFFD9E4DB)),
-        labelStyle: const TextStyle(color: ink)),
+        selectedColor: Color(0xFFD8F2E3),
+        side: BorderSide(color: Color(0xFFD9E4DB)),
+        labelStyle: TextStyle(color: ink)),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(backgroundColor: green,
             foregroundColor: Colors.white)),

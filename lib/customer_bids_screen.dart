@@ -627,7 +627,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
         curve: Curves.easeOutCubic),
     );
     return FadeTransition(
-      key: ValueKey('estimate-$' + id),
+      key: ValueKey('estimate-$id'),
       opacity: anim,
       child: SlideTransition(
         position: Tween<Offset>(

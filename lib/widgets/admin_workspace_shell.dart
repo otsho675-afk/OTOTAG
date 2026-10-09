@@ -298,6 +298,111 @@ class AdminWorkspaceShell extends StatelessWidget {
     );
   }
 
+  /// Mobile section picker replaces the full-width drawer with a compact grid.
+  Future<void> _showSectionsSheet(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      backgroundColor: _side,
+      constraints: const BoxConstraints(maxWidth: 540),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(18, 0, 18, 22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(children: [
+                  _mark(size: 37),
+                  const SizedBox(width: 12),
+                  const Expanded(child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Yönetim bölümleri',
+                        style: TextStyle(
+                          color: _text, fontSize: 19,
+                          fontWeight: FontWeight.w900,
+                        )),
+                      Text('Bir bölüme dokunarak doğrudan açın',
+                        style: TextStyle(color: _sub, fontSize: 11)),
+                    ],
+                  )),
+                  IconButton(
+                    tooltip: 'Menüyü kapat',
+                    onPressed: () => Navigator.pop(sheetContext),
+                    icon: const Icon(Icons.close_rounded, color: _text),
+                  ),
+                ]),
+                const SizedBox(height: 18),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: labels.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisExtent: 84,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                  ),
+                  itemBuilder: (ctx, index) {
+                    final active = selected == index;
+                    return Material(
+                      color: active ? const Color(0xFF1D3A2A) : _surface,
+                      borderRadius: BorderRadius.circular(14),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.pop(sheetContext);
+                          onSelect(index);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: active
+                                  ? _mint.withValues(alpha: .5) : _line,
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(children: [
+                                Icon(icons[index], color: _mint, size: 21),
+                                const Spacer(),
+                                if (_badgeCount(index) > 0)
+                                  Text(_counter(_badgeCount(index)),
+                                    style: const TextStyle(color: _mint,
+                                      fontSize: 12, fontWeight: FontWeight.w900)),
+                              ]),
+                              const Spacer(),
+                              Text(labels[index],
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(color: _text,
+                                    fontSize: 13, fontWeight: FontWeight.w800)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _mobileTabs(BuildContext context) {
     final schemeIndex = switch (selected) {
       0 => 0, 2 => 1, 5 => 2, _ => 3,
@@ -330,7 +435,7 @@ class AdminWorkspaceShell extends StatelessWidget {
                   child: InkWell(
                     onTap: () {
                       if (i == 3) {
-                        Scaffold.of(barContext).openDrawer();
+                        _showSectionsSheet(barContext);
                       } else {
                         onSelect([0, 2, 5][i]);
                       }
@@ -374,28 +479,22 @@ class AdminWorkspaceShell extends StatelessWidget {
       final selectedTitle = labels[selected];
       return Scaffold(
         backgroundColor: const Color(0xFF0B120F),
-        drawer: mobile ? Drawer(
-          elevation: 22,
-          width: width > 390 ? 322 : width - 48,
-          backgroundColor: _side,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.horizontal(
-                right: Radius.circular(22)),
-          ),
-          child: _navigation(context,
-              compact: false,
-              inDrawer: true,
-              navigate: (index) {
-                Navigator.of(context).pop();
-                onSelect(index);
-              }),
-        ) : null,
+
         appBar: AppBar(
           foregroundColor: _text,
           elevation: 0,
           surfaceTintColor: Colors.transparent,
           toolbarHeight: mobile ? 70 : 79,
           backgroundColor: _ink,
+          automaticallyImplyLeading: false,
+          leading: mobile
+              ? IconButton(
+                  tooltip: 'Yönetim bölümleri',
+                  onPressed: () => _showSectionsSheet(context),
+                  icon: const Icon(Icons.dashboard_customize_outlined,
+                      color: _mint, size: 23),
+                )
+              : null,
           titleSpacing: mobile ? 0 : 20,
           title: Row(children: [
             if (!mobile) ...[

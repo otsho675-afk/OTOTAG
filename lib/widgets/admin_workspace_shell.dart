@@ -100,10 +100,26 @@ class AdminWorkspaceShell extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.symmetric(
                 horizontal: compact ? 13 : 12, vertical: 13),
-            child: Row(
-              mainAxisAlignment: compact
-                  ? MainAxisAlignment.center
-                  : MainAxisAlignment.start,
+            child: compact
+                ? Column(mainAxisSize: MainAxisSize.min, children: [
+                    _navIcon(i, selected: active),
+                    const SizedBox(height: 6),
+                    Text(
+                      labels[i],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: active
+                            ? Colors.white
+                            : const Color(0xFFB7C3BC),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ])
+                : Row(
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 _navIcon(i, selected: active),
                 if (!compact) ...[
@@ -275,7 +291,7 @@ class AdminWorkspaceShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
         builder: (context, constraints) {
-          final desktop = constraints.maxWidth >= 850;
+          final desktop = constraints.maxWidth >= 760;
           final expanded = constraints.maxWidth >= 1200;
           final mobile = !desktop;
           final scheme = Theme.of(context).colorScheme;
@@ -365,7 +381,7 @@ class AdminWorkspaceShell extends StatelessWidget {
                 children: [
                   if (desktop)
                     SizedBox(
-                      width: expanded ? 270 : 78,
+                      width: expanded ? 270 : 104,
                       child: _sidebar(
                         context,
                         compact: !expanded,

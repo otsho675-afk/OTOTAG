@@ -2900,7 +2900,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                         color: Colors.white.withValues(alpha: 0.04),
                         borderRadius: BorderRadius.circular(11),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.07),
+                          color: light ? const Color(0xFFCBE6D3) : Colors.white.withValues(alpha: 0.07),
                         ),
                       ),
                       child: const Icon(
@@ -3226,7 +3226,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 11.5,
-                            color: Colors.white.withValues(alpha: .60),
+                            color: subtitleColor,
                             height: 1.35,
                             fontWeight: FontWeight.w500,
                           ),

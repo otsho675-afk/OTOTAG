@@ -1,3 +1,5 @@
+import 'core/theme/app_palette.dart';
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
 // chat_screen.dart
 import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
@@ -106,7 +108,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   void _startFallbackPolling() {
     _fallbackPoller?.cancel();
-    _fallbackPoller = Timer.periodic(const Duration(seconds: 6), (_) {
+    _fallbackPoller = Timer.periodic(Duration(seconds: 6), (_) {
       if (mounted && !pusher.isSubscribed('private-chat_${widget.jobId}')) {
         _fetchMessages();
       }
@@ -147,7 +149,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       final response = await _httpClient
           .get(Uri.parse(
               "$baseUrl?action=get_messages&job_id=${widget.jobId}&user_id=${widget.currentUserId}&receiver_id=${widget.receiverId}"))
-          .timeout(const Duration(seconds: 15));
+          .timeout(Duration(seconds: 15));
 
       if (response.statusCode == 200 && mounted) {
         final data = json.decode(response.body);
@@ -215,7 +217,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       // Use the app client so multipart uploads carry the same session token
       // as ordinary API requests.
       final streamedResponse =
-          await _httpClient.send(request).timeout(const Duration(seconds: 30));
+          await _httpClient.send(request).timeout(Duration(seconds: 30));
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -237,10 +239,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         if (_msgController.text.isEmpty) _msgController.text = previousText;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text(
+            content: Text(
                 "Mesaj gönderilemedi, bağlantınızı kontrol edin.",
-                style: TextStyle(color: Colors.white)),
-            backgroundColor: const Color(0xFFFF3366).withValues(alpha: 0.9),
+                style: TextStyle(color: AppPalette.text)),
+            backgroundColor: Color(0xFFFF3366).withValues(alpha: 0.9),
             behavior: SnackBarBehavior.floating,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -261,7 +263,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         pickedFile = await picker.pickImage(source: source, imageQuality: 70);
       } else if (type == 'video') {
         pickedFile = await picker.pickVideo(
-            source: source, maxDuration: const Duration(seconds: 15));
+            source: source, maxDuration: Duration(seconds: 15));
       }
 
       if (pickedFile != null) {
@@ -273,10 +275,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   // Siber Tema Renk Paleti (V2 - Ultra Modern Glassmorphism)
-  static const Color neonGreen = Color(0xFF00FFA3);
-  static const Color pureBlack = AppConstants.bgColor;
-  static const Color panelBlack = AppConstants.cardColor;
-  static const Color neonCyan = AppConstants.primaryColor;
+  static Color get neonGreen => AppPalette.accent;
+  static Color get pureBlack => AppPalette.page;
+  static Color get panelBlack => AppPalette.surface;
+  static Color get neonCyan => AppPalette.accent;
   static const Color alertRed = Color(0xFFFF2A5F);
 
   @override
@@ -308,7 +310,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       reverse: true,
                       padding: const EdgeInsets.only(
                           top: 20, bottom: 20, left: 16, right: 16),
-                      physics: const BouncingScrollPhysics(),
+                      physics: BouncingScrollPhysics(),
                       itemCount: messages.length,
                       itemBuilder: (context, index) {
                         final msg = messages[index];
@@ -341,16 +343,16 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             surfaceTintColor: Colors.transparent,
             shape: Border(
                 bottom: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.05), width: 1)),
+                    color: AppPalette.text.withValues(alpha: 0.05), width: 1)),
             leading: IconButton(
               icon: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.05),
+                    color: AppPalette.text.withValues(alpha: 0.05),
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white10)),
-                child: const Icon(Icons.arrow_back_ios_new_rounded,
-                    size: 16, color: Colors.white),
+                child: Icon(Icons.arrow_back_ios_new_rounded,
+                    size: 16, color: AppPalette.text),
               ),
               onPressed: () => Navigator.pop(context),
             ),
@@ -370,10 +372,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 Expanded(
                   child: Text(
                     widget.receiverName,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontWeight: FontWeight.w900,
                         fontSize: 18,
-                        color: Colors.white,
+                        color: AppPalette.text,
                         letterSpacing: -0.3),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -470,19 +472,19 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           border: isMe
               ? null
               : Border.all(
-                  color: Colors.white.withValues(alpha: 0.08), width: 1.5),
+                  color: AppPalette.text.withValues(alpha: 0.08), width: 1.5),
           boxShadow: isMe
               ? [
                   BoxShadow(
                       color: primaryColor.withValues(alpha: 0.3),
                       blurRadius: 15,
-                      offset: const Offset(0, 5))
+                      offset: Offset(0, 5))
                 ]
               : [
                   BoxShadow(
                       color: Colors.black.withValues(alpha: 0.4),
                       blurRadius: 10,
-                      offset: const Offset(0, 5))
+                      offset: Offset(0, 5))
                 ],
         ),
         child: ClipRRect(
@@ -502,7 +504,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (hasMedia && msg['media_type'] == 'image')
-                  Padding(
+                  const Padding(
                     padding: const EdgeInsets.only(bottom: 6.0),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
@@ -518,18 +520,18 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                               Container(
                             height: 100,
                             color: Colors.white10,
-                            child: const Center(
+                            child: Center(
                                 child: Icon(Icons.broken_image,
-                                    color: Colors.white54, size: 40)),
+                                    color: AppPalette.muted, size: 40)),
                           ),
                           loadingBuilder: (context, child, loadingProgress) {
                             if (loadingProgress == null) return child;
                             return Container(
                               height: 150,
                               color: Colors.white10,
-                              child: const Center(
+                              child: Center(
                                   child: CircularProgressIndicator(
-                                      color: Colors.white54, strokeWidth: 2)),
+                                      color: AppPalette.muted, strokeWidth: 2)),
                             );
                           },
                         ),
@@ -544,16 +546,16 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       decoration: BoxDecoration(
                           color: Colors.black38,
                           borderRadius: BorderRadius.circular(12)),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.play_circle_fill_rounded,
-                              color: Colors.white, size: 28),
-                          SizedBox(width: 8),
+                              color: AppPalette.text, size: 28),
+                          const SizedBox(width: 8),
                           Flexible(
                               child: Text("Video Eki",
                                   style: TextStyle(
-                                      color: Colors.white,
+                                      color: AppPalette.text,
                                       fontWeight: FontWeight.w600),
                                   overflow: TextOverflow.ellipsis))
                         ],
@@ -565,7 +567,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   Text(
                     msg['message_text'],
                     style: TextStyle(
-                        color: isMe ? const Color(0xFF0A2B1D) : Colors.white,
+                        color: isMe ? Color(0xFF0A2B1D) : AppPalette.text,
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                         height: 1.3,
@@ -580,8 +582,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       timeString,
                       style: TextStyle(
                         color: isMe
-                            ? const Color(0xFF0A2B1D).withValues(alpha: 0.6)
-                            : Colors.white54,
+                            ? Color(0xFF0A2B1D).withValues(alpha: 0.6)
+                            : AppPalette.muted,
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                       ),
@@ -592,8 +594,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                         isRead ? Icons.done_all_rounded : Icons.check_rounded,
                         size: 14,
                         color: isRead
-                            ? const Color(0xFF0A2B1D)
-                            : const Color(0xFF0A2B1D).withValues(alpha: 0.5),
+                            ? Color(0xFF0A2B1D)
+                            : Color(0xFF0A2B1D).withValues(alpha: 0.5),
                       ),
                     ]
                   ],
@@ -612,12 +614,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         color: panelBlack.withValues(alpha: 0.75),
         border: Border(
             top: BorderSide(
-                color: Colors.white.withValues(alpha: 0.08), width: 1.5)),
+                color: AppPalette.text.withValues(alpha: 0.08), width: 1.5)),
         boxShadow: [
           BoxShadow(
               color: Colors.black.withValues(alpha: 0.5),
               blurRadius: 20,
-              offset: const Offset(0, -5))
+              offset: Offset(0, -5))
         ],
       ),
       child: ClipRect(
@@ -640,10 +642,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.05),
+                            color: AppPalette.text.withValues(alpha: 0.05),
                             shape: BoxShape.circle,
                             border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.1))),
+                                color: AppPalette.text.withValues(alpha: 0.1))),
                         child: Icon(Icons.add_rounded,
                             color: primaryColor, size: 22),
                       ),
@@ -656,7 +658,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                         color: Colors.black.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.08),
+                            color: AppPalette.text.withValues(alpha: 0.08),
                             width: 1.5),
                       ),
                       child: TextField(
@@ -664,15 +666,15 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                         enabled: !isUploading,
                         minLines: 1,
                         maxLines: 5,
-                        style: const TextStyle(
-                            color: Colors.white,
+                        style: TextStyle(
+                            color: AppPalette.text,
                             fontWeight: FontWeight.w600,
                             fontSize: 15),
                         textCapitalization: TextCapitalization.sentences,
                         decoration: InputDecoration(
                           hintText: "Mesaj gönder...",
                           hintStyle: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.4),
+                              color: AppPalette.text.withValues(alpha: 0.4),
                               fontWeight: FontWeight.w500),
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 18, vertical: 14),
@@ -688,31 +690,31 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                     child: GestureDetector(
                       onTap: _isTyping && !isUploading ? _sendMessage : null,
                       child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
+                        duration: Duration(milliseconds: 200),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: _isTyping
                               ? primaryColor
-                              : Colors.white.withValues(alpha: 0.05),
+                              : AppPalette.text.withValues(alpha: 0.05),
                           shape: BoxShape.circle,
                           border: Border.all(
                               color: _isTyping
                                   ? primaryColor
-                                  : Colors.white.withValues(alpha: 0.1)),
+                                  : AppPalette.text.withValues(alpha: 0.1)),
                           boxShadow: _isTyping
                               ? [
                                   BoxShadow(
                                       color:
                                           primaryColor.withValues(alpha: 0.4),
                                       blurRadius: 12,
-                                      offset: const Offset(0, 4))
+                                      offset: Offset(0, 4))
                                 ]
                               : [],
                         ),
                         child: Icon(Icons.send_rounded,
                             color: _isTyping
-                                ? const Color(0xFF0A2B1D)
-                                : Colors.white54,
+                                ? Color(0xFF0A2B1D)
+                                : AppPalette.muted,
                             size: 20),
                       ),
                     ),
@@ -739,7 +741,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(32)),
               border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.08), width: 1.5)),
+                  color: AppPalette.text.withValues(alpha: 0.08), width: 1.5)),
           child: SafeArea(
             child: Wrap(
               children: [
@@ -750,14 +752,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                           width: 48,
                           height: 5,
                           decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
+                              color: AppPalette.text.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(10)))),
                 ),
-                const Padding(
+                Padding(
                   padding: EdgeInsets.only(left: 24, bottom: 12),
                   child: Text("Medya Gönder",
                       style: TextStyle(
-                          color: Colors.white,
+                          color: AppPalette.text,
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
                           letterSpacing: -0.5)),
@@ -775,9 +777,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                     child: Icon(Icons.camera_alt_rounded,
                         color: primaryColor, size: 22),
                   ),
-                  title: const Text("Fotoğraf Çek",
+                  title: Text("Fotoğraf Çek",
                       style: TextStyle(
-                          color: Colors.white,
+                          color: AppPalette.text,
                           fontSize: 15,
                           fontWeight: FontWeight.w700)),
                   onTap: () {
@@ -795,12 +797,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                         shape: BoxShape.circle,
                         border:
                             Border.all(color: neonCyan.withValues(alpha: 0.3))),
-                    child: const Icon(Icons.image_rounded,
+                    child: Icon(Icons.image_rounded,
                         color: neonCyan, size: 22),
                   ),
-                  title: const Text("Galeriden Seç",
+                  title: Text("Galeriden Seç",
                       style: TextStyle(
-                          color: Colors.white,
+                          color: AppPalette.text,
                           fontSize: 15,
                           fontWeight: FontWeight.w700)),
                   onTap: () {
@@ -818,12 +820,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                         shape: BoxShape.circle,
                         border:
                             Border.all(color: alertRed.withValues(alpha: 0.3))),
-                    child: const Icon(Icons.videocam_rounded,
+                    child: Icon(Icons.videocam_rounded,
                         color: alertRed, size: 22),
                   ),
-                  title: const Text("Video Çek",
+                  title: Text("Video Çek",
                       style: TextStyle(
-                          color: Colors.white,
+                          color: AppPalette.text,
                           fontSize: 15,
                           fontWeight: FontWeight.w700)),
                   onTap: () {
@@ -831,7 +833,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                     _pickMedia(ImageSource.camera, 'video');
                   },
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
               ],
             ),
           ),

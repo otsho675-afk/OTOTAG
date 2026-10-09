@@ -1296,17 +1296,18 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     TextInputAction textInputAction = TextInputAction.next,
     VoidCallback? onEditingComplete,
   }) {
+    final light = Theme.of(context).brightness == Brightness.light;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       decoration: BoxDecoration(
-        color: focusNode.hasFocus
+        color: light ? Colors.white : (focusNode.hasFocus
             ? Colors.white.withValues(alpha: 0.06)
-            : Colors.white.withValues(alpha: 0.03),
+            : Colors.white.withValues(alpha: 0.03)),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: focusNode.hasFocus
               ? neonGreen
-              : Colors.white.withValues(alpha: 0.05),
+              : (light ? const Color(0xFFD5E2D8) : Colors.white.withValues(alpha: 0.05)),
           width: focusNode.hasFocus ? 1.5 : 1.0,
         ),
       ),
@@ -1325,12 +1326,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             autofillHints: autofillHints,
             onEditingComplete:
                 onEditingComplete ?? () => FocusScope.of(context).nextFocus(),
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600, fontSize: 15),
             decoration: InputDecoration(
               labelText: label,
               labelStyle: TextStyle(
-                  color: focusNode.hasFocus ? neonGreen : textGray,
+                  color: focusNode.hasFocus ? (light ? const Color(0xFF08784D) : neonGreen) : (light ? const Color(0xFF52665A) : textGray),
                   fontSize: 13,
                   fontWeight: FontWeight.w500),
               prefixIcon: Padding(
@@ -1374,11 +1375,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   Widget _buildCitySelectorTile() {
+    final light = Theme.of(context).brightness == Brightness.light;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
+        color: light ? Colors.white : Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: light ? const Color(0xFFD5E2D8) : Colors.white.withValues(alpha: 0.05)),
       ),
       child: Material(
         color: Colors.transparent,
@@ -1429,11 +1431,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   Widget _buildGlassDropdown(String label, IconData icon, String? value,
       List<DropdownMenuItem<String>> items, Function(String?) onChanged) {
+    final light = Theme.of(context).brightness == Brightness.light;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
+        color: light ? Colors.white : Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: light ? const Color(0xFFD5E2D8) : Colors.white.withValues(alpha: 0.05)),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
@@ -1444,9 +1447,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             initialValue: value,
             icon:
                 const Icon(Icons.keyboard_arrow_down_rounded, color: neonGreen),
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
-            dropdownColor: panelBlack,
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600, fontSize: 15),
+            dropdownColor: light ? Colors.white : panelBlack,
             decoration: InputDecoration(
               labelText: label,
               labelStyle: const TextStyle(

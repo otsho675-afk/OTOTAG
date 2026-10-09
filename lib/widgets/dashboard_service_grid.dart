@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/constants/app_constants.dart';
+import '../core/theme/app_palette.dart';
 import '../core/theme/app_motion.dart';
 
 class DashboardServiceGrid extends StatelessWidget {
@@ -88,7 +89,7 @@ class DashboardServiceGrid extends StatelessWidget {
                                       gradient: LinearGradient(
                                         colors: [
                                           Colors.transparent,
-                                          AppConstants.primaryColor
+                                          AppPalette.accent
                                               .withValues(alpha: .46),
                                           Colors.transparent,
                                         ],
@@ -106,7 +107,7 @@ class DashboardServiceGrid extends StatelessWidget {
                                       shape: BoxShape.circle,
                                       gradient: RadialGradient(
                                         colors: [
-                                          AppConstants.primaryColor
+                                          AppPalette.accent
                                               .withValues(alpha: .075),
                                           Colors.transparent,
                                         ],
@@ -132,22 +133,19 @@ class DashboardServiceGrid extends StatelessWidget {
                                                 begin: Alignment.topLeft,
                                                 end: Alignment.bottomRight,
                                                 colors: [
-                                                  AppConstants.primaryColor
-                                                      .withValues(alpha: .18),
-                                                  AppConstants.primaryColor
+                                                  AppPalette.accentSoft,
+                                                  AppPalette.accent
                                                       .withValues(alpha: .055),
                                                 ],
                                               ),
                                               borderRadius:
                                                   BorderRadius.circular(14),
                                               border: Border.all(
-                                                color: AppConstants.primaryColor
-                                                    .withValues(alpha: .20),
+                                                color: AppPalette.accentBorder,
                                               ),
                                               boxShadow: [
                                                 BoxShadow(
-                                                  color: AppConstants
-                                                      .primaryColor
+                                                  color: AppPalette.accent
                                                       .withValues(alpha: .06),
                                                   blurRadius: 14,
                                                 ),
@@ -156,7 +154,7 @@ class DashboardServiceGrid extends StatelessWidget {
                                             child: Icon(
                                               services[index]['icon']
                                                   as IconData,
-                                              color: light ? const Color(0xFF08784D) : AppConstants.primaryColor,
+                                              color: AppPalette.accent,
                                               size: 22,
                                             ),
                                           ),
@@ -194,7 +192,7 @@ class DashboardServiceGrid extends StatelessWidget {
                                           const SizedBox(width: 5),
                                           Icon(
                                             Icons.arrow_outward_rounded,
-                                            color: light ? const Color(0xFF08784D) : AppConstants.primaryColor,
+                                            color: AppPalette.accent,
                                             size: 13,
                                           ),
                                         ],

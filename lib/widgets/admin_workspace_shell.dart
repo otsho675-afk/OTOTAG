@@ -329,7 +329,7 @@ class AdminWorkspaceShell extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(right: 12),
                   child: IconButton.filledTonal(
-                    tooltip: 'Bu bölümün verilerini yenile',
+                    tooltip: 'Verileri yenile',
                     onPressed: loading ? null : onRefresh,
                     icon: const Icon(Icons.refresh_rounded, size: 20),
                   ),
@@ -391,7 +391,7 @@ class AdminWorkspaceShell extends StatelessWidget {
                     final destination = switch (selected) {
                       0 => 0,
                       2 => 1,
-                      1 => 2,
+                      5 => 2,
                       _ => 3,
                     };
                     return NavigationBar(
@@ -401,7 +401,7 @@ class AdminWorkspaceShell extends StatelessWidget {
                         if (index == 3) {
                           Scaffold.of(scaffoldContext).openDrawer();
                         } else {
-                          onSelect([0, 2, 1][index]);
+                          onSelect([0, 2, 5][index]);
                         }
                       },
                       destinations: [
@@ -415,9 +415,10 @@ class AdminWorkspaceShell extends StatelessWidget {
                           selectedIcon: Icon(Icons.groups_rounded),
                           label: 'Üyeler',
                         ),
-                        NavigationDestination(
-                          icon: _navIcon(1, selected: destination == 2),
-                          label: 'Onaylar',
+                        const NavigationDestination(
+                          icon: Icon(Icons.system_update_alt_outlined),
+                          selectedIcon: Icon(Icons.system_update_alt_rounded),
+                          label: 'Güncelleme',
                         ),
                         NavigationDestination(
                           icon: Badge(

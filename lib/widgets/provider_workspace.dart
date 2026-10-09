@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../core/constants/app_constants.dart';
 import '../core/theme/app_motion.dart';
+import 'app_theme_toggle_button.dart';
 
 class ProviderStatusHeader extends StatelessWidget {
   const ProviderStatusHeader(
@@ -84,6 +85,7 @@ class ProviderStatusHeader extends StatelessWidget {
               ),
             ),
           ),
+          const AppThemeToggleButton(),
           const SizedBox(width: 7),
           Switch.adaptive(
               value: online,
@@ -119,9 +121,9 @@ class ProviderNavigationBar extends StatelessWidget {
   final int selected;
   @override
   Widget build(BuildContext context) => Container(
-      decoration: const BoxDecoration(
-          color: AppConstants.cardColor,
-          border: Border(top: BorderSide(color: AppConstants.borderColor))),
+      decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          border: Border(top: BorderSide(color: Theme.of(context).dividerColor))),
       child: SafeArea(
           top: false,
           child: Center(
@@ -190,13 +192,14 @@ class ProviderOfflineDashboard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Row(children: [
-                          const Expanded(
+                          Expanded(
                             child: Text('Usta paneli',
                                 style: TextStyle(
-                                    color: Colors.white,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                     fontSize: 28,
                                     fontWeight: FontWeight.w700)),
                           ),
+                          const AppThemeToggleButton(),
                           Tooltip(
                             message: 'Hızlı çıkış',
                             child: OutlinedButton.icon(
@@ -263,7 +266,7 @@ class ProviderOfflineDashboard extends StatelessWidget {
                         Container(
                             padding: const EdgeInsets.all(24),
                             decoration: BoxDecoration(
-                                color: AppConstants.cardColor,
+                                color: Theme.of(context).colorScheme.surface,
                                 borderRadius: BorderRadius.circular(24),
                                 border: Border.all(
                                     color: AppConstants.borderColor)),

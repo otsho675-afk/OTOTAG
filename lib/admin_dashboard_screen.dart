@@ -12,7 +12,7 @@ import 'dart:ui';
 import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'core/theme/app_theme_state.dart';
 import 'login_screen.dart';
 import 'widgets/admin_workspace_shell.dart';
 import 'widgets/admin_update_panel.dart';
@@ -36,7 +36,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool isLoading = true;
   int _selectedIndex = 0;
   bool _lightAdminTheme = false;
-  static const _adminThemeKey = 'oto_tag_admin_light_theme';
   final _updatesKey = GlobalKey<AdminUpdatePanelState>();
   
   String userSearchQuery = "";
@@ -128,7 +127,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void initState() {
     super.initState();
     _fetchAllData();
-    unawaited(_restoreAdminTheme());
+    _lightAdminTheme = AppThemeState.light.value;
+    AppThemeState.light.addListener(_onGlobalThemeChanged);
     _settingsRefreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
       if (mounted && _selectedIndex == 6 && !_refreshing &&
           !_pendingReads.containsKey('get_all_users')) {
@@ -137,30 +137,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     });
   }
 
-  Future<void> _restoreAdminTheme() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (mounted) {
-        setState(() =>
-            _lightAdminTheme = prefs.getBool(_adminThemeKey) ?? false);
-      }
-    } catch (_) {
-      // Local persistence is optional; dark remains the default.
+  void _onGlobalThemeChanged() {
+    if (mounted && _lightAdminTheme != AppThemeState.light.value) {
+      setState(() => _lightAdminTheme = AppThemeState.light.value);
     }
   }
 
   Future<void> _toggleAdminTheme() async {
     final value = !_lightAdminTheme;
     setState(() => _lightAdminTheme = value);
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_adminThemeKey, value);
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tema seçimi bu cihazda kaydedilemedi.')),
-        );
-      }
+    if (!await AppThemeState.setLight(value) && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tema seçimi bu cihazda kaydedilemedi.')),
+      );
     }
   }
 
@@ -300,6 +289,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   void _searchParts(String query) {
     setState(() => partSearchQuery = query);
+    AppThemeState.light.removeListener(_onGlobalThemeChanged);
     _partSearchDebounce?.cancel();
     _partsGeneration++;
     _partSearchDebounce = Timer(const Duration(milliseconds: 300), () => unawaited(_fetchPartListings()));

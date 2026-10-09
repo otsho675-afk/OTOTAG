@@ -192,18 +192,27 @@ function handleAdminConsoleAction(PDO $pdo, $action, $method) {
             adminConsoleLog($pdo,$userId,'admin',$actor['user_id'],'Araç güncellendi #'.$vehicleId);
         } elseif ($action==='admin_delete_vehicle_record') {
             $recordId=adminConsoleId($input['record_id'] ?? null);
+            $files=$pdo->prepare("SELECT document_url,image_url FROM vehicle_records WHERE id=? AND vehicle_id=?");
+            $files->execute([$recordId,$vehicleId]);
+            $fileRow=$files->fetch(PDO::FETCH_ASSOC);
+            if (!$fileRow) sendResponse(404,['status'=>'error','message'=>'Araç kaydı bulunamadı.']);
             $stmt=$pdo->prepare("DELETE FROM vehicle_records WHERE id=? AND vehicle_id=?");
             $stmt->execute([$recordId,$vehicleId]);
-            if (!$stmt->rowCount()) sendResponse(404,['status'=>'error','message'=>'Araç kaydı bulunamadı.']);
+            foreach (['document_url','image_url'] as $key) deletePhysicalFile($fileRow[$key] ?? null);
             adminConsoleLog($pdo,$userId,'admin',$actor['user_id'],'Araç kaydı silindi #'.$recordId);
         } elseif ($action==='admin_delete_vehicle') {
-            // Kayıtların ilişkilendirmesi temizlenir; dosyalar mevcut silme akışında ayrıca ele alınır.
+            $fileStmt=$pdo->prepare("SELECT document_url,image_url FROM vehicle_records WHERE vehicle_id=?");
+            $fileStmt->execute([$vehicleId]);
+            $files=$fileStmt->fetchAll(PDO::FETCH_ASSOC);
             $pdo->beginTransaction();
             try {
                 $pdo->prepare("DELETE FROM vehicle_records WHERE vehicle_id=?")->execute([$vehicleId]);
                 $pdo->prepare("DELETE FROM vehicles WHERE id=? AND customer_id=?")->execute([$vehicleId,$userId]);
                 $pdo->commit();
             } catch(Throwable $e) { $pdo->rollBack(); throw $e; }
+            foreach ($files as $fileRow) {
+                foreach (['document_url','image_url'] as $key) deletePhysicalFile($fileRow[$key] ?? null);
+            }
             adminConsoleLog($pdo,$userId,'admin',$actor['user_id'],'Araç silindi #'.$vehicleId);
         }
     }

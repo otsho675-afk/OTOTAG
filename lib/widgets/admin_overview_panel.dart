@@ -68,7 +68,12 @@ class AdminOverviewPanel extends StatelessWidget {
                   const SizedBox(height: 13),
                   _shortcutGrid(context, pendingCount: pending.length,
                       openCount: open.length),
-                  const SizedBox(height: 23),
+                  const SizedBox(height: 21),
+                  _sectionHeader('YÖNETİM', 'İşlem merkezi',
+                      'Her yönetim aracına doğrudan erişin.'),
+                  const SizedBox(height: 12),
+                  _commandGrid(),
+                  const SizedBox(height: 24),
                   _sectionHeader('CANLI GÖRÜNÜM', 'İşletme özeti',
                       'Veriler mevcut sunucu kayıtlarından alınır.'),
                   const SizedBox(height: 12),
@@ -185,26 +190,6 @@ class AdminOverviewPanel extends StatelessWidget {
                     })
                   else if (dashboardReady && ticketsReady)
                     _emptyMini('Bekleyen başvuru veya açık destek talebi yok.'),
-                  const SizedBox(height: 28),
-                  _sectionHeader('YÖNETİM ARAÇLARI', 'Hızlı erişim',
-                      'Sık kullanılan işlemlere tek dokunuşla ulaşın.'),
-                  const SizedBox(height: 12),
-                  LayoutBuilder(builder: (context, constraints) {
-                    final columns = constraints.maxWidth >= 1020
-                        ? 3 : constraints.maxWidth >= 680 ? 2 : 1;
-                    final width =
-                        (constraints.maxWidth - (columns - 1) * 12) / columns;
-                    return Wrap(spacing: 12, runSpacing: 12, children: [
-                      for (final command in commands)
-                        SizedBox(width: width,
-                          child: _quickCommand(
-                            title: command.title,
-                            detail: command.subtitle,
-                            icon: command.icon,
-                            onTap: () => onCommand(command.id),
-                          )),
-                    ]);
-                  }),
                   const SizedBox(height: 28),
                   _sectionHeader('HAREKETLER', 'Son servis talepleri',
                       'Sunucudaki en güncel 100 kaydın son 5 tanesi.',
@@ -515,6 +500,31 @@ class AdminOverviewPanel extends StatelessWidget {
     });
   }
 
+  /// A compact responsive matrix, not a tall single-column list of buttons.
+  /// Its width is computed from the actual viewport, not the device width.
+  Widget _commandGrid() => LayoutBuilder(
+    builder: (context, constraints) {
+      final columns = constraints.maxWidth >= 1050
+          ? 4 : constraints.maxWidth >= 680 ? 3 : 2;
+      const gap = 10.0;
+      final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+      final compact = constraints.maxWidth < 680;
+      return Wrap(spacing: gap, runSpacing: gap, children: [
+        for (final command in commands)
+          SizedBox(
+            width: width,
+            child: _quickCommand(
+              title: command.title,
+              detail: command.subtitle,
+              icon: command.icon,
+              compact: compact,
+              onTap: () => onCommand(command.id),
+            ),
+          ),
+      ]);
+    },
+  );
+
   Widget _heroPill(IconData icon, String label, VoidCallback onTap) =>
       Material(
         color: Colors.white.withValues(alpha: .08),
@@ -743,47 +753,96 @@ class AdminOverviewPanel extends StatelessWidget {
     );
 
   Widget _quickCommand({
-    required String title, required String detail,
-    required IconData icon, required VoidCallback onTap,
-  }) => Material(
-    color: _card,
-    borderRadius: BorderRadius.circular(17),
-    clipBehavior: Clip.antiAlias,
-    child: InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(17),
-          border: Border.all(color: _stroke),
-        ),
-        child: Row(children: [
-          Container(width: 45, height: 45,
-            decoration: BoxDecoration(
-              color: _mint.withValues(alpha: .10),
-              borderRadius: BorderRadius.circular(13),
-            ),
-            child: Icon(icon, color: _mint, size: 22),
+    required String title,
+    required String detail,
+    required IconData icon,
+    required VoidCallback onTap,
+    bool compact = false,
+  }) {
+    return Material(
+      color: _card,
+      borderRadius: BorderRadius.circular(17),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          constraints: BoxConstraints(minHeight: compact ? 104 : 93),
+          padding: EdgeInsets.all(compact ? 11 : 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(17),
+            border: Border.all(color: _stroke),
           ),
-          const SizedBox(width: 12),
-          Expanded(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: _white, fontSize: 13, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 4),
-              Text(detail, maxLines: 2, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: _muted, fontSize: 10)),
-            ],
-          )),
-          const SizedBox(width: 8),
-          const Icon(Icons.arrow_forward_ios_rounded,
-              color: _muted, size: 14),
-        ]),
+          child: compact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(children: [
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: _mint.withValues(alpha: .14),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(icon, color: _mint, size: 19),
+                      ),
+                      const Spacer(),
+                      const Icon(Icons.north_east_rounded,
+                          color: _muted, size: 15),
+                    ]),
+                    const SizedBox(height: 10),
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: _white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                )
+              : Row(children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: _mint.withValues(alpha: .11),
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    child: Icon(icon, color: _mint, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              color: _white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 4),
+                      Text(detail,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              color: _muted, fontSize: 10)),
+                    ],
+                  )),
+                  const SizedBox(width: 5),
+                  const Icon(Icons.arrow_forward_ios_rounded,
+                      color: _muted, size: 13),
+                ]),
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   Widget _emptyMini(String message) =>
     Container(

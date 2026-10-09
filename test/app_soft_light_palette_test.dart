@@ -42,8 +42,9 @@ void main() {
       ),
     ));
     await tester.pumpAndSettle();
-    final button = tester.widget<FilledButton>(find.byType(FilledButton));
-    expect(button.style?.backgroundColor?.resolve({}), AppPalette.accent);
+    final element = tester.element(find.byType(FilledButton));
+    final style = Theme.of(element).filledButtonTheme.style;
+    expect(style?.backgroundColor?.resolve({}), AppPalette.accent);
     expect(tester.takeException(), isNull);
   });
 }

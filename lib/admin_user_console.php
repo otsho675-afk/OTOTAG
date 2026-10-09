@@ -36,16 +36,25 @@ function adminConsoleTrackLogin(PDO $pdo, $userId, $kind = 'password') {
 
 function adminConsoleTrackSeen(PDO $pdo, $userId, $action, $method) {
     try {
-        // Telemetri/giriş ayrı kaydedilir; gereksiz konum/poll kayıtları yazılmaz.
-        $pdo->prepare("INSERT IGNORE INTO user_access_state (user_id,last_seen_at) VALUES (?,NOW())")
-            ->execute([(int)$userId]);
-        $pdo->prepare("UPDATE user_access_state SET last_seen_at=NOW()
-            WHERE user_id=? AND (last_seen_at IS NULL OR last_seen_at < NOW() - INTERVAL 90 SECOND)")
-            ->execute([(int)$userId]);
+        // Sık polling istekleri erişim bilgisini sürekli yeniden yazmasın.
+        $touch=true;
+        $redis=$GLOBALS['redis'] ?? null;
+        if ($redis) {
+            $key='ototag_last_seen_'.(int)$userId;
+            if ($redis->exists($key)) $touch=false;
+            else $redis->setex($key,90,'1');
+        }
+        if ($touch) {
+            $pdo->prepare("INSERT INTO user_access_state (user_id,last_seen_at)
+                VALUES (?,NOW()) ON DUPLICATE KEY UPDATE
+                last_seen_at=IF(last_seen_at IS NULL OR last_seen_at<NOW()-INTERVAL 90 SECOND,NOW(),last_seen_at)")
+                ->execute([(int)$userId]);
+        }
+        // Bu kayıt işlemin tamamlandığını değil, sunucuya istek gönderildiğini gösterir.
         if ($method === 'POST' && !in_array($action, ['update_location','mark_read','mark_notif_read','check_unread_messages','log_telemetry'],true)) {
             adminConsoleLog($pdo, (int)$userId, 'user', (int)$userId, 'İstek: '.substr((string)$action,0,88));
         }
-    } catch (Throwable $e) { /* Eski kurulumda tablo henüz oluşmamış olabilir. */ }
+    } catch (Throwable $e) { /* İzleme hatası işlevsel API çağrısını durdurmamalı. */ }
 }
 
 function adminConsoleLog(PDO $pdo, $userId, $actorType, $actorId, $event) {

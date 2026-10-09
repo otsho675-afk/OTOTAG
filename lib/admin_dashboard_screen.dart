@@ -3344,7 +3344,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(children: [
             _buildDataFeedback(),
-            Expanded(child: firstLoad && (_loadingSections.contains(_selectedIndex) || hasErrors)
+            Expanded(child: _selectedIndex != 6 && firstLoad && (_loadingSections.contains(_selectedIndex) || hasErrors)
                 ? Center(child: hasErrors
                     ? const Padding(padding: EdgeInsets.all(24), child: Text('Bu bölümün verileri yüklenemedi. Yukarıdan tekrar deneyebilirsiniz.'))
                     : const CircularProgressIndicator())
@@ -3575,6 +3575,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       bool matchesType = false;
       if (userFilter == 'all') {
         matchesType = true;
+      } else if (userFilter == 'online') {
+        final age = adminLastActivitySeconds(
+            Map<String, dynamic>.from(user),
+            now: DateTime.now(),
+            fetchedAt: _updatedAt['get_all_users']);
+        matchesType = user['status'] == 'active' &&
+            !(user['is_suspended'] == 1 ||
+              user['is_suspended'] == '1' ||
+              user['is_suspended'] == true) &&
+            age != null && age >= 0 && age <= 300;
       } else if (userFilter == 'premium') {
         matchesType = (user['is_premium'] == 1 || user['is_premium'] == '1');
       } else if (userFilter == 'banned') {
@@ -3600,6 +3610,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return AdminMembersPanel(
       users: filteredUsers.map((entry) => Map<String, dynamic>.from(entry as Map)).toList(),
       total: allUsers.length,
+      activityFetchedAt: _updatedAt['get_all_users'],
       hiddenCount: hiddenUsers.length,
       searchController: _userSearchCtrl,
       query: userSearchQuery,

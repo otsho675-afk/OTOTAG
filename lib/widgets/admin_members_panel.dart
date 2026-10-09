@@ -363,6 +363,6 @@ class AdminMembersPanel extends StatelessWidget {
                 child:Padding(padding:EdgeInsets.only(bottom:table?0:10),
                   child:table?desktopRow(users[index]):mobileCard(users[index])))))),
         ],
-      ])));
+      ]));
   });
 }

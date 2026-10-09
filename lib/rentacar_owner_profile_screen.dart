@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
+import 'core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'business_subscription_screen.dart';
 import 'diagnostic_screen.dart';
@@ -70,31 +72,31 @@ class _RentacarOwnerProfileScreenState
   Widget build(BuildContext context) => Theme(
       data: rentalTheme(),
       child: Scaffold(
-          appBar: AppBar(title: const Text('Firma hesabım')),
+          appBar: AppBar(title: Text('Firma hesabım')),
           body: SafeArea(
               child: Center(
                   child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 760),
+                      constraints: BoxConstraints(maxWidth: 760),
                       child: RefreshIndicator(
                           onRefresh: _load,
                           child: ListView(
                               padding: const EdgeInsets.all(20),
-                              physics: const AlwaysScrollableScrollPhysics(),
+                              physics: AlwaysScrollableScrollPhysics(),
                               children: [
-                                if (_loading) const LinearProgressIndicator(),
+                                if (_loading) LinearProgressIndicator(),
                                 if (_error != null) ...[
                                   Text(_error!,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                           color: Colors.redAccent)),
                                   TextButton(
                                       onPressed: _load,
-                                      child: const Text('Tekrar dene'))
+                                      child: Text('Tekrar dene'))
                                 ],
                                 if (_profile != null) ...[
                                   Container(
                                       padding: const EdgeInsets.all(20),
                                       decoration: BoxDecoration(
-                                          color: AppConstants.cardColor,
+                                          color: AppPalette.surface,
                                           borderRadius:
                                               BorderRadius.circular(20),
                                           border:
@@ -103,23 +105,23 @@ class _RentacarOwnerProfileScreenState
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                            const Icon(
+                                            Icon(
                                                 Icons.storefront_outlined,
                                                 size: 38,
                                                 color:
-                                                    AppConstants.primaryColor),
-                                            const SizedBox(height: 16),
+                                                    AppPalette.accent),
+                                            SizedBox(height: 16),
                                             Text('${_profile!['name']}',
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                     fontSize: 25,
                                                     fontWeight:
                                                         FontWeight.w700)),
-                                            const SizedBox(height: 12),
+                                            SizedBox(height: 12),
                                             Wrap(
                                                 spacing: 8,
                                                 runSpacing: 8,
                                                 children: [
-                                                  const RentalTag(
+                                                  RentalTag(
                                                       'Rent A Car • Firma hesabı',
                                                       accent: true),
                                                   RentalTag(
@@ -127,48 +129,48 @@ class _RentacarOwnerProfileScreenState
                                                       icon: Icons
                                                           .location_on_outlined)
                                                 ]),
-                                            const SizedBox(height: 16),
+                                            SizedBox(height: 16),
                                             Text(
                                                 'Telefon: ${_profile!['phone'] ?? '—'}',
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                     color: rentalMuted)),
-                                            const SizedBox(height: 12),
-                                            const Text('Teslim konumu linki',
+                                            SizedBox(height: 12),
+                                            Text('Teslim konumu linki',
                                                 style: TextStyle(
                                                     fontWeight:
                                                         FontWeight.w700)),
-                                            const SizedBox(height: 6),
+                                            SizedBox(height: 6),
                                             Text(
                                                 '${_profile!['map_link'] ?? 'Profilinden konum linki ekle'}',
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                     color: rentalMuted,
                                                     height: 1.5)),
-                                            const SizedBox(height: 16),
+                                            SizedBox(height: 16),
                                             OutlinedButton.icon(
                                                 onPressed: () => _open(
                                                     ProfileScreen(
                                                         userId:
                                                             widget.companyId,
                                                         userType: 'rentacar')),
-                                                icon: const Icon(
+                                                icon: Icon(
                                                     Icons.edit_outlined,
                                                     size: 18),
-                                                label: const Text(
+                                                label: Text(
                                                     'Firma bilgileri ve konum linkini düzenle')),
                                           ])),
-                                  const SizedBox(height: 16),
+                                  SizedBox(height: 16),
                                   ListTile(
                                       shape: RoundedRectangleBorder(
                                           borderRadius:
                                               BorderRadius.circular(16),
-                                          side: const BorderSide(
+                                          side: BorderSide(
                                               color: rentalBorder)),
-                                      tileColor: AppConstants.cardColor,
+                                      tileColor: AppPalette.surface,
                                       contentPadding: const EdgeInsets.all(16),
-                                      leading: const Icon(
+                                      leading: Icon(
                                           Icons.workspace_premium_outlined,
-                                          color: AppConstants.primaryColor),
-                                      title: const Text('Aylık aboneliğim',
+                                          color: AppPalette.accent),
+                                      title: Text('Aylık aboneliğim',
                                           style: TextStyle(
                                               fontWeight: FontWeight.w700)),
                                       subtitle: Text(
@@ -178,28 +180,28 @@ class _RentacarOwnerProfileScreenState
                                                       true
                                                   ? 'Abonelik aktif'
                                                   : 'Abonelik yenilenmeli',
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                               color: rentalMuted)),
-                                      trailing: const Icon(Icons.chevron_right),
+                                      trailing: Icon(Icons.chevron_right),
                                       onTap: () => _open(
                                           BusinessSubscriptionScreen(
                                               userId: widget.companyId,
                                               service: _service))),
-                                  const SizedBox(height: 12),
+                                  SizedBox(height: 12),
                                   OutlinedButton.icon(
                                       onPressed: () => _open(
-                                          const DiagnosticScreen(
+                                          DiagnosticScreen(
                                               userType: 'rentacar')),
                                       icon:
-                                          const Icon(Icons.car_repair_outlined),
-                                      label: const Text(
+                                          Icon(Icons.car_repair_outlined),
+                                      label: Text(
                                           'Araç arıza tespit • Üyeliğe dahil')),
-                                  const SizedBox(height: 24),
-                                  const Text('Müşterilerinin değerlendirmeleri',
+                                  SizedBox(height: 24),
+                                  Text('Müşterilerinin değerlendirmeleri',
                                       style: TextStyle(
                                           fontSize: 20,
                                           fontWeight: FontWeight.w700)),
-                                  const SizedBox(height: 12),
+                                  SizedBox(height: 12),
                                   RentalReputationSummary(
                                       reputation: Map<String, dynamic>.from(
                                           _public!['reputation'])),
@@ -208,15 +210,15 @@ class _RentacarOwnerProfileScreenState
                                     RentalReviewCard(
                                         review:
                                             Map<String, dynamic>.from(review)),
-                                  const SizedBox(height: 16),
+                                  SizedBox(height: 16),
                                   OutlinedButton.icon(
                                       onPressed: () => _open(
                                           RentacarCompanyProfileScreen(
                                               companyId: widget.companyId,
                                               service: _service)),
                                       icon:
-                                          const Icon(Icons.visibility_outlined),
-                                      label: const Text(
+                                          Icon(Icons.visibility_outlined),
+                                      label: Text(
                                           'Müşteride görünen profil ve tüm yorumlar')),
                                 ],
                               ])))))));

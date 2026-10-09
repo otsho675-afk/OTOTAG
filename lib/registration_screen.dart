@@ -2235,8 +2235,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                         overflow: TextOverflow.ellipsis,
                                         textAlign: TextAlign.right,
                                         style: TextStyle(
-                                          color: Colors.white.withValues(
-                                              alpha: 0.72),
+                                          color: light ? const Color(0xFF596C5F) : Colors.white.withValues(alpha: 0.72),
                                           fontSize: 11,
                                           fontWeight: FontWeight.w700,
                                         ),
@@ -2299,7 +2298,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           color: light ? Colors.white : panelBlack.withValues(alpha: 0.97),
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.065),
+                            color: light ? const Color(0xFFD9E6DB) : Colors.white.withValues(alpha: 0.065),
                           ),
                         ),
                         child: Column(
@@ -2315,7 +2314,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                       onPressed:
                                           isRegistering ? null : _prevStep,
                                       style: OutlinedButton.styleFrom(
-                                        foregroundColor: Colors.white,
+                                        foregroundColor: light ? const Color(0xFF15231B) : Colors.white,
                                         padding: EdgeInsets.zero,
                                         side: BorderSide(
                                           color: Colors.white

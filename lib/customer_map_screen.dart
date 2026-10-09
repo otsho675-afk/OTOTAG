@@ -7,6 +7,7 @@ import 'package:geocoding/geocoding.dart' as geocoding;
 import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_palette.dart';
+import 'services/google_maps_bootstrap.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -98,6 +99,8 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
       .Client(); // Port tükenmesini (Socket Exhaustion) engelleyen bağlantı havuzu
   late final String googleApiKey;
   bool _isMapReady = false;
+  bool _isWebMapReady = !kIsWeb;
+  bool _webMapFailed = false;
 
   // Kurumsal Güven Paleti (Slate & Sertifikalı Zümrüt Yeşili)
   static Color get neonGreen => AppPalette.accent;
@@ -116,6 +119,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
   void initState() {
     super.initState();
     googleApiKey = AppConstants.googleMapsKey;
+    unawaited(_loadWebMap());
     WidgetsBinding.instance.addObserver(this);
     selectedService = widget.initialService;
     if (widget.initialProblem?.trim().isNotEmpty == true) {
@@ -140,6 +144,15 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
     _initLocationStream();
     _initCompassStream();
     _checkVehicleReminders();
+  }
+
+  Future<void> _loadWebMap() async {
+    final ready = !kIsWeb || await ensureGoogleMapsReady(googleApiKey);
+    if (!mounted) return;
+    setState(() {
+      _isWebMapReady = ready;
+      _webMapFailed = !ready;
+    });
   }
 
   void _animatedMapMove(LatLng destLocation, double destZoom,
@@ -1081,6 +1094,43 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
               resizeToAvoidBottomInset: false,
               body: Stack(
                 children: [
+                  if (kIsWeb && !_isWebMapReady)
+                    Positioned.fill(
+                      child: ColoredBox(
+                        color: AppPalette.page,
+                        child: Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(24),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.map_outlined, size: 48,
+                                  color: AppPalette.accent),
+                                SizedBox(height: 12),
+                                Text(_webMapFailed ? 'Harita yüklenemedi' : 'Harita hazırlanıyor',
+                                  style: TextStyle(color: AppPalette.text,
+                                    fontSize: 18, fontWeight: FontWeight.w800)),
+                                SizedBox(height: 8),
+                                Text(_webMapFailed
+                                    ? 'Harita anahtarını veya bağlantıyı kontrol edin.'
+                                    : 'Konum haritası yükleniyor.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: AppPalette.muted)),
+                                if (_webMapFailed) ...[
+                                  SizedBox(height: 12),
+                                  FilledButton.icon(
+                                    onPressed: _loadWebMap,
+                                    icon: Icon(Icons.refresh),
+                                    label: Text('Yeniden dene'),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                  else
                   Positioned.fill(
                     child:
                         !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS

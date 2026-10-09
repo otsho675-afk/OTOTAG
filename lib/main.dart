@@ -29,6 +29,7 @@ import 'rent_a_car_panel_screen.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/app_theme_state.dart';
+import 'core/theme/app_palette.dart';
 import 'widgets/app_theme_toggle_button.dart';
 import 'core/theme/app_motion.dart';
 import 'core/theme/premium_surfaces.dart';
@@ -397,7 +398,7 @@ class _SplashScreenState extends State<SplashScreen>
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      AppConstants.primaryColor.withValues(alpha: .10),
+                      AppPalette.accent.withValues(alpha: .10),
                       Colors.transparent,
                     ],
                     stops: const [.0, .72],
@@ -417,7 +418,7 @@ class _SplashScreenState extends State<SplashScreen>
                     color: AppConstants.cardColor.withValues(alpha: .86),
                     borderRadius: BorderRadius.circular(32),
                     border: Border.all(
-                      color: AppConstants.primaryColor.withValues(alpha: .16),
+                      color: AppPalette.accent.withValues(alpha: .16),
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -426,7 +427,7 @@ class _SplashScreenState extends State<SplashScreen>
                         offset: const Offset(0, 18),
                       ),
                       BoxShadow(
-                        color: AppConstants.primaryColor.withValues(alpha: .07),
+                        color: AppPalette.accent.withValues(alpha: .07),
                         blurRadius: 44,
                         spreadRadius: 2,
                       ),
@@ -440,7 +441,7 @@ class _SplashScreenState extends State<SplashScreen>
                     height: logoSize,
                     errorBuilder: (context, error, stackTrace) => Icon(
                       Icons.directions_car_rounded,
-                      color: AppConstants.primaryColor,
+                      color: AppPalette.accent,
                       size: logoSize,
                     ),
                   ),
@@ -484,7 +485,7 @@ class RoleSelectionScreen extends StatelessWidget {
                 ? Colors.white : AppConstants.cardColor.withValues(alpha: .92),
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
-              color: AppConstants.primaryColor.withValues(alpha: .14),
+              color: AppPalette.accent.withValues(alpha: .14),
             ),
           ),
           child: Row(
@@ -493,14 +494,14 @@ class RoleSelectionScreen extends StatelessWidget {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: AppConstants.primaryColor.withValues(alpha: .10),
+                  color: AppPalette.accent.withValues(alpha: .10),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: AppConstants.primaryColor.withValues(alpha: .18),
+                    color: AppPalette.accent.withValues(alpha: .18),
                   ),
                 ),
                 child: Icon(icon,
-                    color: AppConstants.primaryColor, size: 27),
+                    color: AppPalette.accent, size: 27),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -535,12 +536,12 @@ class RoleSelectionScreen extends StatelessWidget {
                 width: 34,
                 height: 34,
                 decoration: BoxDecoration(
-                  color: AppConstants.primaryColor.withValues(alpha: .08),
+                  color: AppPalette.accent.withValues(alpha: .08),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Icons.arrow_forward_rounded,
-                  color: AppConstants.primaryColor,
+                  color: AppPalette.accent,
                   size: 19,
                 ),
               ),
@@ -581,7 +582,7 @@ class RoleSelectionScreen extends StatelessWidget {
                               ? Colors.white : AppConstants.cardElevated,
                           borderRadius: BorderRadius.circular(26),
                           border: Border.all(
-                            color: AppConstants.primaryColor.withValues(alpha: .18),
+                            color: AppPalette.accent.withValues(alpha: .18),
                           ),
                         ),
                         child: Image.asset(
@@ -589,7 +590,7 @@ class RoleSelectionScreen extends StatelessWidget {
                           fit: BoxFit.contain,
                           errorBuilder: (_, __, ___) => const Icon(
                             Icons.directions_car_rounded,
-                            color: AppConstants.primaryColor,
+                            color: AppPalette.accent,
                             size: 44,
                           ),
                         ),
@@ -600,7 +601,7 @@ class RoleSelectionScreen extends StatelessWidget {
                       'OTO TAG',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: AppConstants.primaryColor,
+                        color: AppPalette.accent,
                         fontSize: 11,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 2.8,
@@ -739,7 +740,7 @@ class SmartNotificationHelper {
                       ),
                     ],
                     border: Border.all(
-                        color: const Color(0xFF00FFA3).withValues(alpha: 0.6),
+                        color: AppPalette.accent.withValues(alpha: 0.6),
                         width: 1.5),
                   ),
                   child: Row(
@@ -749,11 +750,11 @@ class SmartNotificationHelper {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color:
-                              const Color(0xFF00FFA3).withValues(alpha: 0.15),
+                              AppPalette.accent.withValues(alpha: 0.15),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.notifications_active_rounded,
-                            color: Color(0xFF00FFA3), size: 24),
+                        child: Icon(Icons.notifications_active_rounded,
+                            color: AppPalette.accent, size: 24),
                       ),
                       const SizedBox(width: 16),
                       Expanded(

@@ -1,4 +1,4 @@
-// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
 import 'notification_helper.dart';
 import 'services/vehicle_deadline.dart';
 // vehicle_panel_screen.dart
@@ -120,7 +120,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
     'Sigorta': Icons.shield_rounded,
   };
 
-  static const Map<String, Color> _typeColors = {
+  static Map<String, Color> get _typeColors => {
     'Periyodik Bakım': AppPalette.accent,
     'Yakıt Alımı': AppPalette.accent,
     'Tamir & Onarım': AppPalette.accent,
@@ -388,7 +388,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
           builder: (ctx) => BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
             child: AlertDialog(
-              backgroundColor: const AppPalette.surfaceAlt,
+              backgroundColor: AppPalette.surfaceAlt,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(28),
                   side: BorderSide(color: AppPalette.text.withValues(alpha: 0.1))),
@@ -518,7 +518,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
       final choice = await showDialog<String>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          backgroundColor: const AppPalette.surfaceAlt,
+          backgroundColor: AppPalette.surfaceAlt,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           title: Text('Kilometrenizi güncelleyin',
@@ -542,7 +542,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop('update'),
               style: FilledButton.styleFrom(
-                backgroundColor: const AppPalette.accent,
+                backgroundColor: AppPalette.accent,
                 foregroundColor: Colors.black,
               ),
               child: Text('Evet, güncelle'),
@@ -671,7 +671,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                           right: 24,
                           top: 20),
                       decoration: BoxDecoration(
-                        color: const AppPalette.surfaceAlt.withValues(alpha: 0.98),
+                        color: AppPalette.surfaceAlt.withValues(alpha: 0.98),
                         borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(32)),
                         border: Border.all(
@@ -769,7 +769,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                               width: double.infinity,
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const AppPalette.accent,
+                                  backgroundColor: AppPalette.accent,
                                   foregroundColor: Colors.black,
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 18),
@@ -848,7 +848,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
     final recordId = record['id'];
 
     final IconData icon = _typeIcons[type] ?? Icons.handyman_rounded;
-    final Color color = _typeColors[type] ?? const AppPalette.accent;
+    final Color color = _typeColors[type] ?? AppPalette.accent;
 
     showModalBottomSheet(
       context: context,
@@ -862,7 +862,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
               constraints: BoxConstraints(maxWidth: 600),
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                  color: const AppPalette.surfaceAlt.withValues(alpha: 0.98),
+                  color: AppPalette.surfaceAlt.withValues(alpha: 0.98),
                   borderRadius:
                       const BorderRadius.vertical(top: Radius.circular(32)),
                   border: Border.all(
@@ -957,7 +957,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                            color: const AppPalette.surfaceAlt,
+                            color: AppPalette.surfaceAlt,
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(
                                 color: AppPalette.text.withValues(alpha: 0.06))),
@@ -990,9 +990,9 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                 icon: Icon(Icons.image_rounded, size: 18),
                                 label: Text("Görseli Aç"),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const AppPalette.accent
+                                  backgroundColor: AppPalette.accent
                                       .withValues(alpha: 0.12),
-                                  foregroundColor: const AppPalette.accent,
+                                  foregroundColor: AppPalette.accent,
                                   elevation: 0,
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 10),
@@ -1506,8 +1506,8 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                 end: Alignment.bottomRight,
                 colors: [
                   AppPalette.accent.withValues(alpha: .075),
-                  const AppPalette.surface,
-                  const AppPalette.surface,
+                  AppPalette.surface,
+                  AppPalette.surface,
                 ],
               ),
               borderRadius: BorderRadius.circular(24),
@@ -1994,7 +1994,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
     final double progress = mKm > 0 ? (cKm / mKm).clamp(0.0, 1.0) : 0.0;
     final Color statusColor = remainingKm <= 0
         ? Color(0xFFFF586B)
-        : remainingKm <= 1000 ? Color(0xFFFFB547) : const AppPalette.accent;
+        : remainingKm <= 1000 ? Color(0xFFFFB547) : AppPalette.accent;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2134,7 +2134,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                     _applyFilters();
                   });
                 },
-                color: const AppPalette.surfaceAlt,
+                color: AppPalette.surfaceAlt,
                 elevation: 18,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -2241,7 +2241,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                     selected: isSelected,
                     selectedColor:
                         AppPalette.accent.withValues(alpha: .075),
-                    backgroundColor: const AppPalette.surface,
+                    backgroundColor: AppPalette.surface,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 9),
                     elevation: 0,
@@ -2475,7 +2475,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 gradient: RadialGradient(colors: [
-                                  const AppPalette.accent
+                                  AppPalette.accent
                                       .withValues(alpha: 0.07),
                                   Colors.transparent
                                 ]),
@@ -2487,8 +2487,8 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                               HapticFeedback.lightImpact();
                               await _fetchRecords();
                             },
-                            color: const AppPalette.accent,
-                            backgroundColor: const AppPalette.surfaceAlt,
+                            color: AppPalette.accent,
+                            backgroundColor: AppPalette.surfaceAlt,
                             child: FadeTransition(
                               opacity: _fadeController,
                               child: CustomScrollView(
@@ -2515,10 +2515,10 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                           },
                                           borderRadius:
                                               BorderRadius.circular(16),
-                                          splashColor: const AppPalette.accent
+                                          splashColor: AppPalette.accent
                                               .withValues(alpha: 0.2),
                                           highlightColor:
-                                              const AppPalette.accent
+                                              AppPalette.accent
                                                   .withValues(alpha: 0.1),
                                           child: ClipRRect(
                                             borderRadius:
@@ -2528,7 +2528,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                                   sigmaX: 10, sigmaY: 10),
                                               child: Container(
                                                 decoration: BoxDecoration(
-                                                  color: const AppPalette.surfaceAlt
+                                                  color: AppPalette.surfaceAlt
                                                       .withValues(alpha: 0.6),
                                                   borderRadius:
                                                       BorderRadius.circular(16),
@@ -3223,7 +3223,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
     detected.add({
       'icon': Icons.category_rounded,
       'label': selectedType,
-      'color': const AppPalette.accent
+      'color': AppPalette.accent
     });
 
     // 2. TUTAR VE MATEMATİKSEL İŞLEMLER (Litre x Fiyat veya Kalem Toplama)
@@ -3351,7 +3351,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
         detected.add({
           'icon': Icons.build_circle_rounded,
           'label': "Hedef: ${maintenanceKmController.text} KM",
-          'color': const AppPalette.accent
+          'color': AppPalette.accent
         });
       }
     } else {
@@ -3364,7 +3364,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
         detected.add({
           'icon': Icons.build_circle_rounded,
           'label': "Hedef: ${maintenanceKmController.text} KM",
-          'color': const AppPalette.accent
+          'color': AppPalette.accent
         });
       }
     }
@@ -3892,7 +3892,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: const AppPalette.accent
+                                color: AppPalette.accent
                                     .withValues(alpha: 0.12),
                                 shape: BoxShape.circle,
                               ),
@@ -3900,7 +3900,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                   isEditing
                                       ? Icons.edit_note_rounded
                                       : Icons.post_add_rounded,
-                                  color: const AppPalette.accent,
+                                  color: AppPalette.accent,
                                   size: 22),
                             ),
                             SizedBox(width: 12),
@@ -3964,7 +3964,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [
-                                    const AppPalette.accent
+                                    AppPalette.accent
                                         .withValues(alpha: 0.12),
                                     AppPalette.field
                                   ],
@@ -3973,7 +3973,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                 ),
                                 borderRadius: BorderRadius.circular(22),
                                 border: Border.all(
-                                    color: const AppPalette.accent
+                                    color: AppPalette.accent
                                         .withValues(alpha: 0.35),
                                     width: 1.5),
                               ),
@@ -3986,7 +3986,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                       Container(
                                         padding: const EdgeInsets.all(6),
                                         decoration: BoxDecoration(
-                                            color: const AppPalette.accent
+                                            color: AppPalette.accent
                                                 .withValues(alpha: 0.15),
                                             shape: BoxShape.circle),
                                         child: Icon(
@@ -4056,7 +4056,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                         label: Text("Çözümle"),
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor:
-                                              const AppPalette.accent,
+                                              AppPalette.accent,
                                           foregroundColor: Colors.black,
                                           shape: RoundedRectangleBorder(
                                               borderRadius:
@@ -4172,7 +4172,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                               title: "İşlem Tarihi",
                               date: selectedRecordDate,
                               icon: Icons.event_available_rounded,
-                              color: const AppPalette.accent,
+                              color: AppPalette.accent,
                               onTap: () {
                                 _showScrollableDatePicker(
                                   context: context,
@@ -4189,7 +4189,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                               title: _getNextDateLabel(selectedType),
                               date: selectedNextDate,
                               icon: Icons.calendar_month_rounded,
-                              color: const AppPalette.accent,
+                              color: AppPalette.accent,
                               emptyText: "Seçilmedi (İsteğe Bağlı)",
                               onTap: () {
                                 _showScrollableDatePicker(
@@ -4207,11 +4207,11 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                               SizedBox(height: 10),
                               Container(
                                 decoration: BoxDecoration(
-                                    color: const AppPalette.accent
+                                    color: AppPalette.accent
                                         .withValues(alpha: 0.06),
                                     borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
-                                        color: const AppPalette.accent
+                                        color: AppPalette.accent
                                             .withValues(alpha: 0.2))),
                                 child: Material(
                                   color: Colors.transparent,
@@ -4221,8 +4221,8 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                       HapticFeedback.selectionClick();
                                       setState(() => enableNotification = val);
                                     },
-                                    activeThumbColor: const AppPalette.accent,
-                                    activeTrackColor: const AppPalette.accent
+                                    activeThumbColor: AppPalette.accent,
+                                    activeTrackColor: AppPalette.accent
                                         .withValues(alpha: 0.3),
                                     contentPadding: const EdgeInsets.symmetric(
                                         horizontal: 14, vertical: 2),
@@ -4259,7 +4259,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                           currentKmController,
                                           "Güncel KM",
                                           Icons.speed_rounded,
-                                          const AppPalette.accent,
+                                          AppPalette.accent,
                                           type: TextInputType.number),
                                       SizedBox(height: 14),
                                       if (selectedType ==
@@ -4268,7 +4268,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                             maintenanceKmController,
                                             "Sonraki Bakım (KM)",
                                             Icons.build_circle_rounded,
-                                            const AppPalette.accent,
+                                            AppPalette.accent,
                                             type: TextInputType.number),
                                         SizedBox(height: 14),
                                       ],
@@ -4276,7 +4276,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                           costController,
                                           "Maliyet / Tutar (₺)",
                                           Icons.payments_rounded,
-                                          const AppPalette.accent,
+                                          AppPalette.accent,
                                           type: TextInputType.number),
                                     ],
                                   );
@@ -4290,7 +4290,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                                   currentKmController,
                                                   "Güncel KM",
                                                   Icons.speed_rounded,
-                                                  const AppPalette.accent,
+                                                  AppPalette.accent,
                                                   type: TextInputType.number)),
                                           SizedBox(width: 14),
                                           Expanded(
@@ -4298,7 +4298,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                                   costController,
                                                   "Tutar (₺)",
                                                   Icons.payments_rounded,
-                                                  const AppPalette.accent,
+                                                  AppPalette.accent,
                                                   type: TextInputType.number)),
                                         ],
                                       ),
@@ -4309,7 +4309,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                             maintenanceKmController,
                                             "Sonraki Bakım Hedefi (KM)",
                                             Icons.build_circle_rounded,
-                                            const AppPalette.accent,
+                                            AppPalette.accent,
                                             type: TextInputType.number),
                                       ]
                                     ],
@@ -4579,7 +4579,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                 Icon(
                   icon,
                   size: 15,
-                  color: const AppPalette.accent,
+                  color: AppPalette.accent,
                 ),
                 SizedBox(width: 6),
                 Text(
@@ -4614,11 +4614,11 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
         height: 80,
         decoration: BoxDecoration(
             color: selectedImage != null
-                ? const AppPalette.accent.withValues(alpha: 0.12)
+                ? AppPalette.accent.withValues(alpha: 0.12)
                 : AppPalette.field,
             border: Border.all(
                 color: selectedImage != null
-                    ? const AppPalette.accent
+                    ? AppPalette.accent
                     : AppPalette.text.withValues(alpha: 0.06),
                 width: 1.5),
             borderRadius: BorderRadius.circular(16)),
@@ -4655,7 +4655,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                           : Icons.check_circle_rounded,
                       color: selectedImage == null
                           ? AppPalette.muted
-                          : const AppPalette.accent,
+                          : AppPalette.accent,
                       size: 24),
                   SizedBox(height: 6),
                   Text(
@@ -4667,7 +4667,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                           fontSize: 12,
                           color: selectedImage == null
                               ? AppPalette.muted
-                              : const AppPalette.accent)),
+                              : AppPalette.accent)),
                 ],
               ),
       ),
@@ -4692,11 +4692,11 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
             color: selectedDoc != null
-                ? const AppPalette.accent.withValues(alpha: 0.12)
+                ? AppPalette.accent.withValues(alpha: 0.12)
                 : AppPalette.field,
             border: Border.all(
                 color: selectedDoc != null
-                    ? const AppPalette.accent
+                    ? AppPalette.accent
                     : AppPalette.text.withValues(alpha: 0.06),
                 width: 1.5),
             borderRadius: BorderRadius.circular(16)),

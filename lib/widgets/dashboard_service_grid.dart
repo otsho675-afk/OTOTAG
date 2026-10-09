@@ -70,7 +70,7 @@ class DashboardServiceGrid extends StatelessWidget {
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
                                         colors: light
-                                            ? [Colors.white, const Color(0xFFF0F7F2)]
+                                            ? [Colors.white, const Color(0xFFF1F6F2)]
                                             : [
                                                 AppConstants.cardElevated.withValues(alpha: .86),
                                                 AppConstants.cardColor,

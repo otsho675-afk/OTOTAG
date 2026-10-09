@@ -3314,7 +3314,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final cardColor = isDark ? const Color(0xFF142019) : Colors.white;
     final actions = _sectionRequests[_selectedIndex] ?? const <String>[];
     final firstLoad = actions.isNotEmpty && !actions.any(_loadedActions.contains);
     final hasErrors = actions.any(_loadErrors.containsKey);
@@ -3677,7 +3677,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               }
                             });
                           },
-                          child: Text(selectedUsers.length == filteredUsers.length ? "Seçimi Kaldır" : "Tümünü Seç", style: const TextStyle(fontSize: 12, color: Colors.blueAccent)),
+                          child: Text(selectedUsers.length == filteredUsers.length ? "Seçimi Kaldır" : "Tümünü Seç", style: const TextStyle(fontSize: 12, color: AppConstants.primaryDeep)),
                         ),
                         TextButton(
                           onPressed: () => _hideSelectedItems('users'),
@@ -3762,19 +3762,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.02), blurRadius: 8, offset: const Offset(0, 3))]
                       ),
                       child: Material(
-                        color: isSelected ? Colors.blue.withValues(alpha:0.1) : (isBanned ? Colors.red.withValues(alpha:0.05) : cardColor),
+                        color: isSelected ? AppConstants.primaryColor.withValues(alpha:0.09) : (isBanned ? Colors.red.withValues(alpha:0.05) : cardColor),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(color: isSelected ? Colors.blueAccent : Colors.transparent, width: 1.5),
+                          side: BorderSide(color: isSelected ? AppConstants.primaryDeep : Colors.transparent, width: 1.5),
                         ),
                         clipBehavior: Clip.antiAlias,
                         child: ListTile(
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           leading: isUserSelectionMode 
-                            ? Icon(isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, color: isSelected ? Colors.blueAccent : Colors.grey)
+                            ? Icon(isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, color: isSelected ? AppConstants.primaryDeep : Colors.grey)
                             : CircleAvatar(
                                 radius: 20,
-                                backgroundColor: isBanned ? Colors.red.withValues(alpha:0.12) : (isCustomer ? Colors.blue.withValues(alpha:0.12) : Colors.purple.withValues(alpha:0.12)),
+                                backgroundColor: isBanned ? Colors.red.withValues(alpha:0.12) : (isCustomer ? AppConstants.primaryColor.withValues(alpha:0.12) : Colors.purple.withValues(alpha:0.12)),
                                 child: Icon(isBanned ? Icons.block : (isCustomer ? Icons.person : Icons.engineering), color: isBanned ? Colors.red : (isCustomer ? Colors.blue : Colors.purple), size: 18),
                               ),
                           title: Row(

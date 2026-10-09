@@ -53,7 +53,13 @@ void main() {
     expect(find.text('Ayşe Aktif'), findsOneWidget);
     expect(find.text('Mehmet Usta'), findsOneWidget);
     expect(find.text('Bora Eski'), findsNothing);
-    expect(tester.takeException(), isNull);
+    final layoutIssue = tester.takeException();
+    if (layoutIssue is FlutterError) {
+      for (final detail in layoutIssue.diagnostics) {
+        debugPrint(detail.toStringDeep());
+      }
+    }
+    expect(layoutIssue, isNull);
 
     await tester.tap(find.text('Etkinliği yenile'));
     expect(refreshCount, 1);

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
-import '../core/constants/app_constants.dart';
+
 
 class VehicleKilometerUpdateDialog extends StatefulWidget {
   const VehicleKilometerUpdateDialog({
@@ -531,12 +531,12 @@ class _Metric extends StatelessWidget {
   const _Metric({
     required this.label,
     required this.value,
-    this.valueColor = AppPalette.text,
+    this.valueColor,
   });
 
   final String label;
   final String value;
-  final Color valueColor;
+  final Color? valueColor;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -557,7 +557,7 @@ class _Metric extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: valueColor,
+              color: valueColor ?? AppPalette.text,
               fontSize: 16,
               fontWeight: FontWeight.w900,
               letterSpacing: -.3,

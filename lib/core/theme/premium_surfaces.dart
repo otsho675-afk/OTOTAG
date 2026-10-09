@@ -58,9 +58,9 @@ class PremiumScene extends StatelessWidget {
                 gradient: RadialGradient(
                   colors: [
                     AppPalette.accent
-                        .withValues(alpha: .105 * strength),
-                    AppConstants.primaryDeep
-                        .withValues(alpha: .035 * strength),
+                        .withValues(alpha: (light ? .035 : .105) * strength),
+                    AppPalette.accentMuted
+                        .withValues(alpha: (light ? .015 : .035) * strength),
                     Colors.transparent,
                   ],
                   stops: const [0, .38, .75],
@@ -140,7 +140,7 @@ class PremiumGlassPanel extends StatelessWidget {
           ),
           if (accent)
             BoxShadow(
-              color: AppPalette.accent.withValues(alpha: .045),
+              color: AppPalette.accent.withValues(alpha: light ? .015 : .045),
               blurRadius: 34,
               spreadRadius: 1,
             ),

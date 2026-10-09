@@ -130,6 +130,12 @@ function handleAdminConsoleAction(PDO $pdo, $action, $method) {
         $jobs=$pdo->prepare("SELECT id,service_type,status,agreed_price,created_at FROM jobs
             WHERE customer_id=? OR provider_id=? ORDER BY id DESC LIMIT 50");
         $jobs->execute([$userId,$userId]);
+        $rentals=$pdo->prepare("SELECT id,plate,car_brand_model,daily_price,status,created_at FROM rentacar_listings
+            WHERE company_id=? ORDER BY id DESC LIMIT 50");
+        $rentals->execute([$userId]);
+        $parts=$pdo->prepare("SELECT id,part_name,car_model,status,price,created_at FROM part_listings
+            WHERE customer_id=? OR seller_id=? ORDER BY id DESC LIMIT 50");
+        $parts->execute([$userId,$userId]);
         $activity=$pdo->prepare("SELECT event_name,actor_type,created_at FROM admin_user_activity
             WHERE user_id=? ORDER BY id DESC LIMIT 80");
         $activity->execute([$userId]);
@@ -139,7 +145,9 @@ function handleAdminConsoleAction(PDO $pdo, $action, $method) {
             WHERE user_id=? ORDER BY id DESC LIMIT 50");
         $telemetry->execute([$userId]);
         sendResponse(200,['status'=>'success','user'=>$user,'vehicles'=>$fleet,'vehicle_records'=>$records,
-            'jobs'=>$jobs->fetchAll(PDO::FETCH_ASSOC),'activity'=>$events,'telemetry'=>$telemetry->fetchAll(PDO::FETCH_ASSOC)]);
+            'jobs'=>$jobs->fetchAll(PDO::FETCH_ASSOC),
+            'rental_listings'=>$rentals->fetchAll(PDO::FETCH_ASSOC),'part_listings'=>$parts->fetchAll(PDO::FETCH_ASSOC),
+            'activity'=>$events,'telemetry'=>$telemetry->fetchAll(PDO::FETCH_ASSOC)]);
     }
     if ($method!=='POST') sendResponse(405,['status'=>'error','message'=>'POST gerekli.']);
     adminConsoleEnsureSchema($pdo);

@@ -2368,7 +2368,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
 
   Future<void> _showLocalNotification(String title, String body) async {
     if (kIsWeb || flutterLocalNotificationsPlugin == null) return;
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+    final AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
       'new_job_channel',
       'Yeni İş Bildirimleri',
@@ -2386,7 +2386,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
       presentBadge: true,
       presentSound: true,
     );
-    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+    final NotificationDetails platformChannelSpecifics = NotificationDetails(
         android: androidPlatformChannelSpecifics,
         iOS: iOSPlatformChannelSpecifics);
 

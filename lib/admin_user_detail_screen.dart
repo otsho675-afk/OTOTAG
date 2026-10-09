@@ -204,6 +204,46 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
     ));
   }
 
+  void _editRental(Map<String,dynamic> listing) {
+    final labels = <String,String>{
+      'plate':'Plaka',
+      'brand':'Marka',
+      'model':'Model',
+      'model_year':'Model yılı',
+      'daily_price':'Günlük ücret (TL)',
+      'description':'İlan açıklaması',
+    };
+    final fields = {for(final key in labels.keys)
+      key: TextEditingController(text: listing[key]?.toString() ?? '')};
+    showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('Kiralık araç ilanını düzenle'),
+      content:SizedBox(width:500,child:SingleChildScrollView(
+        child:Column(mainAxisSize:MainAxisSize.min,children:[
+          for(final item in labels.entries) Padding(
+            padding:const EdgeInsets.only(bottom:10),
+            child:TextField(
+              controller:fields[item.key],
+              maxLines:item.key=='description'?3:1,
+              keyboardType:item.key=='daily_price'?const TextInputType.numberWithOptions(decimal:true):TextInputType.text,
+              decoration:InputDecoration(labelText:item.value,border:const OutlineInputBorder()),
+            ),
+          ),
+        ]),
+      )),
+      actions:[
+        TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Vazgeç')),
+        FilledButton.icon(onPressed:() async {
+          final data={for(final row in fields.entries) row.key:row.value.text.trim()};
+          data['listing_id']=listing['id'].toString();
+          data['listing_version']=listing['listing_version'].toString();
+          Navigator.pop(ctx);
+          await _post('admin_update_rental_listing',data);
+          for(final controller in fields.values) {controller.dispose();}
+        },icon:const Icon(Icons.save_outlined),label:const Text('Kaydet')),
+      ],
+    ));
+  }
+
   Widget _sectionTitle(String title, IconData icon) => Padding(
     padding: const EdgeInsets.only(top:18,bottom:10),
     child:Row(children:[Icon(icon,size:19),const SizedBox(width:8),
@@ -340,10 +380,26 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
         }),
       )),
       if (rentals.isNotEmpty) _sectionTitle('Rent a Car ilanları (${rentals.length})',Icons.car_rental_outlined),
-      for (final item in rentals) Card(child:ListTile(
-        leading:const Icon(Icons.directions_car_filled_outlined),
-        title:Text('${_str(item['plate'])} • ${_str(item['car_brand_model'])}'),
-        subtitle:Text('Durum: ${_str(item['status'])} · Günlük: ${_str(item['daily_price'])} TL · ${_date(item['created_at'])}'),
+      for (final item in rentals) Card(child:Padding(
+        padding:const EdgeInsets.all(12),
+        child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          ListTile(
+            contentPadding:EdgeInsets.zero,
+            leading:const Icon(Icons.directions_car_filled_outlined),
+            title:Text('${_str(item['plate'])} • ${_str(item['car_brand_model'])}'),
+            subtitle:Text('Durum: ${_str(item['status'])} · Günlük: ${_str(item['daily_price'])} TL · ${_date(item['created_at'])}'),
+          ),
+          if(item['status']=='active') Wrap(spacing:8,runSpacing:6,children:[
+            OutlinedButton.icon(onPressed:()=>_editRental(item),icon:const Icon(Icons.edit_outlined,size:17),label:const Text('Düzenle')),
+            OutlinedButton.icon(onPressed:() async {
+              if(!await _confirm('Kiralık ilan silinsin mi?','Bekleyen teklifler kapatılacak. Kiralanmış araçların silinmesine sistem izin vermez.')) return;
+              await _post('admin_delete_rental_listing',{
+                'listing_id':item['id'].toString(),
+                'listing_version':item['listing_version'].toString(),
+              });
+            },icon:const Icon(Icons.delete_outline,size:17),label:const Text('Kaldır')),
+          ]),
+        ]),
       )),
       if(parts.isNotEmpty) _sectionTitle('Parça ilanları (${parts.length})',Icons.inventory_2_outlined),
       for(final item in parts) Card(child:ListTile(

@@ -909,6 +909,9 @@ register_shutdown_function(function() use($pdo) {
 });
 handleAppUpdateAction($pdo, $action, $method);
 require_once __DIR__ . '/rentacar_api.php';
+if (in_array($action,['admin_get_user_detail','admin_update_rental_listing','admin_delete_rental_listing'],true)) {
+    rentalEnsureSchema($pdo);
+}
 handleAdminConsoleAction($pdo, $action, $method);
 handleRentalAction($pdo, $action, $method);
 

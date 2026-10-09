@@ -420,12 +420,12 @@ class AdminOverviewPanel extends StatelessWidget {
         Row(children: [
           Expanded(child: _mobileHeroLink(
               Icons.verified_outlined,
-              dashboardReady ? '${pendingCount} onay' : 'Onaylar',
+              dashboardReady ? '$pendingCount onay' : 'Onaylar',
               () => onCommand('section:1'))),
           const SizedBox(width: 9),
           Expanded(child: _mobileHeroLink(
               Icons.support_agent_outlined,
-              ticketsReady ? '${openCount} destek' : 'Destek',
+              ticketsReady ? '$openCount destek' : 'Destek',
               () => onCommand('section:4'))),
         ]),
       ]),

@@ -363,7 +363,9 @@ class AdminOverviewPanel extends StatelessWidget {
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Icon(icon, color: _mint, size: 16),
               const SizedBox(width: 7),
-              Flexible(child: Text(label,
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 140),
+                child: Text(label,
                   maxLines: 1, overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: _white, fontWeight: FontWeight.w800, fontSize: 11))),
@@ -477,7 +479,9 @@ class AdminOverviewPanel extends StatelessWidget {
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Icon(icon, color: _mint, size: 18),
             const SizedBox(width: 8),
-            Flexible(child: Text(title,
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 169),
+              child: Text(title,
                 maxLines: 1, overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: _white, fontSize: 12, fontWeight: FontWeight.w700))),

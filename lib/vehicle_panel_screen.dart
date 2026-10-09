@@ -1,8 +1,10 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const
 import 'notification_helper.dart';
 import 'services/vehicle_deadline.dart';
 // vehicle_panel_screen.dart
 import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
+import 'core/theme/app_palette.dart';
 import 'core/theme/premium_surfaces.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
@@ -39,7 +41,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
     with TickerProviderStateMixin {
   final http.Client _httpClient = http.Client();
   final String baseUrl = AppConstants.baseUrl;
-  final Duration _apiTimeout = const Duration(seconds: 15);
+  final Duration _apiTimeout = Duration(seconds: 15);
 
   List<dynamic> records = [];
   List<dynamic> _filteredRecordsList = [];
@@ -82,7 +84,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
   final TextEditingController _searchController = TextEditingController();
   late AnimationController _fadeController;
 
-  final List<String> filterOptions = const [
+  final List<String> filterOptions = [
     'Tümü',
     'Yakıt Alımı',
     'Periyodik Bakım',
@@ -119,22 +121,22 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
   };
 
   static const Map<String, Color> _typeColors = {
-    'Periyodik Bakım': Color(0xFF00FFA3),
-    'Yakıt Alımı': Color(0xFF00FFA3),
-    'Tamir & Onarım': Color(0xFF00FFA3),
-    'Tamir': Color(0xFF00FFA3),
-    'Lastik & Balans': Color(0xFF00FFA3),
-    'Fren & Balata': Color(0xFF00FFA3),
-    'Akü & Elektrik': Color(0xFF00FFA3),
-    'Kasko & Poliçe': Color(0xFF00FFA3),
-    'Detay & Yıkama': Color(0xFF00FFA3),
-    'MTV & Harç': Color(0xFF00FFA3),
-    'MTV': Color(0xFF00FFA3),
-    'HGS & Otoyol': Color(0xFF00FFA3),
-    'Otopark': Color(0xFF00FFA3),
-    'Aksesuar & Parça': Color(0xFF00FFA3),
-    'Muayene': Color(0xFF00FFA3),
-    'Sigorta': Color(0xFF00FFA3),
+    'Periyodik Bakım': AppPalette.accent,
+    'Yakıt Alımı': AppPalette.accent,
+    'Tamir & Onarım': AppPalette.accent,
+    'Tamir': AppPalette.accent,
+    'Lastik & Balans': AppPalette.accent,
+    'Fren & Balata': AppPalette.accent,
+    'Akü & Elektrik': AppPalette.accent,
+    'Kasko & Poliçe': AppPalette.accent,
+    'Detay & Yıkama': AppPalette.accent,
+    'MTV & Harç': AppPalette.accent,
+    'MTV': AppPalette.accent,
+    'HGS & Otoyol': AppPalette.accent,
+    'Otopark': AppPalette.accent,
+    'Aksesuar & Parça': AppPalette.accent,
+    'Muayene': AppPalette.accent,
+    'Sigorta': AppPalette.accent,
   };
 
   @override
@@ -144,7 +146,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
     currentVehicleData = Map<String, dynamic>.from(widget.vehicle);
     _updateDateCaches();
     _fadeController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 900))
+        vsync: this, duration: Duration(milliseconds: 900))
       ..forward();
     _fetchRecords();
   }
@@ -208,27 +210,27 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: AppPalette.text.withValues(alpha: 0.2),
                 shape: BoxShape.circle),
             child: Icon(
                 isError
                     ? Icons.error_outline_rounded
                     : Icons.check_circle_outline_rounded,
-                color: Colors.white,
+                color: AppPalette.text,
                 size: 22),
           ),
-          const SizedBox(width: 14),
+          SizedBox(width: 14),
           Expanded(
               child: Text(message,
-                  style: const TextStyle(
-                      color: Colors.white,
+                  style: TextStyle(
+                      color: AppPalette.text,
                       fontWeight: FontWeight.w700,
                       fontSize: 14,
                       letterSpacing: 0.2))),
         ],
       ),
       backgroundColor:
-          isError ? const Color(0xFF9F1239) : const Color(0xFF065F46),
+          isError ? Color(0xFF9F1239) : Color(0xFF065F46),
       behavior: SnackBarBehavior.floating,
       dismissDirection: DismissDirection.up,
       margin: EdgeInsets.only(
@@ -239,7 +241,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       elevation: 15,
-      duration: const Duration(seconds: 2),
+      duration: Duration(seconds: 2),
     ));
   }
 
@@ -386,17 +388,17 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
           builder: (ctx) => BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
             child: AlertDialog(
-              backgroundColor: const Color(0xFF161822),
+              backgroundColor: const AppPalette.surfaceAlt,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(28),
-                  side: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
-              title: const Text("İşlem Kaydını Sil",
+                  side: BorderSide(color: AppPalette.text.withValues(alpha: 0.1))),
+              title: Text("İşlem Kaydını Sil",
                   style: TextStyle(
-                      fontWeight: FontWeight.w900, color: Colors.white)),
-              content: const Text(
+                      fontWeight: FontWeight.w900, color: AppPalette.text)),
+              content: Text(
                   "Bu işlem geçmişi kaydı kalıcı olarak silinecektir. Emin misiniz?",
                   style: TextStyle(
-                      color: Colors.white70, fontSize: 15, height: 1.4)),
+                      color: AppPalette.muted, fontSize: 15, height: 1.4)),
               actionsPadding: const EdgeInsets.all(12),
               actions: [
                 Row(
@@ -407,17 +409,17 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                             HapticFeedback.selectionClick();
                             Navigator.pop(ctx, false);
                           },
-                          child: const Text("Vazgeç",
+                          child: Text("Vazgeç",
                               style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.white54,
+                                  color: AppPalette.muted,
                                   fontSize: 15))),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                            backgroundColor: AppConstants.primaryColor,
+                            backgroundColor: AppPalette.accent,
                             elevation: 0,
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             shape: RoundedRectangleBorder(
@@ -426,7 +428,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                           HapticFeedback.mediumImpact();
                           Navigator.pop(ctx, true);
                         },
-                        child: const Text("Sil",
+                        child: Text("Sil",
                             style: TextStyle(
                                 color: Colors.black,
                                 fontWeight: FontWeight.w900,
@@ -516,34 +518,34 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
       final choice = await showDialog<String>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          backgroundColor: const Color(0xFF161822),
+          backgroundColor: const AppPalette.surfaceAlt,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: const Text('Kilometrenizi güncelleyin',
+          title: Text('Kilometrenizi güncelleyin',
               style:
-                  TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+                  TextStyle(color: AppPalette.text, fontWeight: FontWeight.w800)),
           content: Text(
             '${currentVehicleData['plate']} için kayıtlı kilometre: '
             '$currentKm km.\n\nKilometreniz en az 7 gündür güncellenmedi. '
             'Güncellemek ister misiniz?',
-            style: const TextStyle(color: Colors.white70, height: 1.5),
+            style: TextStyle(color: AppPalette.muted, height: 1.5),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop('disable'),
-              child: const Text('Bir daha gösterme'),
+              child: Text('Bir daha gösterme'),
             ),
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop('later'),
-              child: const Text('Şimdi değil'),
+              child: Text('Şimdi değil'),
             ),
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop('update'),
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF00FFA3),
+                backgroundColor: const AppPalette.accent,
                 foregroundColor: Colors.black,
               ),
-              child: const Text('Evet, güncelle'),
+              child: Text('Evet, güncelle'),
             ),
           ],
         ),
@@ -661,7 +663,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                 child: Align(
                   alignment: Alignment.bottomCenter,
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 600),
+                    constraints: BoxConstraints(maxWidth: 600),
                     child: Container(
                       padding: EdgeInsets.only(
                           bottom: bottomInset > 0 ? bottomInset + 16 : 24,
@@ -669,21 +671,21 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                           right: 24,
                           top: 20),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF161822).withValues(alpha: 0.98),
+                        color: const AppPalette.surfaceAlt.withValues(alpha: 0.98),
                         borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(32)),
                         border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.4),
+                            color: AppPalette.text.withValues(alpha: 0.4),
                             width: 1.5),
                         boxShadow: [
                           BoxShadow(
                               color: Colors.black.withValues(alpha: 0.6),
                               blurRadius: 40,
-                              offset: const Offset(0, -10))
+                              offset: Offset(0, -10))
                         ],
                       ),
                       child: SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(),
+                        physics: BouncingScrollPhysics(),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -693,68 +695,68 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                     width: 48,
                                     height: 6,
                                     decoration: BoxDecoration(
-                                        color: Colors.white24,
+                                        color: AppPalette.border,
                                         borderRadius:
                                             BorderRadius.circular(10)))),
-                            const SizedBox(height: 24),
+                            SizedBox(height: 24),
                             Row(
                               children: [
                                 Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.15),
+                                    color: AppPalette.text.withValues(alpha: 0.15),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(Icons.warning_amber_rounded,
-                                      color: Colors.white, size: 28),
+                                  child: Icon(Icons.warning_amber_rounded,
+                                      color: AppPalette.text, size: 28),
                                 ),
-                                const SizedBox(width: 14),
-                                const Expanded(
+                                SizedBox(width: 14),
+                                Expanded(
                                   child: Text("Hatırlatmalar",
                                       style: TextStyle(
                                           fontWeight: FontWeight.w900,
                                           fontSize: 22,
-                                          color: Colors.white,
+                                          color: AppPalette.text,
                                           letterSpacing: -0.5)),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.close_rounded,
-                                      color: Colors.white54, size: 20),
+                                  icon: Icon(Icons.close_rounded,
+                                      color: AppPalette.muted, size: 20),
                                   onPressed: () => Navigator.pop(modalCtx),
                                 )
                               ],
                             ),
-                            const SizedBox(height: 24),
+                            SizedBox(height: 24),
                             ...alerts.map((a) => Padding(
                                   padding: const EdgeInsets.only(bottom: 14),
                                   child: Container(
                                     padding: const EdgeInsets.all(16),
                                     decoration: BoxDecoration(
                                       color:
-                                          Colors.white.withValues(alpha: 0.08),
+                                          AppPalette.text.withValues(alpha: 0.08),
                                       borderRadius: BorderRadius.circular(16),
                                       border: Border.all(
-                                          color: Colors.white
+                                          color: AppPalette.text
                                               .withValues(alpha: 0.2)),
                                     ),
                                     child: Row(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        const Padding(
+                                        Padding(
                                           padding: EdgeInsets.only(top: 2),
                                           child: Icon(
                                               Icons.error_outline_rounded,
                                               size: 18,
-                                              color: Colors.white),
+                                              color: AppPalette.text),
                                         ),
-                                        const SizedBox(width: 12),
+                                        SizedBox(width: 12),
                                         Expanded(
                                           child: Text(a,
                                               style: TextStyle(
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.w600,
-                                                  color: Colors.white
+                                                  color: AppPalette.text
                                                       .withValues(alpha: 0.9),
                                                   height: 1.4)),
                                         ),
@@ -762,12 +764,12 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                     ),
                                   ),
                                 )),
-                            const SizedBox(height: 24),
+                            SizedBox(height: 24),
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF00FFA3),
+                                  backgroundColor: const AppPalette.accent,
                                   foregroundColor: Colors.black,
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 18),
@@ -779,7 +781,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                   HapticFeedback.selectionClick();
                                   Navigator.pop(modalCtx);
                                 },
-                                child: const Text("Anladım, Kapat",
+                                child: Text("Anladım, Kapat",
                                     style: TextStyle(
                                         fontWeight: FontWeight.w900,
                                         fontSize: 16)),
@@ -846,7 +848,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
     final recordId = record['id'];
 
     final IconData icon = _typeIcons[type] ?? Icons.handyman_rounded;
-    final Color color = _typeColors[type] ?? const Color(0xFF00FFA3);
+    final Color color = _typeColors[type] ?? const AppPalette.accent;
 
     showModalBottomSheet(
       context: context,
@@ -857,22 +859,22 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
           filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Center(
             child: Container(
-              constraints: const BoxConstraints(maxWidth: 600),
+              constraints: BoxConstraints(maxWidth: 600),
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                  color: const Color(0xFF13151F).withValues(alpha: 0.98),
+                  color: const AppPalette.surfaceAlt.withValues(alpha: 0.98),
                   borderRadius:
                       const BorderRadius.vertical(top: Radius.circular(32)),
                   border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.1), width: 1.5),
+                      color: AppPalette.text.withValues(alpha: 0.1), width: 1.5),
                   boxShadow: [
                     BoxShadow(
                         color: Colors.black.withValues(alpha: 0.6),
                         blurRadius: 30,
-                        offset: const Offset(0, -5))
+                        offset: Offset(0, -5))
                   ]),
               child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
+                physics: BouncingScrollPhysics(),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -883,7 +885,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                           height: 5,
                           margin: const EdgeInsets.only(bottom: 20),
                           decoration: BoxDecoration(
-                              color: Colors.white24,
+                              color: AppPalette.border,
                               borderRadius: BorderRadius.circular(10))),
                     ),
                     Row(
@@ -903,7 +905,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                               ]),
                           child: Icon(icon, color: color, size: 28),
                         ),
-                        const SizedBox(width: 16),
+                        SizedBox(width: 16),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -914,12 +916,12 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                       fontWeight: FontWeight.w900,
                                       fontSize: 18,
                                       letterSpacing: 0.5)),
-                              const SizedBox(height: 4),
+                              SizedBox(height: 4),
                               Text(
                                   DateFormat('dd.MM.yyyy - HH:mm').format(date),
                                   style: TextStyle(
                                       color:
-                                          Colors.white.withValues(alpha: 0.6),
+                                          AppPalette.text.withValues(alpha: 0.6),
                                       fontWeight: FontWeight.w600,
                                       fontSize: 13)),
                             ],
@@ -927,55 +929,55 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
-                    const Divider(color: Colors.white12, height: 1),
-                    const SizedBox(height: 20),
+                    SizedBox(height: 20),
+                    Divider(color: Colors.white12, height: 1),
+                    SizedBox(height: 20),
                     if (cost > 0) ...[
                       Text("İşlem Tutarı",
                           style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.5),
+                              color: AppPalette.text.withValues(alpha: 0.5),
                               fontSize: 13,
                               fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 6),
+                      SizedBox(height: 6),
                       Text("${cost.toStringAsFixed(2)} ₺",
-                          style: const TextStyle(
-                              color: Colors.white,
+                          style: TextStyle(
+                              color: AppPalette.text,
                               fontWeight: FontWeight.w900,
                               fontSize: 30,
                               letterSpacing: -0.5)),
-                      const SizedBox(height: 20),
+                      SizedBox(height: 20),
                     ],
                     if (description.isNotEmpty) ...[
                       Text("Açıklama / Detay",
                           style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.5),
+                              color: AppPalette.text.withValues(alpha: 0.5),
                               fontSize: 13,
                               fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                            color: const Color(0xFF1B1E2B),
+                            color: const AppPalette.surfaceAlt,
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.06))),
+                                color: AppPalette.text.withValues(alpha: 0.06))),
                         child: Text(description,
                             style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.9),
+                                color: AppPalette.text.withValues(alpha: 0.9),
                                 fontSize: 14,
                                 height: 1.5,
                                 fontWeight: FontWeight.w500)),
                       ),
-                      const SizedBox(height: 20),
+                      SizedBox(height: 20),
                     ],
                     if (record['document_url'] != null ||
                         record['image_url'] != null) ...[
                       Text("Ekli Belgeler & Görseller",
                           style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.5),
+                              color: AppPalette.text.withValues(alpha: 0.5),
                               fontSize: 13,
                               fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 12),
+                      SizedBox(height: 12),
                       Row(
                         children: [
                           if (record['image_url'] != null)
@@ -985,25 +987,25 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                   HapticFeedback.selectionClick();
                                   _openFile(record['image_url'].toString());
                                 },
-                                icon: const Icon(Icons.image_rounded, size: 18),
-                                label: const Text("Görseli Aç"),
+                                icon: Icon(Icons.image_rounded, size: 18),
+                                label: Text("Görseli Aç"),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF00FFA3)
+                                  backgroundColor: const AppPalette.accent
                                       .withValues(alpha: 0.12),
-                                  foregroundColor: const Color(0xFF00FFA3),
+                                  foregroundColor: const AppPalette.accent,
                                   elevation: 0,
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 10),
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(16),
-                                      side: const BorderSide(
-                                          color: Color(0xFF00FFA3))),
+                                      side: BorderSide(
+                                          color: AppPalette.accent)),
                                 ),
                               ),
                             ),
                           if (record['document_url'] != null &&
                               record['image_url'] != null)
-                            const SizedBox(width: 12),
+                            SizedBox(width: 12),
                           if (record['document_url'] != null)
                             Expanded(
                               child: ElevatedButton.icon(
@@ -1011,26 +1013,26 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                   HapticFeedback.selectionClick();
                                   _openFile(record['document_url'].toString());
                                 },
-                                icon: const Icon(Icons.picture_as_pdf_rounded,
+                                icon: Icon(Icons.picture_as_pdf_rounded,
                                     size: 18),
-                                label: const Text("Belgeyi Aç"),
+                                label: Text("Belgeyi Aç"),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor:
-                                      Colors.white.withValues(alpha: 0.12),
-                                  foregroundColor: Colors.white,
+                                      AppPalette.text.withValues(alpha: 0.12),
+                                  foregroundColor: AppPalette.text,
                                   elevation: 0,
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 10),
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(16),
-                                      side: const BorderSide(
-                                          color: Colors.white)),
+                                      side: BorderSide(
+                                          color: AppPalette.text)),
                                 ),
                               ),
                             ),
                         ],
                       ),
-                      const SizedBox(height: 28),
+                      SizedBox(height: 28),
                     ],
                     Row(
                       children: [
@@ -1040,9 +1042,9 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                               Navigator.pop(context);
                               _deleteRecord(recordId);
                             },
-                            icon: const Icon(Icons.delete_outline_rounded,
-                                color: Colors.white, size: 20),
-                            label: const Text("Sil",
+                            icon: Icon(Icons.delete_outline_rounded,
+                                color: AppPalette.text, size: 20),
+                            label: Text("Sil",
                                 style: TextStyle(
                                     color: Colors.black,
                                     fontWeight: FontWeight.w900,
@@ -1062,11 +1064,11 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                   recordToEdit:
                                       Map<String, dynamic>.from(record));
                             },
-                            icon: const Icon(Icons.edit_rounded,
-                                color: Colors.white, size: 20),
-                            label: const Text("Düzenle",
+                            icon: Icon(Icons.edit_rounded,
+                                color: AppPalette.text, size: 20),
+                            label: Text("Düzenle",
                                 style: TextStyle(
-                                    color: Colors.white,
+                                    color: AppPalette.text,
                                     fontWeight: FontWeight.w900,
                                     fontSize: 15)),
                             style: TextButton.styleFrom(
@@ -1151,7 +1153,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                 child: Icon(
                   Icons.directions_car_filled_rounded,
                   size: 168,
-                  color: AppConstants.primaryColor.withValues(alpha: .035),
+                  color: AppPalette.accent.withValues(alpha: .035),
                 ),
               ),
             ),
@@ -1166,7 +1168,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        AppConstants.primaryColor.withValues(alpha: .12),
+                        AppPalette.accent.withValues(alpha: .12),
                         Colors.transparent,
                       ],
                     ),
@@ -1181,19 +1183,19 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                 children: [
                   Row(
                     children: [
-                      const PremiumBrandMark(
+                      PremiumBrandMark(
                         size: 44,
                         icon: Icons.directions_car_filled_rounded,
                       ),
-                      const SizedBox(width: 12),
-                      const Expanded(
+                      SizedBox(width: 12),
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               'OTO TAG GARAGE',
                               style: TextStyle(
-                                color: AppConstants.primaryColor,
+                                color: AppPalette.accent,
                                 fontSize: 10,
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: 1.45,
@@ -1203,7 +1205,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                             Text(
                               'Araç Komuta Merkezi',
                               style: TextStyle(
-                                color: Colors.white,
+                                color: AppPalette.text,
                                 fontSize: 15,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: -.25,
@@ -1223,7 +1225,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(Icons.health_and_safety_rounded, size: 12, color: healthColor),
-                            const SizedBox(width: 5),
+                            SizedBox(width: 5),
                             Text(
                               '$healthScore%',
                               style: TextStyle(
@@ -1237,20 +1239,20 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                       ),
                     ],
                   ),
-                  const SizedBox(height: 22),
+                  SizedBox(height: 22),
                   Text(
                     brandModel.isEmpty ? 'Aracım' : brandModel,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: AppPalette.text,
                       fontSize: 28,
                       height: 1.02,
                       fontWeight: FontWeight.w900,
                       letterSpacing: -1.1,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -1260,17 +1262,17 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 13, vertical: 8),
                         decoration: BoxDecoration(
-                          color: AppConstants.primaryColor.withValues(alpha: .09),
+                          color: AppPalette.accent.withValues(alpha: .09),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color:
-                                AppConstants.primaryColor.withValues(alpha: .24),
+                                AppPalette.accent.withValues(alpha: .24),
                           ),
                         ),
                         child: Text(
                           plate.isEmpty ? 'PLAKA YOK' : plate,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: AppPalette.text,
                             fontSize: 14,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1.2,
@@ -1291,7 +1293,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                         ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
                   Wrap(
                     spacing: 9,
                     runSpacing: 9,
@@ -1319,22 +1321,22 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                       ),
                     ],
                   ),
-                  const SizedBox(height: 18),
+                  SizedBox(height: 18),
                   Wrap(
                     spacing: 10,
                     runSpacing: 10,
                     children: [
                       OutlinedButton.icon(
                         onPressed: _showKilometerUpdate,
-                        icon: const Icon(Icons.auto_awesome_rounded, size: 18),
-                        label: const Text('Akıllı KM'),
+                        icon: Icon(Icons.auto_awesome_rounded, size: 18),
+                        label: Text('Akıllı KM'),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: AppConstants.primaryColor,
+                          foregroundColor: AppPalette.accent,
                           side: BorderSide(
-                            color: AppConstants.primaryColor.withValues(alpha: .28),
+                            color: AppPalette.accent.withValues(alpha: .28),
                           ),
                           backgroundColor:
-                              AppConstants.primaryColor.withValues(alpha: .055),
+                              AppPalette.accent.withValues(alpha: .055),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 15, vertical: 12),
                           shape: RoundedRectangleBorder(
@@ -1344,10 +1346,10 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                       ),
                       FilledButton.icon(
                         onPressed: () => _showRecordSheet(),
-                        icon: const Icon(Icons.add_rounded, size: 19),
-                        label: const Text('İşlem Ekle'),
+                        icon: Icon(Icons.add_rounded, size: 19),
+                        label: Text('İşlem Ekle'),
                         style: FilledButton.styleFrom(
-                          backgroundColor: AppConstants.primaryColor,
+                          backgroundColor: AppPalette.accent,
                           foregroundColor: Colors.black,
                           padding: const EdgeInsets.symmetric(
                               horizontal: 17, vertical: 12),
@@ -1368,14 +1370,14 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
   }
 
   Widget _buildHeroMetric(String label, String value, IconData icon, {Color? accentColor}) {
-    final color = accentColor ?? AppConstants.primaryColor;
+    final color = accentColor ?? AppPalette.accent;
     return Container(
-      constraints: const BoxConstraints(minWidth: 128),
+      constraints: BoxConstraints(minWidth: 128),
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: .035),
+        color: AppPalette.text.withValues(alpha: .035),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: .065)),
+        border: Border.all(color: AppPalette.text.withValues(alpha: .065)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1389,24 +1391,24 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
             ),
             child: Icon(icon, color: color, size: 16),
           ),
-          const SizedBox(width: 9),
+          SizedBox(width: 9),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 label,
-                style: const TextStyle(
-                  color: AppConstants.subtleTextColor,
+                style: TextStyle(
+                  color: AppPalette.subtle,
                   fontSize: 8.5,
                   fontWeight: FontWeight.w900,
                   letterSpacing: .8,
                 ),
               ),
-              const SizedBox(height: 3),
+              SizedBox(height: 3),
               Text(
                 value,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: AppPalette.text,
                   fontSize: 14,
                   fontWeight: FontWeight.w900,
                   letterSpacing: -.25,
@@ -1468,9 +1470,9 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
   }
 
   Color _vehicleHealthColor(int score) {
-    if (score >= 75) return AppConstants.primaryColor;
-    if (score >= 55) return const Color(0xFFFFB547);
-    return const Color(0xFFFF586B);
+    if (score >= 75) return AppPalette.accent;
+    if (score >= 55) return Color(0xFFFFB547);
+    return Color(0xFFFF586B);
   }
 
   Widget _buildSmartMileageCard() {
@@ -1482,12 +1484,12 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
         0;
     final remaining = maintenanceKm > 0 ? maintenanceKm - currentKm : null;
     final Color statusColor = remaining == null
-        ? AppConstants.mutedColor
+        ? AppPalette.muted
         : remaining <= 0
-            ? const Color(0xFFFF586B)
+            ? Color(0xFFFF586B)
             : remaining <= 1000
-                ? const Color(0xFFFFB547)
-                : AppConstants.primaryColor;
+                ? Color(0xFFFFB547)
+                : AppPalette.accent;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
@@ -1503,20 +1505,20 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  AppConstants.primaryColor.withValues(alpha: .075),
-                  const Color(0xFF111419),
-                  const Color(0xFF0A0C0F),
+                  AppPalette.accent.withValues(alpha: .075),
+                  const AppPalette.surface,
+                  const AppPalette.surface,
                 ],
               ),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: AppConstants.primaryColor.withValues(alpha: .16),
+                color: AppPalette.accent.withValues(alpha: .16),
               ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: .24),
                   blurRadius: 22,
-                  offset: const Offset(0, 10),
+                  offset: Offset(0, 10),
                 ),
               ],
             ),
@@ -1526,43 +1528,43 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                   width: 50,
                   height: 50,
                   decoration: BoxDecoration(
-                    color: AppConstants.primaryColor.withValues(alpha: .10),
+                    color: AppPalette.accent.withValues(alpha: .10),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: AppConstants.primaryColor.withValues(alpha: .17),
+                      color: AppPalette.accent.withValues(alpha: .17),
                     ),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.auto_awesome_rounded,
-                    color: AppConstants.primaryColor,
+                    color: AppPalette.accent,
                     size: 23,
                   ),
                 ),
-                const SizedBox(width: 13),
+                SizedBox(width: 13),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'AKILLI KM ASİSTANI',
                         style: TextStyle(
-                          color: AppConstants.primaryColor,
+                          color: AppPalette.accent,
                           fontSize: 8.5,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 1.05,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         '${formatter.format(currentKm)} km',
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: AppPalette.text,
                           fontSize: 19,
                           fontWeight: FontWeight.w900,
                           letterSpacing: -.45,
                         ),
                       ),
-                      const SizedBox(height: 3),
+                      SizedBox(height: 3),
                       Text(
                         remaining == null
                             ? 'Güncel kilometreyi hızlı ve kontrollü güncelle'
@@ -1573,7 +1575,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: remaining == null
-                              ? AppConstants.mutedColor
+                              ? AppPalette.muted
                               : statusColor,
                           fontSize: 10.5,
                           fontWeight: FontWeight.w700,
@@ -1582,17 +1584,17 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Container(
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: AppConstants.primaryColor.withValues(alpha: .09),
+                    color: AppPalette.accent.withValues(alpha: .09),
                     borderRadius: BorderRadius.circular(13),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.arrow_forward_rounded,
-                    color: AppConstants.primaryColor,
+                    color: AppPalette.accent,
                     size: 19,
                   ),
                 ),
@@ -1618,33 +1620,33 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: AppConstants.primaryColor.withValues(alpha: .08),
+              color: AppPalette.accent.withValues(alpha: .08),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: AppConstants.primaryColor.withValues(alpha: .14),
+                color: AppPalette.accent.withValues(alpha: .14),
               ),
             ),
-            child: Icon(icon, color: AppConstants.primaryColor, size: 18),
+            child: Icon(icon, color: AppPalette.accent, size: 18),
           ),
-          const SizedBox(width: 11),
+          SizedBox(width: 11),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   eyebrow,
-                  style: const TextStyle(
-                    color: AppConstants.primaryColor,
+                  style: TextStyle(
+                    color: AppPalette.accent,
                     fontSize: 8.5,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.1,
                   ),
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: AppPalette.text,
                     fontSize: 17,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -.4,
@@ -1680,7 +1682,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                       Icons.build_circle_rounded,
                       'Planlı bakım ve servis harcamaları',
                     ),
-                    const SizedBox(height: 10),
+                    SizedBox(height: 10),
                     _buildMiniExpenseCard(
                       'YAKIT GİDERİ',
                       totalFuelExpense,
@@ -1699,7 +1701,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                         'Planlı bakım ve servis harcamaları',
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    SizedBox(width: 10),
                     Expanded(
                       child: _buildMiniExpenseCard(
                         'YAKIT GİDERİ',
@@ -1720,18 +1722,18 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
     return Container(
       padding: const EdgeInsets.all(17),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF15181D), Color(0xFF0C0E12)],
+          colors: [AppPalette.surfaceAlt, AppPalette.surface],
         ),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withValues(alpha: .065)),
+        border: Border.all(color: AppPalette.text.withValues(alpha: .065)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: .24),
             blurRadius: 22,
-            offset: const Offset(0, 10),
+            offset: Offset(0, 10),
           ),
         ],
       ),
@@ -1744,53 +1746,53 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: AppConstants.primaryColor.withValues(alpha: .075),
+                  color: AppPalette.accent.withValues(alpha: .075),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: AppConstants.primaryColor.withValues(alpha: .12),
+                    color: AppPalette.accent.withValues(alpha: .12),
                   ),
                 ),
-                child: Icon(icon, color: AppConstants.primaryColor, size: 19),
+                child: Icon(icon, color: AppPalette.accent, size: 19),
               ),
-              const Spacer(),
+              Spacer(),
               Icon(
                 Icons.north_east_rounded,
-                color: Colors.white.withValues(alpha: .22),
+                color: AppPalette.text.withValues(alpha: .22),
                 size: 17,
               ),
             ],
           ),
-          const SizedBox(height: 17),
+          SizedBox(height: 17),
           Text(
             title,
-            style: const TextStyle(
-              color: AppConstants.subtleTextColor,
+            style: TextStyle(
+              color: AppPalette.subtle,
               fontSize: 9.5,
               fontWeight: FontWeight.w900,
               letterSpacing: .8,
             ),
           ),
-          const SizedBox(height: 5),
+          SizedBox(height: 5),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(
               '${amount.toStringAsFixed(2)} ₺',
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: AppPalette.text,
                 fontSize: 24,
                 fontWeight: FontWeight.w900,
                 letterSpacing: -.75,
               ),
             ),
           ),
-          const SizedBox(height: 5),
+          SizedBox(height: 5),
           Text(
             subtitle,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppConstants.subtleTextColor,
+            style: TextStyle(
+              color: AppPalette.subtle,
               fontSize: 10.5,
               fontWeight: FontWeight.w500,
             ),
@@ -1810,18 +1812,18 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF14171C), Color(0xFF0B0D10)],
+          colors: [AppPalette.surfaceAlt, AppPalette.surface],
         ),
         borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: Colors.white.withValues(alpha: .065)),
+        border: Border.all(color: AppPalette.text.withValues(alpha: .065)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: .26),
             blurRadius: 24,
-            offset: const Offset(0, 12),
+            offset: Offset(0, 12),
           ),
         ],
       ),
@@ -1836,24 +1838,24 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                   width: 39,
                   height: 39,
                   decoration: BoxDecoration(
-                    color: AppConstants.primaryColor.withValues(alpha: .08),
+                    color: AppPalette.accent.withValues(alpha: .08),
                     borderRadius: BorderRadius.circular(13),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.health_and_safety_rounded,
-                    color: AppConstants.primaryColor,
+                    color: AppPalette.accent,
                     size: 19,
                   ),
                 ),
-                const SizedBox(width: 11),
-                const Expanded(
+                SizedBox(width: 11),
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'ARAÇ SAĞLIK MERKEZİ',
                         style: TextStyle(
-                          color: AppConstants.primaryColor,
+                          color: AppPalette.accent,
                           fontSize: 8.5,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 1.05,
@@ -1863,7 +1865,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                       Text(
                         'Kritik takipler',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: AppPalette.text,
                           fontSize: 16,
                           fontWeight: FontWeight.w900,
                           letterSpacing: -.3,
@@ -1872,16 +1874,16 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                     ],
                   ),
                 ),
-                const PremiumStatusPill(
+                PremiumStatusPill(
                   '3 KONTROL',
                   icon: Icons.shield_outlined,
                   accent: false,
                 ),
               ],
             ),
-            const SizedBox(height: 18),
-            Divider(height: 1, color: Colors.white.withValues(alpha: .065)),
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
+            Divider(height: 1, color: AppPalette.text.withValues(alpha: .065)),
+            SizedBox(height: 18),
             _buildInfoRow(
               'Trafik Sigortası',
               _effectiveInsuranceDate,
@@ -1892,7 +1894,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
               padding: const EdgeInsets.symmetric(vertical: 15),
               child: Divider(
                 height: 1,
-                color: Colors.white.withValues(alpha: .065),
+                color: AppPalette.text.withValues(alpha: .065),
               ),
             ),
             _buildInfoRow(
@@ -1905,7 +1907,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
               padding: const EdgeInsets.symmetric(vertical: 15),
               child: Divider(
                 height: 1,
-                color: Colors.white.withValues(alpha: .065),
+                color: AppPalette.text.withValues(alpha: .065),
               ),
             ),
             _buildMaintenanceRow(cKm, mKm),
@@ -1932,26 +1934,26 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                     color: statusColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(14)),
                 child: Icon(icon, color: statusColor, size: 22)),
-            const SizedBox(width: 14),
+            SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
-                          color: Colors.white,
+                          color: AppPalette.text,
                           letterSpacing: -0.3),
                       overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4),
                   Text(
                       date == null
                           ? "Tarih Belirtilmedi"
                           : DateFormat('dd.MM.yyyy').format(date),
                       style: TextStyle(
                           fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.55),
+                          color: AppPalette.text.withValues(alpha: 0.55),
                           fontWeight: FontWeight.w600)),
                 ],
               ),
@@ -1973,13 +1975,13 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
           ],
         ),
         if (date != null) ...[
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
                 value: progress,
                 minHeight: 6,
-                backgroundColor: Colors.white.withValues(alpha: 0.06),
+                backgroundColor: AppPalette.text.withValues(alpha: 0.06),
                 valueColor: AlwaysStoppedAnimation<Color>(statusColor)),
           ),
         ]
@@ -1991,8 +1993,8 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
     final int remainingKm = mKm - cKm;
     final double progress = mKm > 0 ? (cKm / mKm).clamp(0.0, 1.0) : 0.0;
     final Color statusColor = remainingKm <= 0
-        ? const Color(0xFFFF586B)
-        : remainingKm <= 1000 ? const Color(0xFFFFB547) : const Color(0xFF00FFA3);
+        ? Color(0xFFFF586B)
+        : remainingKm <= 1000 ? Color(0xFFFFB547) : const AppPalette.accent;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2006,23 +2008,23 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                     borderRadius: BorderRadius.circular(14)),
                 child: Icon(Icons.build_circle_rounded,
                     color: statusColor, size: 22)),
-            const SizedBox(width: 14),
+            SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Periyodik Bakım",
+                  Text("Periyodik Bakım",
                       style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
-                          color: Colors.white,
+                          color: AppPalette.text,
                           letterSpacing: -0.3),
                       overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4),
                   Text("Güncel: $cKm KM",
                       style: TextStyle(
                           fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.55),
+                          color: AppPalette.text.withValues(alpha: 0.55),
                           fontWeight: FontWeight.w600)),
                 ],
               ),
@@ -2045,13 +2047,13 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: LinearProgressIndicator(
               value: progress,
               minHeight: 6,
-              backgroundColor: Colors.white.withValues(alpha: 0.06),
+              backgroundColor: AppPalette.text.withValues(alpha: 0.06),
               valueColor: AlwaysStoppedAnimation<Color>(statusColor)),
         ),
       ],
@@ -2070,12 +2072,12 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                 child: Container(
                   height: 52,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF15181D), Color(0xFF0D0F13)],
+                    gradient: LinearGradient(
+                      colors: [AppPalette.surfaceAlt, AppPalette.surface],
                     ),
                     borderRadius: BorderRadius.circular(17),
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: .065),
+                      color: AppPalette.text.withValues(alpha: .065),
                     ),
                   ),
                   child: TextField(
@@ -2084,28 +2086,28 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                       searchQuery = val;
                       setState(() => _applyFilters());
                     },
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: AppPalette.text,
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),
                     decoration: InputDecoration(
                       hintText: 'İşlem, not veya tutar ara',
-                      hintStyle: const TextStyle(
-                        color: AppConstants.subtleTextColor,
+                      hintStyle: TextStyle(
+                        color: AppPalette.subtle,
                         fontSize: 12.5,
                         fontWeight: FontWeight.w500,
                       ),
-                      prefixIcon: const Icon(
+                      prefixIcon: Icon(
                         Icons.search_rounded,
-                        color: AppConstants.mutedColor,
+                        color: AppPalette.muted,
                         size: 20,
                       ),
                       suffixIcon: searchQuery.isNotEmpty
                           ? IconButton(
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.close_rounded,
-                                color: AppConstants.mutedColor,
+                                color: AppPalette.muted,
                                 size: 17,
                               ),
                               onPressed: () {
@@ -2122,7 +2124,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                   ),
                 ),
               ),
-              const SizedBox(width: 9),
+              SizedBox(width: 9),
               PopupMenuButton<String>(
                 initialValue: selectedDateFilter,
                 onSelected: (value) {
@@ -2132,12 +2134,12 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                     _applyFilters();
                   });
                 },
-                color: const Color(0xFF15181D),
+                color: const AppPalette.surfaceAlt,
                 elevation: 18,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                   side: BorderSide(
-                    color: Colors.white.withValues(alpha: .08),
+                    color: AppPalette.text.withValues(alpha: .08),
                   ),
                 ),
                 itemBuilder: (_) => dateFilterOptions
@@ -2151,17 +2153,17 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                   ? Icons.check_circle_rounded
                                   : Icons.schedule_rounded,
                               color: value == selectedDateFilter
-                                  ? AppConstants.primaryColor
-                                  : AppConstants.mutedColor,
+                                  ? AppPalette.accent
+                                  : AppPalette.muted,
                               size: 17,
                             ),
-                            const SizedBox(width: 9),
+                            SizedBox(width: 9),
                             Text(
                               value,
                               style: TextStyle(
                                 color: value == selectedDateFilter
-                                    ? Colors.white
-                                    : AppConstants.mutedColor,
+                                    ? AppPalette.text
+                                    : AppPalette.muted,
                                 fontWeight: FontWeight.w700,
                                 fontSize: 12.5,
                               ),
@@ -2175,14 +2177,14 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                   height: 52,
                   padding: const EdgeInsets.symmetric(horizontal: 13),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF15181D), Color(0xFF0D0F13)],
+                    gradient: LinearGradient(
+                      colors: [AppPalette.surfaceAlt, AppPalette.surface],
                     ),
                     borderRadius: BorderRadius.circular(17),
                     border: Border.all(
                       color: selectedDateFilter == 'Tümü'
-                          ? Colors.white.withValues(alpha: .065)
-                          : AppConstants.primaryColor.withValues(alpha: .18),
+                          ? AppPalette.text.withValues(alpha: .065)
+                          : AppPalette.accent.withValues(alpha: .18),
                     ),
                   ),
                   child: Row(
@@ -2192,18 +2194,18 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                         Icons.tune_rounded,
                         size: 18,
                         color: selectedDateFilter == 'Tümü'
-                            ? AppConstants.mutedColor
-                            : AppConstants.primaryColor,
+                            ? AppPalette.muted
+                            : AppPalette.accent,
                       ),
-                      const SizedBox(width: 7),
+                      SizedBox(width: 7),
                       Text(
                         selectedDateFilter == 'Tümü'
                             ? 'Dönem'
                             : selectedDateFilter,
                         style: TextStyle(
                           color: selectedDateFilter == 'Tümü'
-                              ? AppConstants.mutedColor
-                              : Colors.white,
+                              ? AppPalette.muted
+                              : AppPalette.text,
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
                         ),
@@ -2214,10 +2216,10 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
+            physics: BouncingScrollPhysics(),
             child: Row(
               children: filterOptions.map((f) {
                 final isSelected = selectedFilter == f;
@@ -2229,8 +2231,8 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                       f,
                       style: TextStyle(
                         color: isSelected
-                            ? AppConstants.primaryColor
-                            : AppConstants.mutedColor,
+                            ? AppPalette.accent
+                            : AppPalette.muted,
                         fontWeight: FontWeight.w800,
                         fontSize: 11.5,
                         letterSpacing: .1,
@@ -2238,8 +2240,8 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                     ),
                     selected: isSelected,
                     selectedColor:
-                        AppConstants.primaryColor.withValues(alpha: .075),
-                    backgroundColor: const Color(0xFF111318),
+                        AppPalette.accent.withValues(alpha: .075),
+                    backgroundColor: const AppPalette.surface,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 9),
                     elevation: 0,
@@ -2249,8 +2251,8 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                     ),
                     side: BorderSide(
                       color: isSelected
-                          ? AppConstants.primaryColor.withValues(alpha: .22)
-                          : Colors.white.withValues(alpha: .055),
+                          ? AppPalette.accent.withValues(alpha: .22)
+                          : AppPalette.text.withValues(alpha: .055),
                     ),
                     onSelected: (val) {
                       if (val && selectedFilter != f) {
@@ -2278,7 +2280,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
         double.tryParse(record['cost']?.toString() ?? '0') ?? 0.0;
     final String description = record['description']?.toString() ?? '';
     final IconData icon = _typeIcons[type] ?? Icons.handyman_rounded;
-    final Color color = _typeColors[type] ?? AppConstants.primaryColor;
+    final Color color = _typeColors[type] ?? AppPalette.accent;
     final bool hasAttachment =
         record['document_url'] != null || record['image_url'] != null;
 
@@ -2305,13 +2307,13 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                     child: Container(
                       width: 1,
                       margin: const EdgeInsets.symmetric(vertical: 6),
-                      color: Colors.white.withValues(alpha: .075),
+                      color: AppPalette.text.withValues(alpha: .075),
                     ),
                   ),
               ],
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: 10),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 11),
@@ -2326,14 +2328,14 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                   child: Container(
                     padding: const EdgeInsets.all(15),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
+                      gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [Color(0xFF15181D), Color(0xFF0C0E12)],
+                        colors: [AppPalette.surfaceAlt, AppPalette.surface],
                       ),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: .06),
+                        color: AppPalette.text.withValues(alpha: .06),
                       ),
                     ),
                     child: Column(
@@ -2346,19 +2348,19 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                 type,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: AppPalette.text,
                                   fontWeight: FontWeight.w800,
                                   fontSize: 13.5,
                                   letterSpacing: -.2,
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                             Text(
                               DateFormat('dd.MM.yyyy').format(date),
-                              style: const TextStyle(
-                                color: AppConstants.subtleTextColor,
+                              style: TextStyle(
+                                color: AppPalette.subtle,
                                 fontWeight: FontWeight.w700,
                                 fontSize: 10.5,
                               ),
@@ -2366,13 +2368,13 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                           ],
                         ),
                         if (description.isNotEmpty) ...[
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8),
                           Text(
                             description,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: AppConstants.mutedColor,
+                            style: TextStyle(
+                              color: AppPalette.muted,
                               fontSize: 11.5,
                               height: 1.4,
                               fontWeight: FontWeight.w500,
@@ -2380,45 +2382,45 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                           ),
                         ],
                         if (cost > 0 || hasAttachment) ...[
-                          const SizedBox(height: 12),
+                          SizedBox(height: 12),
                           Divider(
                             height: 1,
-                            color: Colors.white.withValues(alpha: .055),
+                            color: AppPalette.text.withValues(alpha: .055),
                           ),
-                          const SizedBox(height: 10),
+                          SizedBox(height: 10),
                           Row(
                             children: [
                               if (cost > 0)
                                 Text(
                                   '${cost.toStringAsFixed(2)} ₺',
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                                  style: TextStyle(
+                                    color: AppPalette.text,
                                     fontWeight: FontWeight.w900,
                                     fontSize: 14.5,
                                     letterSpacing: -.3,
                                   ),
                                 ),
-                              const Spacer(),
+                              Spacer(),
                               if (hasAttachment) ...[
-                                const Icon(
+                                Icon(
                                   Icons.attach_file_rounded,
-                                  color: AppConstants.subtleTextColor,
+                                  color: AppPalette.subtle,
                                   size: 14,
                                 ),
-                                const SizedBox(width: 3),
-                                const Text(
+                                SizedBox(width: 3),
+                                Text(
                                   'Ek mevcut',
                                   style: TextStyle(
-                                    color: AppConstants.subtleTextColor,
+                                    color: AppPalette.subtle,
                                     fontSize: 9.5,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
-                                const SizedBox(width: 8),
+                                SizedBox(width: 8),
                               ],
-                              const Icon(
+                              Icon(
                                 Icons.arrow_forward_rounded,
-                                color: AppConstants.subtleTextColor,
+                                color: AppPalette.subtle,
                                 size: 15,
                               ),
                             ],
@@ -2438,12 +2440,12 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
 
   @override
   Widget build(BuildContext context) {
-    const bgColor = AppConstants.bgColor;
+    final bgColor = AppPalette.page;
     final displayRecords = _filteredRecordsList;
 
     return CallbackShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.keyH, control: true): () {
+        SingleActivator(LogicalKeyboardKey.keyH, control: true): () {
           _showRecordSheet();
         }
       },
@@ -2454,14 +2456,14 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
           child: Scaffold(
             backgroundColor: bgColor,
             body: isLoading
-                ? const Center(
+                ? Center(
                     child: CircularProgressIndicator(
-                        color: Color(0xFF00FFA3), strokeWidth: 3.5))
+                        color: AppPalette.accent, strokeWidth: 3.5))
                 : PremiumScene(
                     accentStrength: .9,
                     child: Center(
                       child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 750),
+                      constraints: BoxConstraints(maxWidth: 750),
                       child: Stack(
                         children: [
                           Positioned(
@@ -2473,7 +2475,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 gradient: RadialGradient(colors: [
-                                  const Color(0xFF00FFA3)
+                                  const AppPalette.accent
                                       .withValues(alpha: 0.07),
                                   Colors.transparent
                                 ]),
@@ -2485,12 +2487,12 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                               HapticFeedback.lightImpact();
                               await _fetchRecords();
                             },
-                            color: const Color(0xFF00FFA3),
-                            backgroundColor: const Color(0xFF161822),
+                            color: const AppPalette.accent,
+                            backgroundColor: const AppPalette.surfaceAlt,
                             child: FadeTransition(
                               opacity: _fadeController,
                               child: CustomScrollView(
-                                physics: const BouncingScrollPhysics(
+                                physics: BouncingScrollPhysics(
                                     parent: AlwaysScrollableScrollPhysics()),
                                 slivers: [
                                   SliverAppBar(
@@ -2513,10 +2515,10 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                           },
                                           borderRadius:
                                               BorderRadius.circular(16),
-                                          splashColor: const Color(0xFF00FFA3)
+                                          splashColor: const AppPalette.accent
                                               .withValues(alpha: 0.2),
                                           highlightColor:
-                                              const Color(0xFF00FFA3)
+                                              const AppPalette.accent
                                                   .withValues(alpha: 0.1),
                                           child: ClipRRect(
                                             borderRadius:
@@ -2526,12 +2528,12 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                                   sigmaX: 10, sigmaY: 10),
                                               child: Container(
                                                 decoration: BoxDecoration(
-                                                  color: const Color(0xFF161822)
+                                                  color: const AppPalette.surfaceAlt
                                                       .withValues(alpha: 0.6),
                                                   borderRadius:
                                                       BorderRadius.circular(16),
                                                   border: Border.all(
-                                                      color: Colors.white
+                                                      color: AppPalette.text
                                                           .withValues(
                                                               alpha: 0.15),
                                                       width: 1.5),
@@ -2542,14 +2544,14 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                                                 alpha: 0.2),
                                                         blurRadius: 10,
                                                         offset:
-                                                            const Offset(0, 4))
+                                                            Offset(0, 4))
                                                   ],
                                                 ),
-                                                child: const Icon(
+                                                child: Icon(
                                                   Icons
                                                       .arrow_back_ios_new_rounded,
                                                   size: 18,
-                                                  color: Colors.white,
+                                                  color: AppPalette.text,
                                                 ),
                                               ),
                                             ),
@@ -2559,9 +2561,9 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                     ),
                                     actions: [
                                       IconButton(
-                                        icon: const Icon(
+                                        icon: Icon(
                                             Icons.picture_as_pdf_rounded,
-                                            color: Colors.white),
+                                            color: AppPalette.text),
                                         onPressed: () =>
                                             _generateExpenseReport(),
                                         tooltip: "Gider Raporu (PDF)",
@@ -2577,32 +2579,32 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                             width: 30,
                                             height: 30,
                                             decoration: BoxDecoration(
-                                              color: AppConstants.primaryColor
+                                              color: AppPalette.accent
                                                   .withValues(alpha: .08),
                                               borderRadius:
                                                   BorderRadius.circular(10),
                                               border: Border.all(
-                                                color: AppConstants.primaryColor
+                                                color: AppPalette.accent
                                                     .withValues(alpha: .15),
                                               ),
                                             ),
-                                            child: const Icon(
+                                            child: Icon(
                                               Icons.directions_car_filled_rounded,
-                                              color: AppConstants.primaryColor,
+                                              color: AppPalette.accent,
                                               size: 15,
                                             ),
                                           ),
-                                          const SizedBox(width: 9),
+                                          SizedBox(width: 9),
                                           Expanded(
                                             child: Column(
                                               mainAxisSize: MainAxisSize.min,
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
                                               children: [
-                                                const Text(
+                                                Text(
                                                   'ARAÇ MERKEZİ',
                                                   style: TextStyle(
-                                                    color: Colors.white,
+                                                    color: AppPalette.text,
                                                     fontSize: 15,
                                                     fontWeight: FontWeight.w900,
                                                     letterSpacing: -.3,
@@ -2615,8 +2617,8 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                                       '',
                                                   maxLines: 1,
                                                   overflow: TextOverflow.ellipsis,
-                                                  style: const TextStyle(
-                                                    color: AppConstants.mutedColor,
+                                                  style: TextStyle(
+                                                    color: AppPalette.muted,
                                                     fontSize: 9.5,
                                                     fontWeight: FontWeight.w700,
                                                     letterSpacing: .65,
@@ -2640,7 +2642,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                                 shape: BoxShape.circle,
                                                 gradient: RadialGradient(
                                                   colors: [
-                                                    AppConstants.primaryColor
+                                                    AppPalette.accent
                                                         .withValues(alpha: .11),
                                                     Colors.transparent,
                                                   ],
@@ -2682,7 +2684,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                             icon: Icons.history_rounded,
                                           ),
                                           _buildFilterAndSearchBar(),
-                                          const SizedBox(height: 20),
+                                          SizedBox(height: 20),
                                           if (displayRecords.isEmpty)
                                             Padding(
                                               padding: const EdgeInsets.all(40),
@@ -2693,10 +2695,10 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                                         Icons
                                                             .history_toggle_off_rounded,
                                                         size: 64,
-                                                        color: Colors.white
+                                                        color: AppPalette.text
                                                             .withValues(
                                                                 alpha: 0.2)),
-                                                    const SizedBox(height: 16),
+                                                    SizedBox(height: 16),
                                                     Text(
                                                         records.isEmpty
                                                             ? "Henüz bu araca ait işlem eklenmedi."
@@ -2704,7 +2706,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                                         textAlign:
                                                             TextAlign.center,
                                                         style: TextStyle(
-                                                            color: Colors.white
+                                                            color: AppPalette.text
                                                                 .withValues(
                                                                     alpha: 0.5),
                                                             fontSize: 15,
@@ -2733,7 +2735,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                                                                     1)),
                                               ),
                                             ),
-                                          const SizedBox(height: 100),
+                                          SizedBox(height: 100),
                                         ],
                                       ),
                                     ),
@@ -2753,15 +2755,15 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                 borderRadius: BorderRadius.circular(18),
                 boxShadow: [
                   BoxShadow(
-                    color: AppConstants.primaryColor.withValues(alpha: .16),
+                    color: AppPalette.accent.withValues(alpha: .16),
                     blurRadius: 18,
-                    offset: const Offset(0, 8),
+                    offset: Offset(0, 8),
                   ),
                 ],
               ),
               child: FloatingActionButton.extended(
                 onPressed: () => _showRecordSheet(),
-                backgroundColor: AppConstants.primaryColor,
+                backgroundColor: AppPalette.accent,
                 foregroundColor: Colors.black,
                 elevation: 0,
                 highlightElevation: 0,
@@ -2769,8 +2771,8 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
                 ),
-                icon: const Icon(Icons.add_rounded, size: 21),
-                label: const Text(
+                icon: Icon(Icons.add_rounded, size: 21),
+                label: Text(
                   'Yeni Kayıt',
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
@@ -2798,7 +2800,7 @@ class VehicleRecordFormSheet extends StatefulWidget {
   final Future<void> Function(int? currentKm) onSaved;
   final VoidCallback onDeleted;
 
-  const VehicleRecordFormSheet({
+  VehicleRecordFormSheet({
     super.key,
     required this.vehicleId,
     required this.vehiclePlate,
@@ -2816,7 +2818,7 @@ class VehicleRecordFormSheet extends StatefulWidget {
 }
 
 class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
-  final Duration _uploadTimeout = const Duration(seconds: 60);
+  final Duration _uploadTimeout = Duration(seconds: 60);
 
   int _step = 0;
   final ScrollController _stepScroll = ScrollController();
@@ -2838,71 +2840,71 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
 
   List<Map<String, dynamic>> parsedEntities = [];
 
-  final List<Map<String, dynamic>> operationTypes = const [
+  final List<Map<String, dynamic>> operationTypes = [
     {
       'id': 'Yakıt Alımı',
       'icon': Icons.local_gas_station_rounded,
-      'color': Color(0xFF00FFA3)
+      'color': AppPalette.accent
     },
     {
       'id': 'Periyodik Bakım',
       'icon': Icons.build_circle_rounded,
-      'color': Color(0xFF00FFA3)
+      'color': AppPalette.accent
     },
     {
       'id': 'Tamir & Onarım',
       'icon': Icons.car_repair_rounded,
-      'color': Color(0xFF00FFA3)
+      'color': AppPalette.accent
     },
     {
       'id': 'Lastik & Balans',
       'icon': Icons.tire_repair_rounded,
-      'color': Color(0xFF00FFA3)
+      'color': AppPalette.accent
     },
     {
       'id': 'Fren & Balata',
       'icon': Icons.disc_full_rounded,
-      'color': Color(0xFF00FFA3)
+      'color': AppPalette.accent
     },
     {
       'id': 'Akü & Elektrik',
       'icon': Icons.battery_charging_full_rounded,
-      'color': Color(0xFF00FFA3)
+      'color': AppPalette.accent
     },
     {
       'id': 'Kasko & Poliçe',
       'icon': Icons.shield_rounded,
-      'color': Color(0xFF00FFA3)
+      'color': AppPalette.accent
     },
     {
       'id': 'Detay & Yıkama',
       'icon': Icons.local_car_wash_rounded,
-      'color': Color(0xFF00FFA3)
+      'color': AppPalette.accent
     },
     {
       'id': 'MTV & Harç',
       'icon': Icons.account_balance_rounded,
-      'color': Color(0xFF00FFA3)
+      'color': AppPalette.accent
     },
     {
       'id': 'HGS & Otoyol',
       'icon': Icons.add_road_rounded,
-      'color': Color(0xFF00FFA3)
+      'color': AppPalette.accent
     },
     {
       'id': 'Otopark',
       'icon': Icons.local_parking_rounded,
-      'color': Color(0xFF00FFA3)
+      'color': AppPalette.accent
     },
     {
       'id': 'Aksesuar & Parça',
       'icon': Icons.extension_rounded,
-      'color': Color(0xFF00FFA3)
+      'color': AppPalette.accent
     },
     {
       'id': 'Diğer Masraf',
       'icon': Icons.more_horiz_rounded,
-      'color': Color(0xFF00FFA3)
+      'color': AppPalette.accent
     },
   ];
 
@@ -2955,27 +2957,27 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: AppPalette.text.withValues(alpha: 0.2),
                 shape: BoxShape.circle),
             child: Icon(
                 isError
                     ? Icons.error_outline_rounded
                     : Icons.check_circle_outline_rounded,
-                color: Colors.white,
+                color: AppPalette.text,
                 size: 22),
           ),
-          const SizedBox(width: 14),
+          SizedBox(width: 14),
           Expanded(
               child: Text(message,
-                  style: const TextStyle(
-                      color: Colors.white,
+                  style: TextStyle(
+                      color: AppPalette.text,
                       fontWeight: FontWeight.w700,
                       fontSize: 14,
                       letterSpacing: 0.2))),
         ],
       ),
       backgroundColor:
-          isError ? const Color(0xFF9F1239) : const Color(0xFF065F46),
+          isError ? Color(0xFF9F1239) : Color(0xFF065F46),
       behavior: SnackBarBehavior.floating,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -3221,7 +3223,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
     detected.add({
       'icon': Icons.category_rounded,
       'label': selectedType,
-      'color': const Color(0xFF00FFA3)
+      'color': const AppPalette.accent
     });
 
     // 2. TUTAR VE MATEMATİKSEL İŞLEMLER (Litre x Fiyat veya Kalem Toplama)
@@ -3291,7 +3293,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
       detected.add({
         'icon': Icons.payments_rounded,
         'label': "${costController.text} ₺",
-        'color': const Color(0xFFFFD600)
+        'color': Color(0xFFFFD600)
       });
     }
 
@@ -3329,7 +3331,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
       detected.add({
         'icon': Icons.speed_rounded,
         'label': "$parsedKm KM",
-        'color': Colors.white
+        'color': AppPalette.text
       });
     }
 
@@ -3349,7 +3351,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
         detected.add({
           'icon': Icons.build_circle_rounded,
           'label': "Hedef: ${maintenanceKmController.text} KM",
-          'color': const Color(0xFF00FFA3)
+          'color': const AppPalette.accent
         });
       }
     } else {
@@ -3362,7 +3364,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
         detected.add({
           'icon': Icons.build_circle_rounded,
           'label': "Hedef: ${maintenanceKmController.text} KM",
-          'color': const Color(0xFF00FFA3)
+          'color': const AppPalette.accent
         });
       }
     }
@@ -3374,16 +3376,16 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
     if (note.contains('bugun')) {
       recordDate = now;
     } else if (note.contains('onceki gun') || note.contains('evvelsi gun')) {
-      recordDate = now.subtract(const Duration(days: 2));
+      recordDate = now.subtract(Duration(days: 2));
     } else if (note.contains('dun')) {
-      recordDate = now.subtract(const Duration(days: 1));
+      recordDate = now.subtract(Duration(days: 1));
     } else if (RegExp(r'(\d+)\s*gun\s*once').hasMatch(note)) {
       int days = int.tryParse(
               RegExp(r'(\d+)\s*gun\s*once').firstMatch(note)!.group(1)!) ??
           0;
       recordDate = now.subtract(Duration(days: days));
     } else if (note.contains('gecen hafta') || note.contains('1 hafta once')) {
-      recordDate = now.subtract(const Duration(days: 7));
+      recordDate = now.subtract(Duration(days: 7));
     } else {
       // 12.05 veya 12/05/2024
       final dMatch = RegExp(r'\b(\d{1,2})[./-](\d{1,2})(?:[./-](\d{2,4}))?\b')
@@ -3408,9 +3410,9 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
         note.contains('1 sene sonra') ||
         note.contains('seneye') ||
         note.contains('gelecek yil')) {
-      nextDate = recordDate.add(const Duration(days: 365));
+      nextDate = recordDate.add(Duration(days: 365));
     } else if (note.contains('2 yil sonra') || note.contains('iki yil sonra')) {
-      nextDate = recordDate.add(const Duration(days: 730));
+      nextDate = recordDate.add(Duration(days: 730));
     } else if (note.contains('6 ay sonra') || note.contains('alti ay sonra')) {
       nextDate =
           DateTime(recordDate.year, recordDate.month + 6, recordDate.day);
@@ -3421,7 +3423,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
         (note.contains('police') ||
             note.contains('sigorta') ||
             note.contains('kasko'))) {
-      nextDate = recordDate.add(const Duration(days: 365));
+      nextDate = recordDate.add(Duration(days: 365));
     }
 
     if (nextDate != null) {
@@ -3429,7 +3431,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
       detected.add({
         'icon': Icons.event_rounded,
         'label': "Bitiş: ${DateFormat('dd.MM.yyyy').format(nextDate)}",
-        'color': const Color(0xFFB388FF)
+        'color': Color(0xFFB388FF)
       });
     }
 
@@ -3513,8 +3515,8 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppConstants.fieldColor,
-      shape: const RoundedRectangleBorder(
+      backgroundColor: AppPalette.field,
+      shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (BuildContext builder) {
         return SizedBox(
@@ -3532,9 +3534,9 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                         HapticFeedback.selectionClick();
                         Navigator.pop(context);
                       },
-                      child: const Text('İptal',
+                      child: Text('İptal',
                           style: TextStyle(
-                              color: Colors.white54,
+                              color: AppPalette.muted,
                               fontSize: 15,
                               fontWeight: FontWeight.bold)),
                     ),
@@ -3544,23 +3546,23 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                         onDateSelected(tempPickedDate);
                         Navigator.pop(context);
                       },
-                      child: const Text('Tamam',
+                      child: Text('Tamam',
                           style: TextStyle(
-                              color: Color(0xFF00FFA3),
+                              color: AppPalette.accent,
                               fontWeight: FontWeight.w900,
                               fontSize: 16)),
                     ),
                   ],
                 ),
               ),
-              const Divider(height: 1, color: Colors.white10),
+              Divider(height: 1, color: Colors.white10),
               Expanded(
                 child: CupertinoTheme(
-                  data: const CupertinoThemeData(
+                  data: CupertinoThemeData(
                     brightness: Brightness.dark,
                     textTheme: CupertinoTextThemeData(
                       dateTimePickerTextStyle: TextStyle(
-                          color: Colors.white,
+                          color: AppPalette.text,
                           fontSize: 20,
                           fontWeight: FontWeight.w600),
                     ),
@@ -3668,13 +3670,13 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
         if (response.statusCode == 200 || response.statusCode == 201) {
           HapticFeedback.mediumImpact();
           if (!kIsWeb && enableNotification && selectedNextDate != null &&
-              !const ['Muayene', 'Sigorta'].contains(selectedType)) {
+              !['Muayene', 'Sigorta'].contains(selectedType)) {
             DateTime notifyTarget = selectedNextDate!
-                .subtract(const Duration(days: 3))
+                .subtract(Duration(days: 3))
                 .copyWith(hour: 9, minute: 0);
             DateTime notificationDate = notifyTarget.isAfter(DateTime.now())
                 ? notifyTarget
-                : DateTime.now().add(const Duration(seconds: 10));
+                : DateTime.now().add(Duration(seconds: 10));
 
             try {
               await notificationHelper.scheduleNotification(
@@ -3729,14 +3731,14 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppConstants.fieldColor,
+            color: AppPalette.field,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
             boxShadow: [
               BoxShadow(
                   color: Colors.black.withValues(alpha: 0.2),
                   blurRadius: 10,
-                  offset: const Offset(0, 4))
+                  offset: Offset(0, 4))
             ],
           ),
           child: Row(
@@ -3748,17 +3750,17 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                     borderRadius: BorderRadius.circular(12)),
                 child: Icon(icon, color: color, size: 22),
               ),
-              const SizedBox(width: 14),
+              SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(title,
                         style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.55),
+                            color: AppPalette.text.withValues(alpha: 0.55),
                             fontSize: 12,
                             fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     Text(
                       date != null
                           ? DateFormat('dd.MM.yyyy').format(date)
@@ -3766,7 +3768,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                       style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
-                          color: date != null ? Colors.white : Colors.white54),
+                          color: date != null ? AppPalette.text : AppPalette.muted),
                     ),
                   ],
                 ),
@@ -3785,15 +3787,15 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
       {TextInputType type = TextInputType.text, int maxLines = 1}) {
     return Container(
       decoration: BoxDecoration(
-          color: AppConstants.fieldColor,
+          color: AppPalette.field,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-              color: Colors.white.withValues(alpha: 0.06), width: 1.5),
+              color: AppPalette.text.withValues(alpha: 0.06), width: 1.5),
           boxShadow: [
             BoxShadow(
                 color: Colors.black.withValues(alpha: 0.15),
                 blurRadius: 10,
-                offset: const Offset(0, 4))
+                offset: Offset(0, 4))
           ]),
       child: TextField(
         controller: controller,
@@ -3806,7 +3808,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
         decoration: InputDecoration(
           labelText: label,
           labelStyle: TextStyle(
-              color: Colors.white.withValues(alpha: 0.4),
+              color: AppPalette.text.withValues(alpha: 0.4),
               fontSize: 13,
               fontWeight: FontWeight.w500),
           prefixIcon: Padding(
@@ -3847,15 +3849,15 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
           maxHeight: screenHeight * 0.90,
         ),
         decoration: BoxDecoration(
-            color: AppConstants.cardColor,
+            color: AppPalette.surface,
             borderRadius: BorderRadius.circular(32),
             border: Border.all(
-                color: Colors.white.withValues(alpha: 0.08), width: 1.5),
+                color: AppPalette.text.withValues(alpha: 0.08), width: 1.5),
             boxShadow: [
               BoxShadow(
                   color: Colors.black.withValues(alpha: 0.6),
                   blurRadius: 40,
-                  offset: const Offset(0, 10))
+                  offset: Offset(0, 10))
             ]),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(32),
@@ -3880,7 +3882,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                             width: 44,
                             height: 4,
                             decoration: BoxDecoration(
-                                color: Colors.white24,
+                                color: AppPalette.border,
                                 borderRadius: BorderRadius.circular(10))),
                       ),
                       Padding(
@@ -3890,7 +3892,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF00FFA3)
+                                color: const AppPalette.accent
                                     .withValues(alpha: 0.12),
                                 shape: BoxShape.circle,
                               ),
@@ -3898,29 +3900,29 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                   isEditing
                                       ? Icons.edit_note_rounded
                                       : Icons.post_add_rounded,
-                                  color: const Color(0xFF00FFA3),
+                                  color: const AppPalette.accent,
                                   size: 22),
                             ),
-                            const SizedBox(width: 12),
+                            SizedBox(width: 12),
                             Expanded(
                                 child: Text(
                                     isEditing
                                         ? "İşlemi Düzenle"
                                         : "Yeni İşlem Ekle",
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                         fontSize: 17,
                                         fontWeight: FontWeight.w900,
-                                        color: Colors.white,
+                                        color: AppPalette.text,
                                         letterSpacing: -0.4))),
                             IconButton(
                               icon: Container(
                                 padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.05),
+                                  color: AppPalette.text.withValues(alpha: 0.05),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.close_rounded,
-                                    color: Colors.white70, size: 18),
+                                child: Icon(Icons.close_rounded,
+                                    color: AppPalette.muted, size: 18),
                               ),
                               onPressed: isSaving
                                   ? null
@@ -3936,13 +3938,13 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                   ),
                 ),
                 _stepIndicator(),
-                const Divider(color: Colors.white10, height: 1),
+                Divider(color: Colors.white10, height: 1),
                 Flexible(
                   child: NotificationListener<ScrollNotification>(
                     onNotification: (_) => false,
                     child: SingleChildScrollView(
                       controller: _stepScroll,
-                      physics: const BouncingScrollPhysics(),
+                      physics: BouncingScrollPhysics(),
                       keyboardDismissBehavior:
                           ScrollViewKeyboardDismissBehavior.onDrag,
                       padding: const EdgeInsets.all(20),
@@ -3952,26 +3954,26 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                           if (_step == 0) _categoryStep(),
                           if (_step == 1) ...[
                             Text(selectedType,
-                                style: const TextStyle(
-                                    color: AppConstants.primaryColor,
+                                style: TextStyle(
+                                    color: AppPalette.accent,
                                     fontSize: 18,
                                     fontWeight: FontWeight.w700)),
-                            const SizedBox(height: 14),
+                            SizedBox(height: 14),
                             // Akıllı Doğal Dil Asistanı Paneli
                             Container(
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [
-                                    const Color(0xFF00FFA3)
+                                    const AppPalette.accent
                                         .withValues(alpha: 0.12),
-                                    AppConstants.fieldColor
+                                    AppPalette.field
                                   ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
                                 borderRadius: BorderRadius.circular(22),
                                 border: Border.all(
-                                    color: const Color(0xFF00FFA3)
+                                    color: const AppPalette.accent
                                         .withValues(alpha: 0.35),
                                     width: 1.5),
                               ),
@@ -3984,24 +3986,24 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                       Container(
                                         padding: const EdgeInsets.all(6),
                                         decoration: BoxDecoration(
-                                            color: const Color(0xFF00FFA3)
+                                            color: const AppPalette.accent
                                                 .withValues(alpha: 0.15),
                                             shape: BoxShape.circle),
-                                        child: const Icon(
+                                        child: Icon(
                                             Icons.auto_awesome_rounded,
-                                            color: Color(0xFF00FFA3),
+                                            color: AppPalette.accent,
                                             size: 16),
                                       ),
-                                      const SizedBox(width: 8),
-                                      const Flexible(
+                                      SizedBox(width: 8),
+                                      Flexible(
                                           child: Text(
                                               "Notundan otomatik doldur",
                                               style: TextStyle(
-                                                  color: Color(0xFF00FFA3),
+                                                  color: AppPalette.accent,
                                                   fontWeight: FontWeight.w900,
                                                   fontSize: 13,
                                                   letterSpacing: 0.2))),
-                                      const Spacer(),
+                                      Spacer(),
                                       if (smartNoteController.text.isNotEmpty)
                                         GestureDetector(
                                           onTap: () {
@@ -4010,15 +4012,15 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                             parsedEntities.clear();
                                             setState(() {});
                                           },
-                                          child: const Text("Temizle",
+                                          child: Text("Temizle",
                                               style: TextStyle(
-                                                  color: Colors.white54,
+                                                  color: AppPalette.muted,
                                                   fontSize: 11,
                                                   fontWeight: FontWeight.bold)),
                                         ),
                                     ],
                                   ),
-                                  const SizedBox(height: 12),
+                                  SizedBox(height: 12),
                                   Row(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.center,
@@ -4027,8 +4029,8 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                         child: TextField(
                                           controller: smartNoteController,
                                           focusNode: _smartNoteFocus,
-                                          style: const TextStyle(
-                                              color: Colors.white,
+                                          style: TextStyle(
+                                              color: AppPalette.text,
                                               fontSize: 14,
                                               fontWeight: FontWeight.w600),
                                           onSubmitted: (_) =>
@@ -4037,7 +4039,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                             hintText:
                                                 "Örn: Dün Opet'te 45 lt mazot aldım 1950 TL km 142000",
                                             hintStyle: TextStyle(
-                                                color: Colors.white
+                                                color: AppPalette.text
                                                     .withValues(alpha: 0.35),
                                                 fontSize: 13),
                                             border: InputBorder.none,
@@ -4046,15 +4048,15 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 10),
+                                      SizedBox(width: 10),
                                       ElevatedButton.icon(
                                         onPressed: _processSmartNote,
-                                        icon: const Icon(Icons.flash_on_rounded,
+                                        icon: Icon(Icons.flash_on_rounded,
                                             size: 16),
-                                        label: const Text("Çözümle"),
+                                        label: Text("Çözümle"),
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor:
-                                              const Color(0xFF00FFA3),
+                                              const AppPalette.accent,
                                           foregroundColor: Colors.black,
                                           shape: RoundedRectangleBorder(
                                               borderRadius:
@@ -4063,7 +4065,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                               horizontal: 14, vertical: 10),
                                           minimumSize: Size.zero,
                                           elevation: 0,
-                                          textStyle: const TextStyle(
+                                          textStyle: TextStyle(
                                               fontFamily: 'Roboto',
                                               fontWeight: FontWeight.w900,
                                               fontSize: 13),
@@ -4074,7 +4076,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
 
                                   // Algılanan Varlık Rozetleri (Live Tags)
                                   if (parsedEntities.isNotEmpty) ...[
-                                    const SizedBox(height: 12),
+                                    SizedBox(height: 12),
                                     Wrap(
                                       spacing: 6,
                                       runSpacing: 6,
@@ -4104,7 +4106,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                                         size: 13,
                                                         color: e['color']
                                                             as Color),
-                                                    const SizedBox(width: 4),
+                                                    SizedBox(width: 4),
                                                     Text(
                                                       e['label'].toString(),
                                                       style: TextStyle(
@@ -4121,11 +4123,11 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                     ),
                                   ],
 
-                                  const SizedBox(height: 12),
+                                  SizedBox(height: 12),
                                   // Hızlı Şablon Butonları
                                   SingleChildScrollView(
                                     scrollDirection: Axis.horizontal,
-                                    physics: const BouncingScrollPhysics(),
+                                    physics: BouncingScrollPhysics(),
                                     child: Row(
                                       children: [
                                         _buildQuickChip(
@@ -4158,19 +4160,19 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 20),
+                            SizedBox(height: 20),
 
                             Text("Tarih Ayarları",
                                 style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.5),
+                                    color: AppPalette.text.withValues(alpha: 0.5),
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700)),
-                            const SizedBox(height: 10),
+                            SizedBox(height: 10),
                             _buildDatePickerCard(
                               title: "İşlem Tarihi",
                               date: selectedRecordDate,
                               icon: Icons.event_available_rounded,
-                              color: const Color(0xFF00FFA3),
+                              color: const AppPalette.accent,
                               onTap: () {
                                 _showScrollableDatePicker(
                                   context: context,
@@ -4181,20 +4183,20 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                 );
                               },
                             ),
-                            const SizedBox(height: 10),
+                            SizedBox(height: 10),
 
                             _buildDatePickerCard(
                               title: _getNextDateLabel(selectedType),
                               date: selectedNextDate,
                               icon: Icons.calendar_month_rounded,
-                              color: const Color(0xFF00FFA3),
+                              color: const AppPalette.accent,
                               emptyText: "Seçilmedi (İsteğe Bağlı)",
                               onTap: () {
                                 _showScrollableDatePicker(
                                   context: context,
                                   initialDate: selectedNextDate ??
                                       DateTime.now()
-                                          .add(const Duration(days: 365)),
+                                          .add(Duration(days: 365)),
                                   onDateSelected: (date) {
                                     setState(() => selectedNextDate = date);
                                   },
@@ -4202,14 +4204,14 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                               },
                             ),
                             if (selectedNextDate != null) ...[
-                              const SizedBox(height: 10),
+                              SizedBox(height: 10),
                               Container(
                                 decoration: BoxDecoration(
-                                    color: const Color(0xFF00FFA3)
+                                    color: const AppPalette.accent
                                         .withValues(alpha: 0.06),
                                     borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
-                                        color: const Color(0xFF00FFA3)
+                                        color: const AppPalette.accent
                                             .withValues(alpha: 0.2))),
                                 child: Material(
                                   color: Colors.transparent,
@@ -4219,33 +4221,33 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                       HapticFeedback.selectionClick();
                                       setState(() => enableNotification = val);
                                     },
-                                    activeThumbColor: const Color(0xFF00FFA3),
-                                    activeTrackColor: const Color(0xFF00FFA3)
+                                    activeThumbColor: const AppPalette.accent,
+                                    activeTrackColor: const AppPalette.accent
                                         .withValues(alpha: 0.3),
                                     contentPadding: const EdgeInsets.symmetric(
                                         horizontal: 14, vertical: 2),
-                                    title: const Text(
+                                    title: Text(
                                         "Vakti Yaklaşınca Hatırlat (3 Gün Önce)",
                                         style: TextStyle(
                                             fontWeight: FontWeight.w700,
                                             fontSize: 13,
-                                            color: Colors.white)),
-                                    secondary: const Icon(
+                                            color: AppPalette.text)),
+                                    secondary: Icon(
                                         Icons.notifications_active_rounded,
-                                        color: Color(0xFF00FFA3),
+                                        color: AppPalette.accent,
                                         size: 22),
                                   ),
                                 ),
                               ),
                             ],
 
-                            const SizedBox(height: 20),
+                            SizedBox(height: 20),
                             Text("Detay & Maliyet Bilgileri",
                                 style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.5),
+                                    color: AppPalette.text.withValues(alpha: 0.5),
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700)),
-                            const SizedBox(height: 10),
+                            SizedBox(height: 10),
 
                             LayoutBuilder(
                               builder: (context, constraints) {
@@ -4257,24 +4259,24 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                           currentKmController,
                                           "Güncel KM",
                                           Icons.speed_rounded,
-                                          const Color(0xFF00FFA3),
+                                          const AppPalette.accent,
                                           type: TextInputType.number),
-                                      const SizedBox(height: 14),
+                                      SizedBox(height: 14),
                                       if (selectedType ==
                                           'Periyodik Bakım') ...[
                                         _buildGlassInput(
                                             maintenanceKmController,
                                             "Sonraki Bakım (KM)",
                                             Icons.build_circle_rounded,
-                                            const Color(0xFF00FFA3),
+                                            const AppPalette.accent,
                                             type: TextInputType.number),
-                                        const SizedBox(height: 14),
+                                        SizedBox(height: 14),
                                       ],
                                       _buildGlassInput(
                                           costController,
                                           "Maliyet / Tutar (₺)",
                                           Icons.payments_rounded,
-                                          const Color(0xFF00FFA3),
+                                          const AppPalette.accent,
                                           type: TextInputType.number),
                                     ],
                                   );
@@ -4288,26 +4290,26 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                                   currentKmController,
                                                   "Güncel KM",
                                                   Icons.speed_rounded,
-                                                  const Color(0xFF00FFA3),
+                                                  const AppPalette.accent,
                                                   type: TextInputType.number)),
-                                          const SizedBox(width: 14),
+                                          SizedBox(width: 14),
                                           Expanded(
                                               child: _buildGlassInput(
                                                   costController,
                                                   "Tutar (₺)",
                                                   Icons.payments_rounded,
-                                                  const Color(0xFF00FFA3),
+                                                  const AppPalette.accent,
                                                   type: TextInputType.number)),
                                         ],
                                       ),
                                       if (selectedType ==
                                           'Periyodik Bakım') ...[
-                                        const SizedBox(height: 14),
+                                        SizedBox(height: 14),
                                         _buildGlassInput(
                                             maintenanceKmController,
                                             "Sonraki Bakım Hedefi (KM)",
                                             Icons.build_circle_rounded,
-                                            const Color(0xFF00FFA3),
+                                            const AppPalette.accent,
                                             type: TextInputType.number),
                                       ]
                                     ],
@@ -4316,35 +4318,35 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                               },
                             ),
 
-                            const SizedBox(height: 14),
+                            SizedBox(height: 14),
                             _buildGlassInput(
                                 descController,
                                 selectedType == 'Yakıt Alımı'
                                     ? "Alınan Litre, İstasyon vb."
                                     : "Yapılan İşlemler / Parça Notları",
                                 Icons.notes_rounded,
-                                Colors.white,
+                                AppPalette.text,
                                 maxLines: 3),
 
-                            const SizedBox(height: 20),
+                            SizedBox(height: 20),
                           ],
                           if (_step == 2) ...[
                             _recordSummary(),
-                            const SizedBox(height: 20),
+                            SizedBox(height: 20),
                             Text("Belge & Fatura Yükleme",
                                 style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.5),
+                                    color: AppPalette.text.withValues(alpha: 0.5),
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700)),
-                            const SizedBox(height: 10),
+                            SizedBox(height: 10),
                             Row(
                               children: [
                                 Expanded(child: _buildImagePickerBtn()),
-                                const SizedBox(width: 14),
+                                SizedBox(width: 14),
                                 Expanded(child: _buildDocPickerBtn()),
                               ],
                             ),
-                            const SizedBox(height: 28),
+                            SizedBox(height: 28),
                           ],
                         ],
                       ),
@@ -4391,13 +4393,13 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
 
   Widget _categoryStep() =>
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Hangi işlemi ekliyorsun?',
+        Text('Hangi işlemi ekliyorsun?',
             style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
-        const Text(
+        SizedBox(height: 8),
+        Text(
             'Önce kategori seç; sonraki adımda tarih, kilometre ve tutarı gir.',
-            style: TextStyle(color: AppConstants.mutedColor, height: 1.5)),
-        const SizedBox(height: 20),
+            style: TextStyle(color: AppPalette.muted, height: 1.5)),
+        SizedBox(height: 20),
         LayoutBuilder(builder: (context, constraints) {
           final columns = constraints.maxWidth >= 480
               ? 3
@@ -4412,11 +4414,11 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                   .map((type) => SizedBox(
                       width: width,
                       child: Material(
-                        color: AppConstants.fieldColor,
+                        color: AppPalette.field,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
-                            side: const BorderSide(
-                                color: AppConstants.borderColor)),
+                            side: BorderSide(
+                                color: AppPalette.border)),
                         child: InkWell(
                             borderRadius: BorderRadius.circular(14),
                             onTap: () {
@@ -4434,10 +4436,10 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                                     children: [
                                       Icon(type['icon'] as IconData,
                                           size: 24,
-                                          color: AppConstants.primaryColor),
-                                      const SizedBox(height: 12),
+                                          color: AppPalette.accent),
+                                      SizedBox(height: 12),
                                       Text('${type['id']}',
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                               fontWeight: FontWeight.w600,
                                               fontSize: 13)),
                                     ]))),
@@ -4458,11 +4460,11 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                           height: 3,
                           decoration: BoxDecoration(
                               color: i <= _step
-                                  ? AppConstants.primaryColor
-                                  : AppConstants.borderColor,
+                                  ? AppPalette.accent
+                                  : AppPalette.border,
                               borderRadius: BorderRadius.circular(4)),
                         ))))),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         Align(
             alignment: Alignment.centerLeft,
             child: Text(
@@ -4471,28 +4473,28 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                   'Tarih ve detaylar',
                   'Belge ve onay'
                 ][_step]}',
-                style: const TextStyle(
-                    color: AppConstants.mutedColor, fontSize: 12))),
+                style: TextStyle(
+                    color: AppPalette.muted, fontSize: 12))),
       ]));
   Widget _recordSummary() => Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-          color: AppConstants.fieldColor,
+          color: AppPalette.field,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppConstants.borderColor)),
+          border: Border.all(color: AppPalette.border)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Kaydetmeden önce kontrol et',
+        Text('Kaydetmeden önce kontrol et',
             style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
-        const SizedBox(height: 16),
+        SizedBox(height: 16),
         Text(selectedType,
-            style: const TextStyle(
-                color: AppConstants.primaryColor, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 10),
+            style: TextStyle(
+                color: AppPalette.accent, fontWeight: FontWeight.w700)),
+        SizedBox(height: 10),
         Text(
             'İşlem tarihi: ${DateFormat('dd.MM.yyyy').format(selectedRecordDate)}'),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Text('Kilometre: ${currentKmController.text} km'),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Text(
             'Tutar: ${costController.text.isEmpty ? '0' : costController.text} ₺'),
         if (selectedNextDate != null)
@@ -4504,26 +4506,26 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
           Padding(
               padding: const EdgeInsets.only(top: 12),
               child: Text(descController.text.trim(),
-                  style: const TextStyle(
-                      color: AppConstants.mutedColor, height: 1.5))),
-        const SizedBox(height: 12),
-        const Text('Fotoğraf ve belge eklemek isteğe bağlıdır.',
-            style: TextStyle(color: AppConstants.mutedColor, fontSize: 12)),
+                  style: TextStyle(
+                      color: AppPalette.muted, height: 1.5))),
+        SizedBox(height: 12),
+        Text('Fotoğraf ve belge eklemek isteğe bağlıdır.',
+            style: TextStyle(color: AppPalette.muted, fontSize: 12)),
       ]));
   Widget _stepFooter() => _step == 0
-      ? const Padding(
+      ? Padding(
           padding: EdgeInsets.all(16),
           child: Text('Bir kategoriye dokunarak devam et',
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppConstants.mutedColor, fontSize: 12)))
+              style: TextStyle(color: AppPalette.muted, fontSize: 12)))
       : Padding(
           padding: const EdgeInsets.all(16),
           child: Row(children: [
             if (_step > 0) ...[
               OutlinedButton(
                   onPressed: isSaving ? null : () => _setStep(_step - 1),
-                  child: const Text('Geri')),
-              const SizedBox(width: 12),
+                  child: Text('Geri')),
+              SizedBox(width: 12),
             ],
             Expanded(
                 child: FilledButton(
@@ -4537,7 +4539,7 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                             }
                           },
                     child: isSaving
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
@@ -4567,9 +4569,9 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.04),
+              color: AppPalette.text.withValues(alpha: 0.04),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              border: Border.all(color: AppPalette.text.withValues(alpha: 0.08)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -4577,13 +4579,13 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                 Icon(
                   icon,
                   size: 15,
-                  color: const Color(0xFF00FFA3),
+                  color: const AppPalette.accent,
                 ),
-                const SizedBox(width: 6),
+                SizedBox(width: 6),
                 Text(
                   label,
-                  style: const TextStyle(
-                    color: Colors.white70,
+                  style: TextStyle(
+                    color: AppPalette.muted,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                   ),
@@ -4612,12 +4614,12 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
         height: 80,
         decoration: BoxDecoration(
             color: selectedImage != null
-                ? const Color(0xFF00FFA3).withValues(alpha: 0.12)
-                : AppConstants.fieldColor,
+                ? const AppPalette.accent.withValues(alpha: 0.12)
+                : AppPalette.field,
             border: Border.all(
                 color: selectedImage != null
-                    ? const Color(0xFF00FFA3)
-                    : Colors.white.withValues(alpha: 0.06),
+                    ? const AppPalette.accent
+                    : AppPalette.text.withValues(alpha: 0.06),
                 width: 1.5),
             borderRadius: BorderRadius.circular(16)),
         child: selectedImage != null && !kIsWeb
@@ -4636,10 +4638,10 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                     child: Container(
                       margin: const EdgeInsets.all(4),
                       padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                           color: Colors.black87, shape: BoxShape.circle),
-                      child: const Icon(Icons.close_rounded,
-                          size: 14, color: Colors.white),
+                      child: Icon(Icons.close_rounded,
+                          size: 14, color: AppPalette.text),
                     ),
                   )
                 ],
@@ -4652,10 +4654,10 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                           ? Icons.add_photo_alternate_rounded
                           : Icons.check_circle_rounded,
                       color: selectedImage == null
-                          ? Colors.white54
-                          : const Color(0xFF00FFA3),
+                          ? AppPalette.muted
+                          : const AppPalette.accent,
                       size: 24),
-                  const SizedBox(height: 6),
+                  SizedBox(height: 6),
                   Text(
                       selectedImage == null
                           ? "Fotoğraf / Fiş"
@@ -4664,8 +4666,8 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                           fontWeight: FontWeight.w700,
                           fontSize: 12,
                           color: selectedImage == null
-                              ? Colors.white54
-                              : const Color(0xFF00FFA3))),
+                              ? AppPalette.muted
+                              : const AppPalette.accent)),
                 ],
               ),
       ),
@@ -4690,24 +4692,24 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
             color: selectedDoc != null
-                ? const Color(0xFF00FFA3).withValues(alpha: 0.12)
-                : AppConstants.fieldColor,
+                ? const AppPalette.accent.withValues(alpha: 0.12)
+                : AppPalette.field,
             border: Border.all(
                 color: selectedDoc != null
-                    ? const Color(0xFF00FFA3)
-                    : Colors.white.withValues(alpha: 0.06),
+                    ? const AppPalette.accent
+                    : AppPalette.text.withValues(alpha: 0.06),
                 width: 1.5),
             borderRadius: BorderRadius.circular(16)),
         child: selectedDoc != null
             ? Row(
                 children: [
-                  const Icon(Icons.description_rounded,
-                      color: Color(0xFF00FFA3), size: 24),
-                  const SizedBox(width: 8),
+                  Icon(Icons.description_rounded,
+                      color: AppPalette.accent, size: 24),
+                  SizedBox(width: 8),
                   Expanded(
                     child: Text(selectedDoc!.name,
-                        style: const TextStyle(
-                            color: Color(0xFF00FFA3),
+                        style: TextStyle(
+                            color: AppPalette.accent,
                             fontSize: 11,
                             fontWeight: FontWeight.bold),
                         overflow: TextOverflow.ellipsis,
@@ -4715,22 +4717,22 @@ class _VehicleRecordFormSheetState extends State<VehicleRecordFormSheet> {
                   ),
                   GestureDetector(
                     onTap: () => setState(() => selectedDoc = null),
-                    child: const Icon(Icons.close_rounded,
-                        color: Colors.white54, size: 18),
+                    child: Icon(Icons.close_rounded,
+                        color: AppPalette.muted, size: 18),
                   )
                 ],
               )
-            : const Column(
+            : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.upload_file_rounded,
-                      color: Colors.white54, size: 24),
+                      color: AppPalette.muted, size: 24),
                   SizedBox(height: 6),
                   Text("Ruhsat / Belge",
                       style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 12,
-                          color: Colors.white54)),
+                          color: AppPalette.muted)),
                 ],
               ),
       ),

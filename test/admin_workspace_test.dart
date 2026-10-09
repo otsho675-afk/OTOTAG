@@ -84,6 +84,11 @@ void main() {
           expect((revenue.dy - completed.dy).abs(), lessThan(3),
               reason: 'Mobile dashboard must show the first two stats side by side.');
           expect(revenue.dx, lessThan(completed.dx));
+          final updateTile = tester.getTopLeft(find.text('Sürüm güncelle'));
+          final rentalTile = tester.getTopLeft(find.text('Kiralama takip'));
+          expect((updateTile.dy - rentalTile.dy).abs(), lessThan(4),
+              reason: 'Management actions must be side-by-side on phones.');
+          expect(updateTile.dx, lessThan(rentalTile.dx));
         }
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox());

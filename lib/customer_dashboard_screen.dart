@@ -2776,10 +2776,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
     final accent = light ? const Color(0xFF08784D) : _primaryColor;
     return Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF15171C), Color(0xFF0D0F13)],
+          colors: light ? [Colors.white, const Color(0xFFEEF8F1)]
+            : [const Color(0xFF15171C), const Color(0xFF0D0F13)],
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
@@ -2787,7 +2788,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.24),
+            color: Colors.black.withValues(alpha: light ? .07 : .24),
             blurRadius: 22,
             offset: const Offset(0, 10),
           ),
@@ -2856,15 +2857,14 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                       ),
                     ),
                     const SizedBox(width: 14),
-                    const Expanded(
-                      child: Column(
+                    Expanded(child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'PAZAR YERİ',
                             style: TextStyle(
-                              color: _primaryColor,
-                              fontSize: 9.5,
+                              color: accent,
+                               fontSize: 9.5,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 1.15,
                             ),
@@ -2873,8 +2873,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                           Text(
                             'Yedek Parça Pazarı',
                             style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 17,
+                              color: light ? ink : Colors.white,
+                               fontSize: 17,
                               fontWeight: FontWeight.w800,
                               letterSpacing: -0.3,
                             ),
@@ -2883,8 +2883,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                           Text(
                             'Şehrinizdeki yeni ve çıkma parçaları keşfedin veya ilan verin.',
                             style: TextStyle(
-                              color: Colors.white54,
-                              fontSize: 12,
+                              color: muted,
+                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                               height: 1.35,
                             ),
@@ -2897,15 +2897,13 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                       width: 34,
                       height: 34,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.04),
+                        color: light ? const Color(0xFFE2F3E7) : Colors.white.withValues(alpha: .04),
                         borderRadius: BorderRadius.circular(11),
                         border: Border.all(
                           color: light ? const Color(0xFFCBE6D3) : Colors.white.withValues(alpha: 0.07),
                         ),
                       ),
-                      child: const Icon(
-                        Icons.arrow_forward_rounded,
-                        color: _primaryColor,
+                      child: Icon(Icons.arrow_forward_rounded, color: accent,
                         size: 18,
                       ),
                     ),
@@ -3171,12 +3169,12 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: .035),
+                      color: light ? const Color(0xFFF0F7F1) : Colors.white.withValues(alpha: .035),
                       borderRadius: BorderRadius.circular(99),
                       border:
-                          Border.all(color: Colors.white.withValues(alpha: .06)),
+                          Border.all(color: light ? const Color(0xFFD7E7DB) : Colors.white.withValues(alpha: .06)),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.bolt_rounded,
@@ -3209,8 +3207,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
-                          'Aracınız için her şey tek merkezde',
+                        Text('Aracınız için her şey tek merkezde',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w900,
@@ -3237,9 +3234,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                 ],
               ),
               const Spacer(),
-              const Row(
-                children: [
-                  Icon(Icons.location_on_outlined,
+              Row(children: [ Icon(Icons.location_on_outlined,
                       size: 13, color: _primaryColor),
                   SizedBox(width: 5),
                   Text(

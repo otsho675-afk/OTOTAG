@@ -196,11 +196,17 @@ class ProviderOfflineDashboard extends StatelessWidget {
                       children: [
                         Row(children: [
                           Expanded(
-                            child: Text('Usta paneli',
+                            child: Row(children: [
+                              const OtoTagBrandLogo(height: 29),
+                              const SizedBox(width: 8),
+                              Expanded(child: Text('Usta paneli',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                     color: Theme.of(context).colorScheme.onSurface,
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w700)),
+                                    fontSize: 19,
+                                    fontWeight: FontWeight.w700))),
+                            ]),
                           ),
                           const AppThemeToggleButton(),
                           Tooltip(
@@ -272,7 +278,7 @@ class ProviderOfflineDashboard extends StatelessWidget {
                                 color: Theme.of(context).colorScheme.surface,
                                 borderRadius: BorderRadius.circular(24),
                                 border: Border.all(
-                                    color: AppConstants.borderColor)),
+                                    color: AppPalette.border)),
                             child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -318,9 +324,9 @@ class ProviderOfflineDashboard extends StatelessWidget {
   Widget _stat(BuildContext context, IconData icon, String title, String value) => Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-          color: AppConstants.cardColor,
+          color: AppPalette.surface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppConstants.borderColor)),
+          border: Border.all(color: AppPalette.border)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Icon(icon, color: AppPalette.accent),
         const SizedBox(height: 14),
@@ -330,7 +336,7 @@ class ProviderOfflineDashboard extends StatelessWidget {
         const SizedBox(height: 4),
         Text(value,
             style: TextStyle(
-                color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700))
+                color: AppPalette.text, fontSize: 16, fontWeight: FontWeight.w700))
       ]));
 }
 

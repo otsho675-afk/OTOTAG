@@ -539,7 +539,7 @@ class RoleSelectionScreen extends StatelessWidget {
                   color: AppPalette.accent.withValues(alpha: .08),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.arrow_forward_rounded,
                   color: AppPalette.accent,
                   size: 19,
@@ -588,7 +588,7 @@ class RoleSelectionScreen extends StatelessWidget {
                         child: Image.asset(
                           'assets/images/logo.png',
                           fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => const Icon(
+                          errorBuilder: (_, __, ___) => Icon(
                             Icons.directions_car_rounded,
                             color: AppPalette.accent,
                             size: 44,
@@ -597,7 +597,7 @@ class RoleSelectionScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    const Text(
+                    Text(
                       'OTO TAG',
                       textAlign: TextAlign.center,
                       style: TextStyle(
@@ -764,7 +764,7 @@ class SmartNotificationHelper {
                           children: [
                             Text(
                               title,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w800,

@@ -14,6 +14,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'widgets/app_theme_toggle_button.dart';
 
 import 'customer_dashboard_screen.dart';
 import 'provider_map_screen.dart';
@@ -2018,10 +2019,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         ? 0.0
         : ((_currentStep + 1) / _stepCount).clamp(0.0, 1.0).toDouble();
 
+    final light = Theme.of(context).brightness == Brightness.light;
     return Scaffold(
-      backgroundColor: pureBlack,
+      backgroundColor: light ? const Color(0xFFF6F9F6) : pureBlack,
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
+        actions: const [AppThemeToggleButton(), SizedBox(width: 8)],
         leading: IconButton(
           tooltip: 'Geri',
           icon: Container(
@@ -2050,7 +2053,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             size: 28,
           ),
         ),
-        backgroundColor: pureBlack.withValues(alpha: 0.92),
+        backgroundColor: light ? Colors.white : pureBlack.withValues(alpha: 0.92),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
@@ -2095,7 +2098,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                             width: double.infinity,
                             padding: EdgeInsets.all(compactHeight ? 14 : 16),
                             decoration: BoxDecoration(
-                              color: panelBlack.withValues(alpha: 0.92),
+                              color: light ? Colors.white : panelBlack.withValues(alpha: 0.92),
                               borderRadius: BorderRadius.circular(24),
                               border: Border.all(
                                 color: Colors.white.withValues(alpha: 0.07),
@@ -2290,7 +2293,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       child: Container(
                         padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
                         decoration: BoxDecoration(
-                          color: panelBlack.withValues(alpha: 0.97),
+                          color: light ? Colors.white : panelBlack.withValues(alpha: 0.97),
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
                             color: Colors.white.withValues(alpha: 0.065),

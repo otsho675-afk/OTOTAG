@@ -196,84 +196,216 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
 
   void _editVehicle([Map<String, dynamic>? vehicle]) {
     final existing = vehicle != null;
-    final keys = [
-      'plate','brand_model','engine_type','model_year','current_km','maintenance_km',
-      'insurance_date','inspection_date','mtv_date',
-    ];
-    final labels = {
-      'plate':'Plaka','brand_model':'Marka / model','engine_type':'Yakıt',
-      'model_year':'Model yılı','current_km':'Güncel kilometre',
-      'maintenance_km':'Bakım kilometresi','insurance_date':'Sigorta (YYYY-AA-GG)',
-      'inspection_date':'Muayene (YYYY-AA-GG)','mtv_date':'MTV (YYYY-AA-GG)',
+    const labels = <String, String>{
+      'plate': 'Plaka',
+      'brand_model': 'Marka / model',
+      'engine_type': 'Yakıt',
+      'model_year': 'Model yılı',
+      'current_km': 'Güncel kilometre',
+      'maintenance_km': 'Bakım kilometresi',
+      'insurance_date': 'Sigorta (YYYY-AA-GG)',
+      'inspection_date': 'Muayene (YYYY-AA-GG)',
+      'mtv_date': 'MTV (YYYY-AA-GG)',
     };
-    final controllers = {
-      for(final k in keys) k: TextEditingController(text: vehicle?[k]?.toString() ?? '')
+    final editableFields = existing
+        ? labels.keys.toList()
+        : ['plate', 'brand_model'];
+    final controllers = <String, TextEditingController>{
+      for (final key in editableFields)
+        key: TextEditingController(
+            text: vehicle?[key]?.toString() ??
+                (key == 'current_km'
+                    ? '0'
+                    : key == 'maintenance_km'
+                        ? '10000'
+                        : '')),
     };
-    showDialog<void>(context: context,builder:(ctx) => AlertDialog(
-      title: Text(existing ? 'Aracı düzenle' : 'Araç ekle'),
-      content:SizedBox(width:500,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-        for(final key in (existing ? keys : keys.take(2))) Padding(
-          padding: const EdgeInsets.only(bottom:10),
-          child: TextField(
-            controller: controllers[key],
-            keyboardType: ['current_km','maintenance_km','model_year'].contains(key)
-                ? TextInputType.number : TextInputType.text,
-            decoration: InputDecoration(labelText:labels[key],border:const OutlineInputBorder()),
-          ),
-        )
-      ]))),
-      actions:[
-        TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Vazgeç')),
-        FilledButton(onPressed:() async {
-          final values = {for(final key in (existing ? keys : keys.take(2)))
-              key: controllers[key]!.text.trim()};
-          if (existing) values['vehicle_id'] = vehicle['id'].toString();
-          Navigator.pop(ctx);
-          await _post(existing ? 'admin_update_vehicle' : 'admin_add_vehicle', values);
-          for (final c in controllers.values) { c.dispose(); }
-        },child:const Text('Kaydet')),
-      ],
-    ));
-  }
-
-  void _editRental(Map<String,dynamic> listing) {
-    final labels = <String,String>{
-      'plate':'Plaka',
-      'brand':'Marka',
-      'model':'Model',
-      'model_year':'Model yılı',
-      'daily_price':'Günlük ücret (TL)',
-      'description':'İlan açıklaması',
-    };
-    final fields = {for(final key in labels.keys)
-      key: TextEditingController(text: listing[key]?.toString() ?? '')};
-    showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
-      title:const Text('Kiralık araç ilanını düzenle'),
-      content:SizedBox(width:500,child:SingleChildScrollView(
-        child:Column(mainAxisSize:MainAxisSize.min,children:[
-          for(final item in labels.entries) Padding(
-            padding:const EdgeInsets.only(bottom:10),
-            child:TextField(
-              controller:fields[item.key],
-              maxLines:item.key=='description'?3:1,
-              keyboardType:item.key=='daily_price'?const TextInputType.numberWithOptions(decimal:true):TextInputType.text,
-              decoration:InputDecoration(labelText:item.value,border:const OutlineInputBorder()),
+    bool formSaving = false;
+    String? formError;
+    showDialog<void>(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (dialogContext, update) => AlertDialog(
+          title: Text(existing ? 'Aracı düzenle' : 'Yeni araç ekle'),
+          content: SizedBox(
+            width: 510,
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                for (final key in editableFields)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 11),
+                    child: TextField(
+                      controller: controllers[key],
+                      keyboardType: [
+                        'current_km', 'maintenance_km', 'model_year'
+                      ].contains(key)
+                          ? TextInputType.number
+                          : TextInputType.text,
+                      decoration: InputDecoration(
+                        labelText: labels[key],
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                if (formError != null)
+                  Text(formError!,
+                      style: TextStyle(
+                          color: Theme.of(dialogContext).colorScheme.error)),
+              ]),
             ),
           ),
-        ]),
-      )),
-      actions:[
-        TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Vazgeç')),
-        FilledButton.icon(onPressed:() async {
-          final data={for(final row in fields.entries) row.key:row.value.text.trim()};
-          data['listing_id']=listing['id'].toString();
-          data['listing_version']=listing['listing_version'].toString();
-          Navigator.pop(ctx);
-          await _post('admin_update_rental_listing',data);
-          for(final controller in fields.values) {controller.dispose();}
-        },icon:const Icon(Icons.save_outlined),label:const Text('Kaydet')),
-      ],
-    ));
+          actions: [
+            TextButton(
+              onPressed: formSaving
+                  ? null
+                  : () => Navigator.of(dialogContext).pop(),
+              child: const Text('Vazgeç'),
+            ),
+            FilledButton.icon(
+              onPressed: formSaving
+                  ? null
+                  : () async {
+                      final values = <String, String>{
+                        for (final key in editableFields)
+                          key: controllers[key]!.text.trim(),
+                      };
+                      if (values['plate']!.isEmpty ||
+                          values['brand_model']!.isEmpty) {
+                        update(() => formError =
+                            'Plaka ve marka / model zorunludur.');
+                        return;
+                      }
+                      if (existing) {
+                        values['vehicle_id'] = vehicle['id'].toString();
+                      }
+                      update(() { formSaving = true; formError = null; });
+                      final saved = await _post(
+                        existing ? 'admin_update_vehicle' : 'admin_add_vehicle',
+                        values,
+                      );
+                      if (!dialogContext.mounted) return;
+                      if (saved) {
+                        Navigator.of(dialogContext).pop();
+                      } else {
+                        update(() {
+                          formSaving = false;
+                          formError =
+                              'İşlem başarısız. Alanları kontrol edip tekrar deneyin.';
+                        });
+                      }
+                    },
+              icon: formSaving
+                  ? const SizedBox(
+                      width: 16, height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.save_outlined),
+              label: Text(formSaving ? 'Kaydediliyor' : 'Kaydet'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _editRental(Map<String, dynamic> listing) {
+    const labels = <String, String>{
+      'plate': 'Plaka',
+      'brand': 'Marka',
+      'model': 'Model',
+      'model_year': 'Model yılı',
+      'daily_price': 'Günlük ücret (TL)',
+      'description': 'İlan açıklaması',
+    };
+    final fields = <String, TextEditingController>{
+      for (final key in labels.keys)
+        key: TextEditingController(
+            text: listing[key]?.toString() ?? ''),
+    };
+    bool formSaving = false;
+    String? formError;
+    showDialog<void>(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (dialogContext, update) => AlertDialog(
+          title: const Text('Kiralık araç ilanını düzenle'),
+          content: SizedBox(
+            width: 510,
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                for (final item in labels.entries)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 11),
+                    child: TextField(
+                      controller: fields[item.key],
+                      maxLines: item.key == 'description' ? 3 : 1,
+                      keyboardType: item.key == 'daily_price'
+                          ? const TextInputType.numberWithOptions(
+                              decimal: true)
+                          : TextInputType.text,
+                      decoration: InputDecoration(
+                        labelText: item.value,
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                if (formError != null)
+                  Text(formError!,
+                      style: TextStyle(
+                          color: Theme.of(dialogContext).colorScheme.error)),
+              ]),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: formSaving
+                  ? null
+                  : () => Navigator.of(dialogContext).pop(),
+              child: const Text('Vazgeç'),
+            ),
+            FilledButton.icon(
+              onPressed: formSaving
+                  ? null
+                  : () async {
+                      final data = <String, String>{
+                        for (final row in fields.entries)
+                          row.key: row.value.text.trim(),
+                        'listing_id': listing['id'].toString(),
+                        'listing_version':
+                            listing['listing_version'].toString(),
+                      };
+                      if (data['plate']!.isEmpty ||
+                          data['brand']!.isEmpty ||
+                          data['model']!.isEmpty ||
+                          (double.tryParse(data['daily_price']!) ?? 0) <= 0) {
+                        update(() => formError =
+                            'Plaka, marka, model ve geçerli fiyat zorunludur.');
+                        return;
+                      }
+                      update(() { formSaving = true; formError = null; });
+                      final saved =
+                          await _post('admin_update_rental_listing', data);
+                      if (!dialogContext.mounted) return;
+                      if (saved) {
+                        Navigator.of(dialogContext).pop();
+                      } else {
+                        update(() {
+                          formSaving = false;
+                          formError =
+                              'Kaydedilemedi. Lütfen tekrar kontrol edin.';
+                        });
+                      }
+                    },
+              icon: formSaving
+                  ? const SizedBox(
+                      width: 16, height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.save_outlined),
+              label: Text(formSaving ? 'Kaydediliyor' : 'Kaydet'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _sectionTitle(String title, IconData icon) => Padding(

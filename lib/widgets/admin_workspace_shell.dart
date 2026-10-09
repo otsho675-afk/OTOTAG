@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables
 import 'package:flutter/material.dart';
 import '../core/constants/app_constants.dart';
 
@@ -13,6 +14,8 @@ class AdminWorkspaceShell extends StatelessWidget {
     this.pendingCount = 0,
     this.ticketCount = 0,
     this.loading = false,
+    this.lightMode = false,
+    this.onToggleTheme,
   });
 
   final int selected, pendingCount, ticketCount;
@@ -20,7 +23,8 @@ class AdminWorkspaceShell extends StatelessWidget {
   final VoidCallback onRefresh;
   final VoidCallback? onSearch;
   final Widget child;
-  final bool loading;
+  final bool loading, lightMode;
+  final VoidCallback? onToggleTheme;
 
   static const labels = <String>[
     'Genel bakış', 'Onaylar', 'Üyeler', 'İşlemler',
@@ -41,13 +45,13 @@ class AdminWorkspaceShell extends StatelessWidget {
     'Android ve iPhone sürüm duyuruları',
     'Reklam, abonelik, analiz ve bakım',
   ];
-  static const Color _ink = Color(0xFF08120E);
-  static const Color _side = Color(0xFF0D1914);
-  static const Color _surface = Color(0xFF14231C);
-  static const Color _line = Color(0xFF26382E);
-  static const Color _text = Color(0xFFF2FAF4);
-  static const Color _sub = Color(0xFF92AA9A);
-  static const Color _mint = AppConstants.primaryColor;
+  Color get _ink => lightMode ? Color(0xFFFFFFFF) : Color(0xFF08120E);
+  Color get _side => lightMode ? Color(0xFFFFFFFF) : Color(0xFF0D1914);
+  Color get _surface => lightMode ? Color(0xFFF4F8F5) : Color(0xFF14231C);
+  Color get _line => lightMode ? Color(0xFFDCE7DE) : Color(0xFF26382E);
+  Color get _text => lightMode ? Color(0xFF13241A) : Color(0xFFF2FAF4);
+  Color get _sub => lightMode ? Color(0xFF56685C) : Color(0xFF92AA9A);
+  Color get _mint => lightMode ? Color(0xFF08784D) : AppConstants.primaryColor;
 
   int _badgeCount(int index) => switch (index) {
         1 => pendingCount,
@@ -61,7 +65,7 @@ class AdminWorkspaceShell extends StatelessWidget {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             begin: Alignment.topLeft, end: Alignment.bottomRight,
             colors: [Color(0xFF00FFA3), Color(0xFF00A86D)],
           ),
@@ -70,7 +74,7 @@ class AdminWorkspaceShell extends StatelessWidget {
             BoxShadow(color: _mint.withValues(alpha: .14), blurRadius: 18),
           ],
         ),
-        child: Icon(Icons.route_rounded, color: _ink, size: size * .55),
+        child: Icon(Icons.route_rounded, color: Color(0xFF08120E), size: size * .55),
       );
 
   Widget _navTile(int index, {required bool compact, required VoidCallback onTap}) {
@@ -80,23 +84,23 @@ class AdminWorkspaceShell extends StatelessWidget {
         ? Container(
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
             decoration: BoxDecoration(
-              color: active ? _mint : const Color(0xFF344139),
+              color: active ? _mint : Color(0xFF344139),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(_counter(count),
                 style: TextStyle(
-                  color: active ? _ink : _text,
+                  color: active ? (lightMode ? Colors.white : _ink) : _text,
                   fontSize: 10, fontWeight: FontWeight.w900,
                 )),
           )
         : null;
     final icon = Icon(icons[index],
         size: compact ? 21 : 22,
-        color: active ? _mint : const Color(0xFFB4C7B9));
+        color: active ? _mint : _sub);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Material(
-        color: active ? const Color(0xFF1C382A) : Colors.transparent,
+        color: active ? (lightMode ? Color(0xFFE1F4E9) : Color(0xFF1C382A)) : Colors.transparent,
         borderRadius: BorderRadius.circular(14),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -117,7 +121,7 @@ class AdminWorkspaceShell extends StatelessWidget {
                     Stack(clipBehavior: Clip.none, children: [
                       icon,
                       if (count > 0)
-                        const Positioned(
+                        Positioned(
                           top: -5, right: -9,
                           child: CircleAvatar(
                             radius: 5,
@@ -125,7 +129,7 @@ class AdminWorkspaceShell extends StatelessWidget {
                           ),
                         ),
                     ]),
-                    const SizedBox(height: 5),
+                    SizedBox(height: 5),
                     Text(labels[index],
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -141,31 +145,31 @@ class AdminWorkspaceShell extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: active
                             ? _mint.withValues(alpha: .13)
-                            : const Color(0xFF1A2A21),
+                            : Color(0xFF1A2A21),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Center(child: icon),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(labels[index],
                             maxLines: 1, overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: active ? _text : const Color(0xFFDEE9E0),
+                              color: active ? _text : _sub,
                               fontSize: 13, fontWeight: FontWeight.w800,
                             )),
-                        const SizedBox(height: 2),
+                        SizedBox(height: 2),
                         Text(descriptions[index],
                             maxLines: 1, overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 10, color: _sub)),
+                            style: TextStyle(fontSize: 10, color: _sub)),
                       ],
                     )),
                     if (badge != null) ...[
-                      const SizedBox(width: 7), badge,
+                      SizedBox(width: 7), badge,
                     ] else if (active)
-                      const Icon(Icons.chevron_right_rounded,
+                      Icon(Icons.chevron_right_rounded,
                           color: _mint, size: 19),
                   ]),
           ),
@@ -175,11 +179,11 @@ class AdminWorkspaceShell extends StatelessWidget {
   }
 
   Widget _sectionLabel(String label, {bool compact = false}) {
-    if (compact) return const SizedBox(height: 10);
+    if (compact) return SizedBox(height: 10);
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 16, 12, 6),
       child: Text(label,
-          style: const TextStyle(
+          style: TextStyle(
             color: _sub, fontWeight: FontWeight.w800,
             fontSize: 10, letterSpacing: 1.7,
           )),
@@ -192,7 +196,7 @@ class AdminWorkspaceShell extends StatelessWidget {
     required ValueChanged<int> navigate,
   }) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: _side,
         border: Border(right: BorderSide(color: _line)),
       ),
@@ -207,8 +211,8 @@ class AdminWorkspaceShell extends StatelessWidget {
               children: [
                 _mark(size: compact ? 42 : 44),
                 if (!compact) ...[
-                  const SizedBox(width: 12),
-                  const Expanded(child: Column(
+                  SizedBox(width: 12),
+                  Expanded(child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('OTO TAG',
@@ -227,7 +231,7 @@ class AdminWorkspaceShell extends StatelessWidget {
                     IconButton(
                       tooltip: 'Menüyü kapat',
                       onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close_rounded, color: _text),
+                      icon: Icon(Icons.close_rounded, color: _text),
                     ),
                 ],
               ],
@@ -244,7 +248,7 @@ class AdminWorkspaceShell extends StatelessWidget {
                 ),
                 padding: const EdgeInsets.symmetric(
                     horizontal: 12, vertical: 12),
-                child: const Row(children: [
+                child: Row(children: [
                   Icon(Icons.shield_rounded, color: _mint, size: 19),
                   SizedBox(width: 9),
                   Expanded(child: Column(
@@ -262,7 +266,7 @@ class AdminWorkspaceShell extends StatelessWidget {
                 ]),
               ),
             ),
-          const Divider(color: _line, thickness: 1, height: 12),
+          Divider(color: _line, thickness: 1, height: 12),
           Expanded(child: ListView(
             padding: EdgeInsets.fromLTRB(
                 compact ? 8 : 13, 0, compact ? 8 : 13, 14),
@@ -282,12 +286,12 @@ class AdminWorkspaceShell extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(15, 8, 15, 19),
               child: Row(children: [
                 Container(width: 8, height: 8,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                         color: _mint, shape: BoxShape.circle)),
-                const SizedBox(width: 9),
-                const Expanded(child: Text('Yönetim paneli',
+                SizedBox(width: 9),
+                Expanded(child: Text('Yönetim paneli',
                     style: TextStyle(color: _sub, fontSize: 11))),
-                const Text('OTO TAG',
+                Text('OTO TAG',
                     style: TextStyle(
                         color: _sub, fontSize: 9,
                         fontWeight: FontWeight.w800)),
@@ -306,8 +310,8 @@ class AdminWorkspaceShell extends StatelessWidget {
       useSafeArea: true,
       showDragHandle: true,
       backgroundColor: _side,
-      constraints: const BoxConstraints(maxWidth: 540),
-      shape: const RoundedRectangleBorder(
+      constraints: BoxConstraints(maxWidth: 540),
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (sheetContext) {
@@ -321,8 +325,8 @@ class AdminWorkspaceShell extends StatelessWidget {
               children: [
                 Row(children: [
                   _mark(size: 37),
-                  const SizedBox(width: 12),
-                  const Expanded(child: Column(
+                  SizedBox(width: 12),
+                  Expanded(child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Yönetim bölümleri',
@@ -337,15 +341,15 @@ class AdminWorkspaceShell extends StatelessWidget {
                   IconButton(
                     tooltip: 'Menüyü kapat',
                     onPressed: () => Navigator.pop(sheetContext),
-                    icon: const Icon(Icons.close_rounded, color: _text),
+                    icon: Icon(Icons.close_rounded, color: _text),
                   ),
                 ]),
-                const SizedBox(height: 18),
+                SizedBox(height: 18),
                 GridView.builder(
                   shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
+                  physics: NeverScrollableScrollPhysics(),
                   itemCount: labels.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     mainAxisExtent: 84,
                     mainAxisSpacing: 10,
@@ -354,7 +358,7 @@ class AdminWorkspaceShell extends StatelessWidget {
                   itemBuilder: (ctx, index) {
                     final active = selected == index;
                     return Material(
-                      color: active ? const Color(0xFF1D3A2A) : _surface,
+                      color: active ? (lightMode ? Color(0xFFDDF4E7) : Color(0xFF1D3A2A)) : _surface,
                       borderRadius: BorderRadius.circular(14),
                       clipBehavior: Clip.antiAlias,
                       child: InkWell(
@@ -376,17 +380,17 @@ class AdminWorkspaceShell extends StatelessWidget {
                             children: [
                               Row(children: [
                                 Icon(icons[index], color: _mint, size: 21),
-                                const Spacer(),
+                                Spacer(),
                                 if (_badgeCount(index) > 0)
                                   Text(_counter(_badgeCount(index)),
-                                    style: const TextStyle(color: _mint,
+                                    style: TextStyle(color: _mint,
                                       fontSize: 12, fontWeight: FontWeight.w900)),
                               ]),
-                              const Spacer(),
+                              Spacer(),
                               Text(labels[index],
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(color: _text,
+                                  style: TextStyle(color: _text,
                                     fontSize: 13, fontWeight: FontWeight.w800)),
                             ],
                           ),
@@ -416,7 +420,7 @@ class AdminWorkspaceShell extends StatelessWidget {
       ('Bölümler', Icons.widgets_outlined, Icons.widgets_rounded),
     ];
     return SafeArea(top: false, child: Container(
-      decoration: const BoxDecoration(color: _side,
+      decoration: BoxDecoration(color: _side,
         border: Border(top: BorderSide(color: _line))),
       padding: const EdgeInsets.fromLTRB(4, 7, 4, 3),
       child: Row(children: [
@@ -424,7 +428,7 @@ class AdminWorkspaceShell extends StatelessWidget {
           Expanded(child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2),
             child: Material(
-              color: active == i ? const Color(0xFF1B3D2A) : Colors.transparent,
+              color: active == i ? Color(0xFF1B3D2A) : Colors.transparent,
               borderRadius: BorderRadius.circular(13),
               clipBehavior: Clip.antiAlias,
               child: InkWell(
@@ -445,14 +449,14 @@ class AdminWorkspaceShell extends StatelessWidget {
                           (i == 4 && ticketCount > 0))
                         Positioned(right: -9, top: -5, child: Container(
                           width: 10, height: 10,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             color: Color(0xFFF4B95C), shape: BoxShape.circle,
                             border: Border.fromBorderSide(
                               BorderSide(color: _side, width: 1.5)),
                           ),
                         )),
                     ]),
-                    const SizedBox(height: 5),
+                    SizedBox(height: 5),
                     Text(items[i].$1, maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -478,7 +482,7 @@ class AdminWorkspaceShell extends StatelessWidget {
       final mobile = !desktop;
       final selectedTitle = labels[selected];
       return Scaffold(
-        backgroundColor: const Color(0xFF0B120F),
+        backgroundColor: lightMode ? Color(0xFFF6F8F6) : Color(0xFF0B120F),
 
         appBar: AppBar(
           foregroundColor: _text,
@@ -491,7 +495,7 @@ class AdminWorkspaceShell extends StatelessWidget {
               ? IconButton(
                   tooltip: 'Yönetim bölümleri',
                   onPressed: () => _showSectionsSheet(context),
-                  icon: const Icon(Icons.dashboard_customize_outlined,
+                  icon: Icon(Icons.dashboard_customize_outlined,
                       color: _mint, size: 23),
                 )
               : null,
@@ -501,7 +505,7 @@ class AdminWorkspaceShell extends StatelessWidget {
               Container(width: 4, height: 34,
                   decoration: BoxDecoration(
                     color: _mint, borderRadius: BorderRadius.circular(5))),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
             ],
             Expanded(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -512,10 +516,10 @@ class AdminWorkspaceShell extends StatelessWidget {
                     color: _text, fontWeight: FontWeight.w900,
                     fontSize: mobile ? 18 : 22, letterSpacing: -.6,
                   )),
-                const SizedBox(height: 3),
+                SizedBox(height: 3),
                 Text(mobile ? 'OTO TAG  /  ADMIN' : descriptions[selected],
                   maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: _sub, fontSize: 10,
                     fontWeight: FontWeight.w700, letterSpacing: .7,
                   )),
@@ -523,6 +527,13 @@ class AdminWorkspaceShell extends StatelessWidget {
             )),
           ]),
           actions: [
+            if (onToggleTheme != null)
+              IconButton(
+                tooltip: lightMode ? 'Karanlık temaya geç' : 'Aydınlık temaya geç',
+                onPressed: onToggleTheme,
+                icon: Icon(lightMode ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+                    color: _mint, size: 22),
+              ),
             if (onSearch != null)
               if (width >= 1190)
                 Padding(
@@ -531,15 +542,15 @@ class AdminWorkspaceShell extends StatelessWidget {
                     onPressed: onSearch,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: _text,
-                      side: const BorderSide(color: _line),
+                      side: BorderSide(color: _line),
                       backgroundColor: _surface,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 15),
                     ),
-                    icon: const Icon(Icons.search_rounded, color: _mint, size: 19),
-                    label: const Text('Yönetimde ara    Ctrl + K',
+                    icon: Icon(Icons.search_rounded, color: _mint, size: 19),
+                    label: Text('Yönetimde ara    Ctrl + K',
                       style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
                   ),
                 )
@@ -547,7 +558,7 @@ class AdminWorkspaceShell extends StatelessWidget {
                 IconButton(
                   tooltip: 'Yönetimde ara',
                   onPressed: onSearch,
-                  icon: const Icon(Icons.search_rounded, size: 23),
+                  icon: Icon(Icons.search_rounded, size: 23),
                 ),
             Padding(
               padding: const EdgeInsets.only(right: 12, left: 1),
@@ -557,15 +568,15 @@ class AdminWorkspaceShell extends StatelessWidget {
                 style: IconButton.styleFrom(
                   backgroundColor: _surface,
                   foregroundColor: _mint,
-                  minimumSize: const Size(42, 42),
+                  minimumSize: Size(42, 42),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(13)),
                 ),
-                icon: const Icon(Icons.refresh_rounded, size: 21),
+                icon: Icon(Icons.refresh_rounded, size: 21),
               ),
             ),
           ],
-          bottom: const PreferredSize(
+          bottom: PreferredSize(
             preferredSize: Size.fromHeight(1),
             child: SizedBox(height: 1,
               child: ColoredBox(color: _line)),
@@ -583,7 +594,7 @@ class AdminWorkspaceShell extends StatelessWidget {
               ),
             Expanded(child: Column(children: [
               if (loading)
-                const LinearProgressIndicator(
+                LinearProgressIndicator(
                   minHeight: 2, color: _mint),
               Expanded(child: child),
             ])),

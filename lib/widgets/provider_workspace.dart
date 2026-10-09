@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../core/constants/app_constants.dart';
+import '../core/theme/app_palette.dart';
 import '../core/theme/app_motion.dart';
 import 'app_theme_toggle_button.dart';
 
@@ -35,10 +36,10 @@ class ProviderStatusHeader extends StatelessWidget {
           Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                  color: AppConstants.primaryColor.withValues(alpha: .12),
+                  color: AppPalette.accent.withValues(alpha: .12),
                   borderRadius: BorderRadius.circular(12)),
               child: const Icon(Icons.engineering_outlined,
-                  color: AppConstants.primaryColor)),
+                  color: AppPalette.accent)),
           const SizedBox(width: 12),
           Expanded(
               child: Column(
@@ -52,7 +53,7 @@ class ProviderStatusHeader extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(online ? 'İş almaya açıksın' : 'Şu an çevrimdışısın',
                     style: TextStyle(
-                        color: Theme.of(context).brightness == Brightness.light ? const Color(0xFF52675A) : AppConstants.mutedColor, fontSize: 12))
+                        color: Theme.of(context).brightness == Brightness.light ? const Color(0xFF52675A) : AppPalette.muted, fontSize: 12))
               ])),
           Tooltip(
             message: 'Hızlı çıkış',
@@ -90,20 +91,20 @@ class ProviderStatusHeader extends StatelessWidget {
           Switch.adaptive(
               value: online,
               onChanged: loggingOut ? null : onToggle,
-              activeTrackColor: AppConstants.primaryColor,
+              activeTrackColor: AppPalette.accent,
               activeThumbColor: Colors.black),
         ]),
         if (online) ...[
           const SizedBox(height: 12),
           Row(children: [
             const Icon(Icons.near_me_outlined,
-                size: 16, color: AppConstants.primaryColor),
+                size: 16, color: AppPalette.accent),
             const SizedBox(width: 6),
             Expanded(
                 child: Text(
                     '$jobCount uygun talep • ${radius.toStringAsFixed(0)} km alan',
                     style: const TextStyle(
-                        color: AppConstants.mutedColor, fontSize: 12))),
+                        color: AppPalette.muted, fontSize: 12))),
             IconButton(
                 tooltip: 'Talepleri yenile',
                 onPressed: onRefresh,
@@ -150,15 +151,15 @@ class ProviderNavigationBar extends StatelessWidget {
                     Icon(icon,
                         size: 23,
                         color: selected == id
-                            ? AppConstants.primaryColor
-                            : AppConstants.mutedColor),
+                            ? AppPalette.accent
+                            : AppPalette.muted),
                     const SizedBox(height: 4),
                     Text(label,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                             color: selected == id
-                                ? AppConstants.primaryColor
-                                : AppConstants.mutedColor,
+                                ? AppPalette.accent
+                                : AppPalette.muted,
                             fontSize: 11))
                   ])))));
 }
@@ -238,7 +239,7 @@ class ProviderOfflineDashboard extends StatelessWidget {
                         const SizedBox(height: 8),
                         Text('$service • İşlerini buradan yönet',
                             style: const TextStyle(
-                                color: AppConstants.mutedColor)),
+                                color: AppPalette.muted)),
                         const SizedBox(height: 24),
                         IntrinsicHeight(
                             child: Row(
@@ -274,7 +275,7 @@ class ProviderOfflineDashboard extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Icon(Icons.location_on_outlined,
-                                      color: AppConstants.primaryColor,
+                                      color: AppPalette.accent,
                                       size: 36),
                                   const SizedBox(height: 16),
                                   const Text('Hazır olduğunda çevrimiçi ol',
@@ -286,7 +287,7 @@ class ProviderOfflineDashboard extends StatelessWidget {
                                   const Text(
                                       'Konumuna ve hizmetine uygun talepleri gör. Fiyatını teklif et, anlaşınca müşteriye doğru yola çık.',
                                       style: TextStyle(
-                                          color: AppConstants.mutedColor,
+                                          color: AppPalette.muted,
                                           height: 1.6)),
                                   const SizedBox(height: 20),
                                   SizedBox(
@@ -295,7 +296,7 @@ class ProviderOfflineDashboard extends StatelessWidget {
                                           onPressed: onOnline,
                                           style: FilledButton.styleFrom(
                                               backgroundColor:
-                                                  AppConstants.primaryColor,
+                                                  AppPalette.accent,
                                               foregroundColor: Colors.black,
                                               minimumSize:
                                                   const Size.fromHeight(52)),
@@ -319,11 +320,11 @@ class ProviderOfflineDashboard extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: AppConstants.borderColor)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(icon, color: AppConstants.primaryColor),
+        Icon(icon, color: AppPalette.accent),
         const SizedBox(height: 14),
         Text(title,
             style:
-                const TextStyle(color: AppConstants.mutedColor, fontSize: 12)),
+                const TextStyle(color: AppPalette.muted, fontSize: 12)),
         const SizedBox(height: 4),
         Text(value,
             style: const TextStyle(
@@ -362,14 +363,14 @@ class ProviderJobPreview extends StatelessWidget {
           const SizedBox(width: 8),
           Text('$distance km',
               style: const TextStyle(
-                  color: AppConstants.primaryColor, fontSize: 12))
+                  color: AppPalette.accent, fontSize: 12))
         ]),
         const SizedBox(height: 6),
         Text(customer,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style:
-                const TextStyle(color: AppConstants.mutedColor, fontSize: 12)),
+                const TextStyle(color: AppPalette.muted, fontSize: 12)),
         const SizedBox(height: 6),
         Expanded(
             child: Text(
@@ -379,14 +380,14 @@ class ProviderJobPreview extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                    color: AppConstants.mutedColor, height: 1.4))),
+                    color: AppPalette.muted, height: 1.4))),
         const SizedBox(height: 8),
         SizedBox(
             width: double.infinity,
             child: FilledButton(
                 onPressed: onOffer,
                 style: FilledButton.styleFrom(
-                    backgroundColor: AppConstants.primaryColor,
+                    backgroundColor: AppPalette.accent,
                     foregroundColor: Colors.black),
                 child: const Text('Talebi incele ve teklif ver'))),
       ]));

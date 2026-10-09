@@ -2770,8 +2770,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
   }
 
   Widget _buildSparePartsBanner(BuildContext context) {
-    final light = Theme.of(context).brightness == Brightness.light;
-    final ink = Theme.of(context).colorScheme.onSurface;
     final muted = AppPalette.muted;
     final accent = AppPalette.accent;
     return Container(
@@ -2805,7 +2803,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
               ),
             );
           },
-          child: Stack(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Stack(
             children: [
               Positioned(
                 top: -42,
@@ -2861,7 +2861,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                           Text(
                             'Yedek Parça Pazarı',
                             style: TextStyle(
-                              color: light ? ink : Colors.white,
+                              color: AppPalette.text,
                                fontSize: 17,
                               fontWeight: FontWeight.w800,
                               letterSpacing: -0.3,
@@ -2899,6 +2899,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                 ),
               ),
             ],
+          ),
           ),
         ),
       ),
@@ -3120,137 +3121,110 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
   }
 
   Widget _buildHeaderCard() {
-    final light = Theme.of(context).brightness == Brightness.light;
-    final titleColor = Theme.of(context).colorScheme.onSurface;
-    final subtitleColor = light ? const Color(0xFF53685B) : _subtitleColor;
-    return PremiumGlassPanel(
-      radius: 24,
-      blur: 14,
-      accent: true,
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-      child: Stack(
-        children: [
+    final accent = AppPalette.accent;
+    return Container(
+      decoration: BoxDecoration(
+        color: AppPalette.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppPalette.border),
+        boxShadow: [BoxShadow(
+          color: AppPalette.shadow,
+          blurRadius: 20,
+          offset: const Offset(0, 7),
+        )],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(children: [
           Positioned(
-            right: -18,
-            top: -28,
+            right: -18, bottom: -26,
             child: IgnorePointer(
-              child: Icon(
-                Icons.directions_car_filled_rounded,
-                size: 126,
-                color: _primaryColor.withValues(alpha: .035),
-              ),
+              child: Icon(Icons.directions_car_filled_rounded,
+                size: 144, color: accent.withValues(alpha: .045)),
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  const PremiumStatusPill(
-                    'OTO TAG  •  KULLANICI MERKEZİ',
-                    icon: Icons.verified_rounded,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(17, 15, 17, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppPalette.accentSoft,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppPalette.accentBorder),
+                    ),
+                    child: Text('OTO TAG / GARAJIM',
+                      style: TextStyle(
+                        color: accent,
+                        fontSize: 9.5, fontWeight: FontWeight.w800,
+                        letterSpacing: .5,
+                      )),
                   ),
                   const Spacer(),
+                  Icon(Icons.verified_user_outlined, color: accent, size: 16),
+                  const SizedBox(width: 5),
+                  Text('7/24', style: TextStyle(
+                    color: AppPalette.muted,
+                    fontSize: 11, fontWeight: FontWeight.w700,
+                  )),
+                ]),
+                const Spacer(),
+                Row(children: [
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                    width: 48, height: 48,
                     decoration: BoxDecoration(
-                      color: light ? const Color(0xFFF0F7F1) : Colors.white.withValues(alpha: .035),
-                      borderRadius: BorderRadius.circular(99),
-                      border:
-                          Border.all(color: light ? const Color(0xFFD7E7DB) : Colors.white.withValues(alpha: .06)),
+                      color: AppPalette.accentSoft,
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(color: AppPalette.accentBorder),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.bolt_rounded,
-                            color: _primaryColor, size: 12),
-                        const SizedBox(width: 4),
-                        Text(
-                          '7/24',
-                          style: TextStyle(
-                            color: titleColor,
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ],
-                    ),
+                    child: Icon(Icons.directions_car_rounded,
+                      color: accent, size: 24),
                   ),
-                ],
-              ),
-              const Spacer(),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const PremiumBrandMark(
-                    size: 52,
-                    icon: Icons.directions_car_rounded,
-                  ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 13),
                   Expanded(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Aracınız için her şey tek merkezde',
+                        Text('Aracın için her şey burada',
+                          maxLines: 2, overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            color: titleColor,
-                            letterSpacing: -.45,
-                            height: 1.1,
-                          ),
-                        ),
+                            color: AppPalette.text,
+                            fontSize: 17, fontWeight: FontWeight.w800,
+                            height: 1.15, letterSpacing: -.35,
+                          )),
                         const SizedBox(height: 6),
-                        Text(
-                          'Yol yardımından bakıma, parçadan kiralamaya kadar ihtiyaçlarınıza hızlı ve güvenli erişin.',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                        Text('Yol yardım, servis, parça ve kiralama tek yerde.',
+                          maxLines: 2, overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 11.5,
-                            color: subtitleColor,
-                            height: 1.35,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
+                            color: AppPalette.muted, fontSize: 12,
+                            fontWeight: FontWeight.w500, height: 1.35,
+                          )),
                       ],
                     ),
                   ),
-                ],
-              ),
-              const Spacer(),
-              Row(children: [ Icon(Icons.location_on_outlined,
-                      size: 13, color: _primaryColor),
+                ]),
+                const Spacer(),
+                Row(children: [
+                  Icon(Icons.location_on_outlined, color: accent, size: 15),
                   const SizedBox(width: 5),
-                  Text(
-                    'Konum bazlı eşleşme',
+                  Expanded(child: Text('Konuma göre hızlı hizmet',
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                     style: TextStyle(
-                      color: subtitleColor,
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Icon(Icons.shield_outlined,
-                      size: 13, color: _primaryColor),
-                  const SizedBox(width: 5),
-                  Flexible(
-                    child: Text(
-                      'Güvenli OTO TAG deneyimi',
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: subtitleColor,
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                      color: AppPalette.muted,
+                      fontSize: 11, fontWeight: FontWeight.w600,
+                    ))),
+                  Icon(Icons.arrow_forward_rounded, color: accent, size: 18),
+                ]),
+              ],
+            ),
           ),
-        ],
+        ]),
       ),
     );
   }
@@ -3679,13 +3653,13 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                                           FontWeight.w900,
                                                       fontSize: 16,
                                                       letterSpacing: -0.3)),
-                                              subtitle: const Padding(
+                                              subtitle: Padding(
                                                 padding:
-                                                    EdgeInsets.only(top: 4.0),
+                                                    const EdgeInsets.only(top: 4.0),
                                                 child: Text(
                                                     "Mevcut işlemi tamamlamadan yeni talep oluşturamazsınız.",
                                                     style: TextStyle(
-                                                        color: Colors.white70,
+                                                        color: AppPalette.muted,
                                                         fontWeight:
                                                             FontWeight.w500,
                                                         fontSize: 13)),

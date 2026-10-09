@@ -305,8 +305,8 @@ class PremiumSectionHeading extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  color: AppConstants.textColor,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -.4,
@@ -316,8 +316,8 @@ class PremiumSectionHeading extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   subtitle!,
-                  style: const TextStyle(
-                    color: AppConstants.mutedColor,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 11.5,
                     fontWeight: FontWeight.w500,
                     height: 1.35,
@@ -355,7 +355,7 @@ class PremiumMetric extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.light ? Colors.white : Colors.white.withValues(alpha: .028),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: .055)),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -368,16 +368,16 @@ class PremiumMetric extends StatelessWidget {
             children: [
               Text(
                 value,
-                style: const TextStyle(
-                  color: AppConstants.textColor,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 11.5,
                   fontWeight: FontWeight.w800,
                 ),
               ),
               Text(
                 label,
-                style: const TextStyle(
-                  color: AppConstants.subtleTextColor,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 8.5,
                   fontWeight: FontWeight.w600,
                 ),

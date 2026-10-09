@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-
 import '../core/constants/app_constants.dart';
 
-/// One adaptive admin workspace: sidebar on desktop, drawer + bottom bar on
-/// mobile. All destinations stay accessible at every screen size.
+/// OTO TAG admin console. One navigation model across phone, tablet and web.
 class AdminWorkspaceShell extends StatelessWidget {
   const AdminWorkspaceShell({
     super.key,
@@ -24,432 +22,456 @@ class AdminWorkspaceShell extends StatelessWidget {
   final Widget child;
   final bool loading;
 
-  static const labels = [
-    'Genel bakış',
-    'Onaylar',
-    'Üyeler',
-    'İşlemler',
-    'Destek',
-    'Güncellemeler',
-    'Ayarlar',
+  static const labels = <String>[
+    'Genel bakış', 'Onaylar', 'Üyeler', 'İşlemler',
+    'Destek', 'Güncellemeler', 'Ayarlar',
   ];
-
-  static const icons = [
-    Icons.space_dashboard_rounded,
-    Icons.verified_user_outlined,
-    Icons.groups_rounded,
-    Icons.receipt_long_rounded,
-    Icons.support_agent_rounded,
-    Icons.system_update_alt_rounded,
+  static const icons = <IconData>[
+    Icons.grid_view_rounded, Icons.verified_user_outlined,
+    Icons.people_alt_outlined, Icons.receipt_long_outlined,
+    Icons.support_agent_outlined, Icons.system_update_alt_rounded,
     Icons.tune_rounded,
   ];
-
-  static const descriptions = [
-    'Özet ve hızlı işlemler',
-    'Bekleyen başvurular',
-    'Müşteri, usta ve firmalar',
-    'Servis ve ilan geçmişi',
-    'Destek ve şikâyetler',
-    'Uygulama sürümleri',
-    'Reklam, analiz ve güvenlik',
+  static const descriptions = <String>[
+    'Sistem özeti ve hızlı erişim',
+    'Usta ve firma başvuruları',
+    'Müşteri, usta ve firma hesapları',
+    'Servis talepleri ve parça ilanları',
+    'Şikâyetler ve çözüm takibi',
+    'Android ve iPhone sürüm duyuruları',
+    'Reklam, abonelik, analiz ve bakım',
   ];
+  static const Color _ink = Color(0xFF08120E);
+  static const Color _side = Color(0xFF0D1914);
+  static const Color _surface = Color(0xFF14231C);
+  static const Color _line = Color(0xFF26382E);
+  static const Color _text = Color(0xFFF2FAF4);
+  static const Color _sub = Color(0xFF92AA9A);
+  static const Color _mint = AppConstants.primaryColor;
 
-  static const _dark = Color(0xFF090E0D);
-  static const _panel = Color(0xFF121A17);
-  static const _mint = AppConstants.primaryColor;
-
-  int _count(int index) => switch (index) {
+  int _badgeCount(int index) => switch (index) {
         1 => pendingCount,
         4 => ticketCount,
         _ => 0,
       };
 
-  Widget _navIcon(int index, {bool selected = false}) {
-    final count = _count(index);
-    return Badge(
-      isLabelVisible: count > 0,
-      backgroundColor: const Color(0xFFF5A524),
-      textColor: Colors.black,
-      label: Text(count > 99 ? '99+' : '$count'),
-      child: Icon(
-        icons[index],
-        size: 21,
-        color: selected ? _mint : const Color(0xFFB7C3BC),
+  String _counter(int value) => value > 99 ? '99+' : '$value';
+
+  Widget _mark({double size = 42}) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [Color(0xFF00FFA3), Color(0xFF00A86D)],
+          ),
+          borderRadius: BorderRadius.circular(size * .31),
+          boxShadow: [
+            BoxShadow(color: _mint.withValues(alpha: .14), blurRadius: 18),
+          ],
+        ),
+        child: Icon(Icons.route_rounded, color: _ink, size: size * .55),
+      );
+
+  Widget _navTile(int index, {required bool compact, required VoidCallback onTap}) {
+    final active = selected == index;
+    final count = _badgeCount(index);
+    final badge = count > 0
+        ? Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+            decoration: BoxDecoration(
+              color: active ? _mint : const Color(0xFF344139),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(_counter(count),
+                style: TextStyle(
+                  color: active ? _ink : _text,
+                  fontSize: 10, fontWeight: FontWeight.w900,
+                )),
+          )
+        : null;
+    final icon = Icon(icons[index],
+        size: compact ? 21 : 22,
+        color: active ? _mint : const Color(0xFFB4C7B9));
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Material(
+        color: active ? const Color(0xFF1C382A) : Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            constraints: BoxConstraints(minHeight: compact ? 58 : 56),
+            padding: EdgeInsets.symmetric(
+                horizontal: compact ? 7 : 13, vertical: compact ? 8 : 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: active ? _mint.withValues(alpha: .32) : Colors.transparent,
+              ),
+            ),
+            child: compact
+                ? Column(mainAxisSize: MainAxisSize.min, children: [
+                    Stack(clipBehavior: Clip.none, children: [
+                      icon,
+                      if (count > 0)
+                        Positioned(
+                          top: -5, right: -9,
+                          child: CircleAvatar(
+                            radius: 5,
+                            backgroundColor: const Color(0xFFF7B84B),
+                          ),
+                        ),
+                    ]),
+                    const SizedBox(height: 5),
+                    Text(labels[index],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: active ? _mint : _sub,
+                          fontSize: 10, fontWeight: FontWeight.w700,
+                        )),
+                  ])
+                : Row(children: [
+                    Container(
+                      width: 35, height: 35,
+                      decoration: BoxDecoration(
+                        color: active
+                            ? _mint.withValues(alpha: .13)
+                            : const Color(0xFF1A2A21),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Center(child: icon),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(labels[index],
+                            maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: active ? _text : const Color(0xFFDEE9E0),
+                              fontSize: 13, fontWeight: FontWeight.w800,
+                            )),
+                        const SizedBox(height: 2),
+                        Text(descriptions[index],
+                            maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 10, color: _sub)),
+                      ],
+                    )),
+                    if (badge != null) ...[
+                      const SizedBox(width: 7), badge,
+                    ] else if (active)
+                      const Icon(Icons.chevron_right_rounded,
+                          color: _mint, size: 19),
+                  ]),
+          ),
+        ),
       ),
     );
   }
 
-  Widget _sidebar(BuildContext context,
-      {required bool compact, required ValueChanged<int> navigate}) {
-    final menu = <Widget>[];
-    for (var i = 0; i < labels.length; i++) {
-      final active = selected == i;
-      final item = Material(
-        color: active ? _mint.withValues(alpha: 0.13) : Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(13),
-          side: BorderSide(
-            color: active
-                ? _mint.withValues(alpha: .35)
-                : Colors.transparent,
-          ),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () => navigate(i),
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-                horizontal: compact ? 13 : 12, vertical: 13),
-            child: compact
-                ? Column(mainAxisSize: MainAxisSize.min, children: [
-                    _navIcon(i, selected: active),
-                    const SizedBox(height: 6),
-                    Text(
-                      labels[i],
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: active
-                            ? Colors.white
-                            : const Color(0xFFB7C3BC),
-                        fontWeight: FontWeight.w700,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ])
-                : Row(
-              mainAxisAlignment: MainAxisAlignment.start,
+  Widget _sectionLabel(String label, {bool compact = false}) {
+    if (compact) return const SizedBox(height: 10);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 16, 12, 6),
+      child: Text(label,
+          style: const TextStyle(
+            color: _sub, fontWeight: FontWeight.w800,
+            fontSize: 10, letterSpacing: 1.7,
+          )),
+    );
+  }
+
+  Widget _navigation(BuildContext context, {
+    required bool compact,
+    required bool inDrawer,
+    required ValueChanged<int> navigate,
+  }) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: _side,
+        border: Border(right: BorderSide(color: _line)),
+      ),
+      child: SafeArea(
+        child: Column(children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              compact ? 9 : 17, 19, compact ? 9 : 17, 15),
+            child: Row(
+              mainAxisAlignment: compact
+                  ? MainAxisAlignment.center : MainAxisAlignment.start,
               children: [
-                _navIcon(i, selected: active),
+                _mark(size: compact ? 42 : 44),
                 if (!compact) ...[
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          labels[i],
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                  const SizedBox(width: 12),
+                  const Expanded(child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('OTO TAG',
                           style: TextStyle(
-                            fontWeight:
-                                active ? FontWeight.w800 : FontWeight.w600,
-                            color: active ? Colors.white : const Color(0xFFCDD5CF),
-                            fontSize: 13,
-                          ),
-                        ),
-                        Text(
-                          descriptions[i],
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 10, color: Color(0xFF82948B)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (_count(i) > 0)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF5A524).withValues(alpha: .13),
-                        borderRadius: BorderRadius.circular(7),
-                      ),
-                      child: Text(
-                        '${_count(i)}',
-                        style: const TextStyle(
-                          color: Color(0xFFF8C66A),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
+                            color: _text, fontSize: 17,
+                            fontWeight: FontWeight.w900, letterSpacing: 1,
+                          )),
+                      Text('ADMIN CONSOLE',
+                          style: TextStyle(
+                            color: _mint, fontSize: 10,
+                            fontWeight: FontWeight.w800, letterSpacing: 1.25,
+                          )),
+                    ],
+                  )),
+                  if (inDrawer)
+                    IconButton(
+                      tooltip: 'Menüyü kapat',
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close_rounded, color: _text),
                     ),
                 ],
               ],
             ),
           ),
-        ),
-      );
-      menu.add(Padding(
-        padding: const EdgeInsets.only(bottom: 5),
-        child: compact
-            ? Tooltip(message: labels[i], child: item)
-            : item,
-      ));
-    }
-
-    return Container(
-      decoration: const BoxDecoration(
-        color: _dark,
-        border: Border(right: BorderSide(color: Color(0xFF27352E))),
-      ),
-      child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+          if (!compact)
             Padding(
-              padding: EdgeInsets.fromLTRB(
-                  compact ? 12 : 18, 20, compact ? 12 : 18, 20),
-              child: Row(
-                mainAxisAlignment: compact
-                    ? MainAxisAlignment.center
-                    : MainAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: _mint.withValues(alpha: .13),
-                      border: Border.all(color: _mint.withValues(alpha: .35)),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Icon(Icons.admin_panel_settings_rounded,
-                        color: _mint, size: 25),
-                  ),
-                  if (!compact) ...[
-                    const SizedBox(width: 11),
-                    const Expanded(
+              padding: const EdgeInsets.fromLTRB(16, 3, 16, 9),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: _surface,
+                  borderRadius: BorderRadius.circular(13),
+                  border: Border.all(color: _line),
+                ),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 12),
+                child: const Row(children: [
+                  Icon(Icons.shield_rounded, color: _mint, size: 19),
+                  SizedBox(width: 9),
+                  Expanded(child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Yönetici erişimi',
+                          style: TextStyle(color: _text,
+                              fontWeight: FontWeight.w800, fontSize: 11)),
+                      Text('OTO TAG kontrol merkezi',
+                          style: TextStyle(color: _sub, fontSize: 10)),
+                    ],
+                  )),
+                  Icon(Icons.verified_rounded,
+                      color: _mint, size: 17),
+                ]),
+              ),
+            ),
+          const Divider(color: _line, thickness: 1, height: 12),
+          Expanded(child: ListView(
+            padding: EdgeInsets.fromLTRB(
+                compact ? 8 : 13, 0, compact ? 8 : 13, 14),
+            children: [
+              _sectionLabel('OPERASYON', compact: compact),
+              for (final index in [0, 1, 2, 3, 4])
+                _navTile(index, compact: compact,
+                    onTap: () => navigate(index)),
+              _sectionLabel('SİSTEM', compact: compact),
+              for (final index in [5, 6])
+                _navTile(index, compact: compact,
+                    onTap: () => navigate(index)),
+            ],
+          )),
+          if (!compact)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(15, 8, 15, 19),
+              child: Row(children: [
+                Container(width: 8, height: 8,
+                    decoration: const BoxDecoration(
+                        color: _mint, shape: BoxShape.circle)),
+                const SizedBox(width: 9),
+                const Expanded(child: Text('Yönetim paneli',
+                    style: TextStyle(color: _sub, fontSize: 11))),
+                const Text('OTO TAG',
+                    style: TextStyle(
+                        color: _sub, fontSize: 9,
+                        fontWeight: FontWeight.w800)),
+              ]),
+            ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _mobileTabs(BuildContext context) {
+    final schemeIndex = switch (selected) {
+      0 => 0, 2 => 1, 5 => 2, _ => 3,
+    };
+    const shortcuts = <(String, IconData, IconData)>[
+      ('Genel', Icons.grid_view_outlined, Icons.grid_view_rounded),
+      ('Üyeler', Icons.people_outline_rounded, Icons.people_rounded),
+      ('Güncelleme', Icons.system_update_alt_outlined,
+        Icons.system_update_alt_rounded),
+      ('Bölümler', Icons.menu_rounded, Icons.menu_open_rounded),
+    ];
+    return Builder(builder: (barContext) =>
+      SafeArea(
+        top: false,
+        child: Container(
+          decoration: const BoxDecoration(
+            color: _ink,
+            border: Border(top: BorderSide(color: _line)),
+          ),
+          padding: const EdgeInsets.fromLTRB(8, 7, 8, 4),
+          child: Row(children: [
+            for (var i = 0; i < shortcuts.length; i++)
+              Expanded(child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 3),
+                child: Material(
+                  color: schemeIndex == i
+                      ? const Color(0xFF1C382A) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: () {
+                      if (i == 3) {
+                        Scaffold.of(barContext).openDrawer();
+                      } else {
+                        onSelect([0, 2, 5][i]);
+                      }
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 9),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('OTO TAG',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.1,
-                                fontSize: 16,
-                              )),
-                          Text('YÖNETİM MERKEZİ',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Color(0xFF8DA69A),
-                                letterSpacing: 1.1,
-                              )),
+                          Icon(schemeIndex == i
+                              ? shortcuts[i].$3 : shortcuts[i].$2,
+                              color: schemeIndex == i ? _mint : _sub,
+                              size: 22),
+                          const SizedBox(height: 4),
+                          FittedBox(fit: BoxFit.scaleDown,
+                            child: Text(shortcuts[i].$1,
+                                maxLines: 1,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 10,
+                                  color: schemeIndex == i ? _mint : _sub,
+                                ))),
                         ],
                       ),
                     ),
-                  ],
-                ],
-              ),
-            ),
-            if (!compact)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(18, 0, 18, 14),
-                child: Text('ÇALIŞMA ALANI',
-                    style: TextStyle(
-                      color: Color(0xFF778980),
-                      fontSize: 10,
-                      letterSpacing: 1.4,
-                      fontWeight: FontWeight.w700,
-                    )),
-              ),
-            Expanded(
-              child: ListView(
-                padding: EdgeInsets.symmetric(
-                    horizontal: compact ? 10 : 12, vertical: 2),
-                children: menu,
-              ),
-            ),
-            if (!compact)
-              Container(
-                margin: const EdgeInsets.all(12),
-                padding: const EdgeInsets.all(13),
-                decoration: BoxDecoration(
-                  color: _panel,
-                  borderRadius: BorderRadius.circular(13),
-                  border: Border.all(color: const Color(0xFF273D32)),
+                  ),
                 ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.shield_outlined, color: _mint, size: 19),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Güvenli yönetici oturumu',
-                        style: TextStyle(
-                          color: Color(0xFFDCE9DF), fontSize: 11,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            else
-              const Padding(
-                padding: EdgeInsets.only(bottom: 20),
-                child: Icon(Icons.shield_outlined,
-                    size: 20, color: Color(0xFF7D9A88)),
-              ),
-          ],
+              )),
+          ]),
         ),
-      ),
-    );
+      ));
   }
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
-        builder: (context, constraints) {
-          final desktop = constraints.maxWidth >= 760;
-          final expanded = constraints.maxWidth >= 1200;
-          final mobile = !desktop;
-          final scheme = Theme.of(context).colorScheme;
-          final darkMode = Theme.of(context).brightness == Brightness.dark;
-
-          return Scaffold(
-            backgroundColor: darkMode
-                ? const Color(0xFF0B110F)
-                : const Color(0xFFF3F6F4),
-            appBar: AppBar(
-              toolbarHeight: mobile ? 68 : 76,
-              surfaceTintColor: Colors.transparent,
-              backgroundColor: darkMode
-                  ? const Color(0xFF101815)
-                  : Colors.white,
-              elevation: 0,
-              titleSpacing: mobile ? 0 : 22,
-              title: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    labels[selected],
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      letterSpacing: -.4,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  Text(
-                    descriptions[selected],
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: scheme.onSurface.withValues(alpha: .6)),
-                  ),
-                ],
-              ),
-              actions: [
-                if (onSearch != null)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 2),
-                    child: IconButton(
-                      tooltip: 'Hızlı komut ve bölüm ara (Ctrl+K)',
-                      onPressed: onSearch,
-                      icon: const Icon(Icons.manage_search_rounded, size: 24),
-                    ),
-                  ),
-                Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: IconButton.filledTonal(
-                    tooltip: 'Verileri yenile',
-                    onPressed: loading ? null : onRefresh,
-                    icon: const Icon(Icons.refresh_rounded, size: 20),
-                  ),
-                ),
+    builder: (context, constraints) {
+      final width = constraints.maxWidth;
+      final desktop = width >= 760;
+      final expanded = width >= 1160;
+      final mobile = !desktop;
+      final selectedTitle = labels[selected];
+      return Scaffold(
+        backgroundColor: const Color(0xFF0B120F),
+        drawer: mobile ? Drawer(
+          elevation: 22,
+          width: width > 390 ? 322 : width - 48,
+          backgroundColor: _side,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.horizontal(
+                right: Radius.circular(22)),
+          ),
+          child: _navigation(context,
+              compact: false,
+              inDrawer: true,
+              navigate: (index) {
+                Navigator.of(context).pop();
+                onSelect(index);
+              }),
+        ) : null,
+        appBar: AppBar(
+          foregroundColor: _text,
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
+          toolbarHeight: mobile ? 70 : 79,
+          backgroundColor: _ink,
+          titleSpacing: mobile ? 0 : 20,
+          title: Row(children: [
+            if (!mobile) ...[
+              Container(width: 4, height: 34,
+                  decoration: BoxDecoration(
+                    color: _mint, borderRadius: BorderRadius.circular(5))),
+              const SizedBox(width: 12),
+            ],
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(selectedTitle,
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: _text, fontWeight: FontWeight.w900,
+                    fontSize: mobile ? 18 : 22, letterSpacing: -.6,
+                  )),
+                const SizedBox(height: 3),
+                Text(mobile ? 'OTO TAG  /  ADMIN' : descriptions[selected],
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: _sub, fontSize: 10,
+                    fontWeight: FontWeight.w700, letterSpacing: .7,
+                  )),
               ],
-              bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(1),
-                child: Container(
-                  height: 1,
-                  color: scheme.outlineVariant.withValues(alpha: .4),
+            )),
+          ]),
+          actions: [
+            if (onSearch != null)
+              IconButton(
+                tooltip: 'Yönetimde ara',
+                onPressed: onSearch,
+                icon: const Icon(Icons.search_rounded, size: 23),
+              ),
+            Padding(
+              padding: const EdgeInsets.only(right: 12, left: 1),
+              child: IconButton(
+                tooltip: 'Verileri yenile',
+                onPressed: loading ? null : onRefresh,
+                style: IconButton.styleFrom(
+                  backgroundColor: _surface,
+                  foregroundColor: _mint,
+                  minimumSize: const Size(42, 42),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(13)),
                 ),
+                icon: const Icon(Icons.refresh_rounded, size: 21),
               ),
             ),
-            drawer: mobile
-                ? Drawer(
-                    width: constraints.maxWidth < 400
-                        ? constraints.maxWidth * .88
-                        : 310,
-                    child: _sidebar(
-                      context,
-                      compact: false,
-                      navigate: (index) {
-                        Navigator.of(context).pop();
-                        onSelect(index);
-                      },
-                    ),
-                  )
-                : null,
-            body: SafeArea(
-              top: false,
-              bottom: false,
-              child: Row(
-                children: [
-                  if (desktop)
-                    SizedBox(
-                      width: expanded ? 270 : 104,
-                      child: _sidebar(
-                        context,
-                        compact: !expanded,
-                        navigate: onSelect,
-                      ),
-                    ),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        if (loading)
-                          const LinearProgressIndicator(
-                              minHeight: 2, color: _mint),
-                        Expanded(child: child),
-                      ],
-                    ),
-                  ),
-                ],
+          ],
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1),
+            child: SizedBox(height: 1,
+              child: ColoredBox(color: _line)),
+          ),
+        ),
+        body: SafeArea(
+          top: false, bottom: false,
+          child: Row(children: [
+            if (desktop)
+              SizedBox(
+                width: expanded ? 267 : 105,
+                child: _navigation(context,
+                  compact: !expanded, inDrawer: false,
+                  navigate: onSelect),
               ),
-            ),
-            bottomNavigationBar: !mobile
-                ? null
-                : Builder(builder: (scaffoldContext) {
-                    final destination = switch (selected) {
-                      0 => 0,
-                      2 => 1,
-                      5 => 2,
-                      _ => 3,
-                    };
-                    return NavigationBar(
-                      height: 71,
-                      selectedIndex: destination,
-                      onDestinationSelected: (index) {
-                        if (index == 3) {
-                          Scaffold.of(scaffoldContext).openDrawer();
-                        } else {
-                          onSelect([0, 2, 5][index]);
-                        }
-                      },
-                      destinations: [
-                        const NavigationDestination(
-                          icon: Icon(Icons.space_dashboard_outlined),
-                          selectedIcon: Icon(Icons.space_dashboard_rounded),
-                          label: 'Genel',
-                        ),
-                        const NavigationDestination(
-                          icon: Icon(Icons.groups_outlined),
-                          selectedIcon: Icon(Icons.groups_rounded),
-                          label: 'Üyeler',
-                        ),
-                        const NavigationDestination(
-                          icon: Icon(Icons.system_update_alt_outlined),
-                          selectedIcon: Icon(Icons.system_update_alt_rounded),
-                          label: 'Güncelleme',
-                        ),
-                        NavigationDestination(
-                          icon: Badge(
-                            isLabelVisible: ticketCount > 0,
-                            label: Text(ticketCount > 99
-                                ? '99+'
-                                : '$ticketCount'),
-                            child: const Icon(Icons.grid_view_rounded),
-                          ),
-                          label: 'Bölümler',
-                        ),
-                      ],
-                    );
-                  }),
-          );
-        },
+            Expanded(child: Column(children: [
+              if (loading)
+                const LinearProgressIndicator(
+                  minHeight: 2, color: _mint),
+              Expanded(child: child),
+            ])),
+          ]),
+        ),
+        bottomNavigationBar: mobile ? _mobileTabs(context) : null,
       );
+    },
+  );
 }

@@ -317,7 +317,7 @@ class AdminMembersPanel extends StatelessWidget {
                   style:const TextStyle(color:muted,fontSize:11))),
                 if(hiddenCount>0) TextButton.icon(onPressed:onRestore,
                   icon:const Icon(Icons.visibility_outlined,size:16),
-                  label:Text('${hiddenCount} gizlenen')),
+                  label:Text('$hiddenCount gizlenen')),
                 const Icon(Icons.sort_rounded,color:muted,size:16),
                 const SizedBox(width:6),
                 DropdownButtonHideUnderline(child:DropdownButton<String>(

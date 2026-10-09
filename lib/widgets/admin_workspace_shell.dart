@@ -51,7 +51,7 @@ class AdminWorkspaceShell extends StatelessWidget {
   Color get _line => lightMode ? Color(0xFFDCE7DE) : Color(0xFF26382E);
   Color get _text => lightMode ? Color(0xFF13241A) : Color(0xFFF2FAF4);
   Color get _sub => lightMode ? Color(0xFF56685C) : Color(0xFF92AA9A);
-  Color get _mint => lightMode ? Color(0xFF08784D) : AppConstants.primaryColor;
+  Color get _mint => lightMode ? Color(0xFF286B4B) : AppConstants.primaryColor;
 
   int _badgeCount(int index) => switch (index) {
         1 => pendingCount,
@@ -67,14 +67,16 @@ class AdminWorkspaceShell extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft, end: Alignment.bottomRight,
-            colors: [Color(0xFF00FFA3), Color(0xFF00A86D)],
+            colors: lightMode
+                 ? [Color(0xFF337654), Color(0xFF286B4B)]
+                 : [Color(0xFF00FFA3), Color(0xFF00A86D)],
           ),
           borderRadius: BorderRadius.circular(size * .31),
           boxShadow: [
             BoxShadow(color: _mint.withValues(alpha: .14), blurRadius: 18),
           ],
         ),
-        child: Icon(Icons.route_rounded, color: Color(0xFF08120E), size: size * .55),
+        child: Icon(Icons.route_rounded, color: lightMode ? Colors.white : Color(0xFF08120E), size: size * .55),
       );
 
   Widget _navTile(int index, {required bool compact, required VoidCallback onTap}) {
@@ -100,7 +102,7 @@ class AdminWorkspaceShell extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Material(
-        color: active ? (lightMode ? Color(0xFFE1F4E9) : Color(0xFF1C382A)) : Colors.transparent,
+        color: active ? (lightMode ? Color(0xFFE9F3EC) : Color(0xFF1C382A)) : Colors.transparent,
         borderRadius: BorderRadius.circular(14),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -358,7 +360,7 @@ class AdminWorkspaceShell extends StatelessWidget {
                   itemBuilder: (ctx, index) {
                     final active = selected == index;
                     return Material(
-                      color: active ? (lightMode ? Color(0xFFDDF4E7) : Color(0xFF1D3A2A)) : _surface,
+                      color: active ? (lightMode ? Color(0xFFE8F2EA) : Color(0xFF1D3A2A)) : _surface,
                       borderRadius: BorderRadius.circular(14),
                       clipBehavior: Clip.antiAlias,
                       child: InkWell(

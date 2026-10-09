@@ -233,8 +233,8 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
                   child: Icon(Icons.delete_sweep_rounded,
                       color: alertRed, size: 32),
                 ),
-                const SizedBox(height: 16),
-                const Text(
+                SizedBox(height: 16),
+                Text(
                   "$count İşlem Silinecek",
                   style: TextStyle(
                       color: AppPalette.text,
@@ -242,8 +242,8 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
                       fontWeight: FontWeight.w900,
                       letterSpacing: -0.4),
                 ),
-                const SizedBox(height: 8),
-                const Text(
+                SizedBox(height: 8),
+                Text(
                   "Seçtiğiniz $count adet geçmiş işlem kaydı listenizden kalıcı olarak temizlenecektir. Bu işlem geri alınamaz.",
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -252,7 +252,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
                       height: 1.45,
                       fontWeight: FontWeight.w500),
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
                 Row(
                   children: [
                     Expanded(
@@ -270,7 +270,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
                                 fontSize: 14)),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () => Navigator.pop(ctx, true),
@@ -391,7 +391,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
                 size: 18,
               ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(
               child: Text(
                 message,
@@ -530,13 +530,13 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
                                             color: AppPalette.text,
                                             fontSize: 21,
                                             fontWeight: FontWeight.w700)),
-                                    const SizedBox(height: 8),
+                                    SizedBox(height: 8),
                                     Text(
                                         'İşlerini incele. Listeden kaldırmak için karta uzun bas.',
                                         style: TextStyle(
                                             color: AppPalette.muted,
                                             height: 1.5)),
-                                    const SizedBox(height: 20),
+                                    SizedBox(height: 20),
                                     LayoutBuilder(
                                         builder: (context, box) => Wrap(
                                                 spacing: 12,
@@ -551,13 +551,13 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
                                                       'Tamamlanan',
                                                       '$completedCount işlem'),
                                                 ])),
-                                    const SizedBox(height: 12),
+                                    SizedBox(height: 12),
                                     Text(
                                         'Tamamlama oranı: ${successRate.toStringAsFixed(0)}% • En çok hizmet: $topServiceType',
                                         style: TextStyle(
                                             color: AppPalette.muted,
                                             fontSize: 12)),
-                                    const SizedBox(height: 18),
+                                    SizedBox(height: 18),
                                     Wrap(spacing: 8, runSpacing: 8, children: [
                                       for (final filter in _filterOptions)
                                         ChoiceChip(
@@ -570,7 +570,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
                                               });
                                             })
                                     ]),
-                                    const SizedBox(height: 20),
+                                    SizedBox(height: 20),
                                     if (filteredBids.isEmpty)
                                       Container(
                                           padding: const EdgeInsets.all(28),
@@ -579,9 +579,9 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
                                               borderRadius:
                                                   BorderRadius.circular(22)),
                                           child: Column(children: [
-                                            const Icon(Icons.history_rounded,
+                                            Icon(Icons.history_rounded,
                                                 color: textGray, size: 36),
-                                            const SizedBox(height: 12),
+                                            SizedBox(height: 12),
                                             Text('Bu filtrede işlem bulunamadı',
                                                 style: TextStyle(
                                                     color: AppPalette.text))
@@ -598,7 +598,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
                                                     () => currentPage--)
                                                 : null,
                                             icon:
-                                                const Icon(Icons.chevron_left)),
+                                                Icon(Icons.chevron_left)),
                                         Expanded(
                                             child: Text(
                                                 '$currentPage / $totalPages',
@@ -626,7 +626,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
             Text(title,
                 style: TextStyle(
                     color: AppPalette.muted, fontSize: 12)),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(value,
                 style: TextStyle(
                     color: AppPalette.text,
@@ -683,7 +683,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
                                     ? neonGreen
                                     : alertRed,
                                 size: 22),
-                            const SizedBox(width: 10),
+                            SizedBox(width: 10),
                             Expanded(
                                 child: Text(
                                     '${job['customer_name'] ?? 'Müşteri'}',
@@ -691,13 +691,13 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
                                         color: AppPalette.text,
                                         fontSize: 16,
                                         fontWeight: FontWeight.w700))),
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                             Text('${amount.toStringAsFixed(2)} ₺',
                                 style: TextStyle(
                                     color: neonGreen,
                                     fontWeight: FontWeight.w700))
                           ]),
-                          const SizedBox(height: 10),
+                          SizedBox(height: 10),
                           Wrap(spacing: 8, runSpacing: 8, children: [
                             RentalTag(
                                 completed

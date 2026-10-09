@@ -301,7 +301,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               child: Column(
                 children: [
                   if (isUploading)
-                    const LinearProgressIndicator(
+                    LinearProgressIndicator(
                         color: neonGreen,
                         backgroundColor: Colors.transparent,
                         minHeight: 2),
@@ -368,7 +368,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   child:
                       Icon(Icons.person_rounded, color: primaryColor, size: 20),
                 ),
-                const SizedBox(width: 14),
+                SizedBox(width: 14),
                 Expanded(
                   child: Text(
                     widget.receiverName,
@@ -504,7 +504,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (hasMedia && msg['media_type'] == 'image')
-                  const Padding(
+                  Padding(
                     padding: const EdgeInsets.only(bottom: 6.0),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
@@ -551,7 +551,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                         children: [
                           Icon(Icons.play_circle_fill_rounded,
                               color: AppPalette.text, size: 28),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           Flexible(
                               child: Text("Video Eki",
                                   style: TextStyle(
@@ -573,7 +573,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                         height: 1.3,
                         letterSpacing: -0.2),
                   ),
-                const SizedBox(height: 6),
+                SizedBox(height: 6),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.end,
@@ -589,7 +589,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       ),
                     ),
                     if (isMe) ...[
-                      const SizedBox(width: 4),
+                      SizedBox(width: 4),
                       Icon(
                         isRead ? Icons.done_all_rounded : Icons.check_rounded,
                         size: 14,
@@ -651,7 +651,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  SizedBox(width: 10),
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
@@ -684,7 +684,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  SizedBox(width: 10),
                   Padding(
                     padding: const EdgeInsets.only(bottom: 2.0),
                     child: GestureDetector(

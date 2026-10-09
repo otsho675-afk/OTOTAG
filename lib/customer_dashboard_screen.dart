@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const
 import 'services/vehicle_deadline.dart';
 import 'services/daily_engagement_service.dart';
 import 'rental_market_screen.dart';
@@ -8,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_motion.dart';
 import 'core/theme/premium_surfaces.dart';
+import 'core/theme/app_palette.dart';
 import 'widgets/app_theme_toggle_button.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
@@ -1200,6 +1202,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
           final double screenHeight = MediaQuery.sizeOf(context).height;
+          final surface = AppPalette.surface;
+          final textColor = AppPalette.text;
+          final muted = AppPalette.muted;
+          final border = AppPalette.border;
           final double screenWidth = MediaQuery.sizeOf(context).width;
 
           return BackdropFilter(
@@ -1208,7 +1214,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
               height: screenHeight * 0.85,
               padding: const EdgeInsets.only(top: 14),
               decoration: BoxDecoration(
-                color: const Color(0xFF111115).withValues(alpha: 0.98),
+                color: surface.withValues(alpha: .99),
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(32)),
                 border: Border.all(
@@ -1217,7 +1223,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                   BoxShadow(
                       color: Colors.black.withValues(alpha: 0.9),
                       blurRadius: 40,
-                      offset: const Offset(0, -10)),
+                      offset: Offset(0, -10)),
                   BoxShadow(
                       color: _primaryColor.withValues(alpha: 0.08),
                       blurRadius: 25),
@@ -1231,9 +1237,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                             width: 44,
                             height: 5,
                             decoration: BoxDecoration(
-                                color: Colors.white24,
+                                color: border,
                                 borderRadius: BorderRadius.circular(10)))),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Row(
@@ -1253,12 +1259,12 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                               border: Border.all(
                                   color: _primaryColor.withValues(alpha: 0.4)),
                             ),
-                            child: const Icon(
+                            child: Icon(
                                 Icons.notifications_active_rounded,
                                 color: _primaryColor,
                                 size: 24),
                           ),
-                          const SizedBox(width: 14),
+                          SizedBox(width: 14),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1267,17 +1273,17 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                     style: TextStyle(
                                         fontSize: screenWidth < 380 ? 18 : 20,
                                         fontWeight: FontWeight.w900,
-                                        color: Colors.white,
+                                        color: textColor,
                                         letterSpacing: -0.4),
                                     overflow: TextOverflow.ellipsis),
-                                const SizedBox(height: 3),
+                                SizedBox(height: 3),
                                 Text(
                                     notifications.isEmpty
                                         ? "Aktif bildirim yok"
                                         : "${notifications.length} sistem duyurusu",
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                         fontSize: 12,
-                                        color: Colors.white60,
+                                        color: muted,
                                         fontWeight: FontWeight.w600),
                                     overflow: TextOverflow.ellipsis),
                               ],
@@ -1295,7 +1301,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                               sigmaX: 12, sigmaY: 12),
                                           child: AlertDialog(
                                             backgroundColor:
-                                                const Color(0xFF1E293B),
+                                                Color(0xFF1E293B),
                                             shape: RoundedRectangleBorder(
                                                 borderRadius:
                                                     BorderRadius.circular(22),
@@ -1303,16 +1309,16 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                                     color: Colors.white
                                                         .withValues(
                                                             alpha: 0.1))),
-                                            title: const Text("Tümünü Temizle?",
+                                            title: Text("Tümünü Temizle?",
                                                 style: TextStyle(
                                                     fontWeight: FontWeight.w900,
                                                     color: Colors.white,
                                                     fontSize: 18)),
-                                            content: const Text(
+                                            content: Text(
                                                 "Tüm bildirimler listenizden kalıcı olarak temizlenecektir.",
                                                 style: TextStyle(
                                                     fontSize: 13,
-                                                    color: Colors.white70,
+                                                    color: muted,
                                                     height: 1.4)),
                                             actionsPadding:
                                                 const EdgeInsets.fromLTRB(
@@ -1321,7 +1327,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                               TextButton(
                                                   onPressed: () =>
                                                       Navigator.pop(ctx, false),
-                                                  child: const Text("Vazgeç",
+                                                  child: Text("Vazgeç",
                                                       style: TextStyle(
                                                           fontWeight:
                                                               FontWeight.w800,
@@ -1344,7 +1350,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                                           vertical: 10)),
                                                   onPressed: () =>
                                                       Navigator.pop(ctx, true),
-                                                  child: const Text("Temizle",
+                                                  child: Text("Temizle",
                                                       style: TextStyle(
                                                           color: Colors.white,
                                                           fontWeight:
@@ -1371,7 +1377,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                         color: _dangerColor.withValues(
                                             alpha: 0.3)),
                                   ),
-                                  child: const Row(
+                                  child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(Icons.delete_sweep_rounded,
@@ -1390,11 +1396,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     Container(
                         height: 1,
                         width: double.infinity,
-                        color: Colors.white.withValues(alpha: 0.06)),
+                        color: border.withValues(alpha: .65)),
                     Expanded(
                       child: notifications.isEmpty
                           ? Center(
@@ -1406,32 +1412,30 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                     Container(
                                       padding: const EdgeInsets.all(22),
                                       decoration: BoxDecoration(
-                                        color: Colors.white
-                                            .withValues(alpha: 0.03),
+                                        color: border.withValues(alpha: .65),
                                         shape: BoxShape.circle,
                                         border: Border.all(
-                                            color: Colors.white
-                                                .withValues(alpha: 0.06)),
+                                            color: border.withValues(alpha: .65)),
                                       ),
-                                      child: const Icon(
+                                      child: Icon(
                                           Icons.mark_email_read_rounded,
                                           size: 48,
                                           color: Colors.white24),
                                     ),
-                                    const SizedBox(height: 20),
-                                    const Text("Tüm Bildirimler Okundu",
+                                    SizedBox(height: 20),
+                                    Text("Tüm Bildirimler Okundu",
                                         style: TextStyle(
                                             fontSize: 18,
                                             fontWeight: FontWeight.w900,
                                             color: Colors.white,
                                             letterSpacing: -0.3)),
-                                    const SizedBox(height: 8),
-                                    const Text(
+                                    SizedBox(height: 8),
+                                    Text(
                                         "Şu an için yeni bir sistem uyarısı veya duyuru bulunmuyor.",
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
                                             fontSize: 13,
-                                            color: Colors.white54,
+                                            color: muted,
                                             height: 1.4,
                                             fontWeight: FontWeight.w500)),
                                   ],
@@ -1439,12 +1443,12 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                               ),
                             )
                           : ListView.separated(
-                              physics: const BouncingScrollPhysics(),
+                              physics: BouncingScrollPhysics(),
                               padding:
                                   const EdgeInsets.fromLTRB(16, 16, 16, 24),
                               itemCount: notifications.length,
                               separatorBuilder: (_, __) =>
-                                  const SizedBox(height: 10),
+                                  SizedBox(height: 10),
                               itemBuilder: (context, index) {
                                 final notif = notifications[index];
                                 final int notifId = int.tryParse(
@@ -1480,7 +1484,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                           _dangerColor.withValues(alpha: 0.85),
                                       borderRadius: BorderRadius.circular(18),
                                     ),
-                                    child: const Row(
+                                    child: Row(
                                       mainAxisAlignment: MainAxisAlignment.end,
                                       children: [
                                         Text("Sil",
@@ -1501,19 +1505,17 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                   child: Container(
                                     padding: const EdgeInsets.all(16),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF1E293B)
-                                          .withValues(alpha: 0.8),
+                                      color: AppPalette.surfaceAlt,
                                       borderRadius: BorderRadius.circular(18),
                                       border: Border.all(
-                                          color: Colors.white
-                                              .withValues(alpha: 0.08),
+                                          color: border.withValues(alpha: .65),
                                           width: 1.2),
                                       boxShadow: [
                                         BoxShadow(
                                             color: Colors.black
                                                 .withValues(alpha: 0.3),
                                             blurRadius: 10,
-                                            offset: const Offset(0, 4))
+                                            offset: Offset(0, 4))
                                       ],
                                     ),
                                     child: Row(
@@ -1530,12 +1532,12 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                                 color: _primaryColor.withValues(
                                                     alpha: 0.25)),
                                           ),
-                                          child: const Icon(
+                                          child: Icon(
                                               Icons.campaign_rounded,
                                               color: _primaryColor,
                                               size: 18),
                                         ),
-                                        const SizedBox(width: 14),
+                                        SizedBox(width: 14),
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment:
@@ -1550,7 +1552,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                                 children: [
                                                   Expanded(
                                                     child: Text(title,
-                                                        style: const TextStyle(
+                                                        style: TextStyle(
                                                             fontWeight:
                                                                 FontWeight.w900,
                                                             fontSize: 15,
@@ -1561,22 +1563,20 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                                         overflow: TextOverflow
                                                             .ellipsis),
                                                   ),
-                                                  const SizedBox(width: 8),
+                                                  SizedBox(width: 8),
                                                   Container(
                                                     padding: const EdgeInsets
                                                         .symmetric(
                                                         horizontal: 6,
                                                         vertical: 2),
                                                     decoration: BoxDecoration(
-                                                      color: Colors.white
-                                                          .withValues(
-                                                              alpha: 0.05),
+                                                      color: border.withValues(alpha: .65),
                                                       borderRadius:
                                                           BorderRadius.circular(
                                                               6),
                                                     ),
                                                     child: Text(formattedDate,
-                                                        style: const TextStyle(
+                                                        style: TextStyle(
                                                             fontSize: 10,
                                                             color:
                                                                 Colors.white54,
@@ -1586,13 +1586,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                                   ),
                                                 ],
                                               ),
-                                              const SizedBox(height: 6),
+                                              SizedBox(height: 6),
                                               Text(message,
                                                   style: TextStyle(
                                                       fontSize: 13,
-                                                      color: Colors.white
-                                                          .withValues(
-                                                              alpha: 0.8),
+                                                      color: muted,
                                                       height: 1.4,
                                                       fontWeight:
                                                           FontWeight.w500)),
@@ -1613,9 +1611,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                         height: 48,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
-                          color: Colors.white.withValues(alpha: 0.05),
+                          color: border.withValues(alpha: .65),
                           border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.1)),
+                              color: border),
                         ),
                         child: TextButton(
                           onPressed: () => Navigator.pop(context),
@@ -1623,7 +1621,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16)),
                           ),
-                          child: const Text("Kapat",
+                          child: Text("Kapat",
                               style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w800,

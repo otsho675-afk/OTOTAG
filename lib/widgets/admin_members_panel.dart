@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'admin_settings_panel.dart';
 
 /// Unified, adaptive member directory. All mutations use existing callbacks.
 class AdminMembersPanel extends StatelessWidget {
   const AdminMembersPanel({
-    super.key, required this.users, required this.total, required this.searchController,
+    super.key, required this.users, required this.total, this.activityFetchedAt,
+    required this.searchController,
     required this.query, required this.filter, required this.sort, required this.bulk,
     required this.selected, required this.hiddenCount, required this.onSearch,
     required this.onFilter, required this.onSort, required this.onToggleBulk,
@@ -15,6 +17,7 @@ class AdminMembersPanel extends StatelessWidget {
   });
   final List<Map<String,dynamic>> users;
   final int total, hiddenCount;
+  final DateTime? activityFetchedAt;
   final TextEditingController searchController;
   final String query, filter, sort;
   final bool bulk;
@@ -28,12 +31,19 @@ class AdminMembersPanel extends StatelessWidget {
   static const raised=Color(0xFF1B3024), border=Color(0xFF2B4234);
   static const green=Color(0xFF00D68A), white=Color(0xFFF1F8F2), muted=Color(0xFFA2B4A7);
   static const filterValues=<String,String>{
-    'all':'Tümü','customer':'Müşteriler','provider':'Ustalar',
+    'all':'Tümü','online':'Son 5 dk etkin','customer':'Müşteriler','provider':'Ustalar',
     'rentacar':'Firmalar','premium':'Premium','suspended':'Askıda',
     'banned':'Engellenenler'};
   static const sortValues=<String,String>{
     'newest':'Yeni kayıtlar','oldest':'Eski kayıtlar','active':'Son hareket',
     'login':'Son giriş','name':'İsme göre'};
+  bool recentlyActive(Map<String,dynamic> u) {
+    final age=adminLastActivitySeconds(u,now:DateTime.now(),fetchedAt:activityFetchedAt);
+    final suspended=u['is_suspended']==true || u['is_suspended']==1 ||
+        u['is_suspended']=='1';
+    return u['status']=='active' && !suspended && age!=null &&
+        age>=0 && age<=300;
+  }
   int getId(Map<String,dynamic> u)=>int.tryParse(u['id']?.toString() ?? '') ?? 0;
   bool flag(dynamic v)=>v==true||v==1||v=='1';
   String value(dynamic v,[String fallback='—']) {
@@ -144,6 +154,7 @@ class AdminMembersPanel extends StatelessWidget {
             const SizedBox(height:11),
             Wrap(spacing:6,runSpacing:6,children:[
               pill(role(u),roleColor(u)),pill(status(u),statusColor(u)),
+               if(recentlyActive(u))pill('Son 5 dk etkin',green),
               if(flag(u['is_premium']))pill('PREMIUM',const Color(0xFFF4C674)),
               if((int.tryParse(value(u['vehicle_count'],'0'))??0)>0)
                 pill('${value(u['vehicle_count'])} araç',green),
@@ -205,7 +216,7 @@ class AdminMembersPanel extends StatelessWidget {
               Text(date(u['last_login_at']),maxLines:1,overflow:TextOverflow.ellipsis,
                 style:const TextStyle(color:white,fontSize:10.5)),
               const SizedBox(height:4),
-              Text('Hareket: ${date(u['last_seen_at'])}',maxLines:1,
+              Text(recentlyActive(u) ? '● Son 5 dk etkin' : 'Hareket: ${date(u['last_seen_at'])}',maxLines:1,
                 overflow:TextOverflow.ellipsis,
                 style:const TextStyle(color:muted,fontSize:10)),
             ])),

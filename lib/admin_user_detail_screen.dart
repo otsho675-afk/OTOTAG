@@ -326,6 +326,8 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
 
   Widget _jobsTab() {
     final jobs = _rows('jobs');
+    final rentals = _rows('rental_listings');
+    final parts = _rows('part_listings');
     return ListView(padding:const EdgeInsets.all(14),children:[
       _sectionTitle('İş ve servis geçmişi (${jobs.length})',Icons.receipt_long_outlined),
       if(jobs.isEmpty) const ListTile(title:Text('Servis kaydı bulunamadı')),
@@ -335,6 +337,21 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
         trailing:IconButton(tooltip:'İş kaydını sil',icon:const Icon(Icons.delete_outline),onPressed:() async {
           if (!await _confirm('İş silinsin mi?','İşlem ve bağlı kayıtlar silinebilir. Kiralama işlemleri özel iptal akışından yönetilir.')) return;
           await _post('admin_delete_job',{'job_id':j['id'].toString()});
+        }),
+      )),
+      if (rentals.isNotEmpty) _sectionTitle('Rent a Car ilanları (${rentals.length})',Icons.car_rental_outlined),
+      for (final item in rentals) Card(child:ListTile(
+        leading:const Icon(Icons.directions_car_filled_outlined),
+        title:Text('${_str(item['plate'])} • ${_str(item['car_brand_model'])}'),
+        subtitle:Text('Durum: ${_str(item['status'])} · Günlük: ${_str(item['daily_price'])} TL · ${_date(item['created_at'])}'),
+      )),
+      if(parts.isNotEmpty) _sectionTitle('Parça ilanları (${parts.length})',Icons.inventory_2_outlined),
+      for(final item in parts) Card(child:ListTile(
+        title:Text('${_str(item['part_name'])} • ${_str(item['car_model'])}'),
+        subtitle:Text('Durum: ${_str(item['status'])} · Fiyat: ${_str(item['price'])} TL'),
+        trailing:IconButton(tooltip:'İlanı kaldır',icon:const Icon(Icons.delete_outline),onPressed:() async {
+          if (!await _confirm('Parça ilanı silinsin mi?','İlanın kaldırılması bazı tamamlanmış işlemlerde geçmiş kaydı olarak kalabilir.')) return;
+          await _post('delete_part_record',{'listing_id':item['id'].toString()});
         }),
       )),
     ]);

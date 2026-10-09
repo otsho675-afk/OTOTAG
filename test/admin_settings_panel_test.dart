@@ -47,6 +47,12 @@ void main() {
         onBackup: () {}, onOptimize: () {}, onLogout: () {},
       )),
     );
+    final originalErrorHandler = FlutterError.onError;
+    FlutterError.onError = (details) {
+      debugPrint('SETTINGS_LAYOUT_TRACE: ${details.toString(minLevel: DiagnosticLevel.debug)}');
+      originalErrorHandler?.call(details);
+    };
+    addTearDown(() => FlutterError.onError = originalErrorHandler);
     await tester.pumpWidget(panel());
     expect(find.text('Yönetim ayarları'), findsOneWidget);
     expect(find.text('Son 5 dk etkin'), findsOneWidget);

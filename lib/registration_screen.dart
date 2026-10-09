@@ -1,3 +1,5 @@
+import 'core/theme/app_palette.dart';
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
 import 'widgets/google_login_button.dart';
 // Dosya: registration_screen.dart
 import 'package:flutter/material.dart';
@@ -188,7 +190,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   // Adım takibi için eklendi
   int _currentStep = 0;
 
-  final Duration _apiTimeout = const Duration(seconds: 25);
+  final Duration _apiTimeout = Duration(seconds: 25);
 
   String get _normalizedUserType {
     final raw = widget.userType
@@ -196,7 +198,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         .toLowerCase()
         .replaceAll(RegExp(r'[\s-]+'), '_');
 
-    if (const {
+    if ({
       'provider',
       'usta',
       'service_provider',
@@ -207,7 +209,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       return 'provider';
     }
 
-    if (const {
+    if ({
       'rentacar',
       'rent_a_car',
       'rental',
@@ -217,7 +219,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       return 'rentacar';
     }
 
-    if (const {'customer', 'musteri', 'müşteri', 'user'}.contains(raw)) {
+    if ({'customer', 'musteri', 'müşteri', 'user'}.contains(raw)) {
       return 'customer';
     }
 
@@ -225,7 +227,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   bool get _hasValidUserType =>
-      const {'customer', 'provider', 'rentacar'}.contains(_normalizedUserType);
+      {'customer', 'provider', 'rentacar'}.contains(_normalizedUserType);
 
   bool get _isCustomer => _normalizedUserType == 'customer';
   bool get _isProvider => _normalizedUserType == 'provider';
@@ -286,16 +288,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   List<String> get _stepTitles {
     if (_isProvider) {
       return _selectedRentACar
-          ? const ['Hizmet', 'Firma & Bölge', 'Belgeler']
-          : const ['Hizmet', 'Hesap & Bölge', 'Belgeler'];
+          ? ['Hizmet', 'Firma & Bölge', 'Belgeler']
+          : ['Hizmet', 'Hesap & Bölge', 'Belgeler'];
     }
     if (_isRentACar) {
-      return const ['Firma & Bölge', 'Belgeler'];
+      return ['Firma & Bölge', 'Belgeler'];
     }
     if (_isCustomer) {
-      return const ['Hızlı Kayıt'];
+      return ['Hızlı Kayıt'];
     }
-    return const ['Hesap Türü'];
+    return ['Hesap Türü'];
   }
 
   void _handleFocusChange() {
@@ -408,11 +410,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   static const String _iosGoogleClientId =
       '73273804842-u0lcirptug9aotm2m6gn27g92hftt5ud.apps.googleusercontent.com';
 
-  static const Color neonGreen = Color(0xFF00FFA3);
-  static const Color pureBlack = Color(0xFF030305);
-  static const Color panelBlack = Color(0xFF111115);
-  static const Color textGray = Colors.white54;
-  static const Color alertRed = Color(0xFFFF3366);
+  static Color get neonGreen => AppPalette.accent;
+  static Color get pureBlack => AppPalette.page;
+  static Color get panelBlack => AppPalette.surface;
+  static Color get textGray => AppPalette.muted;
+  static Color get alertRed => AppPalette.danger;
 
   final List<String> _cities = [
     "Adana",
@@ -597,22 +599,22 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: AppPalette.text.withValues(alpha: 0.2),
                 shape: BoxShape.circle),
             child: Icon(
                 isError
                     ? Icons.error_outline_rounded
                     : Icons.check_circle_outline_rounded,
-                color: Colors.white,
+                color: AppPalette.text,
                 size: 22),
           ),
-          const SizedBox(width: 14),
+          SizedBox(width: 14),
           Expanded(
             child: Text(message,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: AppPalette.text,
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
                     letterSpacing: 0.2)),
@@ -630,7 +632,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 0,
-      duration: const Duration(seconds: 4),
+      duration: Duration(seconds: 4),
     ));
   }
 
@@ -649,7 +651,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   ? _iosGoogleClientId
                   : null,
           serverClientId: kIsWeb ? null : AppConstants.googleWebClientId,
-          scopes: const ['email', 'profile'],
+          scopes: ['email', 'profile'],
         );
 
         try {
@@ -792,22 +794,22 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   borderRadius:
                       const BorderRadius.vertical(top: Radius.circular(32)),
                   border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.08), width: 1.5),
+                      color: AppPalette.text.withValues(alpha: 0.08), width: 1.5),
                 ),
                 child: SafeArea(
                   child: Column(
                     children: [
-                      const SizedBox(height: 12),
+                      SizedBox(height: 12),
                       Center(
                         child: Container(
                           width: 48,
                           height: 6,
                           decoration: BoxDecoration(
-                              color: Colors.white24,
+                              color: AppPalette.border,
                               borderRadius: BorderRadius.circular(10)),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: Row(
@@ -817,33 +819,33 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                               decoration: BoxDecoration(
                                   color: neonGreen.withValues(alpha: 0.1),
                                   shape: BoxShape.circle),
-                              child: const Icon(Icons.location_city_rounded,
+                              child: Icon(Icons.location_city_rounded,
                                   color: neonGreen, size: 20),
                             ),
-                            const SizedBox(width: 12),
-                            const Text("Şehir Seçiniz",
+                            SizedBox(width: 12),
+                            Text("Şehir Seçiniz",
                                 style: TextStyle(
-                                    color: Colors.white,
+                                    color: AppPalette.text,
                                     fontSize: 18,
                                     fontWeight: FontWeight.w900)),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: Container(
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.04),
+                            color: AppPalette.text.withValues(alpha: 0.04),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.08)),
+                                color: AppPalette.text.withValues(alpha: 0.08)),
                           ),
                           child: TextField(
-                            style: const TextStyle(
-                                color: Colors.white,
+                            style: TextStyle(
+                                color: AppPalette.text,
                                 fontWeight: FontWeight.w600),
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               hintText: "Şehir ara...",
                               hintStyle:
                                   TextStyle(color: textGray, fontSize: 14),
@@ -861,19 +863,19 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      SizedBox(height: 12),
                       Expanded(
                         child: filteredCities.isEmpty
-                            ? const Center(
+                            ? Center(
                                 child: Text("Şehir bulunamadı",
                                     style: TextStyle(color: textGray)))
                             : ListView.separated(
-                                physics: const BouncingScrollPhysics(),
+                                physics: BouncingScrollPhysics(),
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 20, vertical: 8),
                                 itemCount: filteredCities.length,
                                 separatorBuilder: (_, __) => Divider(
-                                    color: Colors.white.withValues(alpha: 0.04),
+                                    color: AppPalette.text.withValues(alpha: 0.04),
                                     height: 1),
                                 itemBuilder: (itemContext, index) {
                                   final city = filteredCities[index];
@@ -889,7 +891,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                         style: TextStyle(
                                           color: isSelected
                                               ? neonGreen
-                                              : Colors.white,
+                                              : AppPalette.text,
                                           fontWeight: isSelected
                                               ? FontWeight.w900
                                               : FontWeight.w600,
@@ -897,7 +899,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                         ),
                                       ),
                                       trailing: isSelected
-                                          ? const Icon(
+                                          ? Icon(
                                               Icons.check_circle_rounded,
                                               color: neonGreen,
                                               size: 20)
@@ -1146,7 +1148,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(28),
                         side: BorderSide(
-                            color: Colors.white.withValues(alpha: 0.08))),
+                            color: AppPalette.text.withValues(alpha: 0.08))),
                     backgroundColor: panelBlack.withValues(alpha: 0.98),
                     elevation: 0,
                     title: Column(
@@ -1157,15 +1159,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                             color: neonGreen.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.check_circle_outline_rounded,
+                          child: Icon(Icons.check_circle_outline_rounded,
                               color: neonGreen, size: 36),
                         ),
-                        const SizedBox(height: 20),
-                        const Text("Kayıt Başarılı",
+                        SizedBox(height: 20),
+                        Text("Kayıt Başarılı",
                             textAlign: TextAlign.center,
                             style: TextStyle(
                                 fontWeight: FontWeight.w900,
-                                color: Colors.white,
+                                color: AppPalette.text,
                                 fontSize: 22,
                                 letterSpacing: -0.5)),
                       ],
@@ -1176,23 +1178,23 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                             "Belgeleriniz alındı. Yönetici onayının ardından giriş yapabilirsiniz.",
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.7),
+                                color: AppPalette.text.withValues(alpha: 0.7),
                                 fontWeight: FontWeight.w500,
                                 height: 1.4,
                                 fontSize: 14)),
-                        const SizedBox(height: 24),
-                        const Text("Başvuru Takip Numaranız",
+                        SizedBox(height: 24),
+                        Text("Başvuru Takip Numaranız",
                             style: TextStyle(
                                 fontWeight: FontWeight.w700,
                                 color: neonGreen,
                                 fontSize: 13)),
-                        const SizedBox(height: 8),
+                        SizedBox(height: 8),
                         Container(
                             width: double.infinity,
                             padding: const EdgeInsets.symmetric(
                                 vertical: 16, horizontal: 12),
                             decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.03),
+                                color: AppPalette.text.withValues(alpha: 0.03),
                                 borderRadius: BorderRadius.circular(18),
                                 border: Border.all(
                                     color: neonGreen.withValues(alpha: 0.3),
@@ -1201,15 +1203,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                               child: FittedBox(
                                 fit: BoxFit.scaleDown,
                                 child: SelectableText(trackingCode,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                         fontSize: 28,
                                         fontWeight: FontWeight.w900,
                                         color: neonGreen,
                                         letterSpacing: 2)),
                               ),
                             )),
-                        const SizedBox(height: 14),
-                        const Text(
+                        SizedBox(height: 14),
+                        Text(
                             "Durumunuzu sorgulamak için bu numarayı kaydedin.",
                             textAlign: TextAlign.center,
                             style: TextStyle(
@@ -1239,7 +1241,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                     builder: (context) => LoginScreen(
                                         userType: responseUserType)));
                           },
-                          child: const Text("Tamam, Anladım",
+                          child: Text("Tamam, Anladım",
                               style: TextStyle(
                                   fontWeight: FontWeight.w900, fontSize: 16)),
                         ),
@@ -1298,16 +1300,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }) {
     final light = Theme.of(context).brightness == Brightness.light;
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
+      duration: Duration(milliseconds: 300),
       decoration: BoxDecoration(
         color: light ? Colors.white : (focusNode.hasFocus
-            ? Colors.white.withValues(alpha: 0.06)
-            : Colors.white.withValues(alpha: 0.03)),
+            ? AppPalette.text.withValues(alpha: 0.06)
+            : AppPalette.text.withValues(alpha: 0.03)),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: focusNode.hasFocus
               ? neonGreen
-              : (light ? const Color(0xFFD5E2D8) : Colors.white.withValues(alpha: 0.05)),
+              : (light ? Color(0xFFD5E2D8) : AppPalette.text.withValues(alpha: 0.05)),
           width: focusNode.hasFocus ? 1.5 : 1.0,
         ),
       ),
@@ -1331,7 +1333,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             decoration: InputDecoration(
               labelText: label,
               labelStyle: TextStyle(
-                  color: focusNode.hasFocus ? (light ? const Color(0xFF08784D) : neonGreen) : (light ? const Color(0xFF52665A) : textGray),
+                  color: focusNode.hasFocus ? (light ? Color(0xFF08784D) : neonGreen) : (light ? Color(0xFF52665A) : textGray),
                   fontSize: 13,
                   fontWeight: FontWeight.w500),
               prefixIcon: Padding(
@@ -1350,7 +1352,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           _obscurePassword
                               ? Icons.visibility_off_rounded
                               : Icons.visibility_rounded,
-                          color: Colors.white54,
+                          color: AppPalette.muted,
                           size: 18,
                         ),
                         onPressed: () {
@@ -1378,9 +1380,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     final light = Theme.of(context).brightness == Brightness.light;
     return Container(
       decoration: BoxDecoration(
-        color: light ? Colors.white : Colors.white.withValues(alpha: 0.03),
+        color: light ? Colors.white : AppPalette.text.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: light ? const Color(0xFFD5E2D8) : Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: light ? Color(0xFFD5E2D8) : AppPalette.text.withValues(alpha: 0.05)),
       ),
       child: Material(
         color: Colors.transparent,
@@ -1391,25 +1393,25 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
             child: Row(
               children: [
-                const Icon(Icons.location_city_rounded,
+                Icon(Icons.location_city_rounded,
                     color: neonGreen, size: 20),
-                const SizedBox(width: 14),
+                SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text("Bulunduğunuz Şehir",
+                      Text("Bulunduğunuz Şehir",
                           style: TextStyle(
                               color: textGray,
                               fontSize: 11,
                               fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 2),
+                      SizedBox(height: 2),
                       Text(
                         _selectedCity ?? "Şehir Seçmek İçin Dokunun",
                         style: TextStyle(
                           color: _selectedCity != null
-                              ? Colors.white
-                              : Colors.white38,
+                              ? AppPalette.text
+                              : AppPalette.subtle,
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                         ),
@@ -1419,7 +1421,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     ],
                   ),
                 ),
-                const Icon(Icons.keyboard_arrow_down_rounded,
+                Icon(Icons.keyboard_arrow_down_rounded,
                     color: neonGreen, size: 20),
               ],
             ),
@@ -1434,9 +1436,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     final light = Theme.of(context).brightness == Brightness.light;
     return Container(
       decoration: BoxDecoration(
-        color: light ? Colors.white : Colors.white.withValues(alpha: 0.03),
+        color: light ? Colors.white : AppPalette.text.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: light ? const Color(0xFFD5E2D8) : Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: light ? Color(0xFFD5E2D8) : AppPalette.text.withValues(alpha: 0.05)),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
@@ -1446,13 +1448,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             isExpanded: true,
             initialValue: value,
             icon:
-                const Icon(Icons.keyboard_arrow_down_rounded, color: neonGreen),
+                Icon(Icons.keyboard_arrow_down_rounded, color: neonGreen),
             style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600, fontSize: 15),
             dropdownColor: light ? Colors.white : panelBlack,
             decoration: InputDecoration(
               labelText: label,
-              labelStyle: const TextStyle(
+              labelStyle: TextStyle(
                   color: textGray, fontSize: 13, fontWeight: FontWeight.w500),
               prefixIcon: Padding(
                   padding: const EdgeInsets.only(left: 16, right: 12),
@@ -1464,7 +1466,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               border: InputBorder.none,
               focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
-                  borderSide: const BorderSide(color: neonGreen, width: 1.5)),
+                  borderSide: BorderSide(color: neonGreen, width: 1.5)),
             ),
             items: items,
             onChanged: (val) {
@@ -1485,12 +1487,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         decoration: BoxDecoration(
           color: isSelected
               ? neonGreen.withValues(alpha: 0.06)
-              : Colors.white.withValues(alpha: 0.03),
+              : AppPalette.text.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
               color: isSelected
                   ? neonGreen.withValues(alpha: 0.4)
-                  : Colors.white.withValues(alpha: 0.05),
+                  : AppPalette.text.withValues(alpha: 0.05),
               width: 1.5),
         ),
         child: Material(
@@ -1515,7 +1517,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                 width: 44,
                                 height: 44,
                                 color: neonGreen.withValues(alpha: 0.2),
-                                child: const Icon(Icons.image,
+                                child: Icon(Icons.image,
                                     color: neonGreen, size: 20),
                               ),
                             )
@@ -1528,7 +1530,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                 width: 44,
                                 height: 44,
                                 color: neonGreen.withValues(alpha: 0.2),
-                                child: const Icon(Icons.image,
+                                child: Icon(Icons.image,
                                     color: neonGreen, size: 20),
                               ),
                             ),
@@ -1537,29 +1539,29 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.05),
+                        color: AppPalette.text.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.upload_file_rounded,
-                          color: Colors.white70, size: 22),
+                      child: Icon(Icons.upload_file_rounded,
+                          color: AppPalette.muted, size: 22),
                     ),
-                  const SizedBox(width: 14),
+                  SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(title,
                             style: TextStyle(
-                                color: isSelected ? neonGreen : Colors.white,
+                                color: isSelected ? neonGreen : AppPalette.text,
                                 fontWeight: FontWeight.w800,
                                 fontSize: 14),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis),
-                        const SizedBox(height: 2),
+                        SizedBox(height: 2),
                         Text(
                           isSelected ? file.name : "Galeriden fotoğraf seç",
                           style: TextStyle(
-                              color: isSelected ? Colors.white70 : textGray,
+                              color: isSelected ? AppPalette.muted : textGray,
                               fontSize: 12,
                               fontWeight: FontWeight.w500),
                           maxLines: 1,
@@ -1570,13 +1572,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   ),
                   if (isSelected)
                     IconButton(
-                      icon: const Icon(Icons.close_rounded,
+                      icon: Icon(Icons.close_rounded,
                           color: alertRed, size: 20),
                       onPressed: () => _clearImage(type),
                       tooltip: "Kaldır",
                     )
                   else
-                    const Icon(Icons.add_a_photo_rounded,
+                    Icon(Icons.add_a_photo_rounded,
                         color: textGray, size: 18),
                 ],
               ),
@@ -1593,10 +1595,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       child: Row(
         children: [
           Icon(icon, color: neonGreen, size: 18),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Text(title,
-              style: const TextStyle(
-                  color: Colors.white,
+              style: TextStyle(
+                  color: AppPalette.text,
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.3)),
@@ -1610,7 +1612,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildBasicInfoStep(),
-        const SizedBox(height: 26),
+        SizedBox(height: 26),
         _buildProviderLocationAndVehicleStep(),
       ],
     );
@@ -1644,14 +1646,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: alertRed.withValues(alpha: 0.3)),
       ),
-      child: const Column(
+      child: Column(
         children: [
           Icon(Icons.error_outline_rounded, color: alertRed, size: 34),
           SizedBox(height: 12),
           Text(
             'Hesap türü tanınamadı',
             style: TextStyle(
-              color: Colors.white,
+              color: AppPalette.text,
               fontSize: 17,
               fontWeight: FontWeight.w900,
             ),
@@ -1669,15 +1671,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   Widget _buildProviderServiceStep() {
     return KeyedSubtree(
-      key: const ValueKey('step0_service'),
+      key: ValueKey('step0_service'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildSectionHeader(
               "Hangi hizmeti veriyorsunuz?", Icons.build_circle_outlined),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           _buildGlassDropdown("Hizmet Kategorisi Seçin", Icons.handyman_rounded,
-              _selectedService.isEmpty ? null : _selectedService, const [
+              _selectedService.isEmpty ? null : _selectedService, [
             DropdownMenuItem(
                 value: 'mechanic',
                 child: Text("Tamirci",
@@ -1709,7 +1711,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               _mapLinkController.clear();
             });
           }),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -1717,7 +1719,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: neonGreen.withValues(alpha: 0.2)),
             ),
-            child: const Row(
+            child: Row(
               children: [
                 Icon(Icons.info_outline_rounded, color: neonGreen, size: 28),
                 SizedBox(width: 12),
@@ -1725,7 +1727,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   child: Text(
                     "Müşterilerin size ulaşabilmesi için doğru hizmet kategorisini seçmeniz önemlidir. Seçiminizi yapıp devam edin.",
                     style: TextStyle(
-                        color: Colors.white70, fontSize: 13, height: 1.4),
+                        color: AppPalette.muted, fontSize: 13, height: 1.4),
                   ),
                 ),
               ],
@@ -1738,7 +1740,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   Widget _buildBasicInfoStep() {
     return KeyedSubtree(
-      key: const ValueKey('step_basic'),
+      key: ValueKey('step_basic'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1757,20 +1759,20 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.04),
+                            color: AppPalette.text.withValues(alpha: 0.04),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.1)),
+                                color: AppPalette.text.withValues(alpha: 0.1)),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(Icons.g_mobiledata_rounded,
-                                  color: Colors.white, size: 28),
+                                  color: AppPalette.text, size: 28),
                               SizedBox(width: 8),
                               Text("Google",
                                   style: TextStyle(
-                                      color: Colors.white,
+                                      color: AppPalette.text,
                                       fontWeight: FontWeight.w800,
                                       fontSize: 13)),
                             ],
@@ -1778,7 +1780,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         ),
                       ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: InkWell(
                   onTap:
@@ -1787,20 +1789,20 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.04),
+                      color: AppPalette.text.withValues(alpha: 0.04),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.1)),
+                          color: AppPalette.text.withValues(alpha: 0.1)),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.apple_rounded,
-                            color: Colors.white, size: 20),
+                            color: AppPalette.text, size: 20),
                         SizedBox(width: 8),
                         Text("Apple",
                             style: TextStyle(
-                                color: Colors.white,
+                                color: AppPalette.text,
                                 fontWeight: FontWeight.w800,
                                 fontSize: 13)),
                       ],
@@ -1811,7 +1813,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             ],
           ),
           if (_currentOauthProvider != null) ...[
-            const SizedBox(height: 14),
+            SizedBox(height: 14),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
@@ -1828,9 +1830,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           : Icons.apple_rounded,
                       color: neonGreen,
                       size: 20),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Text("${_currentOauthProvider!.toUpperCase()} Bağlandı",
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: neonGreen,
                           fontSize: 12,
                           fontWeight: FontWeight.w800)),
@@ -1838,7 +1840,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ),
             ),
           ],
-          const SizedBox(height: 28),
+          SizedBox(height: 28),
           _buildSectionHeader("Kişisel Bilgiler", Icons.badge_rounded),
           _buildGlassTextField(
             controller: _nameController,
@@ -1849,12 +1851,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 : Icons.person_rounded,
             isPasswordField: false,
             type: TextInputType.name,
-            autofillHints: const [AutofillHints.name],
+            autofillHints: [AutofillHints.name],
             capitalization: TextCapitalization.words,
             onEditingComplete: () =>
                 FocusScope.of(context).requestFocus(_phoneFocus),
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: 14),
           _buildGlassTextField(
             controller: _phoneController,
             focusNode: _phoneFocus,
@@ -1862,7 +1864,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             icon: Icons.phone_android_rounded,
             isPasswordField: false,
             type: TextInputType.phone,
-            autofillHints: const [AutofillHints.telephoneNumber],
+            autofillHints: [AutofillHints.telephoneNumber],
             inputFormatters: [
               SmartPhoneFormatter(),
               LengthLimitingTextInputFormatter(15)
@@ -1870,7 +1872,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             onEditingComplete: () =>
                 FocusScope.of(context).requestFocus(_passwordFocus),
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: 14),
           _buildGlassTextField(
             controller: _passwordController,
             focusNode: _passwordFocus,
@@ -1879,11 +1881,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 : "Şifre (En az 6 karakter)",
             icon: Icons.lock_outline_rounded,
             isPasswordField: true,
-            autofillHints: const [AutofillHints.newPassword],
+            autofillHints: [AutofillHints.newPassword],
             textInputAction: TextInputAction.done,
             onEditingComplete: () => FocusScope.of(context).unfocus(),
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: 14),
           _buildGlassTextField(
             controller: _referralController,
             focusNode: _referralFocus,
@@ -1900,14 +1902,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             onEditingComplete: () => FocusScope.of(context).unfocus(),
           ),
           if (_isCustomer) ...[
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
             _buildSectionHeader("Bulunduğun Şehir", Icons.location_city_rounded),
             _buildCitySelectorTile(),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(
               "Şehrini yalnızca sana yakın usta ve hizmetleri göstermek için kullanıyoruz.",
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.48),
+                color: AppPalette.text.withValues(alpha: 0.48),
                 fontSize: 11,
                 height: 1.4,
               ),
@@ -1920,13 +1922,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   Widget _buildProviderLocationAndVehicleStep() {
     return KeyedSubtree(
-      key: const ValueKey('step_provider_loc'),
+      key: ValueKey('step_provider_loc'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildSectionHeader("Bölge & Konum Seçimi", Icons.map_rounded),
           _buildCitySelectorTile(),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
           _buildSectionHeader(
               _effectiveIsRentACar
                   ? "Firma Bilgileri & Banka"
@@ -1961,7 +1963,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               onEditingComplete: () =>
                   FocusScope.of(context).requestFocus(_ibanFocus),
             ),
-          const SizedBox(height: 14),
+          SizedBox(height: 14),
           _buildGlassTextField(
             controller: _ibanController,
             focusNode: _ibanFocus,
@@ -1984,7 +1986,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   Widget _buildProviderDocumentsStep() {
     return KeyedSubtree(
-      key: const ValueKey('step_provider_docs'),
+      key: ValueKey('step_provider_docs'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2024,22 +2026,22 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
     final light = Theme.of(context).brightness == Brightness.light;
     return Scaffold(
-      backgroundColor: light ? const Color(0xFFF6F9F6) : pureBlack,
+      backgroundColor: light ? Color(0xFFF6F9F6) : pureBlack,
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        actions: const [AppThemeToggleButton(), SizedBox(width: 8)],
+        actions: [AppThemeToggleButton(), SizedBox(width: 8)],
         leading: IconButton(
           tooltip: 'Geri',
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.08),
+              color: AppPalette.text.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.arrow_back_ios_new_rounded,
               size: 16,
-              color: Colors.white,
+              color: AppPalette.text,
             ),
           ),
           onPressed: () {
@@ -2050,7 +2052,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         title: Image.asset(
           'assets/images/logo.png',
           height: 28,
-          errorBuilder: (_, __, ___) => const Icon(
+          errorBuilder: (_, __, ___) => Icon(
             Icons.car_repair_rounded,
             color: neonGreen,
             size: 28,
@@ -2077,7 +2079,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       neonGreen.withValues(alpha: 0.10),
                       Colors.transparent,
                     ],
-                    stops: const [0.0, 0.72],
+                    stops: [0.0, 0.72],
                   ),
                 ),
               ),
@@ -2104,13 +2106,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                               color: light ? Colors.white : panelBlack.withValues(alpha: 0.92),
                               borderRadius: BorderRadius.circular(24),
                               border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.07),
+                                color: AppPalette.text.withValues(alpha: 0.07),
                               ),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withValues(alpha: 0.28),
                                   blurRadius: 28,
-                                  offset: const Offset(0, 12),
+                                  offset: Offset(0, 12),
                                 ),
                               ],
                             ),
@@ -2133,7 +2135,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                     size: compactHeight ? 24 : 28,
                                   ),
                                 ),
-                                const SizedBox(width: 14),
+                                SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
@@ -2147,7 +2149,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                               style: TextStyle(
-                                                color: Colors.white,
+                                                color: AppPalette.text,
                                                 fontSize:
                                                     compactHeight ? 18 : 20,
                                                 fontWeight: FontWeight.w900,
@@ -2155,7 +2157,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                               ),
                                             ),
                                           ),
-                                          const SizedBox(width: 8),
+                                          SizedBox(width: 8),
                                           Container(
                                             padding: const EdgeInsets.symmetric(
                                               horizontal: 9,
@@ -2173,7 +2175,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                             ),
                                             child: Text(
                                               _roleBadge,
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 color: neonGreen,
                                                 fontSize: 10,
                                                 fontWeight: FontWeight.w900,
@@ -2183,13 +2185,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                           ),
                                         ],
                                       ),
-                                      const SizedBox(height: 5),
+                                      SizedBox(height: 5),
                                       Text(
                                         _roleSubtitle,
                                         maxLines: compactHeight ? 1 : 2,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
-                                          color: Colors.white.withValues(
+                                          color: AppPalette.text.withValues(
                                               alpha: 0.58),
                                           fontSize: 12,
                                           height: 1.35,
@@ -2202,15 +2204,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          SizedBox(height: 12),
                           Container(
                             width: double.infinity,
                             padding: const EdgeInsets.fromLTRB(14, 11, 14, 12),
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.025),
+                              color: AppPalette.text.withValues(alpha: 0.025),
                               borderRadius: BorderRadius.circular(18),
                               border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.055),
+                                color: AppPalette.text.withValues(alpha: 0.055),
                               ),
                             ),
                             child: Column(
@@ -2219,13 +2221,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                   children: [
                                     Text(
                                       'Adım ${_currentStep + 1} / $_stepCount',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         color: neonGreen,
                                         fontSize: 11,
                                         fontWeight: FontWeight.w900,
                                       ),
                                     ),
-                                    const Spacer(),
+                                    Spacer(),
                                     Flexible(
                                       child: Text(
                                         stepTitles.isEmpty
@@ -2235,7 +2237,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                         overflow: TextOverflow.ellipsis,
                                         textAlign: TextAlign.right,
                                         style: TextStyle(
-                                          color: light ? const Color(0xFF596C5F) : Colors.white.withValues(alpha: 0.72),
+                                          color: light ? Color(0xFF596C5F) : AppPalette.text.withValues(alpha: 0.72),
                                           fontSize: 11,
                                           fontWeight: FontWeight.w700,
                                         ),
@@ -2243,16 +2245,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 9),
+                                SizedBox(height: 9),
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(999),
                                   child: LinearProgressIndicator(
                                     minHeight: 7,
                                     value: progress,
                                     backgroundColor:
-                                        Colors.white.withValues(alpha: 0.08),
+                                        AppPalette.text.withValues(alpha: 0.08),
                                     valueColor:
-                                        const AlwaysStoppedAnimation<Color>(
+                                        AlwaysStoppedAnimation<Color>(
                                             neonGreen),
                                   ),
                                 ),
@@ -2264,13 +2266,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     ),
                     Expanded(
                       child: SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(),
+                        physics: BouncingScrollPhysics(),
                         keyboardDismissBehavior:
                             ScrollViewKeyboardDismissBehavior.onDrag,
                         padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
                         child: AutofillGroup(
                           child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 260),
+                            duration: Duration(milliseconds: 260),
                             switchInCurve: Curves.easeOutCubic,
                             switchOutCurve: Curves.easeInCubic,
                             transitionBuilder: (child, animation) =>
@@ -2278,7 +2280,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                               opacity: animation,
                               child: SlideTransition(
                                 position: Tween<Offset>(
-                                  begin: const Offset(0.025, 0),
+                                  begin: Offset(0.025, 0),
                                   end: Offset.zero,
                                 ).animate(animation),
                                 child: child,
@@ -2298,7 +2300,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           color: light ? Colors.white : panelBlack.withValues(alpha: 0.97),
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
-                            color: light ? const Color(0xFFD9E6DB) : Colors.white.withValues(alpha: 0.065),
+                            color: light ? Color(0xFFD9E6DB) : AppPalette.text.withValues(alpha: 0.065),
                           ),
                         ),
                         child: Column(
@@ -2314,10 +2316,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                       onPressed:
                                           isRegistering ? null : _prevStep,
                                       style: OutlinedButton.styleFrom(
-                                        foregroundColor: light ? const Color(0xFF15231B) : Colors.white,
+                                        foregroundColor: light ? Color(0xFF15231B) : AppPalette.text,
                                         padding: EdgeInsets.zero,
                                         side: BorderSide(
-                                          color: Colors.white
+                                          color: AppPalette.text
                                               .withValues(alpha: 0.18),
                                         ),
                                         shape: RoundedRectangleBorder(
@@ -2325,13 +2327,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                               BorderRadius.circular(17),
                                         ),
                                       ),
-                                      child: const Icon(
+                                      child: Icon(
                                         Icons.arrow_back_rounded,
                                         size: 22,
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 10),
+                                  SizedBox(width: 10),
                                 ],
                                 Expanded(
                                   child: SizedBox(
@@ -2342,12 +2344,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                           ? null
                                           : _nextStep,
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: light ? const Color(0xFF08784D) : neonGreen,
+                                        backgroundColor: light ? Color(0xFF08784D) : neonGreen,
                                         foregroundColor: light ? Colors.white : Colors.black,
-                                        disabledBackgroundColor: Colors.white
+                                        disabledBackgroundColor: AppPalette.text
                                             .withValues(alpha: 0.08),
                                         disabledForegroundColor:
-                                            Colors.white38,
+                                            AppPalette.subtle,
                                         elevation: 0,
                                         shape: RoundedRectangleBorder(
                                           borderRadius:
@@ -2355,7 +2357,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                         ),
                                       ),
                                       child: isRegistering
-                                          ? const SizedBox(
+                                          ? SizedBox(
                                               width: 22,
                                               height: 22,
                                               child:
@@ -2378,14 +2380,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                                           ? 'Hesabı Oluştur'
                                                           : 'Başvuruyu Gönder')
                                                       : 'Devam Et',
-                                                  style: const TextStyle(
+                                                  style: TextStyle(
                                                     fontSize: 15,
                                                     fontWeight:
                                                         FontWeight.w900,
                                                     letterSpacing: -0.2,
                                                   ),
                                                 ),
-                                                const SizedBox(width: 7),
+                                                SizedBox(width: 7),
                                                 Icon(
                                                   _currentStep ==
                                                           _stepCount - 1
@@ -2403,7 +2405,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
+                            SizedBox(height: 8),
                             TextButton(
                               onPressed: (!_hasValidUserType || isRegistering)
                                   ? null
@@ -2419,7 +2421,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                       );
                                     },
                               style: TextButton.styleFrom(
-                                foregroundColor: Colors.white,
+                                foregroundColor: AppPalette.text,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 14,
                                   vertical: 8,
@@ -2428,7 +2430,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                               child: Text.rich(
                                 TextSpan(
                                   text: 'Zaten hesabınız var mı? ',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: textGray,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
@@ -2440,7 +2442,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                           : (_isProvider
                                               ? 'Usta Girişine Dön'
                                               : 'Giriş Yap'),
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         color: neonGreen,
                                         fontWeight: FontWeight.w900,
                                       ),
@@ -2459,7 +2461,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                   await launchUrl(url);
                                 }
                               },
-                              child: const Padding(
+                              child: Padding(
                                 padding: EdgeInsets.symmetric(vertical: 4),
                                 child: Text(
                                   'Gizlilik Politikası ve Kullanım Koşulları',

@@ -76,6 +76,15 @@ void main() {
         await mountAdmin(tester, width: width, scale: 1.4);
         expect(find.text('Yönetim merkezi'), findsOneWidget);
         expect(find.text('Son 30 gün · tamamlanan işler'), findsOneWidget);
+        expect(find.text('Üyeler'), findsWidgets);
+        if (width <= 390) {
+          expect(find.text('OTO TAG  ·  YENİ PANEL'), findsOneWidget);
+          final revenue = tester.getTopLeft(find.text('Servis cirosu'));
+          final completed = tester.getTopLeft(find.text('Tamamlanan servis'));
+          expect((revenue.dy - completed.dy).abs(), lessThan(3),
+              reason: 'Mobile dashboard must show the first two stats side by side.');
+          expect(revenue.dx, lessThan(completed.dx));
+        }
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox());
       },

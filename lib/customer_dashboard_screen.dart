@@ -3957,13 +3957,14 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
     final int mKm =
         int.tryParse(vehicle['maintenance_km']?.toString() ?? '10000') ?? 10000;
 
+    final light = Theme.of(context).brightness == Brightness.light;
+    final ink = AppPalette.text;
+    final muted = AppPalette.muted;
     return Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            Color(0xFF141622),
-            Color(0xFF0C0E14),
-          ],
+        gradient: LinearGradient(
+          colors: light ? [Colors.white, Color(0xFFEEF8F1)]
+              : [Color(0xFF141622), Color(0xFF0C0E14)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -3971,17 +3972,17 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
         border: Border.all(
           color: isSelected
               ? _primaryColor.withValues(alpha: 0.55)
-              : Colors.white.withValues(alpha: 0.08),
+              : (light ? AppPalette.border : Colors.white.withValues(alpha: .08)),
           width: isSelected ? 1.6 : 1.0,
         ),
         boxShadow: [
           BoxShadow(
             color: isSelected
                 ? _primaryColor.withValues(alpha: 0.14)
-                : Colors.black45,
+                : AppPalette.shadow,
             blurRadius: 18,
             spreadRadius: isSelected ? 1 : 0,
-            offset: const Offset(0, 6),
+            offset: Offset(0, 6),
           ),
         ],
       ),
@@ -4024,15 +4025,15 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 3.5),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF8F9FA),
+                              color: Color(0xFFF8F9FA),
                               borderRadius: BorderRadius.circular(7),
                               border: Border.all(
-                                  color: const Color(0xFF2B2D42), width: 1.5),
+                                  color: Color(0xFF2B2D42), width: 1.5),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withValues(alpha: 0.35),
                                   blurRadius: 6,
-                                  offset: const Offset(0, 2),
+                                  offset: Offset(0, 2),
                                 ),
                               ],
                             ),
@@ -4043,10 +4044,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 4, vertical: 1.5),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF0F318A),
+                                    color: Color(0xFF0F318A),
                                     borderRadius: BorderRadius.circular(2.5),
                                   ),
-                                  child: const Text(
+                                  child: Text(
                                     "TR",
                                     style: TextStyle(
                                       color: Colors.white,
@@ -4056,11 +4057,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 6),
+                                SizedBox(width: 6),
                                 Flexible(
                                   child: Text(
                                     vehicle['plate'] ?? '',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       color: Color(0xFF111111),
                                       fontWeight: FontWeight.w900,
                                       fontSize: 14.5,
@@ -4072,19 +4073,19 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                               ],
                             ),
                           ),
-                          const SizedBox(height: 6),
+                          SizedBox(height: 6),
                           Text(
                             vehicle['brand_model'] ?? '',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 15,
-                              color: Colors.white,
+                              color: light ? ink : Colors.white,
                               fontWeight: FontWeight.w800,
                               letterSpacing: -0.3,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           // Kompakt Yıl & Motor Rozetleri
                           Row(
                             children: [
@@ -4095,7 +4096,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                       horizontal: 6, vertical: 2),
                                   margin: const EdgeInsets.only(right: 5),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.08),
+                                    color: AppPalette.border.withValues(alpha: light ? .8 : .22),
                                     borderRadius: BorderRadius.circular(6),
                                     border: Border.all(
                                         color: Colors.white
@@ -4103,8 +4104,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                   ),
                                   child: Text(
                                     vehicle['model_year'].toString(),
-                                    style: const TextStyle(
-                                      color: Colors.white70,
+                                    style: TextStyle(
+                                      color: muted,
                                       fontSize: 10,
                                       fontWeight: FontWeight.w800,
                                     ),
@@ -4126,15 +4127,15 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(
+                                      Icon(
                                           Icons.local_gas_station_rounded,
-                                          color: _primaryColor,
+                                          color: light ? AppPalette.accent : _primaryColor,
                                           size: 10),
-                                      const SizedBox(width: 3),
+                                      SizedBox(width: 3),
                                       Text(
                                         vehicle['engine_type'],
-                                        style: const TextStyle(
-                                          color: _primaryColor,
+                                        style: TextStyle(
+                                          color: light ? AppPalette.accent : _primaryColor,
                                           fontSize: 10,
                                           fontWeight: FontWeight.w800,
                                         ),
@@ -4147,7 +4148,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Padding(
                       padding: const EdgeInsets.only(top: 1),
                       child: Row(
@@ -4160,7 +4161,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                             onTap: () =>
                                 _showVehicleDialog(vehicleToEdit: vehicle),
                           ),
-                          const SizedBox(width: 6),
+                          SizedBox(width: 6),
                           _buildVehicleQuickAction(
                             icon: Icons.warning_amber_rounded,
                             tooltip: 'Arıza Teşhisi',
@@ -4181,7 +4182,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                               );
                             },
                           ),
-                          const SizedBox(width: 6),
+                          SizedBox(width: 6),
                           _buildVehicleQuickAction(
                             icon: Icons.share_rounded,
                             tooltip: 'Araç Raporunu Paylaş',
@@ -4196,7 +4197,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                   ],
                 ),
 
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
 
                 // DURUM KUTULARI: 3'lü Mini Kartlar
                 Row(
@@ -4205,12 +4206,12 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                         child: _buildCompactStatItem(
                             "Sigorta", insDate, Icons.shield_rounded,
                             isDate: true)),
-                    const SizedBox(width: 6),
+                    SizedBox(width: 6),
                     Expanded(
                         child: _buildCompactStatItem(
                             "Muayene", inspDate, Icons.fact_check_rounded,
                             isDate: true)),
-                    const SizedBox(width: 6),
+                    SizedBox(width: 6),
                     Expanded(
                         child: _buildCompactStatItem(
                             "Bakım", null, Icons.build_circle_rounded,
@@ -4218,13 +4219,13 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                   ],
                 ),
 
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
 
                 // ALT BUTON: Kompakt Neon Buton
                 Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(14),
-                    gradient: const LinearGradient(
+                    gradient: LinearGradient(
                       colors: [Color(0xFF00FFA3), Color(0xFF00D688)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -4233,7 +4234,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                       BoxShadow(
                         color: _primaryColor.withValues(alpha: 0.24),
                         blurRadius: 12,
-                        offset: const Offset(0, 3),
+                        offset: Offset(0, 3),
                       ),
                     ],
                   ),
@@ -4254,7 +4255,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14)),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(

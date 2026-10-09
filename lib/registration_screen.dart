@@ -1333,7 +1333,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             decoration: InputDecoration(
               labelText: label,
               labelStyle: TextStyle(
-                  color: focusNode.hasFocus ? (light ? Color(0xFF08784D) : neonGreen) : (light ? Color(0xFF52665A) : textGray),
+                  color: focusNode.hasFocus ? (light ? Color(0xFF286B4B) : neonGreen) : (light ? Color(0xFF52665A) : textGray),
                   fontSize: 13,
                   fontWeight: FontWeight.w500),
               prefixIcon: Padding(
@@ -2344,7 +2344,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                           ? null
                                           : _nextStep,
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: light ? Color(0xFF08784D) : neonGreen,
+                                        backgroundColor: light ? Color(0xFF286B4B) : neonGreen,
                                         foregroundColor: light ? Colors.white : Colors.black,
                                         disabledBackgroundColor: AppPalette.text
                                             .withValues(alpha: 0.08),

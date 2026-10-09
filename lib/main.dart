@@ -28,6 +28,8 @@ import 'services/platform_http_client.dart';
 import 'rent_a_car_panel_screen.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/app_theme_state.dart';
+import 'widgets/app_theme_toggle_button.dart';
 import 'core/theme/app_motion.dart';
 import 'core/theme/premium_surfaces.dart';
 import 'widgets/app_update_gate.dart';
@@ -186,6 +188,7 @@ Future<void> _startApp() async {
     WidgetsBinding.instance.scheduleFrame();
   });
 
+  await AppThemeState.initialize();
   runApp(const MyApp());
 }
 
@@ -194,7 +197,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return ValueListenableBuilder<bool>(
+      valueListenable: AppThemeState.light,
+      builder: (context, isLight, _) => MaterialApp(
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
@@ -218,9 +223,11 @@ class MyApp extends StatelessWidget {
         Locale('en', 'US'),
       ],
       locale: const Locale('tr', 'TR'),
-      theme: appTheme(),
+      theme: appLightTheme(),
+      darkTheme: appTheme(),
+      themeMode: isLight ? ThemeMode.light : ThemeMode.dark,
       home: const SplashScreen(),
-    );
+    ));
   }
 }
 
@@ -473,7 +480,8 @@ class RoleSelectionScreen extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
           decoration: BoxDecoration(
-            color: AppConstants.cardColor.withValues(alpha: .92),
+            color: Theme.of(context).brightness == Brightness.light
+                ? Colors.white : AppConstants.cardColor.withValues(alpha: .92),
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
               color: AppConstants.primaryColor.withValues(alpha: .14),
@@ -501,8 +509,7 @@ class RoleSelectionScreen extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        color: AppConstants.textColor,
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 17,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -.25,
@@ -513,8 +520,8 @@ class RoleSelectionScreen extends StatelessWidget {
                       subtitle,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppConstants.subtleTextColor,
+                      style: TextStyle(color: Theme.of(context).brightness == Brightness.light
+                          ? const Color(0xFF596D5F) : AppConstants.subtleTextColor,
                         fontSize: 11.5,
                         fontWeight: FontWeight.w500,
                         height: 1.35,
@@ -547,7 +554,7 @@ class RoleSelectionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppConstants.bgColor,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: PremiumScene(
         accentStrength: .95,
         child: SafeArea(
@@ -560,13 +567,18 @@ class RoleSelectionScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    const Align(
+                      alignment: Alignment.centerRight,
+                      child: AppThemeToggleButton(),
+                    ),
                     Center(
                       child: Container(
                         width: 92,
                         height: 92,
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
-                          color: AppConstants.cardElevated,
+                          color: Theme.of(context).brightness == Brightness.light
+                              ? Colors.white : AppConstants.cardElevated,
                           borderRadius: BorderRadius.circular(26),
                           border: Border.all(
                             color: AppConstants.primaryColor.withValues(alpha: .18),
@@ -595,7 +607,7 @@ class RoleSelectionScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'Nasıl devam etmek istiyorsun?',
                       textAlign: TextAlign.center,
                       style: TextStyle(
@@ -606,7 +618,7 @@ class RoleSelectionScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'Sadece giriş türünü seç. Geri kalan her şey ilgili panelde sade şekilde gösterilir.',
                       textAlign: TextAlign.center,
                       style: TextStyle(

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_motion.dart';
+import 'core/theme/app_palette.dart';
 import 'services/adaptive_polling.dart';
 import 'services/realtime_client.dart';
 import 'services/rental_service.dart' show rentalCents, rentalPrice, rentalId;
@@ -33,7 +34,7 @@ class CustomerBidsScreen extends StatefulWidget {
 }
 
 class _CustomerBidsScreenState extends State<CustomerBidsScreen>
-    with WidgetsBindingObserver {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final _service = widget.service ?? ServiceOfferService();
   final _live = RealtimeClient();
   late final AdaptivePolling _polling;
@@ -46,6 +47,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
   bool _loading = true, _fetching = false, _busy = false, _dialog = false;
   bool _foreground = true, _covered = false, _navigating = false;
   Timer? _unansweredTimer;
+  late final AnimationController _estimateReveal;
   bool _expiryAttempted = false;
   int _revision = 0;
   String _sort = 'price';
@@ -55,6 +57,8 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _estimateReveal = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 2600));
     _polling = AdaptivePolling(
         refresh: () => _load(propagate: true),
         connected: () => _live.isSubscribed('job_${widget.jobId}'),
@@ -106,6 +110,7 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
     WidgetsBinding.instance.removeObserver(this);
     _polling.dispose();
     _unansweredTimer?.cancel();
+    _estimateReveal.dispose();
     if (!_navigating) unawaited(LiveActivityService().endTracking());
     unawaited(_live.dispose());
     if (widget.service == null) _service.dispose();
@@ -132,6 +137,8 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
       final rawScan = data['provider_scan'];
       final providerScan =
           rawScan is Map ? Map<String, dynamic>.from(rawScan) : null;
+      final showEstimateCards = bids.isEmpty &&
+          simulation != null && _simulationFallback == null;
       setState(() {
         _bids = bids;
         _simulationFallback = bids.isEmpty ? simulation : null;
@@ -144,6 +151,13 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
         _error = null;
         _loading = false;
       });
+      if (showEstimateCards) {
+        if (AppMotion.reduced(context)) {
+          _estimateReveal.value = 1;
+        } else {
+          _estimateReveal.forward(from: 0);
+        }
+      }
       if (bids.isEmpty && _status == 'searching') {
         _startUnansweredTimer();
       } else {
@@ -418,9 +432,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
                                                         ? 'İşleminiz doğrulanıyor'
                                                         : list.isEmpty
                                                             ? (_providerScan != null
-                                                                ? '${_providerScan!['eligible_count'] ?? 0} uygun sağlayıcı taranıyor'
+                                                                ? 'Yakındaki ustalar aranıyor'
                                                                 : (_simulationFallback != null
-                                                                    ? 'Yakındaki seçenekler'
+                                                                    ? 'Usta yanıtı bekleniyor'
                                                                     : 'Usta teklifleri bekleniyor'))
                                                             : '${list.length} teklif geldi',
                                                 message: _error != null
@@ -429,9 +443,9 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
                                                         ? 'Güncel talep ve teklif durumu kontrol ediliyor.'
                                                         : list.isEmpty
                                                             ? (_providerScan != null
-                                                                ? '${_providerScan!['search_radius'] ?? 50} km alan kontrol ediliyor. Gerçek teklif geldiğinde bu ekran otomatik güncellenir.'
+                                                                ? '${_providerScan!['search_radius'] ?? 50} km alanda gerçek teklifler bekleniyor. Yeni teklifler ekranda gösterilir.'
                                                                 : (_simulationFallback != null
-                                                                    ? 'Mesafe ve hizmet türüne göre hesaplanan seçenekleri inceleyebilir, kendi teklif tutarınızı girebilirsiniz.'
+                                                                    ? 'Aramanız sürüyor. Fiyat tahminlerini inceleyebilir, bütçenizi ayarlayabilirsiniz.'
                                                                     : 'Talebiniz açık. Gelen teklifleri burada karşılaştırabilir, uygun ustayı seçebilirsiniz.'))
                                                             : 'Fiyatı, ustanın puanını ve tahmini varış süresini inceleyin. Seçim sizin.',
                                                 icon: _error != null
@@ -444,7 +458,10 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
                                                 searching: list.isEmpty &&
                                                     !_busy &&
                                                     !_loading &&
-                                                    _status == 'searching',
+                                                    (_status == 'searching' ||
+                                                        (_status == null &&
+                                                         (_providerScan != null ||
+                                                          _simulationFallback != null))),
                                                 active: _error == null),
                                             if (_error != null)
                                               Padding(
@@ -527,7 +544,8 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
     if (_busy || _dialog) return;
     _dialog = true;
     final amount = await showDialog<String>(
-        context: context, builder: (_) => const _CounterOfferDialog());
+        context: context, builder: (_) => const _CounterOfferDialog(
+            title: 'Bütçe tercihiniz', buttonLabel: 'Tahmini fiyatı güncelle'));
     _dialog = false;
     if (!mounted || amount == null) return;
 
@@ -554,101 +572,120 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
     });
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text(
-            'Teklif tutarınız aramaya dahil edildi. Tahmini tutar güncellendi.')));
+            'Bütçe tercihinize göre tahmin güncellendi; ustaya teklif gönderilmedi.')));
   }
 
+
   Widget _simulationPanel() {
-    final fallback = _simulationFallback;
-    if (fallback == null) return const SizedBox.shrink();
-    final points = (fallback['points'] as List? ?? const [])
+    final data = _simulationFallback;
+    if (data == null) return const SizedBox.shrink();
+    final points = (data['points'] as List? ?? const [])
         .whereType<Map>()
         .map((item) => Map<String, dynamic>.from(item))
         .toList();
 
+    int price(Map<String, dynamic> p) =>
+        _estimateOverrides[p['id']?.toString() ?? ''] ??
+        int.tryParse('${p['suggested_price']}') ?? 0;
+    int eta(Map<String, dynamic> p) =>
+        int.tryParse('${p['estimated_time']}') ?? 99999;
+
+    points.sort((a, b) {
+      final rank = _sort == 'time'
+          ? eta(a).compareTo(eta(b))
+          : price(a).compareTo(price(b));
+      return rank != 0 ? rank :
+          (a['id']?.toString() ?? '').compareTo(b['id']?.toString() ?? '');
+    });
+
     return Padding(
-        padding: const EdgeInsets.only(top: 18, bottom: 4),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          for (final point in points)
-            Builder(builder: (context) {
-              final id = point['id']?.toString() ?? '';
-              final suggested =
-                  int.tryParse('${point['suggested_price']}') ?? 0;
-              final shownPrice = _estimateOverrides[id] ?? suggested;
-              final userOffer = _estimateUserOffers[id];
-              return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  elevation: 0,
-                  child: Padding(
-                      padding: const EdgeInsets.all(18),
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(children: [
-                              const CircleAvatar(
-                                  child: Icon(Icons.build_outlined)),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                  child: Text(
-                                      point['label']?.toString() ??
-                                          'Yakındaki seçenek',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium)),
-                              Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 9, vertical: 5),
-                                  decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(999),
-                                      border: Border.all(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .outlineVariant)),
-                                  child: Text('Tahmini',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelSmall)),
-                            ]),
-                            const SizedBox(height: 18),
-                            Wrap(
-                                spacing: 16,
-                                runSpacing: 8,
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                children: [
-                                  Text(
-                                      shownPrice > 0
-                                          ? '${rentalPrice(shownPrice * 100)} ₺'
-                                          : 'Fiyat hesaplanıyor',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headlineSmall
-                                          ?.copyWith(
-                                              fontWeight: FontWeight.w700)),
-                                  Text(
-                                      '${point['distance_km'] ?? '-'} km'),
-                                  Text(
-                                      'Tahmini ${point['estimated_time'] ?? '-'} dk'),
-                                ]),
-                            if (userOffer != null) ...[
-                              const SizedBox(height: 10),
-                              Text(
-                                  'Teklifiniz: ${rentalPrice(userOffer * 100)} ₺ · Güncel tahmin: ${rentalPrice(shownPrice * 100)} ₺',
-                                  style:
-                                      Theme.of(context).textTheme.bodyMedium),
-                            ],
-                            const SizedBox(height: 14),
-                            Wrap(spacing: 8, runSpacing: 8, children: [
-                              FilledButton.icon(
-                                  onPressed: _busy
-                                      ? null
-                                      : () => _counterEstimate(point),
-                                  icon: const Icon(Icons.local_offer_outlined),
-                                  label: Text(userOffer == null
-                                      ? 'Teklif ver'
-                                      : 'Teklifi güncelle')),
-                            ]),
-                          ])));
-            }),
-        ]));
+      padding: const EdgeInsets.only(top: 18, bottom: 4),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('Bölgesel fiyat tahminleri',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: AppPalette.text, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 5),
+        Text('Bunlar gerçek usta teklifleri değildir. Gerçek teklifler geldiğinde burada ayrıca gösterilir.',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: AppPalette.muted, height: 1.4)),
+        const SizedBox(height: 16),
+        for (var index = 0; index < points.length; index++)
+          _estimateCard(points[index], index),
+      ]),
+    );
+  }
+
+  Widget _estimateCard(Map<String, dynamic> point, int index) {
+    final id = point['id']?.toString() ?? '';
+    final suggested = int.tryParse('${point['suggested_price']}') ?? 0;
+    final shownPrice = _estimateOverrides[id] ?? suggested;
+    final userOffer = _estimateUserOffers[id];
+    final start = (index * .17).clamp(0.0, .70).toDouble();
+    final anim = CurvedAnimation(
+      parent: _estimateReveal,
+      curve: Interval(start, (start + .27).clamp(0.0, 1.0).toDouble(),
+        curve: Curves.easeOutCubic),
+    );
+    return FadeTransition(
+      key: ValueKey('estimate-$' + id),
+      opacity: anim,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, .12), end: Offset.zero,
+        ).animate(anim),
+        child: Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          elevation: 0,
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                CircleAvatar(
+                  backgroundColor: AppPalette.accentSoft,
+                  child: Icon(Icons.handyman_outlined, color: AppPalette.accent)),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Fiyat tahmini ${index + 1}',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800))),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    color: AppPalette.accentSoft,
+                    border: Border.all(color: AppPalette.accentBorder)),
+                  child: Text('Öngörü',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppPalette.accent, fontWeight: FontWeight.w800))),
+              ]),
+              const SizedBox(height: 18),
+              Wrap(spacing: 12, runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(shownPrice > 0
+                      ? '${rentalPrice(shownPrice * 100)} ₺'
+                      : 'Fiyat hesaplanıyor',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800)),
+                  Text('Örnek mesafe: ${point['distance_km'] ?? '-'} km'),
+                  Text('Örnek süre: ${point['estimated_time'] ?? '-'} dk'),
+                ]),
+              if (userOffer != null) ...[
+                const SizedBox(height: 10),
+                Text('Bütçeniz: ${rentalPrice(userOffer * 100)} ₺ · '
+                     'Güncel tahmin: ${rentalPrice(shownPrice * 100)} ₺',
+                  style: Theme.of(context).textTheme.bodyMedium),
+              ],
+              const SizedBox(height: 14),
+              FilledButton.icon(
+                onPressed: _busy ? null : () => _counterEstimate(point),
+                icon: const Icon(Icons.tune_rounded),
+                label: Text(userOffer == null
+                  ? 'Bütçeni ayarla' : 'Bütçeni güncelle')),
+            ]),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _offerCard(Map<String, dynamic> bid) {
@@ -747,7 +784,12 @@ class _CustomerBidsScreenState extends State<CustomerBidsScreen>
 }
 
 class _CounterOfferDialog extends StatefulWidget {
-  const _CounterOfferDialog();
+  const _CounterOfferDialog({
+    this.title = 'Karşı teklifiniz',
+    this.buttonLabel = 'Teklifi gönder',
+  });
+  final String title;
+  final String buttonLabel;
   @override
   State<_CounterOfferDialog> createState() => _CounterOfferDialogState();
 }
@@ -763,7 +805,7 @@ class _CounterOfferDialogState extends State<_CounterOfferDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-          title: const Text('Karşı teklifiniz'),
+          title: Text(widget.title),
           content: Form(
               key: _form,
               child: TextFormField(
@@ -786,6 +828,6 @@ class _CounterOfferDialogState extends State<_CounterOfferDialog> {
                     Navigator.pop(context, _text.text.trim());
                   }
                 },
-                child: const Text('Teklifi gönder'))
+                child: Text(widget.buttonLabel))
           ]);
 }

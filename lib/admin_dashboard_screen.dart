@@ -155,12 +155,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   ThemeData get _adminTheme {
     if (!_lightAdminTheme) return Theme.of(context);
-    const ink = Color(0xFF15211B), green = Color(0xFF08784D);
+    const ink = Color(0xFF15211B), green = Color(0xFF286B4B);
     final scheme = ColorScheme.fromSeed(seedColor: green,
       brightness: Brightness.light).copyWith(
         primary: green, onPrimary: Colors.white,
         surface: Colors.white, onSurface: ink,
-        outline: const Color(0xFFD9E4DB),
+        outline: const Color(0xFFD9E4DC),
         outlineVariant: const Color(0xFFE5EBE5),
         surfaceContainerHighest: const Color(0xFFF3F7F4),
         surfaceTint: Colors.transparent,
@@ -168,15 +168,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return ThemeData(
       brightness: Brightness.light, useMaterial3: true,
       colorScheme: scheme, fontFamily: 'Roboto',
-      scaffoldBackgroundColor: const Color(0xFFF6F8F6),
-      canvasColor: const Color(0xFFF6F8F6),
+      scaffoldBackgroundColor: const Color(0xFFF7F9F7),
+      canvasColor: const Color(0xFFF7F9F7),
       textTheme: ThemeData.light().textTheme.apply(
         bodyColor: ink, displayColor: ink, fontFamily: 'Roboto'),
       inputDecorationTheme: InputDecorationTheme(
         filled: true, fillColor: Colors.white,
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFD9E4DB))),
+          borderSide: const BorderSide(color: Color(0xFFD9E4DC))),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: green, width: 1.5))),
@@ -186,10 +186,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18))),
-      dividerTheme: const DividerThemeData(color: Color(0xFFD9E4DB)),
+      dividerTheme: const DividerThemeData(color: Color(0xFFD9E4DC)),
       chipTheme: const ChipThemeData(backgroundColor: Color(0xFFF3F7F4),
         selectedColor: Color(0xFFD8F2E3),
-        side: BorderSide(color: Color(0xFFD9E4DB)),
+        side: BorderSide(color: Color(0xFFD9E4DC)),
         labelStyle: TextStyle(color: ink)),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(backgroundColor: green,

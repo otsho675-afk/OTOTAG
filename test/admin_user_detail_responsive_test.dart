@@ -71,7 +71,6 @@ void main() {
 
   testWidgets('failed member save preserves the form and edited values',
       (tester) async {
-    enableLayoutDiagnostics(tester);
     var posts = 0;
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(390, 900);

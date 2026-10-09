@@ -2869,7 +2869,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                               letterSpacing: 1.15,
                             ),
                           ),
-                          SizedBox(height: 5),
+                          const SizedBox(height: 5),
                           Text(
                             'Yedek Parça Pazarı',
                             style: TextStyle(
@@ -2879,7 +2879,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                               letterSpacing: -0.3,
                             ),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
                             'Şehrinizdeki yeni ve çıkma parçaları keşfedin veya ilan verin.',
                             style: TextStyle(
@@ -3177,9 +3177,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.bolt_rounded,
+                        const Icon(Icons.bolt_rounded,
                             color: _primaryColor, size: 12),
-                        SizedBox(width: 4),
+                        const SizedBox(width: 4),
                         Text(
                           '7/24',
                           style: TextStyle(
@@ -3234,9 +3234,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                 ],
               ),
               const Spacer(),
-              Row(children: [ Icon(Icons.location_on_outlined,
+              Row(children: [ const Icon(Icons.location_on_outlined,
                       size: 13, color: _primaryColor),
-                  SizedBox(width: 5),
+                  const SizedBox(width: 5),
                   Text(
                     'Konum bazlı eşleşme',
                     style: TextStyle(
@@ -3245,8 +3245,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  SizedBox(width: 14),
-                  Icon(Icons.shield_outlined,
+                  const SizedBox(width: 14),
+                  const Icon(Icons.shield_outlined,
                       size: 13, color: _primaryColor),
                   SizedBox(width: 5),
                   Flexible(

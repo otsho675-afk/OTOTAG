@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'admin_settings_panel.dart';
@@ -6,6 +7,7 @@ import 'admin_settings_panel.dart';
 class AdminMembersPanel extends StatelessWidget {
   const AdminMembersPanel({
     super.key, required this.users, required this.total, this.activityFetchedAt,
+    this.lightMode = false,
     required this.searchController,
     required this.query, required this.filter, required this.sort, required this.bulk,
     required this.selected, required this.hiddenCount, required this.onSearch,
@@ -18,6 +20,7 @@ class AdminMembersPanel extends StatelessWidget {
   final List<Map<String,dynamic>> users;
   final int total, hiddenCount;
   final DateTime? activityFetchedAt;
+  final bool lightMode;
   final TextEditingController searchController;
   final String query, filter, sort;
   final bool bulk;
@@ -27,9 +30,13 @@ class AdminMembersPanel extends StatelessWidget {
   final ValueChanged<int> onToggleUser;
   final ValueChanged<Map<String,dynamic>> onOpen, onNotify, onDocs, onPunish, onReviews, onDelete;
 
-  static const background=Color(0xFF0B120F), surface=Color(0xFF14221A);
-  static const raised=Color(0xFF1B3024), border=Color(0xFF2B4234);
-  static const green=Color(0xFF00D68A), white=Color(0xFFF1F8F2), muted=Color(0xFFA2B4A7);
+  Color get background => lightMode ? Color(0xFFF6F8F6) : Color(0xFF0B120F);
+  Color get surface => lightMode ? Colors.white : Color(0xFF14221A);
+  Color get raised => lightMode ? Color(0xFFE7F4EB) : Color(0xFF1B3024);
+  Color get border => lightMode ? Color(0xFFD9E4DB) : Color(0xFF2B4234);
+  Color get green => lightMode ? Color(0xFF08784D) : Color(0xFF00D68A);
+  Color get white => lightMode ? Color(0xFF14241A) : Color(0xFFF1F8F2);
+  Color get muted => lightMode ? Color(0xFF566A5E) : Color(0xFFA2B4A7);
   static const filterValues=<String,String>{
     'all':'Tümü','online':'Son 5 dk etkin','customer':'Müşteriler','provider':'Ustalar',
     'rentacar':'Firmalar','premium':'Premium','suspended':'Askıda',
@@ -57,7 +64,8 @@ class AdminMembersPanel extends StatelessWidget {
   String role(Map<String,dynamic> u)=>switch(u['user_type']) {
     'customer'=>'Müşteri','provider'=>'Usta','rentacar'=>'Rent a Car',_=>'Üye'};
   Color roleColor(Map<String,dynamic> u)=>switch(u['user_type']) {
-    'provider'=>const Color(0xFF68C8FF),'rentacar'=>const Color(0xFFECC27C),_=>green};
+    'provider'=>lightMode ? Color(0xFF156C9F) : Color(0xFF68C8FF),
+    'rentacar'=>lightMode ? Color(0xFF956015) : Color(0xFFECC27C),_=>green};
   IconData roleIcon(Map<String,dynamic> u)=>switch(u['user_type']) {
     'provider'=>Icons.handyman_outlined,'rentacar'=>Icons.directions_car_outlined,
     _=>Icons.person_outline_rounded};
@@ -68,8 +76,9 @@ class AdminMembersPanel extends StatelessWidget {
     return 'Aktif';
   }
   Color statusColor(Map<String,dynamic> u)=>u['status']=='banned'
-    ?const Color(0xFFFF777B):(flag(u['is_suspended'])||u['status']=='pending'
-    ?const Color(0xFFF4C674):green);
+    ?(lightMode ? Color(0xFFBF3342) : Color(0xFFFF777B))
+    :(flag(u['is_suspended'])||u['status']=='pending'
+    ?(lightMode ? Color(0xFF8A6319) : Color(0xFFF4C674)):green);
   Widget pill(String label,Color color)=>Container(
     padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
     decoration:BoxDecoration(color:color.withValues(alpha:.12),
@@ -87,23 +96,23 @@ class AdminMembersPanel extends StatelessWidget {
     decoration:BoxDecoration(color:surface,borderRadius:BorderRadius.circular(12),
       border:Border.all(color:border)),
     child:Row(mainAxisSize:MainAxisSize.min,children:[
-      Icon(icon,color:color,size:21),const SizedBox(width:10),
+      Icon(icon,color:color,size:21),SizedBox(width:10),
       Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Text(number.toString(),style:const TextStyle(color:white,fontSize:19,
+        Text(number.toString(),style:TextStyle(color:white,fontSize:19,
           fontWeight:FontWeight.w900)),
-        Text(title,style:const TextStyle(color:muted,fontSize:10)),
+        Text(title,style:TextStyle(color:muted,fontSize:10)),
       ]),
     ]));
   PopupMenuItem<String> item(String key,IconData icon,String title,{bool danger=false})=>
     PopupMenuItem(value:key,child:Row(children:[
-      Icon(icon,size:17,color:danger?const Color(0xFFFF777B):white),
-      const SizedBox(width:8),
+      Icon(icon,size:17,color:danger?Color(0xFFFF777B):white),
+      SizedBox(width:8),
       Flexible(child:Text(title,style:TextStyle(fontSize:12,
-        color:danger?const Color(0xFFFF777B):white))),
+        color:danger?Color(0xFFFF777B):white))),
     ]));
   Widget actions(Map<String,dynamic> u)=>PopupMenuButton<String>(
     tooltip:'Üye işlemleri',color:raised,
-    icon:const Icon(Icons.more_horiz_rounded,color:muted),
+    icon:Icon(Icons.more_horiz_rounded,color:muted),
     onSelected:(action){
       switch(action) {
         case 'open':onOpen(u);
@@ -122,7 +131,7 @@ class AdminMembersPanel extends StatelessWidget {
         item('reviews',Icons.star_outline_rounded,'Profil / yorumlar'),
       ],
       item('punish',Icons.gavel_outlined,'Ceza / engelle'),
-      const PopupMenuDivider(),
+      PopupMenuDivider(),
       item('delete',Icons.delete_outline_rounded,'Üyeyi sil',danger:true),
     ]);
   Widget mobileCard(Map<String,dynamic> u) {
@@ -138,41 +147,41 @@ class AdminMembersPanel extends StatelessWidget {
             Row(children:[
               if(bulk) ...[
                 Icon(active?Icons.check_box_rounded:Icons.check_box_outline_blank_rounded,
-                  color:green),const SizedBox(width:9)
-              ] else ...[avatar(u),const SizedBox(width:10)],
+                  color:green),SizedBox(width:9)
+              ] else ...[avatar(u),SizedBox(width:10)],
               Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                 Text(value(u['name'],'İsimsiz üye'),maxLines:1,
                   overflow:TextOverflow.ellipsis,
-                  style:const TextStyle(color:white,fontSize:14,fontWeight:FontWeight.w900)),
-                const SizedBox(height:4),
+                  style:TextStyle(color:white,fontSize:14,fontWeight:FontWeight.w900)),
+                SizedBox(height:4),
                 Text('Üye #$uid · ${value(u['city'],'Şehir yok')}',
                   maxLines:1,overflow:TextOverflow.ellipsis,
-                  style:const TextStyle(color:muted,fontSize:11)),
+                  style:TextStyle(color:muted,fontSize:11)),
               ])),
               if(!bulk)actions(u),
             ]),
-            const SizedBox(height:11),
+            SizedBox(height:11),
             Wrap(spacing:6,runSpacing:6,children:[
               pill(role(u),roleColor(u)),pill(status(u),statusColor(u)),
                if(recentlyActive(u))pill('Son 5 dk etkin',green),
-              if(flag(u['is_premium']))pill('PREMIUM',const Color(0xFFF4C674)),
+              if(flag(u['is_premium']))pill('PREMIUM',Color(0xFFF4C674)),
               if((int.tryParse(value(u['vehicle_count'],'0'))??0)>0)
                 pill('${value(u['vehicle_count'])} araç',green),
             ]),
-            const SizedBox(height:11),
-            const Divider(height:1,color:border),
-            const SizedBox(height:10),
+            SizedBox(height:11),
+            Divider(height:1,color:border),
+            SizedBox(height:10),
             Row(children:[
-              const Icon(Icons.phone_outlined,color:muted,size:15),
-              const SizedBox(width:6),
+              Icon(Icons.phone_outlined,color:muted,size:15),
+              SizedBox(width:6),
               Expanded(child:Text(value(u['phone']),maxLines:1,
                 overflow:TextOverflow.ellipsis,
-                style:const TextStyle(color:white,fontSize:11))),
-              const Icon(Icons.login_rounded,color:muted,size:15),
-              const SizedBox(width:5),
+                style:TextStyle(color:white,fontSize:11))),
+              Icon(Icons.login_rounded,color:muted,size:15),
+              SizedBox(width:5),
               Flexible(child:Text(date(u['last_login_at']),
                 maxLines:1,overflow:TextOverflow.ellipsis,
-                style:const TextStyle(color:muted,fontSize:10))),
+                style:TextStyle(color:muted,fontSize:10))),
             ]),
           ]))));
   }
@@ -181,51 +190,51 @@ class AdminMembersPanel extends StatelessWidget {
     return Material(color:active?raised:surface,
       child:InkWell(onTap:bulk?()=>onToggleUser(uid):()=>onOpen(u),
         child:Container(padding:const EdgeInsets.fromLTRB(14,11,10,11),
-          decoration:const BoxDecoration(border:Border(bottom:BorderSide(color:border))),
+          decoration:BoxDecoration(border:Border(bottom:BorderSide(color:border))),
           child:Row(children:[
             Expanded(flex:28,child:Row(children:[
               if(bulk) ...[
                 Icon(active?Icons.check_box_rounded:Icons.check_box_outline_blank_rounded,
-                  color:green),const SizedBox(width:8)
-              ] else ...[avatar(u),const SizedBox(width:9)],
+                  color:green),SizedBox(width:8)
+              ] else ...[avatar(u),SizedBox(width:9)],
               Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                 Text(value(u['name'],'İsimsiz üye'),maxLines:1,
                   overflow:TextOverflow.ellipsis,
-                  style:const TextStyle(color:white,fontSize:12,fontWeight:FontWeight.w800)),
-                const SizedBox(height:4),
+                  style:TextStyle(color:white,fontSize:12,fontWeight:FontWeight.w800)),
+                SizedBox(height:4),
                 Text('#$uid · ${value(u['city'],'Şehir yok')}',
                   maxLines:1,overflow:TextOverflow.ellipsis,
-                  style:const TextStyle(color:muted,fontSize:10)),
+                  style:TextStyle(color:muted,fontSize:10)),
               ]))
             ])),
             Expanded(flex:21,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
               Text(value(u['phone']),maxLines:1,overflow:TextOverflow.ellipsis,
-                style:const TextStyle(color:white,fontSize:11)),
-              const SizedBox(height:4),
+                style:TextStyle(color:white,fontSize:11)),
+              SizedBox(height:4),
               Text(value(u['email']),maxLines:1,overflow:TextOverflow.ellipsis,
-                style:const TextStyle(color:muted,fontSize:10)),
+                style:TextStyle(color:muted,fontSize:10)),
             ])),
             Expanded(flex:15,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
               Text(role(u),style:TextStyle(color:roleColor(u),
                 fontSize:11,fontWeight:FontWeight.w800)),
-              const SizedBox(height:4),
+              SizedBox(height:4),
               Text('${value(u['vehicle_count'],'0')} araç',
-                style:const TextStyle(color:muted,fontSize:10)),
+                style:TextStyle(color:muted,fontSize:10)),
             ])),
             Expanded(flex:20,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
               Text(date(u['last_login_at']),maxLines:1,overflow:TextOverflow.ellipsis,
-                style:const TextStyle(color:white,fontSize:10.5)),
-              const SizedBox(height:4),
+                style:TextStyle(color:white,fontSize:10.5)),
+              SizedBox(height:4),
               Text(recentlyActive(u) ? '● Son 5 dk etkin' : 'Hareket: ${date(u['last_seen_at'])}',maxLines:1,
                 overflow:TextOverflow.ellipsis,
-                style:const TextStyle(color:muted,fontSize:10)),
+                style:TextStyle(color:muted,fontSize:10)),
             ])),
             Expanded(flex:13,child:Align(alignment:Alignment.centerLeft,
               child:pill(status(u),statusColor(u)))),
             SizedBox(width:40,child:bulk?const SizedBox.shrink():actions(u)),
           ]))));
   }
-  static const heading=TextStyle(color:muted,fontSize:10,
+  TextStyle get heading=>TextStyle(color:muted,fontSize:10,
     letterSpacing:.6,fontWeight:FontWeight.w900);
   @override
   Widget build(BuildContext context)=>LayoutBuilder(builder:(context,box) {
@@ -234,19 +243,19 @@ class AdminMembersPanel extends StatelessWidget {
     final provider=users.where((u)=>u['user_type']=='provider').length;
     final company=users.where((u)=>u['user_type']=='rentacar').length;
     return ColoredBox(color:background,child:CustomScrollView(
-      physics:const AlwaysScrollableScrollPhysics(),
+      physics:AlwaysScrollableScrollPhysics(),
       slivers:[
         SliverPadding(padding:EdgeInsets.fromLTRB(pad,22,pad,12),
           sliver:SliverToBoxAdapter(child:Center(child:ConstrainedBox(
-            constraints:const BoxConstraints(maxWidth:1450),
+            constraints:BoxConstraints(maxWidth:1450),
             child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-              const Text('OTO TAG   /   KULLANICI OPERASYONLARI',
+              Text('OTO TAG   /   KULLANICI OPERASYONLARI',
                 style:TextStyle(color:green,fontWeight:FontWeight.w900,
                   fontSize:10,letterSpacing:1.3)),
-              const SizedBox(height:7),
+              SizedBox(height:7),
               Wrap(spacing:15,runSpacing:12,alignment:WrapAlignment.spaceBetween,
                 crossAxisAlignment:WrapCrossAlignment.center,children:[
-                  const Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                  Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                     Text('Üye merkezi',style:TextStyle(color:white,
                       fontSize:27,fontWeight:FontWeight.w900,letterSpacing:-.6)),
                     SizedBox(height:5),
@@ -260,40 +269,40 @@ class AdminMembersPanel extends StatelessWidget {
                     style:FilledButton.styleFrom(backgroundColor:bulk?raised:green,
                       foregroundColor:bulk?white:background)),
                 ]),
-              const SizedBox(height:16),
+              SizedBox(height:16),
               SingleChildScrollView(scrollDirection:Axis.horizontal,
                 child:Row(children:[
                   summary('Yüklenen',total,Icons.groups_2_outlined,green),
-                  const SizedBox(width:8),
+                  SizedBox(width:8),
                   summary('Müşteri',customer,Icons.person_outline_rounded,green),
-                  const SizedBox(width:8),
+                  SizedBox(width:8),
                   summary('Usta',provider,Icons.handyman_outlined,
-                    const Color(0xFF68C8FF)),
-                  const SizedBox(width:8),
+                    Color(0xFF68C8FF)),
+                  SizedBox(width:8),
                   summary('Firma',company,Icons.storefront_outlined,
-                    const Color(0xFFECC27C)),
+                    Color(0xFFECC27C)),
                 ])),
-              const SizedBox(height:16),
+              SizedBox(height:16),
               Container(padding:const EdgeInsets.all(13),
                 decoration:BoxDecoration(color:surface,border:Border.all(color:border),
                   borderRadius:BorderRadius.circular(15)),
                 child:Column(children:[
                   TextField(controller:searchController,onChanged:onSearch,
-                    style:const TextStyle(color:white,fontSize:13),
+                    style:TextStyle(color:white,fontSize:13),
                     decoration:InputDecoration(
                       hintText:'Ad, telefon, şehir, e-posta veya üye no…',
-                      hintStyle:const TextStyle(color:muted,fontSize:12),
-                      prefixIcon:const Icon(Icons.search_rounded,color:green),
+                      hintStyle:TextStyle(color:muted,fontSize:12),
+                      prefixIcon:Icon(Icons.search_rounded,color:green),
                       suffixIcon:query.isEmpty?null:IconButton(
                         onPressed:(){searchController.clear();onSearch('');},
-                        icon:const Icon(Icons.close_rounded,color:muted)),
+                        icon:Icon(Icons.close_rounded,color:muted)),
                       filled:true,fillColor:background,
                       border:OutlineInputBorder(borderRadius:BorderRadius.circular(11),
-                        borderSide:const BorderSide(color:border)),
+                        borderSide:BorderSide(color:border)),
                       enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(11),
-                        borderSide:const BorderSide(color:border)),
+                        borderSide:BorderSide(color:border)),
                     )),
-                  const SizedBox(height:9),
+                  SizedBox(height:9),
                   SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(
                     children:[for(final f in filterValues.entries) ...[
                       ChoiceChip(label:Text(f.value),selected:filter==f.key,
@@ -302,7 +311,7 @@ class AdminMembersPanel extends StatelessWidget {
                         labelStyle:TextStyle(color:filter==f.key?background:muted,
                           fontSize:11,fontWeight:FontWeight.w800),
                         onSelected:(yes){if(yes)onFilter(f.key);}),
-                      const SizedBox(width:6),
+                      SizedBox(width:6),
                     ]])),
                 ])),
               if(bulk) Container(
@@ -314,31 +323,31 @@ class AdminMembersPanel extends StatelessWidget {
                 child:Wrap(spacing:8,runSpacing:7,
                   crossAxisAlignment:WrapCrossAlignment.center,children:[
                     Text('${selected.length} Seçildi',
-                      style:const TextStyle(color:green,fontWeight:FontWeight.w900)),
-                    OutlinedButton(onPressed:onSelectAll,child:const Text('Tümünü Seç')),
+                      style:TextStyle(color:green,fontWeight:FontWeight.w900)),
+                    OutlinedButton(onPressed:onSelectAll,child:Text('Tümünü Seç')),
                     OutlinedButton(onPressed:selected.isEmpty?null:onHide,
-                      child:const Text('Gizle')),
+                      child:Text('Gizle')),
                     FilledButton(onPressed:selected.isEmpty?null:onDeleteSelected,
-                      style:FilledButton.styleFrom(backgroundColor:const Color(0xFFC5414C)),
-                      child:const Text('Sil')),
+                      style:FilledButton.styleFrom(backgroundColor:Color(0xFFC5414C)),
+                      child:Text('Sil')),
                 ])),
-              const SizedBox(height:11),
+              SizedBox(height:11),
               Wrap(
                 spacing:12,runSpacing:4,
                 alignment:WrapAlignment.spaceBetween,
                 crossAxisAlignment:WrapCrossAlignment.center,
                 children:[
                   Text('${users.length} sonuç · $total kayıt',
-                    style:const TextStyle(color:muted,fontSize:11)),
+                    style:TextStyle(color:muted,fontSize:11)),
                   if(hiddenCount>0) TextButton.icon(onPressed:onRestore,
-                    icon:const Icon(Icons.visibility_outlined,size:16),
+                    icon:Icon(Icons.visibility_outlined,size:16),
                     label:Text('$hiddenCount gizlenen')),
                   Row(mainAxisSize:MainAxisSize.min,children:[
-                    const Icon(Icons.sort_rounded,color:muted,size:16),
-                    const SizedBox(width:6),
+                    Icon(Icons.sort_rounded,color:muted,size:16),
+                    SizedBox(width:6),
                     DropdownButtonHideUnderline(child:DropdownButton<String>(
                       value:sort,dropdownColor:raised,
-                      style:const TextStyle(color:white,fontSize:11),
+                      style:TextStyle(color:white,fontSize:11),
                       items:[for(final s in sortValues.entries)
                         DropdownMenuItem(value:s.key,child:Text(s.value))],
                       onChanged:(v){if(v!=null)onSort(v);},
@@ -347,7 +356,7 @@ class AdminMembersPanel extends StatelessWidget {
                 ]),
             ]))))),
         if(users.isEmpty)
-          const SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(40),
+          SliverToBoxAdapter(child:Padding(padding:EdgeInsets.all(40),
             child:Column(children:[
               Icon(Icons.person_search_rounded,size:46,color:green),
               SizedBox(height:12),
@@ -360,11 +369,11 @@ class AdminMembersPanel extends StatelessWidget {
           if(table)
             SliverPadding(padding:EdgeInsets.symmetric(horizontal:pad),
               sliver:SliverToBoxAdapter(child:Center(child:ConstrainedBox(
-                constraints:const BoxConstraints(maxWidth:1450),
+                constraints:BoxConstraints(maxWidth:1450),
                 child:Container(padding:const EdgeInsets.fromLTRB(14,12,10,12),
-                  decoration:const BoxDecoration(color:raised,
+                  decoration:BoxDecoration(color:raised,
                     borderRadius:BorderRadius.vertical(top:Radius.circular(14))),
-                  child:const Row(children:[
+                  child:Row(children:[
                     Expanded(flex:28,child:Text('ÜYE',style:heading)),
                     Expanded(flex:21,child:Text('İLETİŞİM',style:heading)),
                     Expanded(flex:15,child:Text('ROL / ARAÇ',style:heading)),
@@ -375,7 +384,7 @@ class AdminMembersPanel extends StatelessWidget {
           SliverPadding(padding:EdgeInsets.fromLTRB(pad,0,pad,45),
             sliver:SliverList.builder(itemCount:users.length,
               itemBuilder:(context,index)=>Center(child:ConstrainedBox(
-                constraints:const BoxConstraints(maxWidth:1450),
+                constraints:BoxConstraints(maxWidth:1450),
                 child:Padding(padding:EdgeInsets.only(bottom:table?0:10),
                   child:table?desktopRow(users[index]):mobileCard(users[index])))))),
         ],

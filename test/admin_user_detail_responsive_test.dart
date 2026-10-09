@@ -60,7 +60,12 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Kullanıcı detayları'), findsOneWidget);
         expect(find.textContaining('Deneme Kullanıcı'), findsWidgets);
-        expect(tester.takeException(), isNull);
+        final layoutError = tester.takeException();
+        if (layoutError != null) {
+          // ignore: avoid_print
+          print('DETAIL LAYOUT: $layoutError');
+        }
+        expect(layoutError, isNull);
         await tester.tap(find.text('Araçlar').first);
         await tester.pumpAndSettle();
         expect(find.textContaining('42 TEST 42'), findsOneWidget);
@@ -87,7 +92,12 @@ void main() {
         ),
       ));
       await tester.pumpAndSettle();
-      expect(find.text('Üyeyi düzenle'), findsOneWidget);
+      final visibleText = tester.widgetList<Text>(find.byType(Text))
+          .map((widget) => widget.data ?? '')
+          .take(50)
+          .join(' | ');
+      expect(find.text('Üyeyi düzenle'), findsOneWidget,
+          reason: 'Rendered texts: $visibleText');
       await tester.tap(find.text('Üyeyi düzenle'));
       await tester.pumpAndSettle();
       await tester.enterText(

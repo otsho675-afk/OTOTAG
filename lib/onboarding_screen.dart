@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
+import 'core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -48,15 +50,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppConstants.bgColor,
+      backgroundColor: AppPalette.page,
       body: SafeArea(
         child: Column(children: [
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: _finish,
-              child: const Text('Geç',
-                  style: TextStyle(color: Colors.white60)),
+              child: Text('Geç',
+                  style: TextStyle(color: AppPalette.muted)),
             ),
           ),
           Expanded(
@@ -75,29 +77,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         width: 110,
                         height: 110,
                         decoration: BoxDecoration(
-                          color: AppConstants.primaryColor
+                          color: AppPalette.accent
                               .withValues(alpha: .12),
                           shape: BoxShape.circle,
                           border: Border.all(
-                              color: AppConstants.primaryColor
+                              color: AppPalette.accent
                                   .withValues(alpha: .28)),
                         ),
                         child: Icon(item.icon,
-                            color: AppConstants.primaryColor, size: 52),
+                            color: AppPalette.accent, size: 52),
                       ),
-                      const SizedBox(height: 34),
+                      SizedBox(height: 34),
                       Text(item.title,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                              color: Colors.white,
+                          style: TextStyle(
+                              color: AppPalette.text,
                               fontSize: 28,
                               fontWeight: FontWeight.w900,
                               height: 1.1)),
-                      const SizedBox(height: 14),
+                      SizedBox(height: 14),
                       Text(item.text,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                              color: Colors.white60,
+                          style: TextStyle(
+                              color: AppPalette.muted,
                               fontSize: 15,
                               height: 1.55)),
                     ],
@@ -114,20 +116,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 children: List.generate(
                   _items.length,
                   (index) => AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
+                    duration: Duration(milliseconds: 220),
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     width: index == _page ? 24 : 8,
                     height: 8,
                     decoration: BoxDecoration(
                       color: index == _page
-                          ? AppConstants.primaryColor
-                          : Colors.white24,
+                          ? AppPalette.accent
+                          : AppPalette.border,
                       borderRadius: BorderRadius.circular(99),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 22),
+              SizedBox(height: 22),
               SizedBox(
                 width: double.infinity,
                 height: 54,
@@ -137,13 +139,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       _finish();
                     } else {
                       _controller.nextPage(
-                          duration: const Duration(milliseconds: 260),
+                          duration: Duration(milliseconds: 260),
                           curve: Curves.easeOutCubic);
                     }
                   },
                   child: Text(
                     _page == _items.length - 1 ? 'OTO TAG’a Başla' : 'Devam Et',
-                    style: const TextStyle(fontWeight: FontWeight.w800),
+                    style: TextStyle(fontWeight: FontWeight.w800),
                   ),
                 ),
               ),

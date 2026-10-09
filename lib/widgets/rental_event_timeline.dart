@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
+import '../core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import '../services/rental_service.dart';
 import 'rental_market_style.dart';
@@ -51,13 +53,13 @@ class _RentalEventHistoryState extends State<RentalEventHistory> {
   @override
   Widget build(BuildContext context) => Dialog(
       child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 900),
+          constraints: BoxConstraints(maxWidth: 900),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             ListTile(
-                title: const Text('Önceki hareketler'),
+                title: Text('Önceki hareketler'),
                 trailing: IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close))),
+                    icon: Icon(Icons.close))),
             Flexible(
                 child: SingleChildScrollView(
                     padding: const EdgeInsets.all(18),
@@ -67,7 +69,7 @@ class _RentalEventHistoryState extends State<RentalEventHistory> {
                           RentalEventTimeline(events: _events),
                           if (_error != null)
                             Text(_error!,
-                                style: const TextStyle(color: Colors.orange)),
+                                style: TextStyle(color: Colors.orange)),
                           if (_cursor != null)
                             OutlinedButton(
                                 onPressed: _loading ? null : _more,
@@ -108,13 +110,13 @@ class RentalEventTimeline extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const Text('Son hareketler',
+        Text('Son hareketler',
             style: TextStyle(
-                color: Colors.white,
+                color: AppPalette.text,
                 fontSize: 20,
                 fontWeight: FontWeight.bold)),
         if (events.isEmpty)
-          const Padding(
+          Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
               child: Text(
                   'Bu kayıt için hareket geçmişi henüz yok. Eski işlemlerin mevcut durumu üstte gösterilir.',
@@ -133,42 +135,42 @@ class RentalEventTimeline extends StatelessWidget {
                     Text(
                         rentalEventNames[event['event_type']] ??
                             'Kiralama güncellendi',
-                        style: const TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 6),
+                        style: TextStyle(
+                            color: AppPalette.text, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 6),
                     Text(
                         '${{
                               'customer': 'Müşteri',
                               'rentacar': 'Firma',
                               'admin': 'Yönetici'
                             }[event['actor_role']] ?? 'Hesap'} #${event['actor_id']} • ${event['created_at']} UTC',
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: rentalMuted, fontSize: 11, height: 1.5)),
                     if (event['company_name'] != null)
                       Text('${event['company_name']} • ${event['city'] ?? ''}',
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: rentalMuted, fontSize: 12)),
                     if (event['details'] is Map) ...[
                       if (event['details']['amount'] != null)
                         Text('Toplam tutar: ${event['details']['amount']} ₺',
-                            style: const TextStyle(color: Colors.greenAccent)),
+                            style: TextStyle(color: Colors.greenAccent)),
                       if (event['details']['rating'] != null)
                         Text(
                             'Değerlendirme: ${rentalId(event['details']['rating'])} / 5',
-                            style: const TextStyle(color: Colors.greenAccent)),
+                            style: TextStyle(color: Colors.greenAccent)),
                       if (event['details']['subject'] != null)
                         Text('${event['details']['subject']}',
-                            style: const TextStyle(color: rentalMuted)),
+                            style: TextStyle(color: rentalMuted)),
                       if (event['details']['reason'] != null)
                         Text('${event['details']['reason']}',
-                            style: const TextStyle(color: rentalMuted)),
+                            style: TextStyle(color: rentalMuted)),
                       if (event['details']['vehicle'] != null)
                         Text('${event['details']['vehicle']}',
-                            style: const TextStyle(color: rentalMuted)),
+                            style: TextStyle(color: rentalMuted)),
                       if (event['details']['daily_price'] != null)
                         Text(
                             'Günlük fiyat: ${event['details']['daily_price']} ₺',
-                            style: const TextStyle(color: rentalMuted)),
+                            style: TextStyle(color: rentalMuted)),
                     ],
                   ])),
       ]);

@@ -31,6 +31,7 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/app_theme_state.dart';
 import 'core/theme/app_palette.dart';
 import 'widgets/app_theme_toggle_button.dart';
+import 'widgets/ototag_brand_logo.dart';
 import 'core/theme/app_motion.dart';
 import 'core/theme/premium_surfaces.dart';
 import 'widgets/app_update_gate.dart';
@@ -384,7 +385,7 @@ class _SplashScreenState extends State<SplashScreen>
     final double logoSize = size.width > 600 ? 150 : 112;
 
     return Scaffold(
-      backgroundColor: AppConstants.bgColor,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
           Positioned(
@@ -415,14 +416,14 @@ class _SplashScreenState extends State<SplashScreen>
                 child: Container(
                   padding: EdgeInsets.all(size.width > 600 ? 30 : 24),
                   decoration: BoxDecoration(
-                    color: AppConstants.cardColor.withValues(alpha: .86),
+                    color: AppPalette.surface.withValues(alpha: .92),
                     borderRadius: BorderRadius.circular(32),
                     border: Border.all(
                       color: AppPalette.accent.withValues(alpha: .16),
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: .42),
+                        color: AppPalette.shadow,
                         blurRadius: 34,
                         offset: const Offset(0, 18),
                       ),
@@ -433,18 +434,10 @@ class _SplashScreenState extends State<SplashScreen>
                       ),
                     ],
                   ),
-                  child: Image.asset(
-                    'assets/images/logo.png',
-                    cacheWidth:
-                        (logoSize * MediaQuery.of(context).devicePixelRatio)
-                            .round(),
+                  child: OtoTagBrandLogo(
+                    width: logoSize,
                     height: logoSize,
-                    errorBuilder: (context, error, stackTrace) => Icon(
-                      Icons.directions_car_rounded,
-                      color: AppPalette.accent,
-                      size: logoSize,
-                    ),
-                  ),
+                  )
                 ),
               ),
             ),
@@ -585,14 +578,9 @@ class RoleSelectionScreen extends StatelessWidget {
                             color: AppPalette.accent.withValues(alpha: .18),
                           ),
                         ),
-                        child: Image.asset(
-                          'assets/images/logo.png',
-                          fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => Icon(
-                            Icons.directions_car_rounded,
-                            color: AppPalette.accent,
-                            size: 44,
-                          ),
+                        child: const OtoTagBrandLogo(
+                          width: 56,
+                          height: 56,
                         ),
                       ),
                     ),

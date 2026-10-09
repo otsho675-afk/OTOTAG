@@ -2,7 +2,7 @@
 import '../core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 
-import '../core/constants/app_constants.dart';
+
 import '../services/rental_service.dart';
 import 'rental_market_style.dart';
 import '../core/theme/app_motion.dart';

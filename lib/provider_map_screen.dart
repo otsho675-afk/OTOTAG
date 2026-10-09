@@ -4270,8 +4270,9 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
 
   @override
   Widget build(BuildContext context) {
-    const Color bgColor = pureBlack;
-    const Color cardColor = panelBlack;
+    final isLight = Theme.of(context).brightness == Brightness.light;
+    final Color bgColor = isLight ? const Color(0xFFF6F9F6) : pureBlack;
+    final Color cardColor = isLight ? Colors.white : panelBlack;
 
     return LayoutBuilder(
       builder: (context, constraints) {

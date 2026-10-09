@@ -1,7 +1,7 @@
 // ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
 import '../core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
-import '../core/constants/app_constants.dart';
+
 import 'rental_market_style.dart';
 
 Future<String?> showRentalAccountMenu(BuildContext context) =>

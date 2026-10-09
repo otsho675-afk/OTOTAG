@@ -259,17 +259,21 @@ class AdminOverviewPanel extends StatelessWidget {
         final introduction = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(mainAxisSize: MainAxisSize.min, children: [
+            const Row(children: [
               Icon(Icons.admin_panel_settings_rounded,
                   color: AppConstants.primaryColor, size: 18),
               SizedBox(width: 8),
-              Text('OTO TAG / KONTROL MERKEZİ',
-                  style: TextStyle(
-                    color: AppConstants.primaryColor,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1,
-                    fontSize: 10,
-                  )),
+              Expanded(
+                child: Text('OTO TAG / KONTROL MERKEZİ',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppConstants.primaryColor,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1,
+                      fontSize: 10,
+                    )),
+              ),
             ]),
             const SizedBox(height: 12),
             const Text('Yönetim merkezi',

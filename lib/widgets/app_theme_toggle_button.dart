@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_theme_state.dart';
+import '../core/theme/app_palette.dart';
 
 /// Compact appearance action reused by login, registration, user and business areas.
 class AppThemeToggleButton extends StatelessWidget {
@@ -14,9 +15,7 @@ class AppThemeToggleButton extends StatelessWidget {
           onPressed: () => AppThemeState.toggle(),
           icon: Icon(
             isLight ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-            color: isLight
-                ? const Color(0xFF08784D)
-                : const Color(0xFF00E58F),
+            color: isLight ? AppPalette.accent : const Color(0xFF00E58F),
             size: compact ? 23 : 26,
           ),
         ),

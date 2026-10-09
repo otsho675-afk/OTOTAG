@@ -135,7 +135,7 @@ class AdminMembersPanel extends StatelessWidget {
                   overflow:TextOverflow.ellipsis,
                   style:const TextStyle(color:white,fontSize:14,fontWeight:FontWeight.w900)),
                 const SizedBox(height:4),
-                Text('Üye #'+uid.toString()+' · '+value(u['city'],'Şehir yok'),
+                Text('Üye #$uid · ${value(u['city'],'Şehir yok')}',
                   maxLines:1,overflow:TextOverflow.ellipsis,
                   style:const TextStyle(color:muted,fontSize:11)),
               ])),
@@ -146,7 +146,7 @@ class AdminMembersPanel extends StatelessWidget {
               pill(role(u),roleColor(u)),pill(status(u),statusColor(u)),
               if(flag(u['is_premium']))pill('PREMIUM',const Color(0xFFF4C674)),
               if((int.tryParse(value(u['vehicle_count'],'0'))??0)>0)
-                pill(value(u['vehicle_count'])+' araç',green),
+                pill('${value(u['vehicle_count'])} araç',green),
             ]),
             const SizedBox(height:11),
             const Divider(height:1,color:border),
@@ -182,7 +182,7 @@ class AdminMembersPanel extends StatelessWidget {
                   overflow:TextOverflow.ellipsis,
                   style:const TextStyle(color:white,fontSize:12,fontWeight:FontWeight.w800)),
                 const SizedBox(height:4),
-                Text('#'+uid.toString()+' · '+value(u['city'],'Şehir yok'),
+                Text('#$uid · ${value(u['city'],'Şehir yok')}',
                   maxLines:1,overflow:TextOverflow.ellipsis,
                   style:const TextStyle(color:muted,fontSize:10)),
               ]))
@@ -198,14 +198,14 @@ class AdminMembersPanel extends StatelessWidget {
               Text(role(u),style:TextStyle(color:roleColor(u),
                 fontSize:11,fontWeight:FontWeight.w800)),
               const SizedBox(height:4),
-              Text(value(u['vehicle_count'],'0')+' araç',
+              Text('${value(u['vehicle_count'],'0')} araç',
                 style:const TextStyle(color:muted,fontSize:10)),
             ])),
             Expanded(flex:20,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
               Text(date(u['last_login_at']),maxLines:1,overflow:TextOverflow.ellipsis,
                 style:const TextStyle(color:white,fontSize:10.5)),
               const SizedBox(height:4),
-              Text('Hareket: '+date(u['last_seen_at']),maxLines:1,
+              Text('Hareket: ${date(u['last_seen_at'])}',maxLines:1,
                 overflow:TextOverflow.ellipsis,
                 style:const TextStyle(color:muted,fontSize:10)),
             ])),
@@ -302,7 +302,7 @@ class AdminMembersPanel extends StatelessWidget {
                   borderRadius:BorderRadius.circular(12)),
                 child:Wrap(spacing:8,runSpacing:7,
                   crossAxisAlignment:WrapCrossAlignment.center,children:[
-                    Text(selected.length.toString()+' Seçildi',
+                    Text('${selected.length} Seçildi',
                       style:const TextStyle(color:green,fontWeight:FontWeight.w900)),
                     OutlinedButton(onPressed:onSelectAll,child:const Text('Tümünü Seç')),
                     OutlinedButton(onPressed:selected.isEmpty?null:onHide,
@@ -313,12 +313,11 @@ class AdminMembersPanel extends StatelessWidget {
                 ])),
               const SizedBox(height:11),
               Row(children:[
-                Expanded(child:Text(users.length.toString()+' sonuç · '+
-                    total.toString()+' kayıt',
+                Expanded(child:Text('${users.length} sonuç · $total kayıt',
                   style:const TextStyle(color:muted,fontSize:11))),
                 if(hiddenCount>0) TextButton.icon(onPressed:onRestore,
                   icon:const Icon(Icons.visibility_outlined,size:16),
-                  label:Text(hiddenCount.toString()+' gizlenen')),
+                  label:Text('${hiddenCount} gizlenen')),
                 const Icon(Icons.sort_rounded,color:muted,size:16),
                 const SizedBox(width:6),
                 DropdownButtonHideUnderline(child:DropdownButton<String>(

@@ -69,7 +69,7 @@ class _AdminSettingsPanelState extends State<AdminSettingsPanel> {
   Color get bg => widget.lightMode ? Color(0xFFF6F8F6) : Color(0xFF0B120F);
   Color get surface => widget.lightMode ? Colors.white : Color(0xFF14231B);
   Color get line => widget.lightMode ? Color(0xFFD9E4DB) : Color(0xFF2B4335);
-  Color get green => widget.lightMode ? Color(0xFF08784D) : Color(0xFF00DE91);
+  Color get green => widget.lightMode ? Color(0xFF286B4B) : Color(0xFF00DE91);
   Color get white => widget.lightMode ? Color(0xFF15211B) : Color(0xFFF2FAF4);
   Color get muted => widget.lightMode ? Color(0xFF56665C) : Color(0xFFA2B7A9);
   Color get amber => widget.lightMode ? Color(0xFF996415) : Color(0xFFF4C576);

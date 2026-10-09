@@ -120,6 +120,8 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
         ? u['status'].toString() : 'pending';
     bool premium = _flag(u['is_premium']);
     bool suspended = _flag(u['is_suspended']);
+    bool formSaving = false;
+    String? formError;
     showDialog<void>(context: context, builder: (dialogContext) =>
       StatefulBuilder(builder: (ctx, update) => AlertDialog(
         title: const Text('Üyeyi düzenle'),
@@ -152,19 +154,42 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
             ),
             SwitchListTile(title: const Text('Premium'), value: premium, onChanged:(v) => update(() => premium = v)),
             SwitchListTile(title: const Text('Askıya alındı'),value:suspended,onChanged:(v) => update(() => suspended = v)),
+            if (formError != null)
+              Text(formError!,style:TextStyle(color:Theme.of(ctx).colorScheme.error)),
           ])),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('İptal')),
-          FilledButton.icon(onPressed: () async {
-            final values = {for (final f in fields.entries) f.key: f.value.text.trim()};
-            values['status'] = status;
-            values['is_premium'] = premium ? '1' : '0';
-            values['is_suspended'] = suspended ? '1' : '0';
-            Navigator.pop(ctx);
-            await _post('admin_update_user', values);
-            for (final c in fields.values) { c.dispose(); }
-          }, icon: const Icon(Icons.save_outlined), label: const Text('Kaydet')),
+          TextButton(onPressed: formSaving ? null : () => Navigator.pop(ctx),
+              child: const Text('İptal')),
+          FilledButton.icon(
+            onPressed: formSaving ? null : () async {
+              final values = {
+                for (final f in fields.entries) f.key: f.value.text.trim()
+              };
+              if (values['name']!.isEmpty || values['phone']!.isEmpty) {
+                update(() => formError = 'Ad soyad ve telefon zorunludur.');
+                return;
+              }
+              values['status'] = status;
+              values['is_premium'] = premium ? '1' : '0';
+              values['is_suspended'] = suspended ? '1' : '0';
+              update(() { formSaving = true; formError = null; });
+              final saved = await _post('admin_update_user', values);
+              if (!ctx.mounted) return;
+              if (saved) {
+                Navigator.pop(ctx);
+              } else {
+                update(() {
+                  formSaving = false;
+                  formError = 'Kaydedilemedi. Bilgileri kontrol edip tekrar deneyin.';
+                });
+              }
+            },
+            icon: formSaving
+                ? const SizedBox(width: 16, height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.save_outlined),
+            label: Text(formSaving ? 'Kaydediliyor' : 'Kaydet')),
         ],
       )));
   }

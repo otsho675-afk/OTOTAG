@@ -8,6 +8,18 @@ import 'package:http/testing.dart';
 import 'package:ototag/admin_user_detail_screen.dart';
 
 void main() {
+  void enableLayoutDiagnostics(WidgetTester tester) {
+    final previous = FlutterError.onError;
+    FlutterError.onError = (details) {
+      if (details.exceptionAsString().contains('RenderFlex overflowed')) {
+        // ignore: avoid_print
+        print('ADMIN OVERFLOW FULL DETAILS: ${details.toString()}');
+      }
+      previous?.call(details);
+    };
+    addTearDown(() => FlutterError.onError = previous);
+  }
+
   final detail = <String, dynamic>{
     'status': 'success',
     'user': {
@@ -43,6 +55,7 @@ void main() {
   for (final width in [320.0, 390.0, 1100.0]) {
     testWidgets('member detail remains navigable at $width pixels',
         (tester) async {
+      enableLayoutDiagnostics(tester);
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = Size(width, 900);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -80,6 +93,7 @@ void main() {
 
   testWidgets('failed member save preserves the form and edited values',
       (tester) async {
+    enableLayoutDiagnostics(tester);
     var posts = 0;
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(390, 900);

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_motion.dart';
 import 'core/theme/premium_surfaces.dart';
+import 'widgets/app_theme_toggle_button.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -981,6 +982,7 @@ class _LoginScreenState extends State<LoginScreen> {
     List<TextInputFormatter>? inputFormatters,
     VoidCallback? onEditingComplete,
   }) {
+    final light = Theme.of(context).brightness == Brightness.light;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Padding(
           padding: const EdgeInsets.only(left: 6, bottom: 8),
@@ -992,14 +994,14 @@ class _LoginScreenState extends State<LoginScreen> {
       AnimatedContainer(
         duration: AppMotion.duration(context, AppMotion.interaction),
         decoration: BoxDecoration(
-          color: focusNode.hasFocus
+          color: light ? Colors.white : (focusNode.hasFocus
               ? Colors.white.withValues(alpha: 0.08)
-              : Colors.white.withValues(alpha: 0.03),
+              : Colors.white.withValues(alpha: 0.03)),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
               color: focusNode.hasFocus
                   ? const Color(0xFF00FFA3)
-                  : Colors.white.withValues(alpha: 0.05),
+                  : (light ? const Color(0xFFD5E2D8) : Colors.white.withValues(alpha: 0.05)),
               width: focusNode.hasFocus ? 1.5 : 1.0),
           boxShadow: focusNode.hasFocus
               ? [
@@ -1025,8 +1027,8 @@ class _LoginScreenState extends State<LoginScreen> {
               inputFormatters: inputFormatters,
               onEditingComplete:
                   onEditingComplete ?? () => FocusScope.of(context).nextFocus(),
-              style: const TextStyle(
-                  color: Colors.white,
+              style: TextStyle(
+                  color: light ? const Color(0xFF15231B) : Colors.white,
                   fontWeight: FontWeight.w600,
                   fontSize: 16),
               decoration: InputDecoration(
@@ -1110,9 +1112,10 @@ class _LoginScreenState extends State<LoginScreen> {
             : Icons.engineering_rounded;
 
     return Scaffold(
-      backgroundColor: AppConstants.bgColor,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
+        actions: const [AppThemeToggleButton(), SizedBox(width: 8)],
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: GestureDetector(
@@ -1161,8 +1164,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     const SizedBox(height: 9),
                                     Text(
                                       title,
-                                      style: const TextStyle(
-                                        color: AppConstants.textColor,
+                                      style: TextStyle(
+                                        color: Theme.of(context).colorScheme.onSurface,
                                         fontSize: 26,
                                         fontWeight: FontWeight.w900,
                                         letterSpacing: -.65,
@@ -1177,8 +1180,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(height: 13),
                           Text(
                             subtitle,
-                            style: const TextStyle(
-                              color: AppConstants.mutedColor,
+                            style: TextStyle(
+                              color: Theme.of(context).brightness == Brightness.light ? const Color(0xFF54685A) : AppConstants.mutedColor,
                               fontSize: 12.5,
                               height: 1.5,
                               fontWeight: FontWeight.w500,
@@ -1426,8 +1429,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   ButtonStyle _socialStyle() => OutlinedButton.styleFrom(
-      foregroundColor: Colors.white,
-      backgroundColor: AppConstants.cardColor,
+      foregroundColor: Theme.of(context).colorScheme.onSurface,
+      backgroundColor: Theme.of(context).brightness == Brightness.light ? Colors.white : AppConstants.cardColor,
       minimumSize: const Size.fromHeight(48),
       side: const BorderSide(color: AppConstants.borderColor),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)));

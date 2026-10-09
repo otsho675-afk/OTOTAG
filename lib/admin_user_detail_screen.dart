@@ -76,12 +76,16 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
       }
       widget.onChanged?.call();
       await _load();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Değişiklik kaydedildi.')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Değişiklik kaydedildi.')));
+      }
       return true;
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      }
       return false;
     }
   }
@@ -129,7 +133,7 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
               ),
             ),
             DropdownButtonFormField<String>(
-              value: status,
+              initialValue: status,
               decoration: const InputDecoration(labelText: 'Hesap durumu',border: OutlineInputBorder()),
               items: const [
                 DropdownMenuItem(value:'active', child:Text('Aktif')),
@@ -245,12 +249,16 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
         const SizedBox(height:12),
         OutlinedButton.icon(onPressed:_load,icon:const Icon(Icons.refresh),label:const Text('Bilgileri yenile')),
       ]));
-      if (size.maxWidth >= 900) return SingleChildScrollView(
-        padding:const EdgeInsets.all(18),
-        child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          Expanded(flex:3,child:base),const SizedBox(width:14),Expanded(flex:2,child:activity),
-        ]),
-      );
+      if (size.maxWidth >= 900) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(18),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(flex: 3, child: base),
+            const SizedBox(width: 14),
+            Expanded(flex: 2, child: activity),
+          ]),
+        );
+      }
       return ListView(padding:const EdgeInsets.all(14),children:[base,activity]);
     });
   }

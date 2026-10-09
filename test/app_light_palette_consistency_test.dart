@@ -12,13 +12,13 @@ void main() {
 
   test('white black green colors respond to theme state', () {
     AppThemeState.light.value = true;
-    expect(AppPalette.page, const Color(0xFFF6F9F6));
+    expect(AppPalette.page, const Color(0xFFF7F9F7));
     expect(AppPalette.surface, Colors.white);
-    expect(AppPalette.text, const Color(0xFF14231A));
-    expect(AppPalette.accent, const Color(0xFF08784D));
+    expect(AppPalette.text, const Color(0xFF19271E));
+    expect(AppPalette.accent, const Color(0xFF286B4B));
     AppThemeState.light.value = false;
     expect(AppPalette.page, isNot(Colors.white));
-    expect(AppPalette.text, isNot(const Color(0xFF14231A)));
+    expect(AppPalette.text, isNot(const Color(0xFF19271E)));
   });
 
   testWidgets('light garage headings and metrics remain readable at 320px',
@@ -48,8 +48,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
     final title = tester.widget<Text>(find.text('Garajım'));
-    expect(title.style?.color, ThemeData.light().brightness == Brightness.light
-        ? const Color(0xFF15231B) : Colors.white);
+    expect(title.style?.color, appLightTheme().colorScheme.onSurface);
     expect(tester.takeException(), isNull);
   });
 

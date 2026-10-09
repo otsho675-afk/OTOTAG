@@ -32,9 +32,9 @@ class AdminMembersPanel extends StatelessWidget {
 
   Color get background => lightMode ? Color(0xFFF6F8F6) : Color(0xFF0B120F);
   Color get surface => lightMode ? Colors.white : Color(0xFF14221A);
-  Color get raised => lightMode ? Color(0xFFE7F4EB) : Color(0xFF1B3024);
+  Color get raised => lightMode ? Color(0xFFEDF4EF) : Color(0xFF1B3024);
   Color get border => lightMode ? Color(0xFFD9E4DB) : Color(0xFF2B4234);
-  Color get green => lightMode ? Color(0xFF08784D) : Color(0xFF00D68A);
+  Color get green => lightMode ? Color(0xFF286B4B) : Color(0xFF00D68A);
   Color get white => lightMode ? Color(0xFF14241A) : Color(0xFFF1F8F2);
   Color get muted => lightMode ? Color(0xFF566A5E) : Color(0xFFA2B4A7);
   static const filterValues=<String,String>{

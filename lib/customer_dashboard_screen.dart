@@ -4223,14 +4223,16 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(14),
                     gradient: LinearGradient(
-                      colors: [AppPalette.accent, AppPalette.accentMuted],
+                      colors: light
+                        ? [AppPalette.accent, AppPalette.accent]
+                        : [AppPalette.accent, AppPalette.accentMuted],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: _primaryColor.withValues(alpha: 0.24),
-                        blurRadius: 12,
+                        color: _primaryColor.withValues(alpha: light ? .12 : .24),
+                        blurRadius: light ? 8 : 12,
                         offset: Offset(0, 3),
                       ),
                     ],
@@ -4258,7 +4260,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                         Text(
                           "Yönetim Paneli",
                           style: TextStyle(
-                            color: Color(0xFF05160E),
+                            color: AppPalette.accentText,
                             fontWeight: FontWeight.w900,
                             fontSize: 13,
                             letterSpacing: 0.3,

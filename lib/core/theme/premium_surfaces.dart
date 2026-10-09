@@ -234,8 +234,10 @@ class PremiumStatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color =
-        accent ? AppConstants.primaryColor : AppConstants.mutedColor;
+    final light = Theme.of(context).brightness == Brightness.light;
+    final color = accent
+      ? (light ? const Color(0xFF08784D) : AppConstants.primaryColor)
+      : Theme.of(context).colorScheme.onSurface;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
@@ -351,7 +353,7 @@ class PremiumMetric extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: .028),
+        color: Theme.of(context).brightness == Brightness.light ? Colors.white : Colors.white.withValues(alpha: .028),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white.withValues(alpha: .055)),
       ),

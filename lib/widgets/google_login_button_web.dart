@@ -106,7 +106,7 @@ class _GoogleLoginButtonState extends State<GoogleLoginButton> {
           _button ??= web.renderButton(
             configuration: web.GSIButtonConfiguration(
               type: web.GSIButtonType.standard,
-              theme: web.GSIButtonTheme.filledBlack,
+              theme: web.GSIButtonTheme.outline,
               shape: web.GSIButtonShape.rectangular,
               size: web.GSIButtonSize.large,
               minimumWidth: constraints.maxWidth.clamp(120, 400).toDouble(),

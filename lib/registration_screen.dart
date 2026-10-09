@@ -17,6 +17,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'widgets/app_theme_toggle_button.dart';
+import 'widgets/ototag_brand_logo.dart';
 
 import 'customer_dashboard_screen.dart';
 import 'provider_map_screen.dart';
@@ -2049,15 +2050,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             Navigator.pop(context);
           },
         ),
-        title: Image.asset(
-          'assets/images/logo.png',
-          height: 28,
-          errorBuilder: (_, __, ___) => Icon(
-            Icons.car_repair_rounded,
-            color: neonGreen,
-            size: 28,
-          ),
-        ),
+        title: const OtoTagBrandLogo(height: 30),
         backgroundColor: light ? Colors.white : pureBlack.withValues(alpha: 0.92),
         surfaceTintColor: Colors.transparent,
         elevation: 0,

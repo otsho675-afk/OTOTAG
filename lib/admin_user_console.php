@@ -102,7 +102,7 @@ function adminConsoleUpdateVehicle(PDO $pdo, $userId, $vehicleId, $input) {
 }
 
 function handleAdminConsoleAction(PDO $pdo, $action, $method) {
-    $actions=['admin_get_user_detail','admin_update_user','admin_add_vehicle','admin_update_vehicle','admin_delete_vehicle','admin_delete_vehicle_record'];
+    $actions=['admin_get_user_detail','admin_update_user','admin_add_vehicle','admin_update_vehicle','admin_delete_vehicle','admin_delete_vehicle_record','admin_update_rental_listing','admin_delete_rental_listing'];
     if (!in_array($action,$actions,true)) return;
     $actor=authenticateRequest(null,true);
     $input=$method==='GET' ? $_GET : $_POST;
@@ -130,7 +130,7 @@ function handleAdminConsoleAction(PDO $pdo, $action, $method) {
         $jobs=$pdo->prepare("SELECT id,service_type,status,agreed_price,created_at FROM jobs
             WHERE customer_id=? OR provider_id=? ORDER BY id DESC LIMIT 50");
         $jobs->execute([$userId,$userId]);
-        $rentals=$pdo->prepare("SELECT id,plate,car_brand_model,daily_price,status,created_at FROM rentacar_listings
+        $rentals=$pdo->prepare("SELECT id,plate,brand,model,car_brand_model,model_year,daily_price,description,status,listing_version,created_at FROM rentacar_listings
             WHERE company_id=? ORDER BY id DESC LIMIT 50");
         $rentals->execute([$userId]);
         $parts=$pdo->prepare("SELECT id,part_name,car_model,status,price,created_at FROM part_listings
@@ -180,6 +180,75 @@ function handleAdminConsoleAction(PDO $pdo, $action, $method) {
             adminConsoleLog($pdo,$userId,'admin',$actor['user_id'],'Üye güncellendi');
             sendResponse(200,['status'=>'success','message'=>'Üye bilgileri kaydedildi.']);
         } catch (PDOException $e) { sendResponse(409,['status'=>'error','message'=>'Üye bilgileri kaydedilemedi. Benzersiz alanları kontrol edin.']); }
+    }
+    if (in_array($action,['admin_update_rental_listing','admin_delete_rental_listing'],true)) {
+        if ($user['user_type']!=='rentacar') sendResponse(422,['status'=>'error','message'=>'Bu kullanıcı Rent a Car firması değil.']);
+        $listingId=adminConsoleId($input['listing_id'] ?? null);
+        $pdo->beginTransaction();
+        try {
+            $stmt=$pdo->prepare("SELECT * FROM rentacar_listings WHERE id=? AND company_id=? FOR UPDATE");
+            $stmt->execute([$listingId,$userId]);
+            $listing=$stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$listing) { $pdo->rollBack(); sendResponse(404,['status'=>'error','message'=>'Araç ilanı bulunamadı.']); }
+            $activeBid=$pdo->prepare("SELECT id FROM rentacar_bids WHERE listing_id=? AND status='accepted' LIMIT 1");
+            $activeBid->execute([$listingId]);
+            if ($listing['status']!=='active' || $activeBid->fetchColumn()) {
+                $pdo->rollBack();
+                sendResponse(409,['status'=>'error','message'=>'Kirada veya kapanmış olan ilan düzenlenemez / silinemez. Önce rezervasyon işlemini tamamlayın.']);
+            }
+            if (isset($input['listing_version']) && (int)$input['listing_version']!==(int)$listing['listing_version']) {
+                $pdo->rollBack();
+                sendResponse(409,['status'=>'error','message'=>'İlan başka bir cihazda değişti. Önce yenileyin.']);
+            }
+            if ($action==='admin_delete_rental_listing') {
+                rentalClosePending($pdo,$listingId,'Yönetici araç ilanını kapattı.');
+                $files=[$listing['photo1'] ?: $listing['photo'], $listing['photo2'], $listing['photo3']];
+                $pdo->prepare("UPDATE rentacar_listings SET status='deleted',photo=NULL,photo1=NULL,photo2=NULL,photo3=NULL,listing_version=listing_version+1 WHERE id=? AND company_id=?")
+                    ->execute([$listingId,$userId]);
+                $pdo->commit();
+                rentalCleanupPhotos($pdo,$files);
+                adminConsoleLog($pdo,$userId,'admin',$actor['user_id'],'Kiralık araç ilanı silindi #'.$listingId);
+                sendResponse(200,['status'=>'success','message'=>'Kiralık araç ilanı kaldırıldı.']);
+            }
+            $fields=['brand'=>100,'model'=>150,'plate'=>50,'model_year'=>10,'description'=>2000];
+            $changes=[]; $params=[];
+            foreach ($fields as $key=>$limit) {
+                if (!array_key_exists($key,$input)) continue;
+                $value=trim((string)$input[$key]);
+                if ($value==='' && $key!=='description') {
+                    $pdo->rollBack(); sendResponse(422,['status'=>'error','message'=>'Boş bırakılamaz: '.$key]);
+                }
+                if (strlen($value)>$limit) { $pdo->rollBack(); sendResponse(422,['status'=>'error','message'=>'Alan çok uzun: '.$key]); }
+                if ($key==='plate') $value=strtoupper($value);
+                $changes[]="`$key`=?"; $params[]=$value;
+            }
+            if (isset($input['brand'],$input['model'])) {
+                $changes[]='car_brand_model=?';
+                $params[]=trim((string)$input['brand']).' '.trim((string)$input['model']);
+            }
+            if (isset($input['daily_price'])) {
+                $price=$input['daily_price'];
+                if (!is_numeric($price) || (float)$price<1 || (float)$price>10000000) {
+                    $pdo->rollBack(); sendResponse(422,['status'=>'error','message'=>'Günlük fiyat geçersiz.']);
+                }
+                $changes[]='daily_price=?'; $params[]=round((float)$price,2);
+            }
+            if (isset($input['plate'])) {
+                $check=$pdo->prepare("SELECT id FROM rentacar_listings WHERE company_id=? AND REPLACE(plate,' ','')=? AND status<>'deleted' AND id<>? LIMIT 1");
+                $check->execute([$userId,str_replace(' ','',strtoupper(trim($input['plate']))),$listingId]);
+                if ($check->fetchColumn()) { $pdo->rollBack(); sendResponse(409,['status'=>'error','message'=>'Bu plaka firmada zaten kayıtlı.']); }
+            }
+            if (!$changes) { $pdo->rollBack(); sendResponse(422,['status'=>'error','message'=>'Değişiklik yok.']); }
+            $params[]=$listingId; $params[]=$userId;
+            $pdo->prepare("UPDATE rentacar_listings SET ".implode(',',$changes).",listing_version=listing_version+1 WHERE id=? AND company_id=?")->execute($params);
+            $pdo->commit();
+            adminConsoleLog($pdo,$userId,'admin',$actor['user_id'],'Kiralık araç ilanı güncellendi #'.$listingId);
+            sendResponse(200,['status'=>'success','message'=>'Kiralık araç ilanı güncellendi.']);
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            error_log('Admin rental listing action failed.');
+            sendResponse(500,['status'=>'error','message'=>'Kiralık araç yönetim işlemi gerçekleştirilemedi.']);
+        }
     }
     if ($user['user_type']!=='customer') sendResponse(422,['status'=>'error','message'=>'Bu hesap müşteri aracı kullanmıyor.']);
     if ($action==='admin_add_vehicle') {

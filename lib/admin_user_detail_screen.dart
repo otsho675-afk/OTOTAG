@@ -624,7 +624,7 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             LayoutBuilder(builder: (ctx, constraints) {
-              final narrow = constraints.maxWidth < 540;
+              final narrow = constraints.maxWidth < 820;
               final info = Row(children: [
                 CircleAvatar(
                   radius: narrow ? 22 : 27,

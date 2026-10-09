@@ -15,8 +15,8 @@ void main() {
   });
 
   testWidgets('mobile settings shows activity and role filtering', (tester) async {
-    await tester.view.physicalSize = const Size(375, 810);
-    await tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(375, 810);
+    tester.view.devicePixelRatio = 1;
     addTearDown(() {
       tester.view.resetPhysicalSize();
       tester.view.resetDevicePixelRatio();

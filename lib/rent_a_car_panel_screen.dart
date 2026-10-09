@@ -1,8 +1,9 @@
+import 'core/theme/app_palette.dart';
 // ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'core/constants/app_constants.dart';
+
 import 'core/theme/premium_surfaces.dart';
 import 'services/rental_service.dart';
 import 'widgets/rental_bid_card.dart';
@@ -235,7 +236,7 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
       final saved = await showModalBottomSheet<bool>(
           context: context,
           isScrollControlled: true,
-          backgroundColor: AppConstants.cardColor,
+          backgroundColor: AppPalette.surface,
           enableDrag: false,
           constraints: BoxConstraints(maxWidth: 720),
           shape: RoundedRectangleBorder(
@@ -386,7 +387,7 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
               child: Icon(
                 Icons.business_center_rounded,
                 size: 138,
-                color: AppConstants.primaryColor.withValues(alpha: .032),
+                color: AppPalette.accent.withValues(alpha: .032),
               ),
             ),
           ),
@@ -427,7 +428,7 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                         Text(
                           'Firma operasyon merkezi',
                           style: TextStyle(
-                            color: AppConstants.textColor,
+                            color: AppPalette.text,
                             fontSize: 21,
                             fontWeight: FontWeight.w900,
                             letterSpacing: -.5,
@@ -490,8 +491,8 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                AppConstants.cardElevated.withValues(alpha: .96),
-                AppConstants.cardColor,
+                AppPalette.surfaceAlt.withValues(alpha: .96),
+                AppPalette.surface,
               ],
             ),
             borderRadius: BorderRadius.circular(16),
@@ -511,20 +512,20 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                 width: 30,
                 height: 30,
                 decoration: BoxDecoration(
-                  color: AppConstants.primaryColor.withValues(alpha: .09),
+                  color: AppPalette.accent.withValues(alpha: .09),
                   borderRadius: BorderRadius.circular(9),
                   border: Border.all(
-                    color: AppConstants.primaryColor.withValues(alpha: .13),
+                    color: AppPalette.accent.withValues(alpha: .13),
                   ),
                 ),
                 child: Icon(icon,
-                    size: 16, color: AppConstants.primaryColor),
+                    size: 16, color: AppPalette.accent),
               ),
               SizedBox(height: 10),
               Text(
                 '$value',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppPalette.text,
                   fontWeight: FontWeight.w900,
                   fontSize: 22,
                   letterSpacing: -.4,
@@ -562,13 +563,13 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppConstants.cardElevated.withValues(alpha: .96),
-                    AppConstants.cardColor,
+                    AppPalette.surfaceAlt.withValues(alpha: .96),
+                    AppPalette.surface,
                   ],
                 ),
                 borderRadius: BorderRadius.circular(22),
                 border: Border.all(
-                    color: AppConstants.primaryColor.withValues(alpha: .10)),
+                    color: AppPalette.accent.withValues(alpha: .10)),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: .24),
@@ -594,7 +595,7 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
-                                          color: Colors.white,
+                                          color: AppPalette.text,
                                           fontWeight: FontWeight.w700,
                                           fontSize: 19))),
                             ]),
@@ -617,7 +618,7 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                                     ? '—'
                                     : '${rentalPrice(price)} ₺ / gün',
                                 style: TextStyle(
-                                    color: Colors.white,
+                                    color: AppPalette.text,
                                     fontWeight: FontWeight.w700,
                                     fontSize: 20)),
                             if ('${car['description'] ?? ''}'.isNotEmpty)
@@ -641,7 +642,7 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                                           : () => _edit(car),
                                       style: OutlinedButton.styleFrom(
                                           foregroundColor:
-                                              AppConstants.primaryColor,
+                                              AppPalette.accent,
                                           minimumSize: Size(0, 44),
                                           shape: RoundedRectangleBorder(
                                               borderRadius:
@@ -675,16 +676,16 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
   Widget _empty(String title, String text, IconData icon) => Container(
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-          color: AppConstants.cardColor,
+          color: AppPalette.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: rentalBorder)),
       child: Column(children: [
-        Icon(icon, color: AppConstants.primaryColor, size: 38),
+        Icon(icon, color: AppPalette.accent, size: 38),
         SizedBox(height: 16),
         Text(title,
             textAlign: TextAlign.center,
             style: TextStyle(
-                color: Colors.white,
+                color: AppPalette.text,
                 fontWeight: FontWeight.w700,
                 fontSize: 18)),
         SizedBox(height: 8),
@@ -694,7 +695,7 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                 TextStyle(color: rentalMuted, fontSize: 13, height: 1.5))
       ]));
   Widget _page(List<Widget> children) => RefreshIndicator(
-      color: AppConstants.primaryColor,
+      color: AppPalette.accent,
       onRefresh: _refresh,
       child: SingleChildScrollView(
           physics: AlwaysScrollableScrollPhysics(),
@@ -755,7 +756,7 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
-                                        color: AppConstants.primaryColor,
+                                        color: AppPalette.accent,
                                         fontWeight: FontWeight.w900,
                                         fontSize: 9,
                                         letterSpacing: 1.15)),
@@ -774,7 +775,7 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                         ),
                       backgroundColor: Theme.of(context).colorScheme.surface,
                       surfaceTintColor: Colors.transparent,
-                      foregroundColor: Colors.white,
+                      foregroundColor: AppPalette.text,
                       automaticallyImplyLeading: false,
                       actions: [
                         AppThemeToggleButton(),
@@ -789,7 +790,7 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                                             userId: widget.companyId,
                                             userType: 'rentacar'))),
                             icon: Icon(Icons.card_giftcard_rounded,
-                                color: AppConstants.primaryColor)),
+                                color: AppPalette.accent)),
                         IconButton(
                             tooltip: 'Kiralama geçmişi',
                             onPressed: _busy ? null : _history,
@@ -887,14 +888,14 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                                                 begin: Alignment.topLeft,
                                                 end: Alignment.bottomRight,
                                                 colors: [
-                                                  AppConstants.cardElevated,
-                                                  AppConstants.cardColor,
+                                                  AppPalette.surfaceAlt,
+                                                  AppPalette.surface,
                                                 ],
                                               ),
                                               borderRadius:
                                                   BorderRadius.circular(14),
                                               border: Border.all(
-                                                  color: AppConstants.primaryColor
+                                                  color: AppPalette.accent
                                                       .withValues(alpha: .10)),
                                               boxShadow: [
                                                 BoxShadow(
@@ -908,7 +909,7 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                                               padding: const EdgeInsets.all(3),
                                               indicatorSize:
                                                   TabBarIndicatorSize.tab,
-                                              indicator: BoxDecoration(color: AppConstants.primaryColor, borderRadius: BorderRadius.circular(10)),
+                                              indicator: BoxDecoration(color: AppPalette.accent, borderRadius: BorderRadius.circular(10)),
                                               dividerColor: Colors.transparent,
                                               labelColor: Color(0xFF05251A),
                                               unselectedLabelColor: rentalMuted,
@@ -919,7 +920,7 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                                               ]))))))),
                   floatingActionButton: FloatingActionButton.extended(
                       onPressed: _busy || _city.isEmpty ? null : () => _edit(),
-                      backgroundColor: AppConstants.primaryColor,
+                      backgroundColor: AppPalette.accent,
                       foregroundColor: Color(0xFF05251A),
                       icon: Icon(Icons.add_rounded),
                       label: Text(_canWork ? 'Araç Ekle' : 'Aboneliği yenile',
@@ -944,7 +945,7 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                                       _canWork
                                           ? Icons.verified_outlined
                                           : Icons.lock_outline,
-                                      color: AppConstants.primaryColor),
+                                      color: AppPalette.accent),
                                   title: Text(
                                       _subscription!['is_trial'] == true
                                           ? 'Ücretsiz deneme aktif'

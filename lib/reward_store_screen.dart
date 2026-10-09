@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
+import 'core/theme/app_palette.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -45,7 +47,7 @@ class _RewardStoreScreenState extends State<RewardStoreScreen> {
       final uri = Uri.parse(AppConstants.baseUrl)
           .replace(queryParameters: {'action': 'get_reward_catalog'});
       final response =
-          await _client.get(uri).timeout(const Duration(seconds: 15));
+          await _client.get(uri).timeout(Duration(seconds: 15));
       final data = jsonDecode(utf8.decode(response.bodyBytes));
       if (response.statusCode != 200 ||
           data is! Map ||
@@ -57,7 +59,7 @@ class _RewardStoreScreenState extends State<RewardStoreScreen> {
       if (!mounted) return;
       setState(() {
         _points = int.tryParse('${data['reward_points'] ?? 0}') ?? 0;
-        _items = (data['items'] as List? ?? const [])
+        _items = (data['items'] as List? ?? [])
             .whereType<Map>()
             .map((e) => Map<String, dynamic>.from(e))
             .toList();
@@ -79,15 +81,15 @@ class _RewardStoreScreenState extends State<RewardStoreScreen> {
     final ok = await showDialog<bool>(
           context: context,
           builder: (_) => AlertDialog(
-            title: const Text('Puanı kullan'),
+            title: Text('Puanı kullan'),
             content: Text('$title için $points OTO TAG Puan kullanılsın mı?'),
             actions: [
               TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Vazgeç')),
+                  child: Text('Vazgeç')),
               FilledButton(
                   onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Kullan')),
+                  child: Text('Kullan')),
             ],
           ),
         ) ??
@@ -100,7 +102,7 @@ class _RewardStoreScreenState extends State<RewardStoreScreen> {
           .replace(queryParameters: {'action': 'redeem_reward'});
       final response = await _client.post(uri, body: {
         'reward_code': item['code']?.toString() ?? '',
-      }).timeout(const Duration(seconds: 15));
+      }).timeout(Duration(seconds: 15));
       final data = jsonDecode(utf8.decode(response.bodyBytes));
       if (response.statusCode != 200 ||
           data is! Map ||
@@ -127,11 +129,11 @@ class _RewardStoreScreenState extends State<RewardStoreScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppConstants.bgColor,
+      backgroundColor: AppPalette.page,
       appBar: AppBar(
-        title: const Text('OTO TAG Puan Mağazası'),
-        backgroundColor: AppConstants.bgColor,
-        foregroundColor: Colors.white,
+        title: Text('OTO TAG Puan Mağazası'),
+        backgroundColor: AppPalette.page,
+        foregroundColor: AppPalette.text,
         surfaceTintColor: Colors.transparent,
       ),
       body: RefreshIndicator(
@@ -139,77 +141,77 @@ class _RewardStoreScreenState extends State<RewardStoreScreen> {
         child: ListView(
           padding: const EdgeInsets.all(18),
           children: [
-            if (_loading) const LinearProgressIndicator(minHeight: 2),
+            if (_loading) LinearProgressIndicator(minHeight: 2),
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppConstants.cardColor,
+                color: AppPalette.surface,
                 borderRadius: BorderRadius.circular(22),
                 border:
-                    Border.all(color: Colors.white.withValues(alpha: .08)),
+                    Border.all(color: AppPalette.text.withValues(alpha: .08)),
               ),
               child: Row(children: [
-                const CircleAvatar(
-                  backgroundColor: AppConstants.primaryColor,
+                CircleAvatar(
+                  backgroundColor: AppPalette.accent,
                   child: Icon(Icons.stars_rounded, color: Colors.black),
                 ),
-                const SizedBox(width: 14),
+                SizedBox(width: 14),
                 Expanded(
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Puan Bakiyen',
+                        Text('Puan Bakiyen',
                             style: TextStyle(
-                                color: Colors.white60, fontSize: 12)),
-                        const SizedBox(height: 3),
+                                color: AppPalette.muted, fontSize: 12)),
+                        SizedBox(height: 3),
                         Text('$_points OTO TAG Puan',
-                            style: const TextStyle(
-                                color: Colors.white,
+                            style: TextStyle(
+                                color: AppPalette.text,
                                 fontSize: 23,
                                 fontWeight: FontWeight.w900)),
                       ]),
                 ),
               ]),
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
             if (_error != null)
               Text(_error!,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.redAccent)),
+                  style: TextStyle(color: Colors.redAccent)),
             for (final item in _items) ...[
               Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: AppConstants.cardColor,
+                  color: AppPalette.surface,
                   borderRadius: BorderRadius.circular(20),
                   border:
-                      Border.all(color: Colors.white.withValues(alpha: .07)),
+                      Border.all(color: AppPalette.text.withValues(alpha: .07)),
                 ),
                 child: Row(children: [
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color:
-                          AppConstants.primaryColor.withValues(alpha: .12),
+                          AppPalette.accent.withValues(alpha: .12),
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: const Icon(Icons.redeem_rounded,
-                        color: AppConstants.primaryColor),
+                    child: Icon(Icons.redeem_rounded,
+                        color: AppPalette.accent),
                   ),
-                  const SizedBox(width: 14),
+                  SizedBox(width: 14),
                   Expanded(
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(item['title']?.toString() ?? 'Ödül',
-                              style: const TextStyle(
-                                  color: Colors.white,
+                              style: TextStyle(
+                                  color: AppPalette.text,
                                   fontWeight: FontWeight.w800)),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           Text('${item['points'] ?? 0} Puan',
-                              style: const TextStyle(
-                                  color: AppConstants.primaryColor,
+                              style: TextStyle(
+                                  color: AppPalette.accent,
                                   fontWeight: FontWeight.w700)),
                         ]),
                   ),
@@ -219,7 +221,7 @@ class _RewardStoreScreenState extends State<RewardStoreScreen> {
                                 (int.tryParse('${item['points'] ?? 0}') ?? 0)
                         ? null
                         : () => _redeem(item),
-                    child: const Text('Kullan'),
+                    child: Text('Kullan'),
                   )
                 ]),
               )

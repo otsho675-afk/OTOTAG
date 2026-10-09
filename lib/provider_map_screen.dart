@@ -16,6 +16,7 @@ import 'business_subscription_screen.dart';
 import 'widgets/provider_workspace.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'services/realtime_client.dart';
+import 'services/google_maps_bootstrap.dart';
 import 'dart:convert';
 import 'dart:ui' as ui;
 import 'dart:async';
@@ -77,6 +78,7 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
 
   bool isCheckingSubscription = false;
   bool _isMapSdkLoaded = !kIsWeb;
+  bool _mapLoadFailed = false;
   String providerServiceType = 'mechanic';
 
   bool _isFetchingJobs = false;
@@ -2100,11 +2102,12 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
   }
 
   Future<void> _loadMapSdkAndInit() async {
-    if (mounted) {
-      setState(() {
-        _isMapSdkLoaded = true;
-      });
-    }
+    final ready = !kIsWeb || await ensureGoogleMapsReady(googleApiKey);
+    if (!mounted) return;
+    setState(() {
+      _isMapSdkLoaded = ready;
+      _mapLoadFailed = !ready;
+    });
   }
 
   bool _isPusherInitialized = false;
@@ -4302,6 +4305,56 @@ class _ProviderMapScreenState extends State<ProviderMapScreen>
                       backgroundColor: neonGreen.withValues(alpha: 0.2)))
               : Stack(
                   children: [
+                    if (!_isMapSdkLoaded)
+                      Positioned.fill(
+                        child: ColoredBox(
+                          color: bgColor,
+                          child: Center(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 28),
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 350),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.map_outlined, size: 52,
+                                      color: isLight ? const Color(0xFF08784D) : neonGreen),
+                                    const SizedBox(height: 15),
+                                    Text(
+                                      _mapLoadFailed
+                                        ? 'Harita bağlantısı kurulamadı'
+                                        : 'Harita hazırlanıyor',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Theme.of(context).colorScheme.onSurface,
+                                        fontSize: 18, fontWeight: FontWeight.w800),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      _mapLoadFailed
+                                        ? 'Google Haritalar anahtarını ve tarayıcı bağlantısını kontrol edin.'
+                                        : 'Harita verileri yükleniyor, lütfen bekleyin.',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: isLight ? const Color(0xFF55695C) : textGray,
+                                        fontSize: 12),
+                                    ),
+                                    if (_mapLoadFailed) ...[
+                                      const SizedBox(height: 14),
+                                      FilledButton.icon(
+                                        onPressed: _loadMapSdkAndInit,
+                                        icon: const Icon(Icons.refresh_rounded),
+                                        label: const Text('Yeniden dene'),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    else
                     Positioned.fill(
                       child: ValueListenableBuilder<LatLng?>(
                         valueListenable: _animatedProviderPos,

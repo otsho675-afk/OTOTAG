@@ -2235,8 +2235,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                     subtitle: 'Paketler & kalan süre',
                     accentColor: _primaryColor,
                     gradientColors: [
-                      Color(0xFF00FFA3),
-                      Color(0xFF00B074)
+                      AppPalette.accent,
+                      AppPalette.accentMuted
                     ],
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(
                         builder: (_) => SubscriptionsScreen(
@@ -2251,8 +2251,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                         : "Ad, Soyad & IBAN",
                     accentColor: _primaryColor,
                     gradientColors: [
-                      Color(0xFF00FFA3),
-                      Color(0xFF00B074)
+                      AppPalette.accent,
+                      AppPalette.accentMuted
                     ],
                     onTap: _showEditProfileDialog,
                   ),
@@ -2263,8 +2263,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                     subtitle: "${historyJobs.length} Tamamlanan İş",
                     accentColor: _primaryColor,
                     gradientColors: [
-                      Color(0xFF00FFA3),
-                      Color(0xFF00B074)
+                      AppPalette.accent,
+                      AppPalette.accentMuted
                     ],
                     onTap: () {
                       DefaultTabController.of(tabContext).animateTo(1);
@@ -2277,8 +2277,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                     subtitle: "Hesap Güvenliği",
                     accentColor: _primaryColor,
                     gradientColors: [
-                      Color(0xFF00FFA3),
-                      Color(0xFF00B074)
+                      AppPalette.accent,
+                      AppPalette.accentMuted
                     ],
                     onTap: _showChangePasswordDialog,
                   ),
@@ -2289,8 +2289,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                     subtitle: "Bize Yazın & Önerin",
                     accentColor: _primaryColor,
                     gradientColors: [
-                      Color(0xFF00FFA3),
-                      Color(0xFF00B074)
+                      AppPalette.accent,
+                      AppPalette.accentMuted
                     ],
                     onTap: _showFeedbackDialog,
                   ),
@@ -2695,7 +2695,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       googlePolylines.add(gmaps.Polyline(
           polylineId: const gmaps.PolylineId('route'),
           points: [gmaps.LatLng(pLat, pLng), gmaps.LatLng(cLat, cLng)],
-          color: Color(0xFF00FFA3),
+          color: AppPalette.accent,
           width: 4,
           patterns: [gmaps.PatternItem.dash(15), gmaps.PatternItem.gap(10)]));
     }
@@ -2834,7 +2834,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
-                                      color: Color(0xFF00FFA3)
+                                      color: AppPalette.accent
                                           .withValues(alpha: 0.5)),
                                   image: DecorationImage(
                                     image: NetworkImage(afterPhotoUrl
@@ -2851,7 +2851,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                        color: Color(0xFF00FFA3)
+                                        color: AppPalette.accent
                                             .withValues(alpha: 0.9),
                                         borderRadius: BorderRadius.circular(8)),
                                     child: Text("SONRASI",
@@ -2920,7 +2920,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         Column(
                           children: [
                             Icon(Icons.trip_origin,
-                                color: Color(0xFF00FFA3), size: 16),
+                                color: AppPalette.accent, size: 16),
                             Container(
                                 height: 24, width: 2, color: AppPalette.subtle),
                             Icon(Icons.radio_button_checked_rounded,

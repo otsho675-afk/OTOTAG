@@ -313,8 +313,8 @@ class _AdminSettingsPanelState extends State<AdminSettingsPanel> {
             const SizedBox(height: 11),
             const Row(children: [
               Icon(Icons.info_outline_rounded, size: 17, color: muted),
-              const SizedBox(width: 7),
-              const Expanded(child: Text('Çevrimiçi bağlantı sayısı değil; son API hareketi esas alınır. Boşta açık uygulamalar görünmeyebilir.',
+              SizedBox(width: 7),
+              Expanded(child: Text('Çevrimiçi bağlantı sayısı değil; son API hareketi esas alınır. Boşta açık uygulamalar görünmeyebilir.',
                   style: TextStyle(color: muted, fontSize: 11))),
             ]),
             const SizedBox(height: 20),

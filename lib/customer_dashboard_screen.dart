@@ -3248,7 +3248,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                   const SizedBox(width: 14),
                   const Icon(Icons.shield_outlined,
                       size: 13, color: _primaryColor),
-                  SizedBox(width: 5),
+                  const SizedBox(width: 5),
                   Flexible(
                     child: Text(
                       'Güvenli OTO TAG deneyimi',

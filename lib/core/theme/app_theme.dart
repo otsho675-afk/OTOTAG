@@ -252,7 +252,7 @@ ThemeData appTheme() {
         height: 1.4,
       ),
     ),
-    snackBarTheme: const SnackBarThemeData(
+    snackBarTheme: SnackBarThemeData(
       backgroundColor: AppConstants.cardElevated,
       contentTextStyle: const TextStyle(
           color: AppConstants.textColor, fontWeight: FontWeight.w600),
@@ -367,7 +367,7 @@ ThemeData appLightTheme() {
       side: BorderSide(color: outline),
       labelStyle: TextStyle(color: ink)),
     dividerTheme: const DividerThemeData(color: outline),
-    snackBarTheme: SnackBarThemeData(
+    snackBarTheme: const SnackBarThemeData(
       backgroundColor: ink,
       contentTextStyle: TextStyle(color: Colors.white),
       behavior: SnackBarBehavior.floating),

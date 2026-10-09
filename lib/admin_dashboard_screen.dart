@@ -3590,6 +3590,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Column(
       children: [
         Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 5),
+          child: Row(children: [
+            const Icon(Icons.groups_rounded, size: 22,
+                color: Color(0xFF00D68A)),
+            const SizedBox(width: 10),
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Üye yönetimi',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    )),
+                const SizedBox(height: 2),
+                Text('Detayları, araçları ve hareketleri görmek için üyeye dokunun.',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall),
+              ],
+            )),
+          ]),
+        ),
+        Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           child: Row(
             children: [
@@ -3599,7 +3621,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   onChanged: (value) => setState(() => userSearchQuery = value),
                   style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 13),
                   decoration: InputDecoration(
-                    hintText: "İsim, telefon, şehir, e-posta veya üye no…",
+                    hintText: "Üye adı, telefon, şehir, e-posta veya numara…",
                     hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
                     prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
                     suffixIcon: userSearchQuery.isNotEmpty 
@@ -3614,9 +3636,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
               const SizedBox(width: 8),
               Container(
-                decoration: BoxDecoration(color: isUserSelectionMode ? Colors.blue.withValues(alpha:0.2) : cardColor, borderRadius: BorderRadius.circular(16)),
+                decoration: BoxDecoration(color: isUserSelectionMode ? const Color(0xFF00D68A).withValues(alpha:.17) : cardColor, borderRadius: BorderRadius.circular(16)),
                 child: IconButton(
-                  icon: Icon(isUserSelectionMode ? Icons.close_rounded : Icons.checklist_rounded, color: Colors.blueAccent),
+                  tooltip: isUserSelectionMode ? 'Seçimi bitir' : 'Toplu işlem için seç',
+                  icon: Icon(isUserSelectionMode ? Icons.close_rounded : Icons.checklist_rounded, color: const Color(0xFF00D68A)),
                   onPressed: () {
                     setState(() {
                       isUserSelectionMode = !isUserSelectionMode;
@@ -3635,12 +3658,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ? Container(
                 margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(color: Colors.blue.withValues(alpha:0.1), borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.blue.withValues(alpha:0.3))),
+                decoration: BoxDecoration(color: const Color(0xFF00D68A).withValues(alpha:0.1), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFF00D68A).withValues(alpha:0.3))),
                 child: Wrap(
                   alignment: WrapAlignment.spaceBetween,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Text("${selectedUsers.length} Seçildi", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent, fontSize: 13)),
+                    Text("${selectedUsers.length} Seçildi", style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF009B69), fontSize: 13)),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -3706,6 +3729,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 itemBuilder: (context, index) {
                   final user = filteredUsers[index];
                   final isCustomer = user['user_type'] == 'customer';
+                   final isRentacar = user['user_type'] == 'rentacar';
                   final isBanned = user['status'] == 'banned';
                   final isPremium = user['is_premium'] == 1 || user['is_premium'] == '1';
                   final userId = int.tryParse(user['id']?.toString() ?? '0') ?? 0;
@@ -3781,7 +3805,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 runSpacing: 4,
                                 children: [
                                   Text(
-                                    isCustomer ? 'Müşteri' : 'Usta (${_translateServiceType(user['service_category']?.toString())})',
+                                    isCustomer ? 'Müşteri' : (isRentacar ? 'Rent a Car' : 'Usta (${_translateServiceType(user['service_category']?.toString())})'),
                                     style: TextStyle(color: isCustomer ? Colors.blue : Colors.purple, fontSize: 11, fontWeight: FontWeight.bold)
                                   ),
                                   if (isCustomer && isPremium)
@@ -3817,7 +3841,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               if (MediaQuery.sizeOf(context).width >= 680) IconButton(
-                                icon: const Icon(Icons.notifications_active, color: Colors.orange, size: 18),
+                                icon: const Icon(Icons.notifications_active, color: Color(0xFF00D68A), size: 18),
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
                                 tooltip: "Bildirim Gönder",
@@ -4709,12 +4733,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildFilterChip(String label, String value, String currentValue, Function(String) onSelected) {
     final isSelected = value == currentValue;
+    final color = Theme.of(context).colorScheme.onSurface;
     return ChoiceChip(
-      label: Text(label, style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.white : Colors.grey.shade600, fontSize: 12)),
+      label: Text(label,
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: isSelected ? const Color(0xFF06291B) : color,
+            fontSize: 12,
+          )),
       selected: isSelected,
-      selectedColor: Colors.blue.shade600,
-      backgroundColor: Colors.grey.withValues(alpha:0.08),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Colors.transparent)),
+      selectedColor: const Color(0xFF00D68A),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
+      side: BorderSide(
+          color: isSelected
+              ? const Color(0xFF00D68A)
+              : Theme.of(context).colorScheme.outlineVariant),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(13)),
       onSelected: (bool selected) {
         if (selected) onSelected(value);
       },

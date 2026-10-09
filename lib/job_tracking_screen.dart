@@ -340,7 +340,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(20),
                   child: InteractiveViewer(
@@ -354,7 +354,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                           ? child
                           : Center(
                               child:
-                                  const CircularProgressIndicator(color: neonGreen)),
+                                  CircularProgressIndicator(color: neonGreen)),
                       errorBuilder: (_, __, ___) => Container(
                         height: 220,
                         color: pureBlack,
@@ -498,28 +498,28 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
     if (distKm <= 5.0 && distKm > 1.0 && !_notified5km) {
       _notified5km = true;
       Future.delayed(
-          const Duration(seconds: 1),
+          Duration(seconds: 1),
           () => _sendPushNotificationToCustomer(
               "Usta Yola Çıktı!", "Ustanız 5 km yakında."));
       _speak("Müşteriye 5 kilometre mesafedesiniz.");
     } else if (distKm <= 1.0 && distKm > 0.5 && !_notified1km) {
       _notified1km = true;
       Future.delayed(
-          const Duration(seconds: 1),
+          Duration(seconds: 1),
           () => _sendPushNotificationToCustomer(
               "Usta Çok Yaklaştı!", "Ustanız 1 KM içerisinde!"));
       _speak("Hedefe 1 kilometre kaldı, lütfen hazırlanın.");
     } else if (distKm <= 0.5 && distKm > 0.1 && !_notified500m) {
       _notified500m = true;
       Future.delayed(
-          const Duration(seconds: 1),
+          Duration(seconds: 1),
           () => _sendPushNotificationToCustomer("Usta Bölgeye Girdi! 🚨",
               "Lütfen aracınızın yanında hazır bulunun."));
       _speak("Müşteri konumuna 500 metre kaldı.");
     } else if (distKm <= 0.1 && !_notifiedArrived) {
       _notifiedArrived = true;
       Future.delayed(
-          const Duration(seconds: 1),
+          Duration(seconds: 1),
           () => _sendPushNotificationToCustomer(
               "Usta Geldi!", "Ustanız şu an konumunuza ulaştı."));
       _speak("Hedefe ulaştınız.");
@@ -726,10 +726,10 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                   side: BorderSide(color: Color(0xFFFF3366), width: 1.5)),
               title: Row(
                 children: [
-                  const Icon(Icons.warning_rounded,
+                  Icon(Icons.warning_rounded,
                       color: Color(0xFFFF3366), size: 28),
-                  const SizedBox(width: 8),
-                  const Text("Acil Durum (SOS)",
+                  SizedBox(width: 8),
+                  Text("Acil Durum (SOS)",
                       style: TextStyle(
                           fontWeight: FontWeight.w900,
                           color: AppPalette.text,
@@ -754,7 +754,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                     fontWeight: FontWeight.w900,
                                     color: textGray,
                                     fontSize: 14)))),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
@@ -764,7 +764,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16)),
                             shadowColor:
-                                const Color(0xFFFF3366).withValues(alpha: 0.4)),
+                                Color(0xFFFF3366).withValues(alpha: 0.4)),
                         onPressed: () => Navigator.pop(ctx, true),
                         child: Text("SOS Gönder",
                             style: TextStyle(
@@ -1312,7 +1312,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                     fontWeight: FontWeight.w900,
                                     color: textGray,
                                     fontSize: 14)))),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
@@ -1476,7 +1476,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                           color: AppPalette.text,
                           size: 24),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(
                         child: Text(message,
                             style: TextStyle(
@@ -2072,7 +2072,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                             borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
-                    const SizedBox(height: 18),
+                    SizedBox(height: 18),
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -2084,23 +2084,23 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                       child: Icon(Icons.handshake_rounded,
                           color: neonGreen, size: 28),
                     ),
-                    const SizedBox(height: 12),
-                    const Text("Karşı Fiyat Teklifi",
+                    SizedBox(height: 12),
+                    Text("Karşı Fiyat Teklifi",
                         style: TextStyle(
                             fontWeight: FontWeight.w900,
                             color: AppPalette.text,
                             fontSize: 20,
                             letterSpacing: -0.4),
                         textAlign: TextAlign.center),
-                    const SizedBox(height: 6),
-                    const Text(
+                    SizedBox(height: 6),
+                    Text(
                         "Müşterinin son teklifini değerlendirip karşı teklifinizi iletin.",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                             fontSize: 12,
                             color: textGray,
                             fontWeight: FontWeight.w500)),
-                    const SizedBox(height: 18),
+                    SizedBox(height: 18),
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(
@@ -2115,12 +2115,12 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text("Müşteri Teklifi:",
+                          Text("Müşteri Teklifi:",
                               style: TextStyle(
                                   color: textGray,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600)),
-                          const Text("$currentAmount ₺",
+                          Text("$currentAmount ₺",
                               style: TextStyle(
                                   fontWeight: FontWeight.w900,
                                   color: neonGreen,
@@ -2128,7 +2128,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
@@ -2166,14 +2166,14 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                         onSubmitted: (_) => FocusScope.of(context).unfocus(),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    const Text(
+                    SizedBox(height: 12),
+                    Text(
                         "İki taraf arasında en fazla 2 pazarlık hakkı bulunmaktadır.",
                         style: TextStyle(
                             fontSize: 11,
                             color: textGray,
                             fontWeight: FontWeight.w500)),
-                    const SizedBox(height: 20),
+                    SizedBox(height: 20),
                     Row(
                       children: [
                         Expanded(
@@ -2198,7 +2198,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                         fontSize: 14))),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         Expanded(
                           flex: 2,
                           child: Container(
@@ -2229,7 +2229,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                     int.parse(text) > 0) {
                                   Navigator.of(context).pop();
                                   Future.delayed(
-                                      const Duration(milliseconds: 300), () {
+                                      Duration(milliseconds: 300), () {
                                     if (bidId.isNotEmpty) {
                                       _sendCounterBid(bidId, text);
                                     } else {
@@ -2539,7 +2539,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                             borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
-                    const SizedBox(height: 18),
+                    SizedBox(height: 18),
                     Row(
                       children: [
                         Container(
@@ -2555,12 +2555,12 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                           child: Icon(Icons.support_agent_rounded,
                               color: AppPalette.accent, size: 24),
                         ),
-                        const SizedBox(width: 14),
+                        SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 "Müşteri Destek & Şikayet",
                                 style: TextStyle(
                                     fontSize: screenWidth < 380 ? 18 : 20,
@@ -2569,8 +2569,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                     letterSpacing: -0.4),
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              const SizedBox(height: 2),
-                              const Text(
+                              SizedBox(height: 2),
+                              Text(
                                   "Talebiniz incelenmek üzere merkeze aktarılır.",
                                   style: TextStyle(
                                       fontSize: 12,
@@ -2581,7 +2581,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
+                    SizedBox(height: 20),
                     Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(18),
@@ -2616,7 +2616,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                         ),
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
                     Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(18),
@@ -2653,7 +2653,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                         onSubmitted: (_) => FocusScope.of(context).unfocus(),
                       ),
                     ),
-                    const SizedBox(height: 22),
+                    SizedBox(height: 22),
                     Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(18),
@@ -2741,7 +2741,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                     letterSpacing: 0.5)),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     TextButton(
                       onPressed: () => Navigator.pop(modalCtx),
                       child: Text("Vazgeç",
@@ -2832,7 +2832,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                             borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
-                    const SizedBox(height: 18),
+                    SizedBox(height: 18),
                     Center(
                       child: Container(
                         padding: const EdgeInsets.all(16),
@@ -2846,7 +2846,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                             color: Colors.amber, size: 40),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     Text("Hizmeti Değerlendirin",
                         textAlign: TextAlign.center,
                         style: TextStyle(
@@ -2854,7 +2854,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                             fontWeight: FontWeight.w900,
                             color: AppPalette.text,
                             letterSpacing: -0.4)),
-                    const SizedBox(height: 6),
+                    SizedBox(height: 6),
                     Text(
                         "$providerName ustadan aldığınız hizmet kalitesini puanlayın.",
                         textAlign: TextAlign.center,
@@ -2863,7 +2863,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                             color: textGray,
                             fontWeight: FontWeight.w500,
                             height: 1.4)),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24),
                     Wrap(
                       alignment: WrapAlignment.center,
                       spacing: 8,
@@ -2888,7 +2888,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                         );
                       }),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24),
                     Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(18),
@@ -2924,7 +2924,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                         onSubmitted: (_) => FocusScope.of(context).unfocus(),
                       ),
                     ),
-                    const SizedBox(height: 22),
+                    SizedBox(height: 22),
                     Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(18),
@@ -2957,7 +2957,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                 letterSpacing: 0.5)),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    SizedBox(height: 10),
                     TextButton(
                       onPressed: () {
                         FocusScope.of(context).unfocus();
@@ -3140,9 +3140,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(alertIcon, color: alertColor, size: 20),
-          const SizedBox(width: 8),
-          const Flexible(
+          Icon(alertIcon, color: alertColor, size: 20),
+          SizedBox(width: 8),
+          Flexible(
             child: Text(
               title,
               style: TextStyle(
@@ -3168,7 +3168,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               CircularProgressIndicator(color: neonGreen, strokeWidth: 3),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               Text("Canlı Harita Yükleniyor...",
                   style: TextStyle(
                       color: AppPalette.muted,
@@ -3449,7 +3449,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                           color:
-                              const Color(0xFFFF3366).withValues(alpha: 0.15),
+                              Color(0xFFFF3366).withValues(alpha: 0.15),
                           shape: BoxShape.circle),
                       child: Icon(Icons.close_rounded,
                           color: Color(0xFFFF3366), size: 18)),
@@ -3655,7 +3655,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                 child: _buildDesktopPanelContent(
                                     currentStep,
                                     neonGreen,
-                                    const LinearGradient(
+                                    LinearGradient(
                                         colors: [neonGreen, darkGreen]),
                                     neonGreen,
                                     panelBlack,
@@ -3727,7 +3727,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                             mainAxisAlignment:
                                                 MainAxisAlignment.spaceBetween,
                                             children: [
-                                              const SizedBox(width: 32),
+                                              SizedBox(width: 32),
                                               Container(
                                                 width: 50,
                                                 height: 5,
@@ -3766,16 +3766,16 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                       sliver: SliverList(
                                         delegate: SliverChildListDelegate([
                                           _buildStepper(currentStep, neonGreen),
-                                          const SizedBox(height: 16),
+                                          SizedBox(height: 16),
                                           _buildStatusCard(
-                                              const LinearGradient(colors: [
+                                              LinearGradient(colors: [
                                                 neonGreen,
                                                 darkGreen
                                               ]),
                                               neonGreen,
                                               panelBlack,
                                               AppPalette.text),
-                                          const SizedBox(height: 16),
+                                          SizedBox(height: 16),
                                           _buildContactCard(panelBlack,
                                               AppPalette.text, textGray),
                                           if (!isCustomer &&
@@ -3783,7 +3783,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                                   jobStatus != 'completed' &&
                                                   jobStatus != 'cancelled'))
                                             _buildMapButton(
-                                                const LinearGradient(colors: [
+                                                LinearGradient(colors: [
                                                   neonGreen,
                                                   darkGreen
                                                 ]),
@@ -3805,7 +3805,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                               child: _buildActionArea(
                                                   isCustomer,
                                                   neonGreen,
-                                                  const LinearGradient(colors: [
+                                                  LinearGradient(colors: [
                                                     neonGreen,
                                                     darkGreen
                                                   ]),
@@ -3845,9 +3845,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildStepper(currentStep, primaryColor),
-          const SizedBox(height: 28),
+          SizedBox(height: 28),
           _buildStatusCard(themeGradient, shadowColor, cardColor, textColor),
-          const SizedBox(height: 28),
+          SizedBox(height: 28),
           _buildContactCard(cardColor, textColor, subtitleColor),
           if (!isCustomer &&
               (jobStatus != 'searching' &&
@@ -3908,7 +3908,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                       child: Icon(Icons.engineering_rounded,
                           color: neonGreen, size: 26),
                     ),
-                    const SizedBox(width: 14),
+                    SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3926,13 +3926,13 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                           fontWeight: FontWeight.bold),
                                       overflow: TextOverflow.ellipsis)),
                               if (widget.userType == 'customer') ...[
-                                const SizedBox(width: 4),
-                                const Icon(Icons.verified_rounded,
+                                SizedBox(width: 4),
+                                Icon(Icons.verified_rounded,
                                     color: trustBlue, size: 16),
                               ]
                             ],
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           Text(displayName,
                               style: TextStyle(
                                   fontSize: 18,
@@ -4035,7 +4035,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                   ],
                 ),
                 if (widget.userType == 'customer') ...[
-                  const Divider(height: 20, color: Colors.white10),
+                  Divider(height: 20, color: Colors.white10),
                   Wrap(
                     alignment: WrapAlignment.spaceBetween,
                     crossAxisAlignment: WrapCrossAlignment.center,
@@ -4056,7 +4056,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700),
                             ),
-                            const SizedBox(width: 6),
+                            SizedBox(width: 6),
                             Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 6, vertical: 2.5),
@@ -4091,7 +4091,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                           fontWeight: FontWeight.w900),
                                     ),
                                   ),
-                                  const SizedBox(width: 5),
+                                  SizedBox(width: 5),
                                   Text(
                                     towPlateNumber!,
                                     style: TextStyle(
@@ -4120,7 +4120,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                           children: [
                             Icon(Icons.shield_rounded,
                                 color: neonGreen, size: 12),
-                            const SizedBox(width: 4),
+                            SizedBox(width: 4),
                             Text("İşçilik Garantili",
                                 style: TextStyle(
                                     color: neonGreen,
@@ -4133,7 +4133,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                   ),
                 ],
                 if (widget.userType == 'customer') ...[
-                  const SizedBox(height: 14),
+                  SizedBox(height: 14),
                   ElevatedButton.icon(
                     onPressed: _shareLiveTracking,
                     icon: Icon(Icons.share_location_rounded,
@@ -4192,7 +4192,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                       : textGray),
                               size: 18,
                             ),
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                             Flexible(
                               child: Text(
                                 "Tamamlanan İş Kanıtı",
@@ -4224,7 +4224,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                         ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   if (afterPhotoUrl != null && afterPhotoUrl!.isNotEmpty) ...[
                     Row(
                       children: [
@@ -4311,7 +4311,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
                     if (!isEvidenceConfirmed) ...[
                       Row(
                         children: [
@@ -4349,7 +4349,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           Expanded(
                             flex: 1,
                             child: Container(
@@ -4411,7 +4411,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                           children: [
                             Icon(Icons.verified_user_rounded,
                                 color: neonGreen, size: 18),
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                             Flexible(
                                 child: Text("Bu işin son halini doğruladınız.",
                                     style: TextStyle(
@@ -4437,7 +4437,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                         children: [
                           Icon(Icons.hourglass_top_rounded,
                               color: Colors.amber, size: 22),
-                          const SizedBox(width: 12),
+                          SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               "Usta onarımı tamamlayıp bitmiş iş fotoğrafını yüklediğinde burada inceleyip onaylayabileceksiniz.",
@@ -4520,7 +4520,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                   ],
                 );
               }),
-          const SizedBox(height: 14),
+          SizedBox(height: 14),
           Text(_getFriendlyStatus(),
               style: TextStyle(
                   fontSize: 16,
@@ -4585,14 +4585,14 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                     letterSpacing: -0.5),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text("${bid['amount']} ₺",
                 style: TextStyle(
                     fontSize: 40,
                     fontWeight: FontWeight.w900,
                     color: AppPalette.text,
                     letterSpacing: -1.0)),
-            const SizedBox(height: 28),
+            SizedBox(height: 28),
             if (isProcessing)
               CircularProgressIndicator(color: neonGreen, strokeWidth: 3)
             else
@@ -4601,7 +4601,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                 runSpacing: 12,
                 alignment: WrapAlignment.center,
                 children: [
-                  const SizedBox(
+                  SizedBox(
                     width: 130,
                     child: OutlinedButton(
                       onPressed: () => _rejectBid(safeBidId),
@@ -4620,7 +4620,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                     ),
                   ),
                   if (canNegotiate)
-                    const SizedBox(
+                    SizedBox(
                       width: 130,
                       child: OutlinedButton(
                         onPressed: () => _showCounterBidDialog(
@@ -4640,7 +4640,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                     fontSize: 15))),
                       ),
                     ),
-                  const SizedBox(
+                  SizedBox(
                     width: double.infinity,
                     child: Container(
                       margin: const EdgeInsets.only(top: 10),
@@ -4724,7 +4724,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                 ),
             ],
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: 16),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 24.0),
@@ -4738,7 +4738,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                               : AppPalette.muted,
                           fontSize: 16,
                           fontWeight: FontWeight.w900)),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4),
                   Text(subtitle,
                       style: TextStyle(
                           color: isActive || isCompleted
@@ -4789,7 +4789,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                   fontWeight: FontWeight.w900,
                   color: primaryColor,
                   letterSpacing: 1.5)),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
           _buildTimelineStep(
             step: 1,
             title: "Ustanın Gelmesini Bekleyin",
@@ -4868,7 +4868,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                   fontWeight: FontWeight.w900,
                   color: primaryColor,
                   letterSpacing: 1.5)),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
           _buildTimelineStep(
             step: 1,
             title: "İş Öncesi Fotoğraf Yükle",
@@ -4961,8 +4961,8 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                             }
                           },
                         ),
-                        const SizedBox(height: 16),
-                        const SizedBox(
+                        SizedBox(height: 16),
+                        SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
                             onPressed: isProcessing ? null : _verifyCode,
@@ -5016,7 +5016,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                 child: Column(children: [
                   CircularProgressIndicator(
                       strokeWidth: 3, color: primaryColor),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24),
                   Text(
                       "Teklifiniz iletildi. Müşteri yanıtı bekleniyor...\n(Teklifiniz: ${activeBid!['amount']} ₺)",
                       textAlign: TextAlign.center,
@@ -5035,7 +5035,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
             key: ValueKey('searching_area'),
             child: Column(children: [
               CircularProgressIndicator(strokeWidth: 3, color: primaryColor),
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
               Text(
                   isCustomer
                       ? "Ustalar taranıyor..."
@@ -5076,7 +5076,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                           shape: BoxShape.circle),
                       child: Icon(Icons.celebration_rounded,
                           color: neonGreen, size: 48)),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
                   Text(
                       "Hizmet başarıyla tamamlandı.\nBizi tercih ettiğiniz için teşekkür ederiz!",
                       textAlign: TextAlign.center,
@@ -5088,7 +5088,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                 ])),
             if (isCustomer) ...[
               if (!isRated) ...[
-                const SizedBox(height: 28),
+                SizedBox(height: 28),
                 AnimatedBuilder(
                     animation: _glowController,
                     builder: (context, child) {
@@ -5267,7 +5267,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                           fontWeight: FontWeight.w900,
                           color: textColor))
                 ]),
-                const Divider(
+                Divider(
                     height: 32, thickness: 1.0, color: Colors.white12),
                 Text("Alıcı Usta",
                     style: TextStyle(

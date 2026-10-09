@@ -153,12 +153,12 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
   final http.Client _httpClient =
       http.Client(); // Port tükenmesini önleyen bağlantı havuzu
 
-  static const Color _bgColor = Color(0xFF030305);
-  static const Color _cardColor = Color(0xFF111115);
-  static const Color _primaryColor = Color(0xFF00FFA3);
+  static Color get _bgColor => AppPalette.page;
+  static Color get _cardColor => AppPalette.surface;
+  static Color get _primaryColor => AppPalette.accent;
   static const Color _dangerColor = Color(0xFFFF586B);
-  static const Color _textColor = Colors.white;
-  static const Color _subtitleColor = Colors.white54;
+  static Color get _textColor => AppPalette.text;
+  static Color get _subtitleColor => AppPalette.muted;
 
   // Dünya ve Türkiye Pazarındaki Popüler Marka ve Modeller
   static const Map<String, List<String>> carBrandsModels = {
@@ -2699,7 +2699,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
               focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                   borderSide:
-                      const BorderSide(color: _primaryColor, width: 1.5)),
+                      BorderSide(color: _primaryColor, width: 1.5)),
             ),
           ),
         ),
@@ -2771,7 +2771,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
     final light = Theme.of(context).brightness == Brightness.light;
     final ink = Theme.of(context).colorScheme.onSurface;
     final muted = light ? const Color(0xFF5D6E63) : Colors.white54;
-    final accent = light ? const Color(0xFF08784D) : _primaryColor;
+    final accent = light ? const Color(0xFF286B4B) : _primaryColor;
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -4226,7 +4226,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(14),
                     gradient: LinearGradient(
-                      colors: [Color(0xFF00FFA3), Color(0xFF00D688)],
+                      colors: [AppPalette.accent, AppPalette.accentMuted],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),

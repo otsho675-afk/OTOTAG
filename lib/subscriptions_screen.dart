@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
+import 'core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'business_subscription_screen.dart';
@@ -72,31 +74,31 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen>
 
   @override
   Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: const Text('Aboneliklerim'), actions: [
+      appBar: AppBar(title: Text('Aboneliklerim'), actions: [
         IconButton(
             onPressed: _loading ? null : _load,
             tooltip: 'Durumu yenile',
-            icon: const Icon(Icons.refresh))
+            icon: Icon(Icons.refresh))
       ]),
       body: RefreshIndicator(
           onRefresh: _load,
           child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
+              physics: AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(20),
               children: [
-                const Text('Paketlerin ve kalan süren',
+                Text('Paketlerin ve kalan süren',
                     style:
                         TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                const Text(
+                SizedBox(height: 8),
+                Text(
                     'Aktif erişimleriniz sunucudan doğrulanır. Yenileme ve iptal işlemlerini paket detayından yönetin.'),
-                const SizedBox(height: 20),
-                if (_loading) const LinearProgressIndicator(),
+                SizedBox(height: 20),
+                if (_loading) LinearProgressIndicator(),
                 if (_error != null)
                   Padding(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       child: Text(_error!,
-                          style: const TextStyle(color: Colors.redAccent))),
+                          style: TextStyle(color: Colors.redAccent))),
                 for (final plan in _plans ?? <Map<String, dynamic>>[])
                   _card(plan),
               ])));
@@ -105,7 +107,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen>
     final color = _error != null
         ? Colors.grey
         : active
-            ? const Color(0xFF00FFA3)
+            ? AppPalette.accent
             : Colors.redAccent;
     final end = DateTime.tryParse(plan['ends_at']?.toString() ?? '');
     final remaining = plan['remaining_days'] ?? 0;
@@ -116,9 +118,9 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen>
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('${plan['name']}',
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 20, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Text(
                   _error != null
                       ? 'Son alınan bilgi'
@@ -130,27 +132,27 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen>
                               ? 'Aktif abonelik yok'
                               : 'Süresi doldu',
                   style: TextStyle(color: color, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               if (active)
                 Text(
                     end == null
                         ? 'Bitiş tarihi belirtilmemiş'
                         : '$remaining gün kaldı',
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 26, fontWeight: FontWeight.bold)),
               if (end != null)
                 Text(
-                    'Erişim bitişi: ${DateFormat('dd.MM.yyyy HH:mm').format(end.toUtc().add(const Duration(hours: 3)))} (Türkiye)'),
+                    'Erişim bitişi: ${DateFormat('dd.MM.yyyy HH:mm').format(end.toUtc().add(Duration(hours: 3)))} (Türkiye)'),
               if (plan['included'] == true)
-                const Padding(
+                Padding(
                     padding: EdgeInsets.only(top: 8),
                     child: Text('Rent A Car üyeliğinize dahil.')),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               OutlinedButton.icon(
                   onPressed:
                       _loading || _error != null ? null : () => _manage(plan),
-                  icon: const Icon(Icons.manage_accounts_outlined),
-                  label: const Text('Paketi yönet')),
+                  icon: Icon(Icons.manage_accounts_outlined),
+                  label: Text('Paketi yönet')),
             ])));
   }
 }

@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
+import '../core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -73,16 +75,16 @@ class _VehicleKilometerUpdateDialogState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF15181D),
+        backgroundColor: AppPalette.surfaceAlt,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        title: const Row(
+        title: Row(
           children: [
             Icon(Icons.warning_amber_rounded, color: Color(0xFFFFB547)),
             SizedBox(width: 10),
             Expanded(
               child: Text(
                 'Yüksek KM artışı',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
+                style: TextStyle(color: AppPalette.text, fontWeight: FontWeight.w900),
               ),
             ),
           ],
@@ -90,20 +92,20 @@ class _VehicleKilometerUpdateDialogState
         content: Text(
           'Tek seferde ${_numberFormat.format(difference)} km artış girdiniz. '
           'Değer doğruysa kaydetmeye devam edebilirsiniz.',
-          style: const TextStyle(color: Colors.white70, height: 1.45),
+          style: TextStyle(color: AppPalette.muted, height: 1.45),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Tekrar kontrol et'),
+            child: Text('Tekrar kontrol et'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFFFB547),
+              backgroundColor: Color(0xFFFFB547),
               foregroundColor: Colors.black,
             ),
-            child: const Text('Değer doğru'),
+            child: Text('Değer doğru'),
           ),
         ],
       ),
@@ -141,9 +143,9 @@ class _VehicleKilometerUpdateDialogState
   }
 
   Color get _differenceColor {
-    if (_difference < 0) return const Color(0xFFFF586B);
-    if (_difference > 20000) return const Color(0xFFFFB547);
-    return AppConstants.primaryColor;
+    if (_difference < 0) return Color(0xFFFF586B);
+    if (_difference > 20000) return Color(0xFFFFB547);
+    return AppPalette.accent;
   }
 
   @override
@@ -163,26 +165,26 @@ class _VehicleKilometerUpdateDialogState
         backgroundColor: Colors.transparent,
         insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
+          constraints: BoxConstraints(maxWidth: 520),
           child: Container(
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF191D22), Color(0xFF0B0E11)],
+                colors: [AppPalette.surfaceAlt, AppPalette.surface],
               ),
               borderRadius: BorderRadius.circular(28),
               border: Border.all(
-                color: AppConstants.primaryColor.withValues(alpha: .20),
+                color: AppPalette.accent.withValues(alpha: .20),
               ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: .55),
                   blurRadius: 46,
-                  offset: const Offset(0, 22),
+                  offset: Offset(0, 22),
                 ),
                 BoxShadow(
-                  color: AppConstants.primaryColor.withValues(alpha: .045),
+                  color: AppPalette.accent.withValues(alpha: .045),
                   blurRadius: 34,
                 ),
               ],
@@ -206,50 +208,50 @@ class _VehicleKilometerUpdateDialogState
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            color: AppConstants.primaryColor.withValues(alpha: .10),
+                            color: AppPalette.accent.withValues(alpha: .10),
                             borderRadius: BorderRadius.circular(15),
                             border: Border.all(
-                              color: AppConstants.primaryColor.withValues(alpha: .18),
+                              color: AppPalette.accent.withValues(alpha: .18),
                             ),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.speed_rounded,
-                            color: AppConstants.primaryColor,
+                            color: AppPalette.accent,
                             size: 24,
                           ),
                         ),
-                        const SizedBox(width: 13),
+                        SizedBox(width: 13),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'AKILLI KM ASİSTANI',
                                 style: TextStyle(
-                                  color: AppConstants.primaryColor,
+                                  color: AppPalette.accent,
                                   fontSize: 9,
                                   fontWeight: FontWeight.w900,
                                   letterSpacing: 1.15,
                                 ),
                               ),
-                              const SizedBox(height: 3),
+                              SizedBox(height: 3),
                               Text(
                                 vehicleName.isEmpty ? 'Kilometreyi güncelle' : vehicleName,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: AppPalette.text,
                                   fontSize: 18,
                                   fontWeight: FontWeight.w900,
                                   letterSpacing: -.35,
                                 ),
                               ),
                               if (plate.isNotEmpty) ...[
-                                const SizedBox(height: 2),
+                                SizedBox(height: 2),
                                 Text(
                                   plate,
-                                  style: const TextStyle(
-                                    color: AppConstants.mutedColor,
+                                  style: TextStyle(
+                                    color: AppPalette.muted,
                                     fontSize: 10,
                                     fontWeight: FontWeight.w800,
                                     letterSpacing: .8,
@@ -264,17 +266,17 @@ class _VehicleKilometerUpdateDialogState
                           onPressed: _isSaving
                               ? null
                               : () => Navigator.of(context).pop(false),
-                          icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                          icon: Icon(Icons.close_rounded, color: AppPalette.muted),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 18),
+                    SizedBox(height: 18),
                     Container(
                       padding: const EdgeInsets.all(15),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: .035),
+                        color: AppPalette.text.withValues(alpha: .035),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: Colors.white.withValues(alpha: .07)),
+                        border: Border.all(color: AppPalette.text.withValues(alpha: .07)),
                       ),
                       child: Row(
                         children: [
@@ -285,7 +287,7 @@ class _VehicleKilometerUpdateDialogState
                             ),
                           ),
                           Container(width: 1, height: 38, color: Colors.white10),
-                          const SizedBox(width: 14),
+                          SizedBox(width: 14),
                           Expanded(
                             child: _Metric(
                               label: 'DEĞİŞİM',
@@ -298,7 +300,7 @@ class _VehicleKilometerUpdateDialogState
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     TextFormField(
                       controller: _controller,
                       autofocus: true,
@@ -309,8 +311,8 @@ class _VehicleKilometerUpdateDialogState
                         FilteringTextInputFormatter.digitsOnly,
                         LengthLimitingTextInputFormatter(9),
                       ],
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: AppPalette.text,
                         fontSize: 20,
                         fontWeight: FontWeight.w900,
                         letterSpacing: .2,
@@ -318,38 +320,38 @@ class _VehicleKilometerUpdateDialogState
                       decoration: InputDecoration(
                         labelText: 'Güncel kilometre',
                         hintText: widget.currentKm.toString(),
-                        prefixIcon: const Icon(
+                        prefixIcon: Icon(
                           Icons.pin_rounded,
-                          color: AppConstants.primaryColor,
+                          color: AppPalette.accent,
                         ),
                         suffixText: 'KM',
-                        suffixStyle: const TextStyle(
-                          color: AppConstants.primaryColor,
+                        suffixStyle: TextStyle(
+                          color: AppPalette.accent,
                           fontWeight: FontWeight.w900,
                         ),
                         filled: true,
                         fillColor: Colors.black.withValues(alpha: .20),
-                        labelStyle: const TextStyle(color: AppConstants.mutedColor),
+                        labelStyle: TextStyle(color: AppPalette.muted),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(17),
                           borderSide: BorderSide(
-                            color: Colors.white.withValues(alpha: .10),
+                            color: AppPalette.text.withValues(alpha: .10),
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(17),
-                          borderSide: const BorderSide(
-                            color: AppConstants.primaryColor,
+                          borderSide: BorderSide(
+                            color: AppPalette.accent,
                             width: 1.5,
                           ),
                         ),
                         errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(17),
-                          borderSide: const BorderSide(color: Color(0xFFFF586B)),
+                          borderSide: BorderSide(color: Color(0xFFFF586B)),
                         ),
                         focusedErrorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(17),
-                          borderSide: const BorderSide(color: Color(0xFFFF586B)),
+                          borderSide: BorderSide(color: Color(0xFFFF586B)),
                         ),
                         errorMaxLines: 2,
                       ),
@@ -366,17 +368,17 @@ class _VehicleKilometerUpdateDialogState
                       },
                       onFieldSubmitted: (_) => _save(),
                     ),
-                    const SizedBox(height: 13),
-                    const Text(
+                    SizedBox(height: 13),
+                    Text(
                       'HIZLI ARTIŞ',
                       style: TextStyle(
-                        color: AppConstants.subtleTextColor,
+                        color: AppPalette.subtle,
                         fontSize: 9,
                         fontWeight: FontWeight.w900,
                         letterSpacing: .9,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Wrap(
                       spacing: 7,
                       runSpacing: 7,
@@ -385,22 +387,22 @@ class _VehicleKilometerUpdateDialogState
                                 onPressed: _isSaving
                                     ? null
                                     : () => _applyQuickIncrease(amount),
-                                avatar: const Icon(
+                                avatar: Icon(
                                   Icons.add_rounded,
                                   size: 15,
-                                  color: AppConstants.primaryColor,
+                                  color: AppPalette.accent,
                                 ),
                                 label: Text(
                                   '${_numberFormat.format(amount)} km',
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                                  style: TextStyle(
+                                    color: AppPalette.text,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w800,
                                   ),
                                 ),
-                                backgroundColor: Colors.white.withValues(alpha: .04),
+                                backgroundColor: AppPalette.text.withValues(alpha: .04),
                                 side: BorderSide(
-                                  color: Colors.white.withValues(alpha: .08),
+                                  color: AppPalette.text.withValues(alpha: .08),
                                 ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -409,23 +411,23 @@ class _VehicleKilometerUpdateDialogState
                           .toList(),
                     ),
                     if (remainingToMaintenance != null) ...[
-                      const SizedBox(height: 15),
+                      SizedBox(height: 15),
                       Container(
                         padding: const EdgeInsets.all(13),
                         decoration: BoxDecoration(
                           color: (remainingToMaintenance <= 0
-                                  ? const Color(0xFFFF586B)
+                                  ? Color(0xFFFF586B)
                                   : remainingToMaintenance <= 1000
-                                      ? const Color(0xFFFFB547)
-                                      : AppConstants.primaryColor)
+                                      ? Color(0xFFFFB547)
+                                      : AppPalette.accent)
                               .withValues(alpha: .07),
                           borderRadius: BorderRadius.circular(15),
                           border: Border.all(
                             color: (remainingToMaintenance <= 0
-                                    ? const Color(0xFFFF586B)
+                                    ? Color(0xFFFF586B)
                                     : remainingToMaintenance <= 1000
-                                        ? const Color(0xFFFFB547)
-                                        : AppConstants.primaryColor)
+                                        ? Color(0xFFFFB547)
+                                        : AppPalette.accent)
                                 .withValues(alpha: .16),
                           ),
                         ),
@@ -437,19 +439,19 @@ class _VehicleKilometerUpdateDialogState
                                   : Icons.route_rounded,
                               size: 19,
                               color: remainingToMaintenance <= 0
-                                  ? const Color(0xFFFF586B)
+                                  ? Color(0xFFFF586B)
                                   : remainingToMaintenance <= 1000
-                                      ? const Color(0xFFFFB547)
-                                      : AppConstants.primaryColor,
+                                      ? Color(0xFFFFB547)
+                                      : AppPalette.accent,
                             ),
-                            const SizedBox(width: 10),
+                            SizedBox(width: 10),
                             Expanded(
                               child: Text(
                                 remainingToMaintenance <= 0
                                     ? 'Bakım hedefi ${_numberFormat.format(remainingToMaintenance.abs())} km aşılmış görünüyor.'
                                     : 'Bakım hedefine yaklaşık ${_numberFormat.format(remainingToMaintenance)} km kaldı.',
-                                style: const TextStyle(
-                                  color: Colors.white70,
+                                style: TextStyle(
+                                  color: AppPalette.muted,
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w700,
                                   height: 1.35,
@@ -461,8 +463,8 @@ class _VehicleKilometerUpdateDialogState
                       ),
                     ],
                     if (_difference > 20000) ...[
-                      const SizedBox(height: 10),
-                      const Text(
+                      SizedBox(height: 10),
+                      Text(
                         'Bu artış normalden yüksek görünüyor. Kaydetmeden önce değeri kontrol edin.',
                         style: TextStyle(
                           color: Color(0xFFFFB547),
@@ -472,29 +474,29 @@ class _VehicleKilometerUpdateDialogState
                       ),
                     ],
                     if (_error != null) ...[
-                      const SizedBox(height: 12),
+                      SizedBox(height: 12),
                       Text(
                         _error!,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Color(0xFFFF586B),
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
-                    const SizedBox(height: 18),
+                    SizedBox(height: 18),
                     SizedBox(
                       height: 52,
                       child: FilledButton.icon(
                         onPressed: _isSaving ? null : _save,
                         style: FilledButton.styleFrom(
-                          backgroundColor: AppConstants.primaryColor,
-                          foregroundColor: const Color(0xFF03130D),
+                          backgroundColor: AppPalette.accent,
+                          foregroundColor: AppPalette.surface,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
                         icon: _isSaving
-                            ? const SizedBox(
+                            ? SizedBox(
                                 width: 18,
                                 height: 18,
                                 child: CircularProgressIndicator(
@@ -502,17 +504,17 @@ class _VehicleKilometerUpdateDialogState
                                   color: Colors.black,
                                 ),
                               )
-                            : const Icon(Icons.check_circle_rounded, size: 20),
+                            : Icon(Icons.check_circle_rounded, size: 20),
                         label: Text(
                           _isSaving ? 'Kaydediliyor…' : 'Kilometreyi Güncelle',
-                          style: const TextStyle(fontWeight: FontWeight.w900),
+                          style: TextStyle(fontWeight: FontWeight.w900),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    SizedBox(height: 6),
                     TextButton(
                       onPressed: _isSaving ? null : () => Navigator.of(context).pop(false),
-                      child: const Text('Vazgeç'),
+                      child: Text('Vazgeç'),
                     ),
                   ],
                 ),
@@ -529,7 +531,7 @@ class _Metric extends StatelessWidget {
   const _Metric({
     required this.label,
     required this.value,
-    this.valueColor = Colors.white,
+    this.valueColor = AppPalette.text,
   });
 
   final String label;
@@ -542,14 +544,14 @@ class _Metric extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: AppConstants.subtleTextColor,
+            style: TextStyle(
+              color: AppPalette.subtle,
               fontSize: 8.5,
               fontWeight: FontWeight.w900,
               letterSpacing: .8,
             ),
           ),
-          const SizedBox(height: 3),
+          SizedBox(height: 3),
           Text(
             value,
             maxLines: 1,

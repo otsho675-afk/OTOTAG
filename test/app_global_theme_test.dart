@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ototag/core/theme/app_theme.dart';
 import 'package:ototag/core/theme/app_theme_state.dart';
+import 'package:ototag/core/theme/app_palette.dart';
+import 'package:ototag/widgets/ototag_brand_logo.dart';
 import 'package:ototag/widgets/app_theme_toggle_button.dart';
 
 void main() {
@@ -29,6 +31,21 @@ void main() {
     });
     await AppThemeState.initialize();
     expect(AppThemeState.light.value, isTrue);
+  });
+
+  test('light palette stays muted and has readable white button labels', () {
+    AppThemeState.light.value = true;
+    const expectedGreen = Color(0xFF286B4B);
+    expect(AppPalette.accent, expectedGreen);
+    expect(appLightTheme().colorScheme.primary, expectedGreen);
+    final contrast = 1.05 / (expectedGreen.computeLuminance() + 0.05);
+    expect(contrast, greaterThanOrEqualTo(4.5));
+    expect(AppPalette.surface, Colors.white);
+    expect(AppPalette.text, const Color(0xFF19271E));
+    expect(OtoTagBrandLogo.lightAsset,
+        'assets/images/ototag_logo_light.png');
+    AppThemeState.light.value = false;
+    expect(AppPalette.accent, isNot(expectedGreen));
   });
 
   for (final width in [320.0, 390.0, 1280.0]) {

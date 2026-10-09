@@ -246,7 +246,7 @@ class ProviderOfflineDashboard extends StatelessWidget {
                                 children: [
                               Expanded(
                                   child: _stat(
-                                      Icons.account_balance_wallet_outlined,
+                                      context, Icons.account_balance_wallet_outlined,
                                       'Bu ay',
                                       NumberFormat.currency(
                                               locale: 'tr_TR',
@@ -256,7 +256,7 @@ class ProviderOfflineDashboard extends StatelessWidget {
                               const SizedBox(width: 12),
                               Expanded(
                                   child: _stat(
-                                      Icons.star_outline_rounded,
+                                      context, Icons.star_outline_rounded,
                                       'Değerlendirme',
                                       reviewCount == 0
                                           ? 'Henüz puan yok'
@@ -312,7 +312,7 @@ class ProviderOfflineDashboard extends StatelessWidget {
                             onPressed: onSubscription,
                             child: const Text('Üyelik ve ödeme')),
                       ])))));
-  Widget _stat(IconData icon, String title, String value) => Container(
+  Widget _stat(BuildContext context, IconData icon, String title, String value) => Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
           color: AppConstants.cardColor,

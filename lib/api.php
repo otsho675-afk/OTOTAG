@@ -3479,6 +3479,7 @@ switch ($action) {
         $user_id = $_POST['user_id'] ?? null;
         if (!$user_id) sendResponse(400, ["status" => "error", "message" => "Eksik parametre."]);
         try {
+            adminConsoleEnsureSchema($pdo);
             $pdo->beginTransaction();
             rentalGuardAccountDeletion($pdo,$user_id);
 
@@ -3519,7 +3520,11 @@ switch ($action) {
             $pdo->prepare("UPDATE jobs SET provider_id = NULL WHERE provider_id = ?")->execute([$user_id]);
             
             $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$user_id]);
-            
+            // Silinen hesaba ait oturum/telemetri kayıtları tutulmasın.
+            $pdo->prepare("DELETE FROM user_access_state WHERE user_id = ?")->execute([$user_id]);
+            $pdo->prepare("DELETE FROM admin_user_activity WHERE user_id = ?")->execute([$user_id]);
+            $pdo->prepare("DELETE FROM app_telemetry WHERE user_id = ?")->execute([$user_id]);
+
             $pdo->commit();
             sendResponse(200, ["status" => "success", "message" => "Kullanıcı ve yüklenen dosyaları başarıyla silindi."]);
         } catch (\Throwable $e) {

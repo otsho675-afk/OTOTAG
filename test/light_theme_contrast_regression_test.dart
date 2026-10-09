@@ -24,7 +24,7 @@ void main() {
         greaterThan(4.5));
     expect(contrast(AppPalette.accent, AppPalette.surface),
         greaterThan(4.5));
-    expect(AppPalette.accent.green, lessThan(180));
+    expect(AppPalette.accent.g, lessThan(0.71));
   });
 
   testWidgets('logo uses uploaded light asset while leaving dark logo alone',

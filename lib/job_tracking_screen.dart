@@ -23,6 +23,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'services/realtime_client.dart';
 import 'provider_map_screen.dart';
 import 'customer_dashboard_screen.dart';
+import 'widgets/matching_radar.dart';
 import 'chat_screen.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:share_plus/share_plus.dart';
@@ -2732,7 +2733,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                 width: 22,
                                 height: 22,
                                 child: CircularProgressIndicator(
-                                    color: Colors.black, strokeWidth: 2.5))
+                                    color: AppPalette.accentText, strokeWidth: 2.5))
                             : Text("Şikayeti Yetkililere Gönder",
                                 style: TextStyle(
                                     color: Colors.black,
@@ -3732,7 +3733,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                                 width: 50,
                                                 height: 5,
                                                 decoration: BoxDecoration(
-                                                  color: Colors.white30,
+                                                  color: AppPalette.border,
                                                   borderRadius:
                                                       BorderRadius.circular(10),
                                                 ),
@@ -4484,50 +4485,200 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
 
   Widget _buildStatusCard(LinearGradient themeGradient, Color shadowColor,
       Color cardColor, Color textColor) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+    final searchingForUsta =
+        jobStatus == 'searching' && widget.userType == 'customer';
+    final light = Theme.of(context).brightness == Brightness.light;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+      padding: EdgeInsets.symmetric(
+        vertical: searchingForUsta ? 22 : 18,
+        horizontal: 18,
+      ),
       decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(24),
-        border:
-            Border.all(color: AppPalette.text.withValues(alpha: 0.05), width: 1.5),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            cardColor,
+            light ? const Color(0xFFF5F9F6) : AppPalette.surfaceAlt,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(
+          color: searchingForUsta
+              ? neonGreen.withValues(alpha: light ? .25 : .30)
+              : AppPalette.border,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: light ? .045 : .15),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          AnimatedBuilder(
-              animation: _pulseController,
-              builder: (context, child) {
-                return Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    if (jobStatus == 'searching' &&
-                        widget.userType == 'customer')
-                      Container(
-                        width: 75 * (1.0 + _pulseController.value * 0.2),
-                        height: 75 * (1.0 + _pulseController.value * 0.2),
-                        decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: shadowColor.withValues(alpha: 0.1)),
-                      ),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: neonGreen.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(_getStatusIcon(), size: 32, color: neonGreen),
+          if (searchingForUsta) ...[
+            MatchingRadar(
+              color: neonGreen,
+              icon: Icons.handyman_rounded,
+              searching: true,
+              size: 148,
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppPalette.accentSoft,
+                borderRadius: BorderRadius.circular(99),
+                border: Border.all(color: AppPalette.accentBorder),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.radar_rounded, size: 15, color: neonGreen),
+                  const SizedBox(width: 6),
+                  Text('CANLI USTA ARAMASI',
+                    style: TextStyle(
+                      color: neonGreen, fontSize: 10,
+                      fontWeight: FontWeight.w900, letterSpacing: .7,
                     ),
-                  ],
-                );
-              }),
-          SizedBox(height: 14),
-          Text(_getFriendlyStatus(),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Size uygun ustalar aranıyor',
+              textAlign: TextAlign.center,
               style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  color: textColor,
-                  letterSpacing: -0.4),
-              textAlign: TextAlign.center),
+                color: textColor, fontSize: 19, fontWeight: FontWeight.w900,
+                letterSpacing: -.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Talebinize uygun hizmet sağlayıcılar aranıyor. '
+              'Yeni bir teklif geldiğinde burada görüntüleyebilirsiniz.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppPalette.muted,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w500,
+                height: 1.5,
+              ),
+            ),
+          ] else ...[
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: neonGreen.withValues(alpha: .11),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: neonGreen.withValues(alpha: .18),
+                ),
+              ),
+              child: Icon(_getStatusIcon(), size: 32, color: neonGreen),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              _getFriendlyStatus(),
+              style: TextStyle(
+                fontSize: 16, fontWeight: FontWeight.w900,
+                color: textColor, letterSpacing: -.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchJourney(Color primaryColor, Color subtitleColor) {
+    Widget step(IconData icon, String title, String description, bool active) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: active ? AppPalette.accentSoft : AppPalette.surfaceAlt,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: active ? AppPalette.accentBorder : AppPalette.border,
+              ),
+            ),
+            child: Icon(icon,
+              color: active ? primaryColor : AppPalette.muted, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                  style: TextStyle(
+                    color: AppPalette.text, fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(description,
+                  style: TextStyle(
+                    color: subtitleColor, fontSize: 11.5, height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (active)
+            SizedBox(
+              width: 14, height: 14,
+              child: CircularProgressIndicator(
+                strokeWidth: 2, color: primaryColor,
+              ),
+            ),
+        ],
+      );
+    }
+
+    return Container(
+      key: const ValueKey('searching_area'),
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(17),
+      decoration: BoxDecoration(
+        color: AppPalette.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppPalette.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('EŞLEŞME SÜRECİ',
+            style: TextStyle(color: primaryColor, fontSize: 11,
+              fontWeight: FontWeight.w900, letterSpacing: 1.0)),
+          const SizedBox(height: 16),
+          step(Icons.location_on_outlined, 'Konum bazlı arama',
+            'Talebiniz belirttiğiniz hizmet konumuna göre değerlendiriliyor.', false),
+          const SizedBox(height: 17),
+          step(Icons.radar_rounded, 'Yakındaki ustalar taranıyor',
+            'Uygun hizmet sağlayıcıların yanıtları bekleniyor.', true),
+          const SizedBox(height: 17),
+          step(Icons.request_quote_outlined, 'Teklifleri karşılaştırın',
+            'Teklif geldiğinde fiyat ve detayları inceleyebilirsiniz.', false),
+          const SizedBox(height: 16),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(99),
+            child: LinearProgressIndicator(
+              minHeight: 4,
+              backgroundColor: AppPalette.surfaceAlt,
+              color: primaryColor,
+            ),
+          ),
         ],
       ),
     );
@@ -4891,7 +5042,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                               width: 16,
                               height: 16,
                               child: CircularProgressIndicator(
-                                  color: Colors.black, strokeWidth: 2))
+                                  color: AppPalette.accentText, strokeWidth: 2))
                           : Icon(Icons.camera_alt_rounded,
                               color: Colors.black),
                       label: Text("Kamerayı Aç",
@@ -4977,7 +5128,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                     width: 24,
                                     height: 24,
                                     child: CircularProgressIndicator(
-                                        color: Colors.black, strokeWidth: 3))
+                                        color: AppPalette.accentText, strokeWidth: 3))
                                 : Text("Doğrula ve Başla",
                                     style: TextStyle(
                                         fontSize: 16,
@@ -5031,20 +5182,25 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                 activeBid!, primaryColor, canNegotiate, cardColor);
           }
         }
+        if (isCustomer) {
+          return _buildSearchJourney(primaryColor, subtitleColor);
+        }
         return Center(
-            key: ValueKey('searching_area'),
+          key: const ValueKey('searching_area'),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
             child: Column(children: [
               CircularProgressIndicator(strokeWidth: 3, color: primaryColor),
-              SizedBox(height: 24),
-              Text(
-                  isCustomer
-                      ? "Ustalar taranıyor..."
-                      : "Müşteri yanıtı bekleniyor...",
-                  style: TextStyle(
-                      color: subtitleColor,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14))
-            ]));
+              const SizedBox(height: 16),
+              Text('Müşteri yanıtı bekleniyor...',
+                style: TextStyle(
+                  color: subtitleColor, fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+            ]),
+          ),
+        );
       case 'matched':
         return isCustomer
             ? _buildCustomerCode(
@@ -5421,7 +5577,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                     width: 16,
                                     height: 16,
                                     child: CircularProgressIndicator(
-                                        color: Colors.black, strokeWidth: 2))
+                                        color: AppPalette.accentText, strokeWidth: 2))
                                 : Icon(Icons.camera_alt_rounded,
                                     color: Colors.black),
                             label: Text("Kamerayı Aç",
@@ -5473,7 +5629,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen>
                                 width: 24,
                                 height: 24,
                                 child: CircularProgressIndicator(
-                                    color: Colors.black, strokeWidth: 3.0))
+                                    color: AppPalette.accentText, strokeWidth: 3.0))
                             : FittedBox(
                                 child: Text("Ödemeyi Aldım (İşi Bitir)",
                                     textAlign: TextAlign.center,

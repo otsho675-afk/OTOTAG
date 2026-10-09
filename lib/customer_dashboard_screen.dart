@@ -838,7 +838,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
       backgroundColor: _cardColor,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          side: BorderSide(color: Colors.white10)),
+          side: BorderSide(color: AppPalette.border)),
       builder: (BuildContext builder) {
         return SafeArea(
           child: ConstrainedBox(
@@ -875,13 +875,14 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                       ],
                     ),
                   ),
-                  const Divider(height: 1, color: Colors.white12),
+                  Divider(height: 1, color: AppPalette.border),
                   Expanded(
                     child: CupertinoTheme(
-                      data: const CupertinoThemeData(
+                      data: CupertinoThemeData(
+                        brightness: Theme.of(context).brightness,
                         textTheme: CupertinoTextThemeData(
                           dateTimePickerTextStyle: TextStyle(
-                              color: Colors.white,
+                              color: _textColor,
                               fontSize: 22,
                               fontWeight: FontWeight.w600),
                         ),
@@ -2447,11 +2448,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
               height: 56,
               decoration: BoxDecoration(
                 color: enabled
-                    ? Colors.white.withValues(alpha: 0.03)
-                    : Colors.white.withValues(alpha: 0.01),
+                    ? AppPalette.field
+                    : AppPalette.surfaceAlt,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.05), width: 1.5),
+                    color: AppPalette.border, width: 1.5),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
@@ -2472,7 +2473,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                     child: Text(
                       value ?? (enabled ? "Seçiniz" : "Önce Marka"),
                       style: TextStyle(
-                        color: value != null ? Colors.white : Colors.white38,
+                        color: value != null ? _textColor : _subtitleColor,
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
                       ),
@@ -2481,7 +2482,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                     ),
                   ),
                   Icon(Icons.search_rounded,
-                      color: enabled ? Colors.white54 : Colors.white12,
+                      color: enabled ? _primaryColor : _subtitleColor,
                       size: 18),
                 ],
               ),
@@ -2521,7 +2522,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                   borderRadius:
                       const BorderRadius.vertical(top: Radius.circular(28)),
                   border:
-                      Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                      Border.all(color: AppPalette.border),
                 ),
                 child: SafeArea(
                   child: Column(
@@ -2531,7 +2532,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                           width: 44,
                           height: 4,
                           decoration: BoxDecoration(
-                              color: Colors.white24,
+                              color: AppPalette.border,
                               borderRadius: BorderRadius.circular(8))),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
@@ -2540,12 +2541,12 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                           children: [
                             Text(title,
                                 style: TextStyle(
-                                    color: Colors.white,
+                                    color: _textColor,
                                     fontSize: 18,
                                     fontWeight: FontWeight.w900)),
                             IconButton(
                               icon: Icon(Icons.close_rounded,
-                                  color: Colors.white70),
+                                  color: _subtitleColor),
                               onPressed: () => Navigator.pop(ctx),
                             ),
                           ],
@@ -2555,19 +2556,19 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Container(
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.04),
+                            color: AppPalette.field,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.06)),
+                                color: AppPalette.border),
                           ),
                           child: TextField(
                             autofocus: true,
                             style: TextStyle(
-                                color: Colors.white, fontSize: 14),
+                                color: _textColor, fontSize: 14),
                             decoration: InputDecoration(
                               hintText: "Hemen ara...",
                               hintStyle: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.35)),
+                                  color: _subtitleColor),
                               prefixIcon: Icon(Icons.search_rounded,
                                   color: _primaryColor, size: 20),
                               border: InputBorder.none,
@@ -2583,7 +2584,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                         ),
                       ),
                       const SizedBox(height: 10),
-                      const Divider(color: Colors.white10, height: 1),
+                      const Divider(color: AppPalette.border, height: 1),
                       Expanded(
                         child: filteredItems.isEmpty
                             ? Center(
@@ -2660,10 +2661,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
         ),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.03),
+            color: AppPalette.field,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-                color: Colors.white.withValues(alpha: 0.05), width: 1.5),
+                color: AppPalette.border, width: 1.5),
           ),
           child: TextField(
             controller: controller,
@@ -2675,11 +2676,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                 : TextCapitalization.none,
             inputFormatters: isPlate ? [TurkishPlateFormatter()] : null,
             style: TextStyle(
-                color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
+                color: _textColor, fontWeight: FontWeight.w600, fontSize: 15),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.25), fontSize: 14),
+                  color: _subtitleColor, fontSize: 14),
               prefixIcon: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Container(
@@ -3119,7 +3120,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                     decoration: BoxDecoration(
                       color: selectedIdx == index
                           ? _primaryColor
-                          : Colors.white.withValues(alpha: 0.2),
+                          : AppPalette.border,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),

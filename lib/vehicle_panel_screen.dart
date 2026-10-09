@@ -1821,9 +1821,9 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
         border: Border.all(color: AppPalette.text.withValues(alpha: .065)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: .26),
-            blurRadius: 24,
-            offset: Offset(0, 12),
+            color: AppPalette.shadow,
+            blurRadius: AppPalette.light ? 12 : 24,
+            offset: Offset(0, AppPalette.light ? 3 : 12),
           ),
         ],
       ),
@@ -1921,7 +1921,8 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
       String title, DateTime? date, IconData icon, int totalDays) {
     final deadline = VehicleDeadline(date);
     final double progress = date == null ? 0 : ((deadline.days ?? 0) / totalDays).clamp(0.0, 1.0);
-    final Color statusColor = deadline.color;
+    final Color statusColor = AppPalette.light && (deadline.days ?? -1) > 15
+        ? AppPalette.accent : deadline.color;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1931,7 +1932,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
             Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.12),
+                    color: statusColor.withValues(alpha: AppPalette.light ? .07 : .12),
                     borderRadius: BorderRadius.circular(14)),
                 child: Icon(icon, color: statusColor, size: 22)),
             SizedBox(width: 14),
@@ -1961,10 +1962,10 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.1),
+                  color: statusColor.withValues(alpha: AppPalette.light ? .07 : .1),
                   borderRadius: BorderRadius.circular(12),
                   border:
-                      Border.all(color: statusColor.withValues(alpha: 0.3))),
+                      Border.all(color: statusColor.withValues(alpha: AppPalette.light ? .18 : .3))),
               child: Text(
                   deadline.label,
                   style: TextStyle(
@@ -1981,7 +1982,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
             child: LinearProgressIndicator(
                 value: progress,
                 minHeight: 6,
-                backgroundColor: AppPalette.text.withValues(alpha: 0.06),
+                backgroundColor: AppPalette.border.withValues(alpha: .55),
                 valueColor: AlwaysStoppedAnimation<Color>(statusColor)),
           ),
         ]
@@ -1994,7 +1995,9 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
     final double progress = mKm > 0 ? (cKm / mKm).clamp(0.0, 1.0) : 0.0;
     final Color statusColor = remainingKm <= 0
         ? Color(0xFFFF586B)
-        : remainingKm <= 1000 ? Color(0xFFFFB547) : AppPalette.accent;
+        : remainingKm <= 1000
+          ? (AppPalette.light ? const Color(0xFF986713) : const Color(0xFFFFB547))
+          : AppPalette.accent;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2004,7 +2007,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
             Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.12),
+                    color: statusColor.withValues(alpha: AppPalette.light ? .07 : .12),
                     borderRadius: BorderRadius.circular(14)),
                 child: Icon(Icons.build_circle_rounded,
                     color: statusColor, size: 22)),
@@ -2032,10 +2035,10 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.1),
+                  color: statusColor.withValues(alpha: AppPalette.light ? .07 : .1),
                   borderRadius: BorderRadius.circular(12),
                   border:
-                      Border.all(color: statusColor.withValues(alpha: 0.3))),
+                      Border.all(color: statusColor.withValues(alpha: AppPalette.light ? .18 : .3))),
               child: Text(
                   remainingKm < 0
                       ? "${remainingKm.abs()} KM Gecikti"
@@ -2053,7 +2056,7 @@ class _VehiclePanelScreenState extends State<VehiclePanelScreen>
           child: LinearProgressIndicator(
               value: progress,
               minHeight: 6,
-              backgroundColor: AppPalette.text.withValues(alpha: 0.06),
+              backgroundColor: AppPalette.border.withValues(alpha: .55),
               valueColor: AlwaysStoppedAnimation<Color>(statusColor)),
         ),
       ],

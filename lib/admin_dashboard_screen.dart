@@ -18,6 +18,7 @@ import 'widgets/admin_update_panel.dart';
 import 'services/app_session.dart';
 import 'widgets/admin_command_palette.dart';
 import 'widgets/admin_overview_panel.dart';
+import 'widgets/admin_members_panel.dart';
 import 'growth_analytics_screen.dart';
 import 'admin_user_detail_screen.dart';
 
@@ -3587,353 +3588,71 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       return _userSort == 'oldest' ? left.compareTo(right) : right.compareTo(left);
     });
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 5),
-          child: Row(children: [
-            const Icon(Icons.groups_rounded, size: 22,
-                color: Color(0xFF00D68A)),
-            const SizedBox(width: 10),
-            Expanded(child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Üye yönetimi',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    )),
-                const SizedBox(height: 2),
-                Text('Detayları, araçları ve hareketleri görmek için üyeye dokunun.',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall),
-              ],
-            )),
-          ]),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _userSearchCtrl,
-                  onChanged: (value) => setState(() => userSearchQuery = value),
-                  style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 13),
-                  decoration: InputDecoration(
-                    hintText: "Üye adı, telefon, şehir, e-posta veya numara…",
-                    hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
-                    prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
-                    suffixIcon: userSearchQuery.isNotEmpty 
-                        ? IconButton(icon: const Icon(Icons.clear, color: Colors.grey, size: 18), onPressed: () => setState(() { _userSearchCtrl.clear(); userSearchQuery = ""; }))
-                        : null,
-                    filled: true,
-                    fillColor: cardColor,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                decoration: BoxDecoration(color: isUserSelectionMode ? const Color(0xFF00D68A).withValues(alpha:.17) : cardColor, borderRadius: BorderRadius.circular(16)),
-                child: IconButton(
-                  tooltip: isUserSelectionMode ? 'Seçimi bitir' : 'Toplu işlem için seç',
-                  icon: Icon(isUserSelectionMode ? Icons.close_rounded : Icons.checklist_rounded, color: const Color(0xFF00D68A)),
-                  onPressed: () {
-                    setState(() {
-                      isUserSelectionMode = !isUserSelectionMode;
-                      selectedUsers.clear();
-                    });
-                  },
-                ),
-              )
-            ],
-          ),
-        ),
-        
-        AnimatedSize(
-          duration: const Duration(milliseconds: 300),
-          child: isUserSelectionMode && selectedUsers.isNotEmpty
-            ? Container(
-                margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(color: const Color(0xFF00D68A).withValues(alpha:0.1), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFF00D68A).withValues(alpha:0.3))),
-                child: Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text("${selectedUsers.length} Seçildi", style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF009B69), fontSize: 13)),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        TextButton(
-                          onPressed: () {
-                            setState(() {
-                              if (selectedUsers.length == filteredUsers.length) {
-                                selectedUsers.clear();
-                              } else {
-                                selectedUsers.addAll(filteredUsers.map((u) => int.tryParse(u['id']?.toString() ?? '0') ?? 0));
-                              }
-                            });
-                          },
-                          child: Text(selectedUsers.length == filteredUsers.length ? "Seçimi Kaldır" : "Tümünü Seç", style: const TextStyle(fontSize: 12, color: AppConstants.primaryDeep)),
-                        ),
-                        TextButton(
-                          onPressed: () => _hideSelectedItems('users'),
-                          child: const Text("Gizle", style: TextStyle(fontSize: 12)),
-                        ),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white, elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6)),
-                          onPressed: () => _bulkDeleteItems('users'),
-                          child: const Text("Sil", style: TextStyle(fontSize: 12)),
-                        )
-                      ],
-                    )
-                  ],
-                ),
-              )
-            : const SizedBox.shrink(),
-        ),
-
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Row(
-            children: [
-              _buildFilterChip("Tümü", "all", userFilter, (val) => setState(() => userFilter = val)),
-              const SizedBox(width: 8),
-              _buildFilterChip("Müşteriler", "customer", userFilter, (val) => setState(() => userFilter = val)),
-              const SizedBox(width: 8),
-              _buildFilterChip("Ustalar", "provider", userFilter, (val) => setState(() => userFilter = val)),
-              const SizedBox(width: 8),
-              _buildFilterChip("Firmalar", "rentacar", userFilter, (val) => setState(() => userFilter = val)),
-              const SizedBox(width: 8),
-              _buildFilterChip("Premium", "premium", userFilter, (val) => setState(() => userFilter = val)),
-              const SizedBox(width: 8),
-              _buildFilterChip("Askıdakiler", "suspended", userFilter, (val) => setState(() => userFilter = val)),
-              const SizedBox(width: 8),
-              _buildFilterChip("Engellenenler", "banned", userFilter, (val) => setState(() => userFilter = val)),
-            ],
-          ),
-        ),
-        _buildListTools(filteredUsers.length, allUsers.length, hiddenUsers, showSort: true, limit: 1500),
-        Expanded(
-          child: filteredUsers.isEmpty
-            ? _buildEmptyState("Arama kriterlerine uygun kullanıcı bulunamadı.", Icons.search_off_rounded)
-            : ListView.separated(
-                scrollCacheExtent: const ScrollCacheExtent.pixels(2000), physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 6, 16, 100),
-                itemCount: filteredUsers.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (context, index) {
-                  final user = filteredUsers[index];
-                  final isCustomer = user['user_type'] == 'customer';
-                   final isRentacar = user['user_type'] == 'rentacar';
-                  final isBanned = user['status'] == 'banned';
-                  final isPremium = user['is_premium'] == 1 || user['is_premium'] == '1';
-                  final userId = int.tryParse(user['id']?.toString() ?? '0') ?? 0;
-                  final String joinedDate = _formatDate(user['created_at']?.toString());
-                  final isSelected = selectedUsers.contains(userId);
-                  
-                  final DateTime createdAtDate = DateTime.tryParse(user['created_at']?.toString() ?? '') ?? DateTime.now();
-                  final bool isUnderProbation = !isCustomer && DateTime.now().difference(createdAtDate).inDays < 90;
-
-                  return GestureDetector(
-                    onTap: () {
-                      if (isUserSelectionMode) {
-                        setState(() {
-                          if (isSelected) { selectedUsers.remove(userId); }
-                          else { selectedUsers.add(userId); }
-                        });
-                      } else {
-                        _showUserDetailsModal(Map<String, dynamic>.from(user), cardColor, isDark);
-                      }
-                    },
-                    onLongPress: () {
-                      setState(() {
-                        isUserSelectionMode = true;
-                        selectedUsers.add(userId);
-                      });
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.02), blurRadius: 8, offset: const Offset(0, 3))]
-                      ),
-                      child: Material(
-                        color: isSelected ? AppConstants.primaryColor.withValues(alpha:0.09) : (isBanned ? Colors.red.withValues(alpha:0.05) : cardColor),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(color: isSelected ? AppConstants.primaryDeep : const Color(0xFF2B4134), width: 1),
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          leading: isUserSelectionMode 
-                            ? Icon(isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, color: isSelected ? AppConstants.primaryDeep : Colors.grey)
-                            : CircleAvatar(
-                                radius: 20,
-                                backgroundColor: isBanned ? Colors.red.withValues(alpha:0.12) : AppConstants.primaryColor.withValues(alpha:0.13),
-                                child: Icon(isBanned ? Icons.block : (isCustomer ? Icons.person_outline_rounded : (isRentacar ? Icons.car_rental_outlined : Icons.handyman_outlined)), color: isBanned ? Colors.red : AppConstants.primaryColor, size: 20),
-                              ),
-                          title: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  user['name']?.toString() ?? 'Bilinmeyen', 
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, decoration: isBanned ? TextDecoration.lineThrough : null),
-                                  overflow: TextOverflow.ellipsis,
-                                )
-                              ),
-                              if (MediaQuery.sizeOf(context).width >= 640)
-                                 Text(joinedDate, style: const TextStyle(color: Colors.grey, fontSize: 10)),
-                            ],
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 3),
-                              Text(user['phone']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12)),
-                              Text("Son giriş: ${user['last_login_at'] != null ? _formatDate(user['last_login_at'].toString()) : 'Henüz kaydedilmedi'}",
-                                  maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11,color:Colors.grey)),
-                               if (MediaQuery.sizeOf(context).width >= 640)
-                                 Text("Son hareket: ${user['last_seen_at'] != null ? _formatDate(user['last_seen_at'].toString()) : '—'}",
-                                    maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11,color:Colors.grey)),
-                               if (MediaQuery.sizeOf(context).width < 640)
-                                 Text("Kayıt: $joinedDate", maxLines:1,overflow:TextOverflow.ellipsis,
-                                    style:const TextStyle(fontSize:10,color:Colors.grey)),
-                              if ((int.tryParse('${user['vehicle_count']}') ?? 0) > 0)
-                                Text("Kayıtlı araç: ${user['vehicle_count']}",style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)),
-                              const SizedBox(height: 3),
-                              Wrap(
-                                spacing: 6,
-                                runSpacing: 4,
-                                children: [
-                                  Text(
-                                    isCustomer ? 'Müşteri' : (isRentacar ? 'Rent a Car' : 'Usta (${_translateServiceType(user['service_category']?.toString())})'),
-                                    style: const TextStyle(color: AppConstants.primaryColor, fontSize: 11, fontWeight: FontWeight.w800)
-                                  ),
-                                  if (isCustomer && isPremium)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                      decoration: BoxDecoration(color: Colors.amber.shade100, borderRadius: BorderRadius.circular(4)),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.workspace_premium, color: Colors.orange, size: 9),
-                                          SizedBox(width: 2),
-                                          Text("PREMIUM", style: TextStyle(color: Colors.orange, fontSize: 8, fontWeight: FontWeight.bold)),
-                                        ],
-                                      ),
-                                    ),
-                                  if (isBanned)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                      decoration: BoxDecoration(color: Colors.red.shade100, borderRadius: BorderRadius.circular(4)),
-                                      child: const Text("ENGELLİ", style: TextStyle(color: Colors.red, fontSize: 8, fontWeight: FontWeight.bold)),
-                                    )
-                                  else if (isUnderProbation)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                      decoration: BoxDecoration(color: Colors.amber.shade100, borderRadius: BorderRadius.circular(4)),
-                                      child: const Text("YENİ", style: TextStyle(color: Colors.orange, fontSize: 8, fontWeight: FontWeight.bold)),
-                                    )
-                                ],
-                              ),
-                            ],
-                          ),
-                          trailing: isUserSelectionMode ? null : Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (MediaQuery.sizeOf(context).width >= 680) IconButton(
-                                icon: const Icon(Icons.notifications_active, color: Color(0xFF00D68A), size: 18),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                tooltip: "Bildirim Gönder",
-                                onPressed: () => _showNotificationDialog(userId: userId, userName: user['name']?.toString() ?? 'Kullanıcı'),
-                              ),
-                              if (MediaQuery.sizeOf(context).width >= 680) const SizedBox(width: 8),
-                               if (!isCustomer && MediaQuery.sizeOf(context).width >= 680)
-                                IconButton(
-                                  icon: const Icon(Icons.folder_shared, color: Colors.blueGrey, size: 18),
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(),
-                                  tooltip: "Belgeler",
-                                  onPressed: () => _showUserDocumentsDialog(Map<String, dynamic>.from(user)),
-                                ),
-                              PopupMenuButton<String>(
-                                padding: EdgeInsets.zero,
-                                icon: const Icon(Icons.more_vert_rounded, color: Colors.grey, size: 20),
-                                onSelected: (value) {
-                                  if (value == 'details') {
-                                     _showUserDetailsModal(Map<String,dynamic>.from(user), cardColor, isDark);
-                                   } else if (value == 'notify') {
-                                     _showNotificationDialog(userId: userId, userName: user['name']?.toString() ?? 'Kullanıcı');
-                                   } else if (value == 'docs') {
-                                     _showUserDocumentsDialog(Map<String,dynamic>.from(user));
-                                   } else if (value == 'delete') {
-                                    _deleteUser(userId, user['name']?.toString() ?? 'Kullanıcı');
-                                  } else if (value == 'punish') {
-                                    _showPunishmentDialog(userId, user['name']?.toString() ?? 'Kullanıcı', !isCustomer);
-                                  } else if (value == 'reviews' && !isCustomer) {
-                                    if (user['user_type'] == 'rentacar') {
-                                      Navigator.push(context, MaterialPageRoute(builder: (_) => RentacarCompanyProfileScreen(companyId: userId)));
-                                    } else {
-                                      _fetchAndShowProviderReviews(userId, user['name']?.toString() ?? 'Usta');
-                                    }
-                                  }
-                                },
-                                itemBuilder: (context) => <PopupMenuEntry<String>>[
-                                   const PopupMenuItem<String>(value:'details',child:Text('Detaylar / Araçlar / Hareketler')),
-                                   if (MediaQuery.sizeOf(context).width < 680)
-                                     const PopupMenuItem<String>(value:'notify',child:Text('Bildirim gönder')),
-                                   if (!isCustomer && MediaQuery.sizeOf(context).width < 680)
-                                     const PopupMenuItem<String>(value:'docs',child:Text('Belgeler')),
-                                  if (!isCustomer)
-                                    const PopupMenuItem<String>(
-                                      value: 'reviews',
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.star_rate_rounded, color: Colors.amber, size: 18),
-                                          SizedBox(width: 8),
-                                          Text("Profili/Yorumları Gör", style: TextStyle(fontSize: 13)),
-                                        ],
-                                      ),
-                                    ),
-                                  const PopupMenuItem<String>(
-                                    value: 'punish',
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.gavel_rounded, color: Colors.orange, size: 14),
-                                        SizedBox(width: 8),
-                                        Text("Ceza / Ban", style: TextStyle(fontSize: 13)),
-                                      ],
-                                    ),
-                                  ),
-                                  const PopupMenuItem<String>(
-                                    value: 'delete',
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.delete_forever_rounded, color: Colors.red, size: 18),
-                                        SizedBox(width: 8),
-                                        Text("Sil", style: TextStyle(fontSize: 13)),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-        ),
-      ],
+    return AdminMembersPanel(
+      users: filteredUsers.map((entry) => Map<String, dynamic>.from(entry as Map)).toList(),
+      total: allUsers.length,
+      hiddenCount: hiddenUsers.length,
+      searchController: _userSearchCtrl,
+      query: userSearchQuery,
+      filter: userFilter,
+      sort: _userSort,
+      bulk: isUserSelectionMode,
+      selected: selectedUsers,
+      onSearch: (value) => setState(() => userSearchQuery = value),
+      onFilter: (value) => setState(() => userFilter = value),
+      onSort: (value) => setState(() => _userSort = value),
+      onToggleBulk: () => setState(() {
+        isUserSelectionMode = !isUserSelectionMode;
+        selectedUsers.clear();
+      }),
+      onToggleUser: (id) => setState(() {
+        if (!isUserSelectionMode) {
+          isUserSelectionMode = true;
+          selectedUsers.add(id);
+        } else if (selectedUsers.contains(id)) {
+          selectedUsers.remove(id);
+        } else {
+          selectedUsers.add(id);
+        }
+      }),
+      onSelectAll: () => setState(() {
+        final ids = filteredUsers
+            .map((user) => int.tryParse(user['id']?.toString() ?? '') ?? 0)
+            .where((id) => id > 0)
+            .toSet();
+        if (ids.isNotEmpty && selectedUsers.containsAll(ids)) {
+          selectedUsers.removeAll(ids);
+        } else {
+          selectedUsers.addAll(ids);
+        }
+      }),
+      onHide: () => _hideSelectedItems('users'),
+      onDeleteSelected: () => _bulkDeleteItems('users'),
+      onRestore: () => setState(hiddenUsers.clear),
+      onOpen: (user) => _showUserDetailsModal(user, cardColor, isDark),
+      onNotify: (user) => _showNotificationDialog(
+        userId: int.tryParse(user['id']?.toString() ?? '') ?? 0,
+        userName: user['name']?.toString() ?? 'Kullanıcı',
+      ),
+      onDocs: (user) => _showUserDocumentsDialog(user),
+      onPunish: (user) => _showPunishmentDialog(
+        int.tryParse(user['id']?.toString() ?? '') ?? 0,
+        user['name']?.toString() ?? 'Kullanıcı',
+        user['user_type'] != 'customer',
+      ),
+      onReviews: (user) {
+        final id = int.tryParse(user['id']?.toString() ?? '') ?? 0;
+        if (user['user_type'] == 'rentacar') {
+          Navigator.push(context, MaterialPageRoute(
+            builder: (_) => RentacarCompanyProfileScreen(companyId: id)));
+        } else {
+          _fetchAndShowProviderReviews(id, user['name']?.toString() ?? 'Usta');
+        }
+      },
+      onDelete: (user) => _deleteUser(
+        int.tryParse(user['id']?.toString() ?? '') ?? 0,
+        user['name']?.toString() ?? 'Kullanıcı',
+      ),
     );
   }
 

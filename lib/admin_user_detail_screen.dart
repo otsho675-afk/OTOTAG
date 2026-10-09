@@ -142,6 +142,7 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
               ),
             ),
             DropdownButtonFormField<String>(
+              isExpanded: true,
               initialValue: status,
               decoration: const InputDecoration(labelText: 'Hesap durumu',border: OutlineInputBorder()),
               items: const [
@@ -410,8 +411,18 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
 
   Widget _sectionTitle(String title, IconData icon) => Padding(
     padding: const EdgeInsets.only(top:18,bottom:10),
-    child:Row(children:[Icon(icon,size:19),const SizedBox(width:8),
-      Text(title,style:const TextStyle(fontSize:17,fontWeight:FontWeight.w800))]),
+    child: Row(children: [
+      Icon(icon, size: 19),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Text(
+          title,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+        ),
+      ),
+    ]),
   );
   Widget _info(String label, dynamic value) => Padding(
     padding:const EdgeInsets.symmetric(vertical:7),

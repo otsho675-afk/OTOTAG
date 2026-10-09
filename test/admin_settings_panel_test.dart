@@ -47,25 +47,13 @@ void main() {
         onBackup: () {}, onOptimize: () {}, onLogout: () {},
       )),
     );
-    final originalErrorHandler = FlutterError.onError;
-    FlutterError.onError = (details) {
-      debugPrint('SETTINGS_LAYOUT_TRACE: ${details.toString(minLevel: DiagnosticLevel.debug)}');
-      originalErrorHandler?.call(details);
-    };
-    addTearDown(() => FlutterError.onError = originalErrorHandler);
     await tester.pumpWidget(panel());
     expect(find.text('Yönetim ayarları'), findsOneWidget);
     expect(find.text('Son 5 dk etkin'), findsOneWidget);
     expect(find.text('Ayşe Aktif'), findsOneWidget);
     expect(find.text('Mehmet Usta'), findsOneWidget);
     expect(find.text('Bora Eski'), findsNothing);
-    final layoutIssue = tester.takeException();
-    if (layoutIssue is FlutterError) {
-      for (final detail in layoutIssue.diagnostics) {
-        debugPrint(detail.toStringDeep());
-      }
-    }
-    expect(layoutIssue, isNull);
+    expect(tester.takeException(), isNull);
 
     await tester.tap(find.text('Etkinliği yenile'));
     expect(refreshCount, 1);

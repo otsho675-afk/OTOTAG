@@ -262,9 +262,10 @@ class _AdminSettingsPanelState extends State<AdminSettingsPanel> {
                 const Row(children: [
                   Icon(Icons.tune_rounded, color: green, size: 18),
                   SizedBox(width: 8),
-                  Text('OTO TAG  /  KONTROL MERKEZİ',
+                  Expanded(child: Text('OTO TAG  /  KONTROL MERKEZİ',
+                    maxLines: 2, overflow: TextOverflow.ellipsis,
                     style: TextStyle(color: green, fontSize: 10,
-                        fontWeight: FontWeight.w900, letterSpacing: 1.1)),
+                        fontWeight: FontWeight.w900, letterSpacing: 1.1))),
                 ]),
                 const SizedBox(height: 14),
                 const Text('Yönetim ayarları', style: TextStyle(

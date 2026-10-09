@@ -2770,6 +2770,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
   }
 
   Widget _buildSparePartsBanner(BuildContext context) {
+    final light = Theme.of(context).brightness == Brightness.light;
+    final ink = Theme.of(context).colorScheme.onSurface;
+    final muted = light ? const Color(0xFF5D6E63) : Colors.white54;
+    final accent = light ? const Color(0xFF08784D) : _primaryColor;
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -3132,6 +3136,9 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
   }
 
   Widget _buildHeaderCard() {
+    final light = Theme.of(context).brightness == Brightness.light;
+    final titleColor = Theme.of(context).colorScheme.onSurface;
+    final subtitleColor = light ? const Color(0xFF53685B) : _subtitleColor;
     return PremiumGlassPanel(
       radius: 24,
       blur: 14,
@@ -3178,7 +3185,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                         Text(
                           '7/24',
                           style: TextStyle(
-                            color: _textColor,
+                            color: titleColor,
                             fontSize: 9.5,
                             fontWeight: FontWeight.w800,
                           ),
@@ -3207,7 +3214,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w900,
-                            color: _textColor,
+                            color: titleColor,
                             letterSpacing: -.45,
                             height: 1.1,
                           ),
@@ -3238,7 +3245,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                   Text(
                     'Konum bazlı eşleşme',
                     style: TextStyle(
-                      color: _subtitleColor,
+                      color: subtitleColor,
                       fontSize: 9.5,
                       fontWeight: FontWeight.w600,
                     ),
@@ -3252,7 +3259,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                       'Güvenli OTO TAG deneyimi',
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: _subtitleColor,
+                        color: subtitleColor,
                         fontSize: 9.5,
                         fontWeight: FontWeight.w600,
                       ),

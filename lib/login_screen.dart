@@ -849,7 +849,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderSide: BorderSide.none),
                       filled: true,
                       fillColor: Colors.white.withValues(alpha: 0.05),
-                      focusedBorder: const OutlineInputBorder(
+                      focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(24)),
                           borderSide:
                               BorderSide(color: AppPalette.accent, width: 1.5)),

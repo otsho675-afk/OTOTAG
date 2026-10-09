@@ -1,3 +1,5 @@
+import 'core/theme/app_palette.dart';
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
 // provider_profile_screen.dart
 import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
@@ -24,7 +26,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
   late final http.Client _httpClient = widget.client ?? http.Client();
   late final AuthenticatedHttpClient _authClient =
       AuthenticatedHttpClient(http.Client());
-  final Duration _apiTimeout = const Duration(seconds: 15);
+  final Duration _apiTimeout = Duration(seconds: 15);
   bool _favorite = false;
   bool _favoriteBusy = false;
 
@@ -41,19 +43,19 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
   final String baseUrl = AppConstants.baseUrl;
   late AnimationController _listAnimController;
 
-  static const Color neonGreen = Color(0xFF00FFA3);
-  static const Color darkGreen = Color(0xFF0A2B1D);
-  static const Color pureBlack = Color(0xFF030305);
-  static const Color panelBlack = Color(0xFF111115);
-  static const Color surfaceBlack = Color(0xFF18181F);
-  static const Color textGray = Colors.white54;
+  static Color get neonGreen => AppPalette.accent;
+  static Color get darkGreen => AppPalette.accentSoft;
+  static Color get pureBlack => AppPalette.page;
+  static Color get panelBlack => AppPalette.surface;
+  static Color get surfaceBlack => AppPalette.surfaceAlt;
+  static Color get textGray => AppPalette.muted;
   static const Color goldAccent = Color(0xFFF59E0B);
 
   @override
   void initState() {
     super.initState();
     _listAnimController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 900));
+        vsync: this, duration: Duration(milliseconds: 900));
 
     _fetchProviderData();
     _loadFavoriteState();
@@ -136,7 +138,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
       final uri = Uri.parse(baseUrl)
           .replace(queryParameters: {'action': 'get_favorite_providers'});
       final response =
-          await _authClient.get(uri).timeout(const Duration(seconds: 10));
+          await _authClient.get(uri).timeout(Duration(seconds: 10));
       final data = jsonDecode(utf8.decode(response.bodyBytes));
       if (response.statusCode == 200 &&
           data is Map &&
@@ -271,11 +273,11 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
         border: Border.all(color: Colors.white10),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 15, color: neonGreen),
+        const Icon(icon, size: 15, color: neonGreen),
         const SizedBox(width: 6),
-        Text(text,
-            style: const TextStyle(
-                color: Colors.white70,
+        const Text(text,
+            style: TextStyle(
+                color: AppPalette.muted,
                 fontSize: 11,
                 fontWeight: FontWeight.w700)),
       ]),
@@ -304,7 +306,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
               filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
               child: Center(
                 child: Container(
-                  constraints: const BoxConstraints(maxWidth: 650),
+                  constraints: BoxConstraints(maxWidth: 650),
                   padding: EdgeInsets.only(
                       bottom: MediaQuery.of(context).viewInsets.bottom + 20,
                       left: isSmallScreen ? 16 : 24,
@@ -315,13 +317,13 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                     borderRadius:
                         const BorderRadius.vertical(top: Radius.circular(32)),
                     border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.08),
+                        color: AppPalette.text.withValues(alpha: 0.08),
                         width: 1.5),
                     boxShadow: [
                       BoxShadow(
                           color: pureBlack.withValues(alpha: 0.9),
                           blurRadius: 40,
-                          offset: const Offset(0, -10)),
+                          offset: Offset(0, -10)),
                     ],
                   ),
                   child: Column(
@@ -332,7 +334,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                               width: 44,
                               height: 5,
                               decoration: BoxDecoration(
-                                  color: Colors.white24,
+                                  color: AppPalette.border,
                                   borderRadius: BorderRadius.circular(10)))),
                       const SizedBox(height: 18),
                       Row(
@@ -345,13 +347,13 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                                 decoration: BoxDecoration(
                                     color: neonGreen.withValues(alpha: 0.12),
                                     shape: BoxShape.circle),
-                                child: const Icon(Icons.rate_review_rounded,
+                                child: Icon(Icons.rate_review_rounded,
                                     color: neonGreen, size: 22),
                               ),
-                              SizedBox(width: isSmallScreen ? 8 : 12),
-                              Text("Müşteri Değerlendirmeleri",
+                              const SizedBox(width: isSmallScreen ? 8 : 12),
+                              const Text("Müşteri Değerlendirmeleri",
                                   style: TextStyle(
-                                      color: Colors.white,
+                                      color: AppPalette.text,
                                       fontSize: isSmallScreen ? 17 : 20,
                                       fontWeight: FontWeight.w900,
                                       letterSpacing: -0.5)),
@@ -362,10 +364,10 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                             icon: Container(
                               padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.06),
+                                  color: AppPalette.text.withValues(alpha: 0.06),
                                   shape: BoxShape.circle),
-                              child: const Icon(Icons.close_rounded,
-                                  color: Colors.white70, size: 18),
+                              child: Icon(Icons.close_rounded,
+                                  color: AppPalette.muted, size: 18),
                             ),
                           )
                         ],
@@ -388,13 +390,13 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                                 const Icon(Icons.star_rounded,
                                     color: goldAccent, size: 24),
                                 const SizedBox(width: 8),
-                                Text(providerRating.toStringAsFixed(1),
-                                    style: const TextStyle(
-                                        color: Colors.white,
+                                const Text(providerRating.toStringAsFixed(1),
+                                    style: TextStyle(
+                                        color: AppPalette.text,
                                         fontWeight: FontWeight.w900,
                                         fontSize: 18)),
                                 const SizedBox(width: 6),
-                                Text("/ 5.0",
+                                const Text("/ 5.0",
                                     style: TextStyle(
                                         color: textGray.withValues(alpha: 0.8),
                                         fontWeight: FontWeight.w600,
@@ -402,7 +404,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                               ],
                             ),
                             Text("${reviews.length} Son Yorum",
-                                style: const TextStyle(
+                                style: TextStyle(
                                     color: neonGreen,
                                     fontWeight: FontWeight.w800,
                                     fontSize: 13)),
@@ -420,7 +422,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                                         size: 48,
                                         color: textGray.withValues(alpha: 0.4)),
                                     const SizedBox(height: 12),
-                                    const Text(
+                                    Text(
                                         "Henüz müşteri yorumu bulunmuyor.",
                                         style: TextStyle(
                                             color: textGray,
@@ -432,7 +434,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                             : ListView.separated(
                                 controller:
                                     scrollController, // DraggableScrollableSheet ile bağlantıyı kurar, akıllı kaydırma sağlar
-                                physics: const BouncingScrollPhysics(),
+                                physics: BouncingScrollPhysics(),
                                 itemCount: reviews.length,
                                 separatorBuilder: (_, __) =>
                                     const SizedBox(height: 12),
@@ -449,7 +451,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                                           surfaceBlack.withValues(alpha: 0.7),
                                       borderRadius: BorderRadius.circular(20),
                                       border: Border.all(
-                                          color: Colors.white
+                                          color: AppPalette.text
                                               .withValues(alpha: 0.06),
                                           width: 1.0),
                                     ),
@@ -479,7 +481,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                                                                   [0]
                                                               .toUpperCase()
                                                           : "M",
-                                                      style: const TextStyle(
+                                                      style: TextStyle(
                                                           color: neonGreen,
                                                           fontSize: 12,
                                                           fontWeight:
@@ -492,7 +494,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                                                       review['customer_name'] ??
                                                           "Müşteri",
                                                       style: TextStyle(
-                                                          color: Colors.white,
+                                                          color: AppPalette.text,
                                                           fontWeight:
                                                               FontWeight.w800,
                                                           fontSize:
@@ -513,7 +515,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                                         const SizedBox(height: 10),
                                         Text(review['comment'] ?? "",
                                             style: TextStyle(
-                                                color: Colors.white
+                                                color: AppPalette.text
                                                     .withValues(alpha: 0.85),
                                                 fontSize:
                                                     isSmallScreen ? 13 : 14,
@@ -567,7 +569,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
               BoxShadow(
                   color: pureBlack.withValues(alpha: 0.6),
                   blurRadius: 16,
-                  offset: const Offset(0, 6)),
+                  offset: Offset(0, 6)),
             ],
           ),
           child: Column(
@@ -585,8 +587,8 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(value,
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: AppPalette.text,
                         fontSize: 26,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -0.5)),
@@ -594,7 +596,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
               const SizedBox(height: 4),
               Text(title,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: textGray,
                       fontSize: 12,
                       fontWeight: FontWeight.w600)),
@@ -611,16 +613,16 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
       backgroundColor: pureBlack,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text("Usta Profili",
+        title: Text("Usta Profili",
             style: TextStyle(
                 fontWeight: FontWeight.w900,
-                color: Colors.white,
+                color: AppPalette.text,
                 fontSize: 18,
                 letterSpacing: -0.5)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(color: AppPalette.text),
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
           child: IconButton(
@@ -630,8 +632,8 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                   color: panelBlack.withValues(alpha: 0.8),
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white10)),
-              child: const Icon(Icons.arrow_back_ios_new_rounded,
-                  size: 14, color: Colors.white),
+              child: Icon(Icons.arrow_back_ios_new_rounded,
+                  size: 14, color: AppPalette.text),
             ),
             onPressed: () => Navigator.pop(context),
           ),
@@ -654,7 +656,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                         ? Icons.favorite_rounded
                         : Icons.favorite_border_rounded,
                     size: 16,
-                    color: _favorite ? Colors.redAccent : Colors.white,
+                    color: _favorite ? Colors.redAccent : AppPalette.text,
                   ),
                 ),
               ),
@@ -668,7 +670,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                     color: panelBlack.withValues(alpha: 0.8),
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white10)),
-                child: const Icon(Icons.refresh_rounded,
+                child: Icon(Icons.refresh_rounded,
                     size: 16, color: neonGreen),
               ),
               onPressed: _fetchProviderData,
@@ -683,7 +685,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
         ),
       ),
       body: isLoading
-          ? const Center(
+          ? Center(
               child:
                   CircularProgressIndicator(color: neonGreen, strokeWidth: 3))
           : hasError
@@ -715,7 +717,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                           backgroundColor: panelBlack,
                           onRefresh: _fetchProviderData,
                           child: SingleChildScrollView(
-                            physics: const AlwaysScrollableScrollPhysics(
+                            physics: AlwaysScrollableScrollPhysics(
                                 parent: BouncingScrollPhysics()),
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 16),
@@ -731,7 +733,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                                     const SizedBox(height: 32),
                                     SlideTransition(
                                       position: Tween<Offset>(
-                                              begin: const Offset(0, 0.2),
+                                              begin: Offset(0, 0.2),
                                               end: Offset.zero)
                                           .animate(CurvedAnimation(
                                               parent: _listAnimController,
@@ -794,7 +796,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                                     const SizedBox(height: 32),
                                     SlideTransition(
                                       position: Tween<Offset>(
-                                              begin: const Offset(0, 0.3),
+                                              begin: Offset(0, 0.3),
                                               end: Offset.zero)
                                           .animate(CurvedAnimation(
                                               parent: _listAnimController,
@@ -831,24 +833,24 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
               decoration: BoxDecoration(
                   color: Colors.redAccent.withValues(alpha: 0.1),
                   shape: BoxShape.circle),
-              child: const Icon(Icons.cloud_off_rounded,
+              child: Icon(Icons.cloud_off_rounded,
                   color: Colors.redAccent, size: 48),
             ),
             const SizedBox(height: 20),
-            const Text("Profil Verisi Alınamadı",
+            Text("Profil Verisi Alınamadı",
                 style: TextStyle(
-                    color: Colors.white,
+                    color: AppPalette.text,
                     fontSize: 20,
                     fontWeight: FontWeight.w900)),
             const SizedBox(height: 8),
-            const Text("Bağlantınızı kontrol edip tekrar deneyin.",
+            Text("Bağlantınızı kontrol edip tekrar deneyin.",
                 textAlign: TextAlign.center,
                 style: TextStyle(color: textGray, fontSize: 14)),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: _fetchProviderData,
-              icon: const Icon(Icons.refresh_rounded, color: pureBlack),
-              label: const Text("Tekrar Dene",
+              icon: Icon(Icons.refresh_rounded, color: pureBlack),
+              label: Text("Tekrar Dene",
                   style:
                       TextStyle(color: pureBlack, fontWeight: FontWeight.w900)),
               style: ElevatedButton.styleFrom(
@@ -880,17 +882,17 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
               width: double.infinity,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(28),
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   colors: [surfaceBlack, panelBlack],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+                border: Border.all(color: AppPalette.text.withValues(alpha: 0.06)),
                 boxShadow: [
                   BoxShadow(
                       color: pureBlack.withValues(alpha: 0.5),
                       blurRadius: 20,
-                      offset: const Offset(0, 8))
+                      offset: Offset(0, 8))
                 ],
               ),
               child: ClipRRect(
@@ -949,10 +951,10 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                 ? profile['name']
                 : 'Onaylı Sağlayıcı',
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w900,
-                color: Colors.white,
+                color: AppPalette.text,
                 letterSpacing: -0.5),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -972,7 +974,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (profile['verified'] == true) ...[
-                  const Icon(Icons.verified_rounded,
+                  Icon(Icons.verified_rounded,
                       color: neonGreen, size: 16),
                   const SizedBox(width: 6),
                 ],
@@ -981,7 +983,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                       ? 'DOĞRULANMIŞ • ${_getServiceTypeName(profile['service_category']).toUpperCase()}'
                       : _getServiceTypeName(profile['service_category'])
                           .toUpperCase(),
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: neonGreen,
                       fontWeight: FontWeight.w900,
                       fontSize: 12,
@@ -1027,11 +1029,11 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                         color: neonGreen,
                         borderRadius: BorderRadius.circular(8))),
                 const SizedBox(width: 10),
-                const Text("Son Yorumlar",
+                Text("Son Yorumlar",
                     style: TextStyle(
                         fontSize: 19,
                         fontWeight: FontWeight.w900,
-                        color: Colors.white,
+                        color: AppPalette.text,
                         letterSpacing: -0.5)),
               ],
             ),
@@ -1045,7 +1047,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text("Son Yorumları Gör",
+                child: Text("Son Yorumları Gör",
                     style:
                         TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
               )
@@ -1059,9 +1061,9 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
             decoration: BoxDecoration(
               color: panelBlack,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+              border: Border.all(color: AppPalette.text.withValues(alpha: 0.05)),
             ),
-            child: const Center(
+            child: Center(
                 child: Text("Henüz müşteri yorumu bulunmuyor.",
                     style: TextStyle(
                         color: textGray,
@@ -1071,9 +1073,9 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
         else
           ListView.separated(
             shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
+            physics: NeverScrollableScrollPhysics(),
             itemCount: reviews.length > 3 ? 3 : reviews.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (_, __) => SizedBox(height: 10),
             itemBuilder: (context, index) {
               final review = reviews[index];
               final double rScore =
@@ -1084,7 +1086,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                   color: panelBlack,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.05), width: 1.0),
+                      color: AppPalette.text.withValues(alpha: 0.05), width: 1.0),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1096,7 +1098,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                           child: Text(
                             review['customer_name'] ?? "Gizli Kullanıcı",
                             style: TextStyle(
-                                color: Colors.white,
+                                color: AppPalette.text,
                                 fontWeight: FontWeight.w800,
                                 fontSize: isSmallScreen ? 13 : 14),
                             overflow: TextOverflow.ellipsis,
@@ -1108,11 +1110,11 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                     const SizedBox(height: 8),
                     Text(review['comment'] ?? "",
                         style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.85),
+                            color: AppPalette.text.withValues(alpha: 0.85),
                             fontSize: isSmallScreen ? 12 : 13,
                             height: 1.4,
                             fontWeight: FontWeight.w500)),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Text(review['date'] ?? "",
                         style: TextStyle(
                             color: textGray.withValues(alpha: 0.7),

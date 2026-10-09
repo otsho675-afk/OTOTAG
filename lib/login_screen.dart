@@ -1229,8 +1229,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               onPressed:
                                   isLoggingIn || _socialBusy ? null : _login,
                               style: FilledButton.styleFrom(
-                                backgroundColor: AppConstants.primaryColor,
-                                foregroundColor: AppConstants.primaryInk,
+                                backgroundColor: Theme.of(context).colorScheme.primary,
+                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                 minimumSize: const Size.fromHeight(54),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),

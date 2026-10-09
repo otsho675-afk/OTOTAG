@@ -140,8 +140,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Future<void> _restoreAdminTheme() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      if (mounted) setState(() =>
-          _lightAdminTheme = prefs.getBool(_adminThemeKey) ?? false);
+      if (mounted) {
+        setState(() =>
+            _lightAdminTheme = prefs.getBool(_adminThemeKey) ?? false);
+      }
     } catch (_) {
       // Local persistence is optional; dark remains the default.
     }
@@ -154,9 +156,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_adminThemeKey, value);
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tema seçimi bu cihazda kaydedilemedi.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tema seçimi bu cihazda kaydedilemedi.')),
+        );
+      }
     }
   }
 

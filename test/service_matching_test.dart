@@ -145,6 +145,53 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
+
+  testWidgets('price estimates sort correctly and never masquerade as offers',
+      (tester) async {
+    final service = ServiceOfferService(
+      client: MockClient((_) async => response({
+        'status': 'success',
+        'job_status': 'searching',
+        'bids': [],
+        'provider_scan': {'eligible_count': 0, 'search_radius': 50},
+        'simulation_fallback': {
+          'points': [
+            {
+              'id': 'slow',
+              'suggested_price': 500,
+              'estimated_time': 24,
+              'distance_km': 4.0,
+            },
+            {
+              'id': 'fast',
+              'suggested_price': 900,
+              'estimated_time': 6,
+              'distance_km': 1.5,
+            },
+          ],
+        },
+      })),
+    );
+    await mount(tester, service, reduced: true, width: 390);
+    expect(find.text('Yakındaki ustalar aranıyor'), findsOneWidget);
+    expect(find.text('Bölgesel fiyat tahminleri'), findsOneWidget);
+    expect(find.textContaining('gerçek usta teklifleri değildir'), findsOneWidget);
+    expect(find.text('Bütçeni ayarla'), findsNWidgets(2));
+    expect(find.text('Teklifi seç'), findsNothing);
+    final cheapCard = find.byKey(const ValueKey('estimate-slow'));
+    final fastCard = find.byKey(const ValueKey('estimate-fast'));
+    expect(tester.getTopLeft(cheapCard).dy,
+        lessThan(tester.getTopLeft(fastCard).dy));
+    await tester.tap(find.byType(DropdownButton<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Varış süresine göre').last);
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(fastCard).dy,
+        lessThan(tester.getTopLeft(cheapCard).dy));
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('unanswered search closes once and returns customer to dashboard',
       (tester) async {
     var expiryPosts = 0;

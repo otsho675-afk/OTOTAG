@@ -64,6 +64,10 @@ void main() {
         if (layoutError != null) {
           // ignore: avoid_print
           print('DETAIL LAYOUT: $layoutError');
+          if (layoutError is FlutterError) {
+            // ignore: avoid_print
+            print('DETAIL CAUSE: ${layoutError.toStringDeep()}');
+          }
         }
         expect(layoutError, isNull);
         await tester.tap(find.text('Araçlar').first);

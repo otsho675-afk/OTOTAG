@@ -33,15 +33,19 @@ void main() {
       theme: appLightTheme(),
       home: const Scaffold(body: Center(child: OtoTagBrandLogo(width: 100))),
     ));
+    await tester.pumpAndSettle();
     final light = tester.widget<Image>(find.byType(Image).first);
     expect((light.image as AssetImage).assetName,
         OtoTagBrandLogo.lightAsset);
     expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(MaterialApp(
-      theme: appTheme(),
+      theme: appLightTheme(),
+      darkTheme: appTheme(),
+      themeMode: ThemeMode.dark,
       home: const Scaffold(body: Center(child: OtoTagBrandLogo(width: 100))),
     ));
+    await tester.pumpAndSettle();
     final dark = tester.widget<Image>(find.byType(Image).first);
     expect((dark.image as AssetImage).assetName, OtoTagBrandLogo.darkAsset);
   });

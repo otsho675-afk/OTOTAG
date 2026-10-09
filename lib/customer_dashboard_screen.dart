@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_motion.dart';
 import 'core/theme/premium_surfaces.dart';
+import 'widgets/app_theme_toggle_button.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -3482,7 +3483,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
     return NavigationBar(
       selectedIndex: _navIndex,
       onDestinationSelected: _handleBottomNavigation,
-      backgroundColor: const Color(0xFF090B0E),
+      backgroundColor: Theme.of(context).brightness == Brightness.light ? Colors.white : const Color(0xFF090B0E),
       indicatorColor: _primaryColor.withValues(alpha: .14),
       height: 70,
       labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
@@ -3533,7 +3534,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
       child: Focus(
         autofocus: true,
         child: Scaffold(
-          backgroundColor: _bgColor,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           extendBodyBehindAppBar: false,
           appBar: AppBar(
             automaticallyImplyLeading: false,
@@ -3542,10 +3543,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
               height: 28,
               fit: BoxFit.contain,
             ),
-            backgroundColor: _bgColor.withValues(alpha: .94),
+            backgroundColor: Theme.of(context).brightness == Brightness.light ? Colors.white : _bgColor.withValues(alpha: .94),
             elevation: 0,
             centerTitle: true,
             actions: [
+              const AppThemeToggleButton(),
               Stack(
                 alignment: Alignment.center,
                 children: [
@@ -3554,7 +3556,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                     onPressed: _showNotificationsDialog,
                     icon: Icon(
                       Icons.notifications_none_rounded,
-                      color: unreadCount > 0 ? _primaryColor : Colors.white70,
+                      color: unreadCount > 0 ? _primaryColor : Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   if (unreadCount > 0)
@@ -3585,7 +3587,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
               IconButton(
                 tooltip: 'Çıkış yap',
                 onPressed: _confirmLogout,
-                icon: const Icon(Icons.logout_rounded, color: Colors.white70),
+                icon: Icon(Icons.logout_rounded, color: Theme.of(context).colorScheme.onSurface),
               ),
               const SizedBox(width: 6),
             ],
@@ -3622,7 +3624,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                         child: LayoutBuilder(builder: (context, constraints) {
                           return RefreshIndicator(
                             color: _primaryColor,
-                            backgroundColor: _cardColor,
+                            backgroundColor: Theme.of(context).colorScheme.surface,
                             onRefresh: _fetchAllDataConcurrently,
                             child: SingleChildScrollView(
                               controller: _dashboardScrollController,

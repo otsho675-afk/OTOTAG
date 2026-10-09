@@ -11,6 +11,7 @@ import 'widgets/rental_market_style.dart';
 import 'widgets/rental_listing_editor.dart';
 import 'widgets/rental_account_menu.dart';
 import 'widgets/app_theme_toggle_button.dart';
+import 'widgets/ototag_brand_logo.dart';
 import 'chat_screen.dart';
 import 'rentacar_owner_profile_screen.dart';
 import 'business_subscription_screen.dart';
@@ -745,7 +746,7 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                       title: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Image.asset('assets/images/logo.png', height: 24),
+                            const OtoTagBrandLogo(height: 26),
                             SizedBox(width: 9),
                             Flexible(
                               child: Column(

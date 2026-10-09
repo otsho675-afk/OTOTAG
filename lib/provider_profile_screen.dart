@@ -162,7 +162,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
           .replace(queryParameters: {'action': 'toggle_favorite_provider'});
       final response = await _authClient.post(uri,
           body: {'provider_id': widget.providerId.toString()}).timeout(
-        const Duration(seconds: 10),
+        Duration(seconds: 10),
       );
       final data = jsonDecode(utf8.decode(response.bodyBytes));
       if (response.statusCode == 200 &&
@@ -273,9 +273,9 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
         border: Border.all(color: Colors.white10),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(icon, size: 15, color: neonGreen),
-        const SizedBox(width: 6),
-        const Text(text,
+        Icon(icon, size: 15, color: neonGreen),
+        SizedBox(width: 6),
+        Text(text,
             style: TextStyle(
                 color: AppPalette.muted,
                 fontSize: 11,
@@ -336,7 +336,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                               decoration: BoxDecoration(
                                   color: AppPalette.border,
                                   borderRadius: BorderRadius.circular(10)))),
-                      const SizedBox(height: 18),
+                      SizedBox(height: 18),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -350,8 +350,8 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                                 child: Icon(Icons.rate_review_rounded,
                                     color: neonGreen, size: 22),
                               ),
-                              const SizedBox(width: isSmallScreen ? 8 : 12),
-                              const Text("Müşteri Değerlendirmeleri",
+                              SizedBox(width: isSmallScreen ? 8 : 12),
+                              Text("Müşteri Değerlendirmeleri",
                                   style: TextStyle(
                                       color: AppPalette.text,
                                       fontSize: isSmallScreen ? 17 : 20,
@@ -372,7 +372,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                           )
                         ],
                       ),
-                      const SizedBox(height: 12),
+                      SizedBox(height: 12),
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 12),
@@ -387,16 +387,16 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.star_rounded,
+                                Icon(Icons.star_rounded,
                                     color: goldAccent, size: 24),
-                                const SizedBox(width: 8),
-                                const Text(providerRating.toStringAsFixed(1),
+                                SizedBox(width: 8),
+                                Text(providerRating.toStringAsFixed(1),
                                     style: TextStyle(
                                         color: AppPalette.text,
                                         fontWeight: FontWeight.w900,
                                         fontSize: 18)),
-                                const SizedBox(width: 6),
-                                const Text("/ 5.0",
+                                SizedBox(width: 6),
+                                Text("/ 5.0",
                                     style: TextStyle(
                                         color: textGray.withValues(alpha: 0.8),
                                         fontWeight: FontWeight.w600,
@@ -411,7 +411,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                           ],
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      SizedBox(height: 20),
                       Expanded(
                         child: reviews.isEmpty
                             ? Center(
@@ -421,7 +421,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                                     Icon(Icons.speaker_notes_off_rounded,
                                         size: 48,
                                         color: textGray.withValues(alpha: 0.4)),
-                                    const SizedBox(height: 12),
+                                    SizedBox(height: 12),
                                     Text(
                                         "Henüz müşteri yorumu bulunmuyor.",
                                         style: TextStyle(
@@ -437,7 +437,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                                 physics: BouncingScrollPhysics(),
                                 itemCount: reviews.length,
                                 separatorBuilder: (_, __) =>
-                                    const SizedBox(height: 12),
+                                    SizedBox(height: 12),
                                 itemBuilder: (context, index) {
                                   final review = reviews[index];
                                   final double rScore = double.tryParse(
@@ -488,7 +488,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                                                               FontWeight.w900),
                                                     ),
                                                   ),
-                                                  const SizedBox(width: 8),
+                                                  SizedBox(width: 8),
                                                   Expanded(
                                                     child: Text(
                                                       review['customer_name'] ??
@@ -512,7 +512,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                                                 size: isSmallScreen ? 14 : 16),
                                           ],
                                         ),
-                                        const SizedBox(height: 10),
+                                        SizedBox(height: 10),
                                         Text(review['comment'] ?? "",
                                             style: TextStyle(
                                                 color: AppPalette.text
@@ -521,7 +521,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                                                     isSmallScreen ? 13 : 14,
                                                 height: 1.4,
                                                 fontWeight: FontWeight.w500)),
-                                        const SizedBox(height: 10),
+                                        SizedBox(height: 10),
                                         Text(review['date'] ?? "",
                                             style: TextStyle(
                                                 color: textGray.withValues(
@@ -583,7 +583,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                 ),
                 child: Icon(icon, color: color, size: 24),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(value,
@@ -593,7 +593,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                         fontWeight: FontWeight.w900,
                         letterSpacing: -0.5)),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: 4),
               Text(title,
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -724,13 +724,13 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                             child: Center(
                               child: ConstrainedBox(
                                 constraints:
-                                    const BoxConstraints(maxWidth: 750),
+                                    BoxConstraints(maxWidth: 750),
                                 child: Column(
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
                                   children: [
                                     _buildProfileHeader(isSmallScreen),
-                                    const SizedBox(height: 32),
+                                    SizedBox(height: 32),
                                     SlideTransition(
                                       position: Tween<Offset>(
                                               begin: Offset(0, 0.2),
@@ -750,7 +750,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                                                         Icons.handyman_rounded,
                                                     color: neonGreen,
                                                   ),
-                                                  const SizedBox(height: 12),
+                                                  SizedBox(height: 12),
                                                   _buildStatCard(
                                                     title:
                                                         "Müşteri Puanı (İncele)",
@@ -774,7 +774,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                                                       color: neonGreen,
                                                     ),
                                                   ),
-                                                  const SizedBox(width: 14),
+                                                  SizedBox(width: 14),
                                                   Expanded(
                                                     child: _buildStatCard(
                                                       title:
@@ -791,9 +791,9 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                                               ),
                                       ),
                                     ),
-                                    const SizedBox(height: 18),
+                                    SizedBox(height: 18),
                                     _buildPerformanceMeta(),
-                                    const SizedBox(height: 32),
+                                    SizedBox(height: 32),
                                     SlideTransition(
                                       position: Tween<Offset>(
                                               begin: Offset(0, 0.3),
@@ -807,7 +807,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                                             _buildReviewsSection(isSmallScreen),
                                       ),
                                     ),
-                                    const SizedBox(height: 24),
+                                    SizedBox(height: 24),
                                   ],
                                 ),
                               ),
@@ -836,17 +836,17 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
               child: Icon(Icons.cloud_off_rounded,
                   color: Colors.redAccent, size: 48),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             Text("Profil Verisi Alınamadı",
                 style: TextStyle(
                     color: AppPalette.text,
                     fontSize: 20,
                     fontWeight: FontWeight.w900)),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text("Bağlantınızı kontrol edip tekrar deneyin.",
                 textAlign: TextAlign.center,
                 style: TextStyle(color: textGray, fontSize: 14)),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: _fetchProviderData,
               icon: Icon(Icons.refresh_rounded, color: pureBlack),
@@ -943,7 +943,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
             ),
           ],
         ),
-        const SizedBox(height: 48),
+        SizedBox(height: 48),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
@@ -960,7 +960,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         Center(
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -976,7 +976,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                 if (profile['verified'] == true) ...[
                   Icon(Icons.verified_rounded,
                       color: neonGreen, size: 16),
-                  const SizedBox(width: 6),
+                  SizedBox(width: 6),
                 ],
                 Text(
                   profile['verified'] == true
@@ -1028,7 +1028,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                     decoration: BoxDecoration(
                         color: neonGreen,
                         borderRadius: BorderRadius.circular(8))),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Text("Son Yorumlar",
                     style: TextStyle(
                         fontSize: 19,
@@ -1053,7 +1053,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
               )
           ],
         ),
-        const SizedBox(height: 14),
+        SizedBox(height: 14),
         if (reviews.isEmpty)
           Container(
             width: double.infinity,
@@ -1107,7 +1107,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen>
                         _buildStarRating(rScore, size: isSmallScreen ? 13 : 15),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Text(review['comment'] ?? "",
                         style: TextStyle(
                             color: AppPalette.text.withValues(alpha: 0.85),

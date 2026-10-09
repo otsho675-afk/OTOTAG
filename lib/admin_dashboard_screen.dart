@@ -19,6 +19,7 @@ import 'services/app_session.dart';
 import 'widgets/admin_command_palette.dart';
 import 'widgets/admin_overview_panel.dart';
 import 'widgets/admin_members_panel.dart';
+import 'widgets/admin_settings_panel.dart';
 import 'growth_analytics_screen.dart';
 import 'admin_user_detail_screen.dart';
 
@@ -69,7 +70,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     2: ['get_all_users'],
     3: ['admin_dashboard', 'get_part_listings'],
     4: ['get_tickets'],
-    6: [],
+    6: ['get_all_users'],
   };
   static const _requestLabels = <String, String>{
     'admin_dashboard': 'Sistem özeti', 'get_all_users': 'Üyeler',
@@ -89,6 +90,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool _partsLoading = false;
   int _partsGeneration = 0;
   Timer? _partSearchDebounce;
+  Timer? _settingsRefreshTimer;
   String? _partsError;
 
   List<dynamic> allPurchases = [];
@@ -123,6 +125,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void initState() {
     super.initState();
     _fetchAllData();
+    _settingsRefreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      if (mounted && _selectedIndex == 6 && !_refreshing &&
+          !_pendingReads.containsKey('get_all_users')) {
+        unawaited(_fetchAllUsers());
+      }
+    });
   }
 
   Future<Map<String, dynamic>> _readAdminData(String action) =>
@@ -267,6 +275,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   void dispose() {
     _partSearchDebounce?.cancel();
+    _settingsRefreshTimer?.cancel();
     _userSearchCtrl.dispose();
     _jobSearchCtrl.dispose();
     _ticketSearchCtrl.dispose();
@@ -4272,162 +4281,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildSettingsTab(Color cardColor, bool isDark) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-      physics: const AlwaysScrollableScrollPhysics(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text("Yönetim merkezi",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
-          const Text(
-              "Hesapları, işlemleri ve destek taleplerini bölüm menüsünden yönetin. Sistem araçları aşağıda."),
-          const SizedBox(height: 16),
-          Material(
-              color: cardColor,
-              borderRadius: BorderRadius.circular(20),
-              clipBehavior: Clip.antiAlias,
-              child: Column(children: [
-                ListTile(
-                    leading: const Icon(Icons.system_update_rounded),
-                    title: const Text('Android ve iPhone güncellemeleri'),
-                    subtitle: const Text(
-                        'Sürüm yayımla, bildirim gönder, duyuruyu geri çek'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _selectSection(5)),
-                const Divider(height: 1),
-                ListTile(
-                    leading: const Icon(Icons.car_rental_rounded),
-                    title: const Text('Kiralama canlı takip'),
-                    subtitle: const Text(
-                        'Firmalar, rezervasyonlar, ödemeler ve olay geçmişi'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const AdminRentalMonitorScreen()))),
-              ])),
-          const SizedBox(height: 24),
-          const Text("Yönetim İşlemleri",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 12),
-          Material(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(20),
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              children: [
-                ListTile(
-                  onTap: () => unawaited(_runCommand('ads')),
-                  leading:
-                      const Icon(Icons.campaign_rounded, color: Colors.purple),
-                  title: const Text("Reklam (Banner) Yönetimi",
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  trailing:
-                      const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  onTap: () => unawaited(_runCommand('purchases')),
-                  leading: const Icon(Icons.workspace_premium_rounded,
-                      color: Colors.orange),
-                  title: const Text("Premium ve Satın Alım Takibi",
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  trailing:
-                      const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  onTap: () => _showFeedbacksModal(context, isDark),
-                  leading:
-                      const Icon(Icons.feedback_rounded, color: Colors.amber),
-                  title: const Text("Kullanıcı Geri Bildirimleri",
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  trailing:
-                      const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  onTap: () => unawaited(_runCommand('analytics')),
-                  leading:
-                      const Icon(Icons.analytics_rounded, color: Colors.teal),
-                  title: const Text("Kullanıcı Davranış & Darboğaz Analizi",
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  subtitle: const Text(
-                      "En çok basılan butonlar, bekleme süreleri ve sorunlar",
-                      style: TextStyle(fontSize: 11, color: Colors.grey)),
-                  trailing:
-                      const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const GrowthAnalyticsScreen())),
-                  leading: const Icon(Icons.insights_rounded,
-                      color: AppConstants.primaryColor),
-                  title: const Text("Büyüme & Dönüşüm Analizi",
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  subtitle: const Text(
-                      "Yeni üye, tamamlanan iş, iptal, şehir ve davet dönüşümü",
-                      style: TextStyle(fontSize: 11, color: Colors.grey)),
-                  trailing:
-                      const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  onTap: _changeAdminPassword,
-                  leading: const Icon(Icons.lock_reset_rounded),
-                  title: const Text("Admin Şifresi Değiştir",
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  trailing:
-                      const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  onTap: _backupDatabase,
-                  leading: const Icon(Icons.backup_rounded),
-                  title: const Text("Veritabanı Yedeği Al",
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  trailing:
-                      const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  onTap: _optimizeSystem,
-                  leading: const Icon(Icons.cleaning_services_rounded,
-                      color: Colors.green),
-                  title: const Text("Sistemi ve Dosyaları Optimize Et",
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  trailing:
-                      const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  onTap: _logout,
-                  leading:
-                      const Icon(Icons.logout_rounded, color: Colors.redAccent),
-                  title: const Text("Güvenli Çıkış Yap",
-                      style: TextStyle(
-                          color: Colors.redAccent,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14)),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return AdminSettingsPanel(
+      users: allUsers.whereType<Map>()
+          .map((user) => Map<String, dynamic>.from(user)).toList(),
+      loaded: _loadedActions.contains('get_all_users'),
+      loading: _loadingSections.contains(6) ||
+          _pendingReads.containsKey('get_all_users'),
+      updatedAt: _updatedAt['get_all_users'],
+      error: _loadErrors['get_all_users'],
+      onRefresh: () => unawaited(_loadSection(6, force: true)),
+      onOpenUser: (user) => _showUserDetailsModal(user, cardColor, isDark),
+      onMembers: () => _selectSection(2),
+      onUpdates: () => _selectSection(5),
+      onRental: () => unawaited(Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const AdminRentalMonitorScreen()))),
+      onAds: () => unawaited(_runCommand('ads')),
+      onPurchases: () => unawaited(_runCommand('purchases')),
+      onFeedback: () => _showFeedbacksModal(context, isDark),
+      onTelemetry: () => unawaited(_runCommand('analytics')),
+      onGrowth: () => unawaited(Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const GrowthAnalyticsScreen()))),
+      onPassword: _changeAdminPassword,
+      onBackup: _backupDatabase,
+      onOptimize: _optimizeSystem,
+      onLogout: _logout,
     );
   }
 

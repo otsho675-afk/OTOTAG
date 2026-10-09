@@ -8,6 +8,7 @@ import 'widgets/rental_bid_card.dart';
 import 'widgets/rental_market_style.dart';
 import 'widgets/rental_listing_editor.dart';
 import 'widgets/rental_account_menu.dart';
+import 'widgets/app_theme_toggle_button.dart';
 import 'chat_screen.dart';
 import 'rentacar_owner_profile_screen.dart';
 import 'business_subscription_screen.dart';
@@ -275,7 +276,7 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
       await showDialog<bool>(
           context: context,
           builder: (ctx) => Theme(
-              data: rentalTheme(),
+              data: Theme.of(context),
               child: AlertDialog(
                   title: Text(title),
                   content: Text(text),
@@ -770,12 +771,13 @@ class _RentACarPanelScreenState extends State<RentACarPanelScreen>
                             ),
                           ],
                         ),
-                      backgroundColor: AppConstants.bgColor,
+                      backgroundColor: Theme.of(context).colorScheme.surface,
                       surfaceTintColor: Colors.transparent,
                       foregroundColor: Colors.white,
                       automaticallyImplyLeading: false,
                       actions: [
-                        IconButton(
+                        const AppThemeToggleButton(),
+                         IconButton(
                             tooltip: 'Arkadaşını davet et',
                             onPressed: _busy
                                 ? null

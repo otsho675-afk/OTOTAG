@@ -3816,15 +3816,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           trailing: isUserSelectionMode ? null : Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              IconButton(
+                              if (MediaQuery.sizeOf(context).width >= 680) IconButton(
                                 icon: const Icon(Icons.notifications_active, color: Colors.orange, size: 18),
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
                                 tooltip: "Bildirim Gönder",
                                 onPressed: () => _showNotificationDialog(userId: userId, userName: user['name']?.toString() ?? 'Kullanıcı'),
                               ),
-                              const SizedBox(width: 8),
-                              if (!isCustomer)
+                              if (MediaQuery.sizeOf(context).width >= 680) const SizedBox(width: 8),
+                               if (!isCustomer && MediaQuery.sizeOf(context).width >= 680)
                                 IconButton(
                                   icon: const Icon(Icons.folder_shared, color: Colors.blueGrey, size: 18),
                                   padding: EdgeInsets.zero,
@@ -3836,7 +3836,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 padding: EdgeInsets.zero,
                                 icon: const Icon(Icons.more_vert_rounded, color: Colors.grey, size: 20),
                                 onSelected: (value) {
-                                  if (value == 'delete') {
+                                  if (value == 'details') {
+                                     _showUserDetailsModal(Map<String,dynamic>.from(user), cardColor, isDark);
+                                   } else if (value == 'notify') {
+                                     _showNotificationDialog(userId: userId, userName: user['name']?.toString() ?? 'Kullanıcı');
+                                   } else if (value == 'docs') {
+                                     _showUserDocumentsDialog(Map<String,dynamic>.from(user));
+                                   } else if (value == 'delete') {
                                     _deleteUser(userId, user['name']?.toString() ?? 'Kullanıcı');
                                   } else if (value == 'punish') {
                                     _showPunishmentDialog(userId, user['name']?.toString() ?? 'Kullanıcı', !isCustomer);
@@ -3849,6 +3855,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                   }
                                 },
                                 itemBuilder: (context) => <PopupMenuEntry<String>>[
+                                   const PopupMenuItem<String>(value:'details',child:Text('Detaylar / Araçlar / Hareketler')),
+                                   if (MediaQuery.sizeOf(context).width < 680)
+                                     const PopupMenuItem<String>(value:'notify',child:Text('Bildirim gönder')),
+                                   if (!isCustomer && MediaQuery.sizeOf(context).width < 680)
+                                     const PopupMenuItem<String>(value:'docs',child:Text('Belgeler')),
                                   if (!isCustomer)
                                     const PopupMenuItem<String>(
                                       value: 'reviews',

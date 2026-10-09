@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'admin_command_palette.dart';
+import '../core/constants/app_constants.dart';
 
 class AdminOverviewPanel extends StatelessWidget {
   const AdminOverviewPanel({
@@ -39,17 +40,14 @@ class AdminOverviewPanel extends StatelessWidget {
     final theme = Theme.of(context);
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+      padding: const EdgeInsets.fromLTRB(14, 16, 14, 40),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1320),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Yönetim merkezi', style: theme.textTheme.headlineSmall),
-            const SizedBox(height: 6),
-            Text(
-                'Başvuruları inceleyin, destek taleplerini çözün ve sistemi yönetin.',
-                style: theme.textTheme.bodyMedium),
+            _hero(context, pendingCount: pending.length,
+                openCount: open.length),
             const SizedBox(height: 24),
             LayoutBuilder(builder: (context, constraints) {
               final columns = constraints.maxWidth >= 1000
@@ -237,10 +235,137 @@ class AdminOverviewPanel extends StatelessWidget {
     );
   }
 
+  Widget _hero(BuildContext context,
+      {required int pendingCount, required int openCount}) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF0A1510),
+            Color(0xFF152B20),
+            Color(0xFF0A1510),
+          ],
+        ),
+        border: Border.all(
+            color: AppConstants.primaryColor.withValues(alpha: .22)),
+      ),
+      padding: const EdgeInsets.all(20),
+      child: LayoutBuilder(builder: (context, bounds) {
+        final wide = bounds.maxWidth >= 680;
+        final introduction = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.admin_panel_settings_rounded,
+                  color: AppConstants.primaryColor, size: 18),
+              SizedBox(width: 8),
+              Text('OTO TAG / KONTROL MERKEZİ',
+                  style: TextStyle(
+                    color: AppConstants.primaryColor,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1,
+                    fontSize: 10,
+                  )),
+            ]),
+            const SizedBox(height: 12),
+            const Text('Her şey kontrolünüzde.',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -.6,
+                  fontSize: 25,
+                )),
+            const SizedBox(height: 6),
+            const Text(
+              'Üyeleri, başvuruları ve servis işlemlerini tek merkezden yönetin.',
+              style: TextStyle(color: Color(0xFFB9CAC0), fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            Wrap(spacing: 9, runSpacing: 8, children: [
+              _heroAction(
+                icon: Icons.verified_user_outlined,
+                label: 'Başvurular',
+                count: dashboardReady ? '$pendingCount' : '—',
+                onTap: () => onCommand('section:1'),
+              ),
+              _heroAction(
+                icon: Icons.support_agent_outlined,
+                label: 'Açık destek',
+                count: ticketsReady ? '$openCount' : '—',
+                onTap: () => onCommand('section:4'),
+              ),
+            ]),
+          ],
+        );
+        if (!wide) return introduction;
+        return Row(children: [
+          Expanded(child: introduction),
+          const SizedBox(width: 24),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 190),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                FilledButton.icon(
+                  onPressed: () => onCommand('section:2'),
+                  icon: const Icon(Icons.groups_rounded),
+                  label: const Text('Üyeleri yönet'),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () => onCommand('analytics'),
+                  style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white),
+                  icon: const Icon(Icons.insights_rounded),
+                  label: const Text('Analizler'),
+                ),
+              ],
+            ),
+          ),
+        ]);
+      }),
+    );
+  }
+
+  Widget _heroAction({
+    required IconData icon,
+    required String label,
+    required String count,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.white.withValues(alpha: .08),
+      borderRadius: BorderRadius.circular(11),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(11),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(icon, color: AppConstants.primaryColor, size: 17),
+            const SizedBox(width: 7),
+            Text(label,
+                style: const TextStyle(color: Colors.white, fontSize: 12)),
+            const SizedBox(width: 7),
+            Text(count,
+                style: const TextStyle(
+                    color: AppConstants.primaryColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900)),
+          ]),
+        ),
+      ),
+    );
+  }
+
   Widget _surface(BuildContext context, Widget child) => Material(
       color: Theme.of(context).colorScheme.surfaceContainerLow,
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           side: BorderSide(
               color: Theme.of(context)
                   .colorScheme
@@ -261,37 +386,69 @@ class AdminOverviewPanel extends StatelessWidget {
         if (action != null) TextButton(onPressed: onTap, child: Text(action)),
       ]);
 
-  Widget _metric(BuildContext context, double width, String label, String value,
-          String description, IconData icon, VoidCallback onTap) =>
-      SizedBox(
-          width: width,
-          child: _surface(
-              context,
-              InkWell(
-                  onTap: onTap,
-                  child: Padding(
-                      padding: const EdgeInsets.all(18),
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(children: [
-                              Expanded(
-                                  child: Text(label,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleSmall)),
-                              Icon(icon,
-                                  color: Theme.of(context).colorScheme.primary,
-                                  size: 22)
-                            ]),
-                            const SizedBox(height: 12),
-                            Text(value,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineSmall
-                                    ?.copyWith(fontWeight: FontWeight.w700)),
-                            const SizedBox(height: 6),
-                            Text(description,
-                                style: Theme.of(context).textTheme.bodySmall),
-                          ])))));
+  Widget _metric(BuildContext context, double width, String label,
+      String value, String description, IconData icon, VoidCallback onTap) {
+    final scheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      width: width,
+      child: Material(
+        color: scheme.surfaceContainerLow,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: .65),
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(17),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Container(
+                    width: 35,
+                    height: 35,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(11),
+                      color: AppConstants.primaryColor.withValues(alpha: .12),
+                    ),
+                    child: Icon(icon,
+                        color: AppConstants.primaryDark, size: 19),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700)),
+                  ),
+                  Icon(Icons.arrow_outward_rounded,
+                      size: 15,
+                      color: scheme.onSurface.withValues(alpha: .45)),
+                ]),
+                const SizedBox(height: 14),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -.4),
+                ),
+                const SizedBox(height: 6),
+                Text(description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

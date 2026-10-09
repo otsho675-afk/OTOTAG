@@ -392,7 +392,7 @@ class AdminOverviewPanel extends StatelessWidget {
           )),
           const SizedBox(width: 9),
           Container(
-            width: 87, height: 96,
+            width: 90, height: 110,
             alignment: Alignment.center,
             padding: const EdgeInsets.all(9),
             decoration: BoxDecoration(
@@ -409,10 +409,14 @@ class AdminOverviewPanel extends StatelessWidget {
                     style: const TextStyle(color: _mint, fontSize: 26,
                         fontWeight: FontWeight.w900)),
                 const SizedBox(height: 2),
-                const Text('TOPLAM ÜYE',
+                const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('TOPLAM ÜYE',
+                    maxLines: 1,
                     textAlign: TextAlign.center,
                     style: TextStyle(color: _muted, fontSize: 9,
                         fontWeight: FontWeight.w800)),
+                ),
               ]),
           ),
         ]),

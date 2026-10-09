@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import 'core/constants/app_constants.dart';
+import 'core/theme/app_palette.dart';
 import 'services/authenticated_http_client.dart';
 import 'reward_store_screen.dart';
 
@@ -55,7 +57,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
         'user_id': widget.userId.toString(),
       });
       final response =
-          await _client.get(uri).timeout(const Duration(seconds: 15));
+          await _client.get(uri).timeout(Duration(seconds: 15));
       final decoded = jsonDecode(utf8.decode(response.bodyBytes));
       if (decoded is! Map<String, dynamic> ||
           response.statusCode != 200 ||
@@ -82,7 +84,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
     await Clipboard.setData(ClipboardData(text: code));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Davet kodu kopyalandı.')));
+        SnackBar(content: Text('Davet kodu kopyalandı.')));
   }
 
   Future<void> _copyInviteText() async {
@@ -94,7 +96,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Davet mesajı kopyalandı.')));
+        SnackBar(content: Text('Davet mesajı kopyalandı.')));
   }
 
   int _int(dynamic value) => int.tryParse(value?.toString() ?? '') ?? 0;
@@ -113,17 +115,17 @@ class _ReferralScreenState extends State<ReferralScreen> {
         : <Map<String, dynamic>>[];
 
     return Scaffold(
-      backgroundColor: AppConstants.bgColor,
+      backgroundColor: AppPalette.page,
       appBar: AppBar(
-        title: const Text('Arkadaşını Davet Et'),
-        backgroundColor: AppConstants.bgColor,
-        foregroundColor: Colors.white,
+        title: Text('Arkadaşını Davet Et'),
+        backgroundColor: AppPalette.page,
+        foregroundColor: AppPalette.text,
         surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
               tooltip: 'Yenile',
               onPressed: _loading ? null : _load,
-              icon: const Icon(Icons.refresh_rounded))
+              icon: Icon(Icons.refresh_rounded))
         ],
       ),
       body: RefreshIndicator(
@@ -131,19 +133,19 @@ class _ReferralScreenState extends State<ReferralScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(18, 10, 18, 32),
           children: [
-            if (_loading) const LinearProgressIndicator(minHeight: 2),
+            if (_loading) LinearProgressIndicator(minHeight: 2),
             if (_error != null) ...[
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               _panel(
                 child: Column(children: [
-                  const Icon(Icons.cloud_off_rounded, size: 34),
-                  const SizedBox(height: 10),
+                  Icon(Icons.cloud_off_rounded, size: 34),
+                  SizedBox(height: 10),
                   Text(_error!, textAlign: TextAlign.center),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10),
                   FilledButton.icon(
                     onPressed: _load,
-                    icon: const Icon(Icons.refresh_rounded),
-                    label: const Text('Tekrar dene'),
+                    icon: Icon(Icons.refresh_rounded),
+                    label: Text('Tekrar dene'),
                   )
                 ]),
               ),
@@ -153,106 +155,106 @@ class _ReferralScreenState extends State<ReferralScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Arkadaşını getir, birlikte kazan',
+                    Text('Arkadaşını getir, birlikte kazan',
                         style: TextStyle(
-                            color: Colors.white,
+                            color: AppPalette.text,
                             fontSize: 22,
                             fontWeight: FontWeight.w900)),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Text(
                       'Arkadaşın ilk gerçek OTO TAG işlemini tamamladığında sen ${_int(data['inviter_reward'])} puan, arkadaşın ${_int(data['invited_reward'])} puan kazanır.',
-                      style: const TextStyle(
-                          color: Colors.white70, height: 1.5, fontSize: 13),
+                      style: TextStyle(
+                          color: AppPalette.muted, height: 1.5, fontSize: 13),
                     ),
-                    const SizedBox(height: 22),
-                    const Text('DAVET KODUN',
+                    SizedBox(height: 22),
+                    Text('DAVET KODUN',
                         style: TextStyle(
-                            color: AppConstants.primaryColor,
+                            color: AppPalette.accent,
                             fontSize: 11,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1.3)),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     SelectableText(
                       data['referral_code']?.toString() ?? '-',
-                      style: const TextStyle(
-                          color: Colors.white,
+                      style: TextStyle(
+                          color: AppPalette.text,
                           fontSize: 30,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 2),
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     Wrap(
                       spacing: 10,
                       runSpacing: 10,
                       children: [
                         FilledButton.icon(
                           onPressed: _copyCode,
-                          icon: const Icon(Icons.copy_rounded),
-                          label: const Text('Kodu Kopyala'),
+                          icon: Icon(Icons.copy_rounded),
+                          label: Text('Kodu Kopyala'),
                         ),
                         OutlinedButton.icon(
                           onPressed: _copyInviteText,
-                          icon: const Icon(Icons.ios_share_rounded),
-                          label: const Text('Davet Mesajını Kopyala'),
+                          icon: Icon(Icons.ios_share_rounded),
+                          label: Text('Davet Mesajını Kopyala'),
                         ),
                         OutlinedButton.icon(
                           onPressed: () => Navigator.push(
                               context,
                               MaterialPageRoute(
-                                  builder: (_) => const RewardStoreScreen())),
-                          icon: const Icon(Icons.redeem_rounded),
-                          label: const Text('Puan Mağazası'),
+                                  builder: (_) => RewardStoreScreen())),
+                          icon: Icon(Icons.redeem_rounded),
+                          label: Text('Puan Mağazası'),
                         ),
                       ],
                     )
                   ],
                 ),
               ),
-              const SizedBox(height: 14),
+              SizedBox(height: 14),
               Row(children: [
                 Expanded(
                     child: _statCard('Puanın', _int(data['reward_points']),
                         Icons.stars_rounded)),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Expanded(
                     child: _statCard('Davet', _int(stats['total']),
                         Icons.group_add_rounded)),
               ]),
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
               Row(children: [
                 Expanded(
                     child: _statCard('Tamamlanan', _int(stats['rewarded']),
                         Icons.verified_rounded)),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Expanded(
                     child: _statCard('Bekleyen', _int(stats['pending']),
                         Icons.schedule_rounded)),
               ]),
-              const SizedBox(height: 22),
-              const Text('Davetlerin',
+              SizedBox(height: 22),
+              Text('Davetlerin',
                   style: TextStyle(
-                      color: Colors.white,
+                      color: AppPalette.text,
                       fontSize: 18,
                       fontWeight: FontWeight.w800)),
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
               if (referrals.isEmpty)
                 _panel(
-                    child: const Padding(
+                    child: Padding(
                   padding: EdgeInsets.symmetric(vertical: 14),
                   child: Text(
                     'Henüz davetin yok. Kodunu arkadaşlarınla paylaşarak başlayabilirsin.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white70, height: 1.45),
+                    style: TextStyle(color: AppPalette.muted, height: 1.45),
                   ),
                 ))
               else
                 for (final item in referrals) _referralTile(item),
-              const SizedBox(height: 14),
-              const Text(
+              SizedBox(height: 14),
+              Text(
                 'Ödül, davet edilen hesap ilk gerçek ve tamamlanmış servis veya kiralama işlemine ulaştığında bir kez verilir. İptal edilen veya tahmini eşleşmeler ödül oluşturmaz.',
                 textAlign: TextAlign.center,
                 style:
-                    TextStyle(color: Colors.white54, fontSize: 11, height: 1.5),
+                    TextStyle(color: AppPalette.subtle, fontSize: 11, height: 1.5),
               ),
             ],
           ],
@@ -264,9 +266,9 @@ class _ReferralScreenState extends State<ReferralScreen> {
   Widget _panel({required Widget child}) => Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: AppConstants.cardColor,
+          color: AppPalette.surface,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: Colors.white.withValues(alpha: .08)),
+          border: Border.all(color: AppPalette.border),
         ),
         child: child,
       );
@@ -274,21 +276,21 @@ class _ReferralScreenState extends State<ReferralScreen> {
   Widget _statCard(String label, int value, IconData icon) => Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppConstants.cardColor,
+          color: AppPalette.surface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white.withValues(alpha: .07)),
+          border: Border.all(color: AppPalette.border),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, color: AppConstants.primaryColor, size: 21),
-          const SizedBox(height: 14),
+          Icon(icon, color: AppPalette.accent, size: 21),
+          SizedBox(height: 14),
           Text('$value',
-              style: const TextStyle(
-                  color: Colors.white,
+              style: TextStyle(
+                  color: AppPalette.text,
                   fontSize: 24,
                   fontWeight: FontWeight.w900)),
-          const SizedBox(height: 3),
+          SizedBox(height: 3),
           Text(label,
-              style: const TextStyle(color: Colors.white60, fontSize: 12)),
+              style: TextStyle(color: AppPalette.muted, fontSize: 12)),
         ]),
       );
 
@@ -304,10 +306,10 @@ class _ReferralScreenState extends State<ReferralScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 9),
       child: ListTile(
-        tileColor: AppConstants.cardColor,
+        tileColor: AppPalette.surface,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: Colors.white.withValues(alpha: .06))),
+            side: BorderSide(color: AppPalette.border)),
         leading: CircleAvatar(
           backgroundColor: AppConstants.primaryColor.withValues(alpha: .12),
           child: Icon(
@@ -316,17 +318,17 @@ class _ReferralScreenState extends State<ReferralScreen> {
                   : rejected
                       ? Icons.close_rounded
                       : Icons.hourglass_top_rounded,
-              color: AppConstants.primaryColor),
+              color: AppPalette.accent),
         ),
         title: Text(item['invited_name']?.toString() ?? 'OTO TAG kullanıcısı',
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.w700)),
+            style: TextStyle(
+                color: AppPalette.text, fontWeight: FontWeight.w700)),
         subtitle: Text(label,
-            style: const TextStyle(color: Colors.white60, fontSize: 12)),
+            style: TextStyle(color: AppPalette.muted, fontSize: 12)),
         trailing: rewarded
             ? Text('+${_int(item['inviter_points'])}',
-                style: const TextStyle(
-                    color: AppConstants.primaryColor,
+                style: TextStyle(
+                    color: AppPalette.accent,
                     fontWeight: FontWeight.w900))
             : null,
       ),

@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../core/constants/app_constants.dart';
@@ -38,7 +39,7 @@ class ProviderStatusHeader extends StatelessWidget {
               decoration: BoxDecoration(
                   color: AppPalette.accent.withValues(alpha: .12),
                   borderRadius: BorderRadius.circular(12)),
-              child: const Icon(Icons.engineering_outlined,
+              child: Icon(Icons.engineering_outlined,
                   color: AppPalette.accent)),
           const SizedBox(width: 12),
           Expanded(
@@ -76,7 +77,7 @@ class ProviderStatusHeader extends StatelessWidget {
                               color: Color(0xFFFF586B),
                             ),
                           )
-                        : const Icon(
+                        : Icon(
                             Icons.power_settings_new_rounded,
                             color: Color(0xFFFF586B),
                             size: 20,
@@ -97,18 +98,18 @@ class ProviderStatusHeader extends StatelessWidget {
         if (online) ...[
           const SizedBox(height: 12),
           Row(children: [
-            const Icon(Icons.near_me_outlined,
+            Icon(Icons.near_me_outlined,
                 size: 16, color: AppPalette.accent),
             const SizedBox(width: 6),
             Expanded(
                 child: Text(
                     '$jobCount uygun talep • ${radius.toStringAsFixed(0)} km alan',
-                    style: const TextStyle(
+                    style: TextStyle(
                         color: AppPalette.muted, fontSize: 12))),
             IconButton(
                 tooltip: 'Talepleri yenile',
                 onPressed: onRefresh,
-                icon: const Icon(Icons.refresh_rounded,
+                icon: Icon(Icons.refresh_rounded,
                     color: Colors.white, size: 20))
           ])
         ],
@@ -228,17 +229,17 @@ class ProviderOfflineDashboard extends StatelessWidget {
                                         color: Color(0xFFFF586B),
                                       ),
                                     )
-                                  : const Icon(
+                                  : Icon(
                                       Icons.power_settings_new_rounded,
                                       size: 18,
                                     ),
-                              label: const Text('Çıkış'),
+                              label: Text('Çıkış'),
                             ),
                           ),
                         ]),
                         const SizedBox(height: 8),
                         Text('$service • İşlerini buradan yönet',
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: AppPalette.muted)),
                         const SizedBox(height: 24),
                         IntrinsicHeight(
@@ -274,17 +275,17 @@ class ProviderOfflineDashboard extends StatelessWidget {
                             child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Icon(Icons.location_on_outlined,
+                                  Icon(Icons.location_on_outlined,
                                       color: AppPalette.accent,
                                       size: 36),
                                   const SizedBox(height: 16),
-                                  const Text('Hazır olduğunda çevrimiçi ol',
+                                  Text('Hazır olduğunda çevrimiçi ol',
                                       style: TextStyle(
-                                          color: Colors.white,
+                                          color: AppPalette.text,
                                           fontSize: 21,
                                           fontWeight: FontWeight.w700)),
                                   const SizedBox(height: 8),
-                                  const Text(
+                                  Text(
                                       'Konumuna ve hizmetine uygun talepleri gör. Fiyatını teklif et, anlaşınca müşteriye doğru yola çık.',
                                       style: TextStyle(
                                           color: AppPalette.muted,
@@ -297,21 +298,21 @@ class ProviderOfflineDashboard extends StatelessWidget {
                                           style: FilledButton.styleFrom(
                                               backgroundColor:
                                                   AppPalette.accent,
-                                              foregroundColor: Colors.black,
+                                              foregroundColor: AppPalette.accentText,
                                               minimumSize:
                                                   const Size.fromHeight(52)),
-                                          icon: const Icon(
+                                          icon: Icon(
                                               Icons.power_settings_new_rounded),
-                                          label: const Text('Çevrimiçi ol'))),
+                                          label: Text('Çevrimiçi ol'))),
                                 ])),
                         const SizedBox(height: 14),
                         OutlinedButton.icon(
                             onPressed: onHistory,
-                            icon: const Icon(Icons.history_rounded),
-                            label: const Text('Geçmiş işlerim')),
+                            icon: Icon(Icons.history_rounded),
+                            label: Text('Geçmiş işlerim')),
                         TextButton(
                             onPressed: onSubscription,
-                            child: const Text('Üyelik ve ödeme')),
+                            child: Text('Üyelik ve ödeme')),
                       ])))));
   Widget _stat(BuildContext context, IconData icon, String title, String value) => Container(
       padding: const EdgeInsets.all(16),
@@ -324,10 +325,10 @@ class ProviderOfflineDashboard extends StatelessWidget {
         const SizedBox(height: 14),
         Text(title,
             style:
-                const TextStyle(color: AppPalette.muted, fontSize: 12)),
+                TextStyle(color: AppPalette.muted, fontSize: 12)),
         const SizedBox(height: 4),
         Text(value,
-            style: const TextStyle(
+            style: TextStyle(
                 color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700))
       ]));
 }
@@ -356,13 +357,13 @@ class ProviderJobPreview extends StatelessWidget {
               child: Text(service,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: Colors.white,
                       fontSize: 17,
                       fontWeight: FontWeight.w700))),
           const SizedBox(width: 8),
           Text('$distance km',
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppPalette.accent, fontSize: 12))
         ]),
         const SizedBox(height: 6),
@@ -370,7 +371,7 @@ class ProviderJobPreview extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style:
-                const TextStyle(color: AppPalette.muted, fontSize: 12)),
+                TextStyle(color: AppPalette.muted, fontSize: 12)),
         const SizedBox(height: 6),
         Expanded(
             child: Text(
@@ -379,7 +380,7 @@ class ProviderJobPreview extends StatelessWidget {
                     : description,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppPalette.muted, height: 1.4))),
         const SizedBox(height: 8),
         SizedBox(
@@ -389,6 +390,6 @@ class ProviderJobPreview extends StatelessWidget {
                 style: FilledButton.styleFrom(
                     backgroundColor: AppPalette.accent,
                     foregroundColor: Colors.black),
-                child: const Text('Talebi incele ve teklif ver'))),
+                child: Text('Talebi incele ve teklif ver'))),
       ]));
 }

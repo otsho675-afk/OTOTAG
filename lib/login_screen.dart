@@ -1303,43 +1303,33 @@ class _LoginScreenState extends State<LoginScreen> {
                             ],
                           ),
                           const SizedBox(height: 14),
-                          Row(
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Expanded(
-                                child: kIsWeb
-                                    ? GoogleLoginButton(
-                                        clientId:
-                                            AppConstants.googleWebClientId,
-                                        enabled:
-                                            !isLoggingIn && !_socialBusy,
-                                        onSignedIn: _googleWebAccount,
-                                        onError: (message) =>
-                                            _showCustomSnackBar(
-                                          message,
-                                          isError: true,
-                                        ),
-                                      )
-                                    : OutlinedButton.icon(
-                                        onPressed:
-                                            isLoggingIn || _socialBusy
-                                                ? null
-                                                : _signInWithGoogle,
-                                        icon: const Icon(
-                                            Icons.g_mobiledata_rounded),
-                                        label: const Text('Google'),
-                                        style: _socialStyle(),
-                                      ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: OutlinedButton.icon(
+                              if (kIsWeb)
+                                GoogleLoginButton(
+                                  clientId: AppConstants.googleWebClientId,
+                                  enabled: !isLoggingIn && !_socialBusy,
+                                  onSignedIn: _googleWebAccount,
+                                  onError: (message) => _showCustomSnackBar(
+                                    message, isError: true,
+                                  ),
+                                )
+                              else
+                                OutlinedButton.icon(
                                   onPressed: isLoggingIn || _socialBusy
-                                      ? null
-                                      : _signInWithApple,
-                                  icon: const Icon(Icons.apple, size: 21),
-                                  label: const Text('Apple'),
+                                    ? null : _signInWithGoogle,
+                                  icon: const Icon(Icons.g_mobiledata_rounded),
+                                  label: const Text('Google ile devam et'),
                                   style: _socialStyle(),
                                 ),
+                              const SizedBox(height: 10),
+                              OutlinedButton.icon(
+                                onPressed: isLoggingIn || _socialBusy
+                                  ? null : _signInWithApple,
+                                icon: const Icon(Icons.apple, size: 21),
+                                label: const Text('Apple ile devam et'),
+                                style: _socialStyle(),
                               ),
                             ],
                           ),

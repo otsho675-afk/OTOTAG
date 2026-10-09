@@ -3,7 +3,7 @@ import 'core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'core/constants/app_constants.dart';
+
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key, required this.nextScreen});

@@ -198,7 +198,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18))),
       dividerTheme: const DividerThemeData(color: Color(0xFFD9E4DB)),
-      chipTheme: ChipThemeData(backgroundColor: const Color(0xFFF3F7F4),
+      chipTheme: const ChipThemeData(backgroundColor: Color(0xFFF3F7F4),
         selectedColor: const Color(0xFFD8F2E3),
         side: const BorderSide(color: Color(0xFFD9E4DB)),
         labelStyle: const TextStyle(color: ink)),

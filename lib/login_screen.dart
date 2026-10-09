@@ -587,15 +587,15 @@ class _LoginScreenState extends State<LoginScreen> {
     showDialog(
         context: context,
         barrierDismissible: false,
-        barrierColor: Colors.black.withValues(alpha: 0.85),
+        barrierColor: Colors.black.withValues(alpha: 0.55),
         builder: (dialogContext) {
           return BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
             child: AlertDialog(
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(32),
-                  side: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
-              backgroundColor: AppPalette.surface.withValues(alpha: 0.98),
+                  side: BorderSide(color: AppPalette.border)),
+              backgroundColor: AppPalette.surface,
               elevation: 24,
               insetPadding:
                   const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -616,19 +616,19 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: AppPalette.accent, size: 36),
                   ),
                   const SizedBox(height: 20),
-                  const Text("Arka Plan Konum İzni",
+                  Text("Arka Plan Konum İzni",
                       textAlign: TextAlign.center,
                       style: TextStyle(
                           fontWeight: FontWeight.w900,
-                          color: Colors.white,
+                          color: AppPalette.text,
                           fontSize: 22,
                           letterSpacing: -0.5)),
                 ],
               ),
-              content: const Text(
+              content: Text(
                 "Ototag, müşterilerin size ulaşabilmesi ve hizmete giderken canlı konumunuzu haritadan takip edebilmesi için, uygulama kapalıyken veya arka planda çalışırken bile konum verilerinizi toplar.",
                 style: TextStyle(
-                    color: Colors.white70,
+                    color: AppPalette.muted,
                     fontSize: 15,
                     height: 1.5,
                     fontWeight: FontWeight.w500),
@@ -655,9 +655,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(20))),
-                          child: const Text("Reddet",
+                          child: Text("Reddet",
                               style: TextStyle(
-                                  color: Colors.white54,
+                                  color: AppPalette.muted,
                                   fontWeight: FontWeight.w700,
                                   fontSize: 15))),
                     ),
@@ -667,9 +667,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: ElevatedButton.styleFrom(
                             backgroundColor: AppPalette.accent,
                             foregroundColor: AppPalette.accentText,
-                            elevation: 10,
+                            elevation: AppPalette.light ? 1 : 10,
                             shadowColor:
-                                AppPalette.accent.withValues(alpha: 0.5),
+                                AppPalette.accent.withValues(alpha: AppPalette.light ? .12 : .5),
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20))),

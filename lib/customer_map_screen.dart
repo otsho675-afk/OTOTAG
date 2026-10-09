@@ -7,6 +7,7 @@ import 'package:geocoding/geocoding.dart' as geocoding;
 import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_palette.dart';
+import 'widgets/ototag_brand_logo.dart';
 import 'services/google_maps_bootstrap.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
@@ -1463,18 +1464,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                       Expanded(
                                           child: Align(
                                               alignment: Alignment.centerLeft,
-                                              child: Image.asset(
-                                                'assets/images/logo.png',
-                                                height: 26,
-                                                fit: BoxFit.contain,
-                                                errorBuilder: (context, error,
-                                                        stackTrace) =>
-                                                    Icon(
-                                                        Icons
-                                                            .local_car_wash_rounded,
-                                                        color: neonGreen,
-                                                        size: 26),
-                                              ))),
+                                              child: OtoTagBrandLogo(height: 26))),
                                       GestureDetector(
                                         onTap: _showNotificationsDialog,
                                         child: Container(
@@ -1655,13 +1645,13 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                               color: panelBlack.withValues(alpha: 0.96),
                               borderRadius: BorderRadius.circular(36),
                               border: Border.all(
-                                color: neonGreen.withValues(alpha: 0.35),
-                                width: 1.5,
+                                color: AppPalette.light ? AppPalette.border : neonGreen.withValues(alpha: 0.35),
+width: 1.5,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                    color: pureBlack.withValues(alpha: 0.95),
-                                    blurRadius: 40,
+                                    color: AppPalette.shadow,
+blurRadius: 30,
                                     offset: Offset(0, 10)),
                               ],
                             ),
@@ -1773,17 +1763,12 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                     vertical:
                                                                         10),
                                                                 decoration: BoxDecoration(
-                                                                    color: neonGreen
-                                                                        .withValues(
-                                                                            alpha:
-                                                                                0.1),
-                                                                    borderRadius:
+                                                                    color: AppPalette.accentSoft,
+borderRadius:
                                                                         BorderRadius.circular(
                                                                             14),
                                                                     border: Border.all(
-                                                                        color: neonGreen.withValues(
-                                                                            alpha:
-                                                                                0.2))),
+                                                                        color: AppPalette.accentBorder)),
                                                                 child: Row(
                                                                   children: [
                                                                     Icon(
@@ -1853,20 +1838,20 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                           BoxDecoration(
                                                                         color: isSelected
                                                                             ? neonGreen.withValues(alpha: 0.18)
-                                                                            : pureBlack,
+                                                                            : AppPalette.surfaceAlt,
                                                                         borderRadius:
                                                                             BorderRadius.circular(22),
                                                                         border: Border.all(
                                                                             color: isSelected
                                                                                 ? neonGreen
-                                                                                : AppPalette.text.withValues(alpha: 0.08),
+                                                                                : AppPalette.border,
                                                                             width: 1.5),
                                                                         boxShadow: isSelected
                                                                             ? [
-                                                                                BoxShadow(color: neonGreen.withValues(alpha: 0.25), blurRadius: 18, spreadRadius: -2)
+                                                                                BoxShadow(color: neonGreen.withValues(alpha: AppPalette.light ? 0.10 : 0.25), blurRadius: 18, spreadRadius: -2)
                                                                               ]
                                                                             : [
-                                                                                BoxShadow(color: pureBlack.withValues(alpha: 0.5), blurRadius: 10, offset: Offset(0, 4))
+                                                                                BoxShadow(color: AppPalette.shadow, blurRadius: 10, offset: Offset(0, 4))
                                                                               ],
                                                                       ),
                                                                       child:
@@ -1909,11 +1894,8 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                               20),
                                                                   boxShadow: [
                                                                     BoxShadow(
-                                                                        color: pureBlack.withValues(
-                                                                            alpha:
-                                                                                0.4),
-                                                                        blurRadius:
-                                                                            15,
+                                                                        color: AppPalette.shadow,
+blurRadius: 15,
                                                                         offset: Offset(
                                                                             0,
                                                                             5))
@@ -1953,20 +1935,26 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                   });
                                                                 },
                                                                 style: TextStyle(
-                                                                    fontSize:
-                                                                        15,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w700,
-                                                                    color: Colors
-                                                                        .white,
-                                                                    letterSpacing:
-                                                                        0.5),
+  fontSize: 15,
+  fontWeight: FontWeight.w700,
+  color: AppPalette.text,
+  letterSpacing: 0.2,
+),
+cursorColor: neonGreen,
                                                                 decoration:
                                                                     InputDecoration(
-                                                                  labelText:
-                                                                      "Sorun Açıklaması Yazınız",
-                                                                  labelStyle: TextStyle(
+                                                                  labelText: "Sorun Açıklaması Yazınız",
+hintText: "Örn. Motor çalışmıyor, araç ses yapıyor...",
+hintStyle: TextStyle(
+  color: AppPalette.subtle,
+  fontSize: 13,
+  fontWeight: FontWeight.w500,
+),
+floatingLabelStyle: TextStyle(
+  color: neonGreen,
+  fontWeight: FontWeight.w800,
+),
+labelStyle: TextStyle(
                                                                       fontSize:
                                                                           13,
                                                                       color:
@@ -1992,10 +1980,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                           size:
                                                                               24)),
                                                                   filled: true,
-                                                                  fillColor: pureBlack
-                                                                      .withValues(
-                                                                          alpha:
-                                                                              0.85),
+                                                                  fillColor: AppPalette.field,
                                                                   counterStyle: TextStyle(
                                                                       color:
                                                                           neonGreen,
@@ -2016,10 +2001,8 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                           BorderRadius.circular(
                                                                               20),
                                                                       borderSide: BorderSide(
-                                                                          color: Colors
-                                                                              .white
-                                                                              .withValues(alpha: 0.1),
-                                                                          width: 1.5)),
+                                                                          color: AppPalette.border,
+width: 1.5)),
                                                                   focusedBorder: OutlineInputBorder(
                                                                       borderRadius:
                                                                           BorderRadius.circular(
@@ -2067,7 +2050,14 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                                     borderRadius: BorderRadius.circular(24),
                                                                                     color: neonGreen,
                                                                                     boxShadow: [
-                                                                                      BoxShadow(color: neonGreen.withValues(alpha: 0.35 + (_buttonPulseController.value * 0.35)), blurRadius: 28 + (_buttonPulseController.value * 12), spreadRadius: 2 + (_buttonPulseController.value * 5), offset: Offset(0, 8))
+                                                                                      BoxShadow(
+  color: neonGreen.withValues(alpha: AppPalette.light
+      ? 0.10 + (_buttonPulseController.value * 0.07)
+      : 0.25 + (_buttonPulseController.value * 0.20)),
+  blurRadius: 22 + (_buttonPulseController.value * 8),
+  spreadRadius: AppPalette.light ? 0 : 2 + (_buttonPulseController.value * 3),
+  offset: Offset(0, 6),
+)
                                                                                     ],
                                                                                   ),
                                                                                   child: ValueListenableBuilder<bool>(
@@ -2075,16 +2065,16 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                                       builder: (context, isMapMoving, child) {
                                                                                         return ElevatedButton(
                                                                                           onPressed: isCreatingJob ? null : _createJobRequest,
-                                                                                          style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 20), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
+                                                                                          style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, foregroundColor: AppPalette.accentText, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 20), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
                                                                                           child: isCreatingJob
-                                                                                              ? SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 3.5))
+                                                                                              ? SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: AppPalette.accentText, strokeWidth: 3.5))
                                                                                               : FittedBox(
                                                                                                   child: Row(
                                                                                                     mainAxisAlignment: MainAxisAlignment.center,
                                                                                                     children: [
-                                                                                                      Icon(Icons.cell_tower_rounded, color: pureBlack, size: 26),
+                                                                                                      Icon(Icons.cell_tower_rounded, color: AppPalette.accentText, size: 26),
                                                                                                       SizedBox(width: 10),
-                                                                                                      Text("USTA BUL", style: TextStyle(fontSize: 18, color: pureBlack, fontWeight: FontWeight.w900, letterSpacing: 1.5))
+                                                                                                      Text("USTA BUL", style: TextStyle(fontSize: 18, color: AppPalette.accentText, fontWeight: FontWeight.w900, letterSpacing: 1.5))
                                                                                                     ],
                                                                                                   ),
                                                                                                 ),

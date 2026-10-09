@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
+import 'core/theme/app_palette.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -59,7 +61,7 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
     _poller?.cancel();
     if (!mounted || !_foreground) return;
     _poller = Timer.periodic(
-        const Duration(seconds: 8), (_) => _refresh(silent: true));
+        Duration(seconds: 8), (_) => _refresh(silent: true));
   }
 
   @override
@@ -209,26 +211,26 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
       final cents = rentalCents('${car['daily_price']}');
       final budget = rentalCents(_appliedBudget);
       if (cents == null) {
-        throw const RentalException('Araç fiyatı geçerli değil.');
+        throw RentalException('Araç fiyatı geçerli değil.');
       }
       if (budget == null) {
-        throw const RentalException('Geçerli bir toplam bütçe girin.');
+        throw RentalException('Geçerli bir toplam bütçe girin.');
       }
       final confirmed = await showDialog<bool>(
           context: context,
           builder: (ctx) => Theme(
               data: rentalTheme(),
               child: AlertDialog(
-                  title: const Text('Firmaya teklif gönder'),
+                  title: Text('Firmaya teklif gönder'),
                   content: Text(
                       '${car['car_brand_model']}\nTeklifin: ${rentalPrice(budget)} ₺ / $days gün\nİlan toplamı: ${rentalPrice(cents * days)} ₺\n\nFirma kabul ederse mesajlaşabilir ve telefonla görüşebilirsiniz. Uygulama ödeme almaz.'),
                   actions: [
                     TextButton(
                         onPressed: () => Navigator.pop(ctx, false),
-                        child: const Text('Vazgeç')),
+                        child: Text('Vazgeç')),
                     FilledButton(
                         onPressed: () => Navigator.pop(ctx, true),
-                        child: const Text('Teklif gönder'))
+                        child: Text('Teklif gönder'))
                   ])));
       if (confirmed != true || !mounted) return;
       await _service.place(rentalId(car['id']), days,
@@ -258,17 +260,17 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
         final confirmed = await showDialog<bool>(
             context: context,
             builder: (ctx) => AlertDialog(
-                    title: const Text('Teklifi sil'),
+                    title: Text('Teklifi sil'),
                     content: Text(bid['status'] == 'pending'
                         ? 'Bekleyen teklifin iptal edilip listenden kaldırılacak. Devam edilsin mi?'
                         : 'Teklif listenden kaldırılacak. Tamamlanan kiralamanın geçmiş kaydı korunur.'),
                     actions: [
                       TextButton(
                           onPressed: () => Navigator.pop(ctx, false),
-                          child: const Text('Vazgeç')),
+                          child: Text('Vazgeç')),
                       FilledButton(
                           onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text('Teklifi sil'))
+                          child: Text('Teklifi sil'))
                     ]));
         if (confirmed != true || !mounted) return;
       }
@@ -298,8 +300,8 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
     final value = await showModalBottomSheet<String>(
         context: context,
         isScrollControlled: true,
-        backgroundColor: AppConstants.cardColor,
-        shape: const RoundedRectangleBorder(
+        backgroundColor: AppPalette.surface,
+        shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
         builder: (sheetContext) => Theme(
             data: rentalTheme(),
@@ -321,26 +323,26 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                                           color: rentalBorder,
                                           borderRadius:
                                               BorderRadius.circular(10)))),
-                              const SizedBox(height: 20),
-                              const Text('Toplam kiralama bütçen',
+                              SizedBox(height: 20),
+                              Text('Toplam kiralama bütçen',
                                   style: TextStyle(
-                                      color: Colors.white,
+                                      color: AppPalette.text,
                                       fontSize: 22,
                                       fontWeight: FontWeight.w700)),
-                              const SizedBox(height: 8),
+                              SizedBox(height: 8),
                               Text(
                                   '${_days.text} günlük kiralamanın toplamı bu tutarı aşmasın.',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       color: rentalMuted, height: 1.5)),
-                              const SizedBox(height: 20),
+                              SizedBox(height: 20),
                               TextFormField(
                                   controller: controller,
                                   autofocus: true,
                                   keyboardType:
                                       const TextInputType.numberWithOptions(
                                           decimal: true),
-                                  style: const TextStyle(color: Colors.white),
-                                  decoration: const InputDecoration(
+                                  style: TextStyle(color: AppPalette.text),
+                                  decoration: InputDecoration(
                                       labelText: 'En fazla toplam ücret',
                                       prefixText: '₺ ',
                                       hintText: 'Tutar girin'),
@@ -348,7 +350,7 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                                       rentalCents(value ?? '') == null
                                           ? 'Geçerli, pozitif bir ücret girin.'
                                           : null),
-                              const SizedBox(height: 20),
+                              SizedBox(height: 20),
                               FilledButton(
                                   onPressed: () {
                                     if (form.currentState!.validate()) {
@@ -356,12 +358,12 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                                           sheetContext, controller.text.trim());
                                     }
                                   },
-                                  child: const Text('Bütçeyi seç')),
+                                  child: Text('Bütçeyi seç')),
                               TextButton(
                                   onPressed: () => Navigator.pop(sheetContext),
-                                  child: const Text('Vazgeç')),
+                                  child: Text('Vazgeç')),
                             ]))))));
-    await Future<void>.delayed(const Duration(milliseconds: 300));
+    await Future<void>.delayed(Duration(milliseconds: 300));
     controller.dispose();
     if (mounted && value != null) {
       setState(() => _budget.text = value);
@@ -398,14 +400,14 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                 key: ValueKey('brand-$_brand'),
                 initialValue: _brand,
                 isExpanded: true,
-                icon: const Icon(Icons.expand_more_rounded,
+                icon: Icon(Icons.expand_more_rounded,
                     color: rentalMuted, size: 20),
                 dropdownColor: rentalField,
-                style: const TextStyle(
-                    color: Colors.white, fontFamily: 'Roboto', fontSize: 13),
-                decoration: const InputDecoration(labelText: 'Marka'),
+                style: TextStyle(
+                    color: AppPalette.text, fontFamily: 'Roboto', fontSize: 13),
+                decoration: InputDecoration(labelText: 'Marka'),
                 items: [
-                  const DropdownMenuItem<String>(
+                  DropdownMenuItem<String>(
                       value: null, child: Text('Tüm markalar')),
                   ...CarData.makesAndModels.keys.map((brand) =>
                       DropdownMenuItem(
@@ -418,23 +420,23 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                           _brand = value;
                           _model = null;
                         }))),
-        const SizedBox(width: 10),
+        SizedBox(width: 10),
         Expanded(
             child: DropdownButtonFormField<String>(
                 key: ValueKey('model-$_brand-$_model'),
                 initialValue: _model,
                 isExpanded: true,
-                icon: const Icon(Icons.expand_more_rounded,
+                icon: Icon(Icons.expand_more_rounded,
                     color: rentalMuted, size: 20),
                 dropdownColor: rentalField,
-                style: const TextStyle(
-                    color: Colors.white, fontFamily: 'Roboto', fontSize: 13),
-                decoration: const InputDecoration(labelText: 'Model'),
-                disabledHint: const Text('Önce marka seç',
+                style: TextStyle(
+                    color: AppPalette.text, fontFamily: 'Roboto', fontSize: 13),
+                decoration: InputDecoration(labelText: 'Model'),
+                disabledHint: Text('Önce marka seç',
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(color: rentalMuted, fontSize: 12)),
                 items: [
-                  const DropdownMenuItem<String>(
+                  DropdownMenuItem<String>(
                       value: null, child: Text('Tüm modeller')),
                   ...(CarData.makesAndModels[_brand] ?? <String>[]).map(
                       (model) => DropdownMenuItem(
@@ -455,9 +457,9 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
         IconButton(
             tooltip: 'Bir gün azalt',
             onPressed: _busy ? null : () => _adjustDays(-1),
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 40),
+            constraints: BoxConstraints(minWidth: 36, minHeight: 40),
             padding: EdgeInsets.zero,
-            icon: const Icon(Icons.remove_rounded, size: 17)),
+            icon: Icon(Icons.remove_rounded, size: 17)),
         SizedBox(
             width: 30,
             child: TextField(
@@ -469,11 +471,11 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                   FilteringTextInputFormatter.digitsOnly,
                   LengthLimitingTextInputFormatter(3)
                 ],
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: AppPalette.text,
                     fontSize: 14,
                     fontWeight: FontWeight.w700),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                     isDense: true,
                     filled: false,
                     contentPadding: EdgeInsets.symmetric(vertical: 10),
@@ -482,53 +484,53 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                     focusedBorder: InputBorder.none,
                     disabledBorder: InputBorder.none),
                 onChanged: (_) => setState(() {}))),
-        const Text('gün', style: TextStyle(color: rentalMuted, fontSize: 11)),
+        Text('gün', style: TextStyle(color: rentalMuted, fontSize: 11)),
         IconButton(
             tooltip: 'Bir gün artır',
             onPressed: _busy ? null : () => _adjustDays(1),
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 40),
+            constraints: BoxConstraints(minWidth: 36, minHeight: 40),
             padding: EdgeInsets.zero,
-            icon: const Icon(Icons.add_rounded, size: 17)),
+            icon: Icon(Icons.add_rounded, size: 17)),
       ]));
 
   Widget _searchButtons() => Row(children: [
         OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
-                minimumSize: const Size(0, 46),
+                minimumSize: Size(0, 46),
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 foregroundColor: _budget.text.isEmpty
-                    ? const Color(0xFFD1D6DC)
-                    : AppConstants.primaryColor,
+                    ? Color(0xFFD1D6DC)
+                    : AppPalette.accent,
                 side: BorderSide(
                     color: _budget.text.isEmpty
                         ? rentalBorder
-                        : const Color(0xFF164B37)),
+                        : Color(0xFF164B37)),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12))),
             onPressed: _busy ? null : _showBudget,
-            icon: const Icon(Icons.tune_rounded, size: 17),
-            label: const Text('Bütçe', style: TextStyle(fontSize: 12))),
-        const SizedBox(width: 10),
+            icon: Icon(Icons.tune_rounded, size: 17),
+            label: Text('Bütçe', style: TextStyle(fontSize: 12))),
+        SizedBox(width: 10),
         Expanded(
             child: FilledButton.icon(
                 onPressed: _busy || _loading ? null : _applyFilters,
-                icon: const Icon(Icons.search_rounded, size: 18),
-                label: const Text('Araçları bul'))),
+                icon: Icon(Icons.search_rounded, size: 18),
+                label: Text('Araçları bul'))),
       ]);
 
   Widget _filters() => Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-          color: AppConstants.cardColor,
+          color: AppPalette.surface,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: rentalBorder)),
       child: LayoutBuilder(
           builder: (context, constraints) =>
               Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 _brandFields(),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 TextField(
-                    key: const ValueKey('rental-total-budget'),
+                    key: ValueKey('rental-total-budget'),
                     controller: _budget,
                     enabled: !_busy,
                     keyboardType:
@@ -537,28 +539,28 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                       FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
                       LengthLimitingTextInputFormatter(11)
                     ],
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                         labelText: 'Toplam bütçe',
                         hintText: 'Örn. 15000',
                         suffixText: '₺ toplam',
                         prefixIcon: Icon(Icons.account_balance_wallet_outlined,
                             size: 19)),
                     onChanged: (_) => setState(() {})),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 Row(children: [
-                  const Icon(Icons.calendar_month_outlined,
+                  Icon(Icons.calendar_month_outlined,
                       size: 16, color: rentalMuted),
-                  const SizedBox(width: 6),
-                  const Expanded(
+                  SizedBox(width: 6),
+                  Expanded(
                       child: Text('Kiralama süresi',
                           style: TextStyle(
                               color: Color(0xFFD1D6DC), fontSize: 12))),
                   _dayPicker(),
                 ]),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 _searchButtons(),
-                const SizedBox(height: 8),
-                const Text('Günlük fiyat × gün sayısı, toplam bütçeni aşmaz.',
+                SizedBox(height: 8),
+                Text('Günlük fiyat × gün sayısı, toplam bütçeni aşmaz.',
                     style: TextStyle(
                         color: rentalMuted, fontSize: 11, height: 1.5)),
                 if (_budget.text.isNotEmpty)
@@ -566,8 +568,8 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                       padding: const EdgeInsets.only(top: 12),
                       child: Text(
                           'Toplam bütçe: ${_budget.text} ₺ / ${_days.text} gün',
-                          style: const TextStyle(
-                              color: AppConstants.primaryColor, fontSize: 12))),
+                          style: TextStyle(
+                              color: AppPalette.accent, fontSize: 12))),
               ])));
   Widget _pagination() => Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -581,16 +583,16 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                 onPressed: _loading || _fetching || _pageNumber <= 1
                     ? null
                     : () => _changePage(-1),
-                icon: const Icon(Icons.chevron_left, size: 18),
-                label: const Text('Önceki')),
+                icon: Icon(Icons.chevron_left, size: 18),
+                label: Text('Önceki')),
             Text('$_pageNumber / $_totalPages',
-                style: const TextStyle(color: rentalMuted)),
+                style: TextStyle(color: rentalMuted)),
             OutlinedButton.icon(
                 onPressed: _loading || _fetching || _pageNumber >= _totalPages
                     ? null
                     : () => _changePage(1),
-                icon: const Icon(Icons.chevron_right, size: 18),
-                label: const Text('Sonraki')),
+                icon: Icon(Icons.chevron_right, size: 18),
+                label: Text('Sonraki')),
           ]));
   void _changePage(int delta) {
     setState(() {
@@ -640,26 +642,26 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
       Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-              color: AppConstants.primaryColor.withValues(alpha: .08),
+              color: AppPalette.accent.withValues(alpha: .08),
               border: Border.all(
-                  color: AppConstants.primaryColor.withValues(alpha: .25)),
+                  color: AppPalette.accent.withValues(alpha: .25)),
               borderRadius: BorderRadius.circular(18)),
-          child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Icon(Icons.science_outlined, color: AppConstants.primaryColor),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Icon(Icons.science_outlined, color: AppPalette.accent),
             SizedBox(width: 10),
             Expanded(
                 child: Text(
                     'Şu anda bu şehirde uygun gerçek rent a car ilanı bulunmuyor. Aşağıdaki araç sınıfları ve fiyatlar gerçek firma/ilan değildir; tahmini piyasa seçenekleridir.',
                     style: TextStyle(
-                        color: Colors.white, height: 1.5, fontSize: 13))),
+                        color: AppPalette.text, height: 1.5, fontSize: 13))),
           ])),
-      const SizedBox(height: 12),
+      SizedBox(height: 12),
       for (final item in examples)
         Container(
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-                color: AppConstants.cardColor,
+                color: AppPalette.surface,
                 border: Border.all(color: rentalBorder),
                 borderRadius: BorderRadius.circular(18)),
             child:
@@ -668,48 +670,48 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                 Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                        color: AppConstants.primaryColor.withValues(alpha: .1),
+                        color: AppPalette.accent.withValues(alpha: .1),
                         borderRadius: BorderRadius.circular(12)),
-                    child: const Icon(Icons.directions_car_outlined,
-                        color: AppConstants.primaryColor)),
-                const SizedBox(width: 10),
+                    child: Icon(Icons.directions_car_outlined,
+                        color: AppPalette.accent)),
+                SizedBox(width: 10),
                 Expanded(
                     child: Text(item['label'].toString(),
-                        style: const TextStyle(
-                            color: Colors.white,
+                        style: TextStyle(
+                            color: AppPalette.text,
                             fontWeight: FontWeight.w700,
                             fontSize: 15))),
                 Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                     decoration: BoxDecoration(
-                        color: AppConstants.primaryColor.withValues(alpha: .1),
+                        color: AppPalette.accent.withValues(alpha: .1),
                         borderRadius: BorderRadius.circular(999)),
-                    child: const Text('TAHMİNİ',
+                    child: Text('TAHMİNİ',
                         style: TextStyle(
-                            color: AppConstants.primaryColor,
+                            color: AppPalette.accent,
                             fontSize: 10,
                             fontWeight: FontWeight.w800))),
               ]),
-              const SizedBox(height: 14),
+              SizedBox(height: 14),
               Text(
                   'Tahmini günlük: ${rentalPrice((item['daily'] as int) * 100)} ₺',
-                  style: const TextStyle(
-                      color: Colors.white,
+                  style: TextStyle(
+                      color: AppPalette.text,
                       fontSize: 18,
                       fontWeight: FontWeight.w700)),
-              const SizedBox(height: 4),
+              SizedBox(height: 4),
               Text(
                   '$days gün için yaklaşık: ${rentalPrice((item['daily'] as int) * days * 100)} ₺',
-                  style: const TextStyle(
-                      color: AppConstants.primaryColor,
+                  style: TextStyle(
+                      color: AppPalette.accent,
                       fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               Text(item['note'].toString(),
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: rentalMuted, fontSize: 12, height: 1.45)),
             ])),
-      const Padding(
+      Padding(
           padding: EdgeInsets.only(top: 4, bottom: 8),
           child: Text(
               'Gerçek bir firma aynı şehirde aktif ilan yayınladığında bu örnekler otomatik olarak kaldırılır ve yalnızca gerçek ilanlar gösterilir.',
@@ -721,29 +723,29 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
   Widget _emptyState({required bool offers}) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
       decoration: BoxDecoration(
-          color: AppConstants.cardColor,
+          color: AppPalette.surface,
           border: Border.all(color: rentalBorder),
           borderRadius: BorderRadius.circular(20)),
       child: Column(children: [
         Container(
             padding: const EdgeInsets.all(18),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
                 color: Color(0xFF0C2B20), shape: BoxShape.circle),
             child: Icon(
                 offers ? Icons.handshake_outlined : Icons.search_off_rounded,
-                color: AppConstants.primaryColor,
+                color: AppPalette.accent,
                 size: 30)),
-        const SizedBox(height: 18),
+        SizedBox(height: 18),
         Text(
             offers
                 ? 'Tekliflerin burada görünecek'
                 : 'Bu seçimle araç bulunamadı',
             textAlign: TextAlign.center,
-            style: const TextStyle(
-                color: Colors.white,
+            style: TextStyle(
+                color: AppPalette.text,
                 fontWeight: FontWeight.w700,
                 fontSize: 17)),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Text(
             offers
                 ? 'Beğendiğin araca teklif gönder. Firmanın yanıtını buradan takip et.'
@@ -752,13 +754,13 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                     : '$_city şehrinde farklı bir marka veya modelle tekrar arayabilirsin.',
             textAlign: TextAlign.center,
             style:
-                const TextStyle(color: rentalMuted, fontSize: 13, height: 1.6)),
+                TextStyle(color: rentalMuted, fontSize: 13, height: 1.6)),
         if (!offers && _appliedBudget.isNotEmpty) ...[
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           TextButton.icon(
               onPressed: _busy ? null : _showBudget,
-              icon: const Icon(Icons.tune_rounded, size: 17),
-              label: const Text('Bütçeyi değiştir')),
+              icon: Icon(Icons.tune_rounded, size: 17),
+              label: Text('Bütçeyi değiştir')),
         ],
       ]));
 
@@ -769,14 +771,14 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
           length: 2,
           initialIndex: widget.showOffers ? 1 : 0,
           child: Scaffold(
-              backgroundColor: AppConstants.bgColor,
+              backgroundColor: AppPalette.page,
               appBar: AppBar(
-                  title: const Text('Araç kirala',
+                  title: Text('Araç kirala',
                       style:
                           TextStyle(fontSize: 19, fontWeight: FontWeight.w700)),
-                  backgroundColor: AppConstants.bgColor,
+                  backgroundColor: AppPalette.page,
                   surfaceTintColor: Colors.transparent,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppPalette.text,
                   elevation: 0,
                   actions: [
                     IconButton(
@@ -788,11 +790,11 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                                     userId: widget.customerId,
                                     company: false,
                                     service: _service))),
-                        icon: const Icon(Icons.history_rounded)),
+                        icon: Icon(Icons.history_rounded)),
                     IconButton(
                         tooltip: 'Listeyi yenile',
                         onPressed: _loading ? null : () => _refresh(),
-                        icon: const Icon(Icons.refresh_rounded, size: 22))
+                        icon: Icon(Icons.refresh_rounded, size: 22))
                   ],
                   bottom: PreferredSize(
                       preferredSize: const Size.fromHeight(60),
@@ -801,11 +803,11 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                           child: Center(
                               child: ConstrainedBox(
                                   constraints:
-                                      const BoxConstraints(maxWidth: 380),
+                                      BoxConstraints(maxWidth: 380),
                                   child: Container(
                                       height: 44,
                                       decoration: BoxDecoration(
-                                          color: AppConstants.cardColor,
+                                          color: AppPalette.surface,
                                           borderRadius:
                                               BorderRadius.circular(13),
                                           border:
@@ -815,18 +817,18 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                                           indicatorSize:
                                               TabBarIndicatorSize.tab,
                                           indicator: BoxDecoration(
-                                              color: AppConstants.primaryColor,
+                                              color: AppPalette.accent,
                                               borderRadius:
                                                   BorderRadius.circular(10)),
                                           dividerColor: Colors.transparent,
-                                          labelColor: const Color(0xFF05251A),
+                                          labelColor: Color(0xFF05251A),
                                           unselectedLabelColor: rentalMuted,
-                                          labelStyle: const TextStyle(
+                                          labelStyle: TextStyle(
                                               fontFamily: 'Roboto',
                                               fontSize: 13,
                                               fontWeight: FontWeight.w700),
                                           tabs: [
-                                            const Tab(text: 'Araçlar'),
+                                            Tab(text: 'Araçlar'),
                                             Tab(
                                                 text: _bids
                                                         .where((bid) => [
@@ -842,34 +844,34 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                                                         ].contains(bid['status'])).length})')
                                           ]))))))),
               body: _loading && _cars.isEmpty && _bids.isEmpty
-                  ? const Center(child: CircularProgressIndicator())
+                  ? Center(child: CircularProgressIndicator())
                   : TabBarView(children: [
                       _page([
                         Text('$_city şehrindeki araçlar',
-                            style: const TextStyle(
-                                color: Colors.white,
+                            style: TextStyle(
+                                color: AppPalette.text,
                                 fontSize: 20,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: -.3)),
-                        const SizedBox(height: 6),
-                        const Text(
+                        SizedBox(height: 6),
+                        Text(
                             'Toplam bütçeni gir, aynı şehirde uygun araçlarla eşleş.',
                             style: TextStyle(
                                 color: rentalMuted, fontSize: 12, height: 1.5)),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
                         _filters(),
-                        const SizedBox(height: 20),
+                        SizedBox(height: 20),
                         Row(children: [
-                          const Expanded(
+                          Expanded(
                               child: Text('Kiralık araçlar',
                                   style: TextStyle(
-                                      color: Colors.white,
+                                      color: AppPalette.text,
                                       fontSize: 16,
                                       fontWeight: FontWeight.w700))),
                           RentalTag('$_totalCars araç',
                               icon: Icons.directions_car_outlined),
                         ]),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         if (_cars.isEmpty && _error == null)
                           _rentalSimulationFallback(),
                         LayoutBuilder(builder: (context, constraints) {
@@ -883,7 +885,7 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                         }),
                         if (_totalPages > 1) _pagination(),
                         if (_cars.isNotEmpty)
-                          const Padding(
+                          Padding(
                               padding: EdgeInsets.only(top: 14),
                               child: Text(
                                   'İlk teklif, firmanın günlük ücreti × seçtiğin gün sayısıdır.',
@@ -901,24 +903,24 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                             message:
                                 'Firma kabul edince sohbet ve telefon açılır. Anlaştık onayından sonra eşleşme detayından yol tarifi alabilirsin.',
                             icon: Icons.handshake_outlined,
-                            steps: const ['Araç seçimi', 'Teklif', 'Görüşme'],
+                            steps: ['Araç seçimi', 'Teklif', 'Görüşme'],
                             stage: _bids.any((b) => b['status'] == 'accepted')
                                 ? 2
                                 : _bids.isEmpty
                                     ? 0
                                     : 1),
-                        const SizedBox(height: 18),
-                        const Text('Tekliflerini takip et',
+                        SizedBox(height: 18),
+                        Text('Tekliflerini takip et',
                             style: TextStyle(
-                                color: Colors.white,
+                                color: AppPalette.text,
                                 fontSize: 22,
                                 fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 6),
-                        const Text(
+                        SizedBox(height: 6),
+                        Text(
                             'Yanıtları değerlendir, karşı teklif ver veya firma ile mesajlaş.',
                             style: TextStyle(
                                 color: rentalMuted, fontSize: 13, height: 1.5)),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         if (_bids.isEmpty && _error == null)
                           _emptyState(offers: true),
                         ..._bids.map((bid) => RentalBidCard(
@@ -933,13 +935,13 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                     ]))));
 
   Widget _page(List<Widget> children) => RefreshIndicator(
-      color: AppConstants.primaryColor,
+      color: AppPalette.accent,
       onRefresh: _refresh,
       child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
+          physics: AlwaysScrollableScrollPhysics(),
           child: Center(
               child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1100),
+                  constraints: BoxConstraints(maxWidth: 1100),
                   child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                       child: Column(
@@ -950,22 +952,22 @@ class _RentalMarketScreenState extends State<RentalMarketScreen>
                                   margin: const EdgeInsets.only(bottom: 16),
                                   padding: const EdgeInsets.all(14),
                                   decoration: BoxDecoration(
-                                      color: const Color(0xFF2C2016),
+                                      color: AppPalette.surfaceAlt,
                                       borderRadius: BorderRadius.circular(14)),
                                   child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(_error!,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                                 color: Color(0xFFFFC991),
                                                 height: 1.5)),
                                         TextButton(
                                             onPressed: () => _refresh(),
-                                            child: const Text('Tekrar dene')),
+                                            child: Text('Tekrar dene')),
                                       ])),
                             if (_loading)
-                              const Padding(
+                              Padding(
                                   padding: EdgeInsets.only(bottom: 12),
                                   child: LinearProgressIndicator(minHeight: 2)),
                             ...children,

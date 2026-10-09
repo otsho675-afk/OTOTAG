@@ -511,7 +511,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
     return insDate;
   }
 
-  static const List<Map<String, dynamic>> services = [
+  static List<Map<String, dynamic>> get services => [
     {
       'id': 'wash',
       'name': 'Yıkama',
@@ -626,14 +626,14 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(title,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w800,
                               fontSize: 14,
                             )),
                         const SizedBox(height: 3),
                         Text(text,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: Colors.white54,
                               fontSize: 11.5,
                               height: 1.4,
@@ -689,11 +689,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                           color: _primaryColor.withValues(alpha: .10),
                           borderRadius: BorderRadius.circular(17),
                         ),
-                        child: const Icon(Icons.waving_hand_rounded,
+                        child: Icon(Icons.waving_hand_rounded,
                             color: _primaryColor, size: 27),
                       ),
                       const SizedBox(width: 13),
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -734,7 +734,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                         color: _primaryColor.withValues(alpha: .15),
                       ),
                     ),
-                    child: const Row(
+                    child: Row(
                       children: [
                         Icon(Icons.card_giftcard_rounded,
                             color: _primaryColor, size: 24),
@@ -775,7 +775,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    child: const Text('Uygulamayı Keşfet',
+                    child: Text('Uygulamayı Keşfet',
                         style: TextStyle(fontWeight: FontWeight.w900)),
                   ),
                   const SizedBox(height: 8),
@@ -784,8 +784,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                       Navigator.pop(sheetContext);
                       Future.microtask(_openReferral);
                     },
-                    icon: const Icon(Icons.card_giftcard_rounded, size: 18),
-                    label: const Text('Arkadaşını Davet Et'),
+                    icon: Icon(Icons.card_giftcard_rounded, size: 18),
+                    label: Text('Arkadaşını Davet Et'),
                     style: TextButton.styleFrom(
                       foregroundColor: _primaryColor,
                     ),
@@ -854,7 +854,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                       children: [
                         TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text('İptal',
+                          child: Text('İptal',
                               style: TextStyle(
                                   color: _subtitleColor,
                                   fontSize: 16,
@@ -865,7 +865,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                             onDateSelected(tempPickedDate);
                             Navigator.pop(context);
                           },
-                          child: const Text('Onayla',
+                          child: Text('Onayla',
                               style: TextStyle(
                                   color: _primaryColor,
                                   fontWeight: FontWeight.w900,
@@ -1706,7 +1706,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
             Expanded(
               child: Text(
                 message,
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
                   fontSize: 13.5,
@@ -1740,16 +1740,16 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Çıkış yap'),
-        content: const Text('Hesabınızdan çıkış yapmak istiyor musunuz?'),
+        title: Text('Çıkış yap'),
+        content: Text('Hesabınızdan çıkış yapmak istiyor musunuz?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Vazgeç'),
+            child: Text('Vazgeç'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Çıkış yap'),
+            child: Text('Çıkış yap'),
           ),
         ],
       ),
@@ -2116,7 +2116,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                             Expanded(
                               child: Text(
                                 isEditing ? "Aracı Düzenle" : "Yeni Araç Ekle",
-                                style: const TextStyle(
+                                style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w900,
                                     color: _textColor,
@@ -2136,7 +2136,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                       color:
                                           Colors.white.withValues(alpha: 0.05),
                                       shape: BoxShape.circle),
-                                  child: const Icon(Icons.close_rounded,
+                                  child: Icon(Icons.close_rounded,
                                       color: Colors.white70, size: 20),
                                 ),
                               ),
@@ -2302,7 +2302,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                         width: 1.5),
                                     borderRadius: BorderRadius.circular(16)),
                                 child: IconButton(
-                                  icon: const Icon(Icons.delete_outline_rounded,
+                                  icon: Icon(Icons.delete_outline_rounded,
                                       color: _dangerColor, size: 22),
                                   padding: const EdgeInsets.all(14),
                                   onPressed: () {
@@ -2382,7 +2382,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                         isEditing
                                             ? "Değişiklikleri Kaydet"
                                             : "Aracı Garaja Ekle",
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w900,
                                             letterSpacing: 0.5)),
@@ -2432,7 +2432,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 6),
           child: Text(label,
-              style: const TextStyle(
+              style: TextStyle(
                   color: _subtitleColor,
                   fontSize: 13,
                   fontWeight: FontWeight.w600)),
@@ -2538,12 +2538,12 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(title,
-                                style: const TextStyle(
+                                style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 18,
                                     fontWeight: FontWeight.w900)),
                             IconButton(
-                              icon: const Icon(Icons.close_rounded,
+                              icon: Icon(Icons.close_rounded,
                                   color: Colors.white70),
                               onPressed: () => Navigator.pop(ctx),
                             ),
@@ -2561,13 +2561,13 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                           ),
                           child: TextField(
                             autofocus: true,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: Colors.white, fontSize: 14),
                             decoration: InputDecoration(
                               hintText: "Hemen ara...",
                               hintStyle: TextStyle(
                                   color: Colors.white.withValues(alpha: 0.35)),
-                              prefixIcon: const Icon(Icons.search_rounded,
+                              prefixIcon: Icon(Icons.search_rounded,
                                   color: _primaryColor, size: 20),
                               border: InputBorder.none,
                               contentPadding:
@@ -2617,7 +2617,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                       ),
                                     ),
                                     trailing: isSelected
-                                        ? const Icon(Icons.check_circle_rounded,
+                                        ? Icon(Icons.check_circle_rounded,
                                             color: _primaryColor, size: 20)
                                         : null,
                                     onTap: () {
@@ -2652,7 +2652,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 6),
           child: Text(label,
-              style: const TextStyle(
+              style: TextStyle(
                   color: _subtitleColor,
                   fontSize: 13,
                   fontWeight: FontWeight.w600)),
@@ -2673,7 +2673,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                 ? TextCapitalization.characters
                 : TextCapitalization.none,
             inputFormatters: isPlate ? [TurkishPlateFormatter()] : null,
-            style: const TextStyle(
+            style: TextStyle(
                 color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
             decoration: InputDecoration(
               hintText: hint,
@@ -2715,7 +2715,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 6),
           child: Text(title,
-              style: const TextStyle(
+              style: TextStyle(
                   color: _subtitleColor,
                   fontSize: 13,
                   fontWeight: FontWeight.w600)),
@@ -2848,7 +2848,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                           color: _primaryColor.withValues(alpha: 0.20),
                         ),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.storefront_rounded,
                         color: _primaryColor,
                         size: 26,
@@ -2961,7 +2961,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                               color: _primaryColor.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(16),
                             ),
-                            child: const Icon(Icons.campaign_rounded,
+                            child: Icon(Icons.campaign_rounded,
                                 color: _primaryColor, size: 24),
                           ),
                           const SizedBox(width: 16),
@@ -2971,7 +2971,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                               children: [
                                 Text(
                                   ad['title'] ?? 'Kampanya',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w900,
                                       color: _textColor,
@@ -2999,7 +2999,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                 decoration: BoxDecoration(
                                     color: Colors.white.withValues(alpha: 0.05),
                                     shape: BoxShape.circle),
-                                child: const Icon(Icons.close_rounded,
+                                child: Icon(Icons.close_rounded,
                                     color: Colors.white70, size: 20),
                               ),
                             ),
@@ -3052,7 +3052,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16)),
                         ),
-                        child: const Text("Fırsatı Değerlendir",
+                        child: Text("Fırsatı Değerlendir",
                             style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w900,
@@ -3175,7 +3175,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.bolt_rounded,
+                        Icon(Icons.bolt_rounded,
                             color: _primaryColor, size: 12),
                         const SizedBox(width: 4),
                         Text(
@@ -3232,7 +3232,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                 ],
               ),
               const Spacer(),
-              Row(children: [ const Icon(Icons.location_on_outlined,
+              Row(children: [ Icon(Icons.location_on_outlined,
                       size: 13, color: _primaryColor),
                   const SizedBox(width: 5),
                   Text(
@@ -3244,7 +3244,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                     ),
                   ),
                   const SizedBox(width: 14),
-                  const Icon(Icons.shield_outlined,
+                  Icon(Icons.shield_outlined,
                       size: 13, color: _primaryColor),
                   const SizedBox(width: 5),
                   Flexible(
@@ -3319,7 +3319,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                       color: _primaryColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.campaign_rounded,
+                    child: Icon(Icons.campaign_rounded,
                         color: _primaryColor, size: 24),
                   ),
                   const SizedBox(width: 12),
@@ -3334,7 +3334,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                           decoration: BoxDecoration(
                               color: _primaryColor,
                               borderRadius: BorderRadius.circular(4)),
-                          child: const Text("SPONSORLU",
+                          child: Text("SPONSORLU",
                               style: TextStyle(
                                   color: Colors.black,
                                   fontSize: 9,
@@ -3342,7 +3342,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                         ),
                         const SizedBox(height: 6),
                         Text(ad['title'] ?? 'Kampanya',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w900,
                               color: Colors.white,
@@ -3370,7 +3370,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Icon(Icons.arrow_forward_ios_rounded,
+                  Icon(Icons.arrow_forward_ios_rounded,
                       color: Colors.white54, size: 16),
                 ],
               ),
@@ -3574,7 +3574,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                         alignment: Alignment.center,
                         child: Text(
                           unreadCount > 9 ? '9+' : '$unreadCount',
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: Colors.white,
                             fontSize: 9,
                             fontWeight: FontWeight.w900,
@@ -3594,7 +3594,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
           ),
           bottomNavigationBar: _buildBottomNavigation(),
           body: isLoading
-              ? const Center(
+              ? Center(
                   child: CircularProgressIndicator(
                       color: _primaryColor, strokeWidth: 3))
               : PremiumScene(
@@ -3663,11 +3663,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                                   const EdgeInsets.symmetric(
                                                       horizontal: 16,
                                                       vertical: 12),
-                                              leading: const Icon(
+                                              leading: Icon(
                                                   Icons.warning_rounded,
                                                   color: _dangerColor,
                                                   size: 32),
-                                              title: const Text(
+                                              title: Text(
                                                   "Devam Eden İşleminiz Var",
                                                   style: TextStyle(
                                                       color: _dangerColor,
@@ -3694,7 +3694,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                                           .withValues(
                                                               alpha: 0.1),
                                                       shape: BoxShape.circle),
-                                                  child: const Icon(
+                                                  child: Icon(
                                                       Icons
                                                           .arrow_forward_ios_rounded,
                                                       color: _dangerColor,
@@ -3769,10 +3769,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
                                               _showVehicleDialog();
                                             }
                                           },
-                                          icon: const Icon(
+                                          icon: Icon(
                                               Icons.add_rounded,
                                               size: 17),
-                                          label: const Text('Araç Ekle'),
+                                          label: Text('Araç Ekle'),
                                           style: OutlinedButton.styleFrom(
                                             foregroundColor: _textColor,
                                             minimumSize: const Size(0, 42),
@@ -4383,7 +4383,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen>
               Flexible(
                 child: Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: _subtitleColor,
                       fontSize: 11,
                       fontWeight: FontWeight.w600),

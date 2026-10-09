@@ -16,6 +16,7 @@ class DashboardServiceGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       LayoutBuilder(builder: (context, constraints) {
+        final light = Theme.of(context).brightness == Brightness.light;
         final columns = constraints.maxWidth >= 1000
             ? 5
             : constraints.maxWidth >= 680
@@ -46,16 +47,16 @@ class DashboardServiceGrid extends StatelessWidget {
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: .24),
+                                color: Colors.black.withValues(alpha: light ? .07 : .24),
                                 blurRadius: 20,
                                 offset: const Offset(0, 9),
                               ),
                             ],
                           ),
                           child: AppInteractiveSurface(
-                            color: AppConstants.cardColor,
+                            color: Theme.of(context).colorScheme.surface,
                             side: BorderSide(
-                              color: Colors.white.withValues(alpha: .065),
+                              color: light ? const Color(0xFFDCE7DF) : Colors.white.withValues(alpha: .065),
                             ),
                             borderRadius: BorderRadius.circular(20),
                             onTap: () => onSelected(services[index]),

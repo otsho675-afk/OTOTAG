@@ -386,8 +386,7 @@ class _BusinessSubscriptionScreenState
                                                           fontSize: 32,
                                                           fontWeight:
                                                               FontWeight.w700,
-                                                          color: AppConstants
-                                                              .primaryColor)),
+                                                          color: AppPalette.accent)),
                                                   Text('/ ay',
                                                       style: TextStyle(
                                                           color: rentalMuted))

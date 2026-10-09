@@ -5,6 +5,7 @@ import 'core/theme/app_motion.dart';
 import 'core/theme/premium_surfaces.dart';
 import 'core/theme/app_palette.dart';
 import 'widgets/app_theme_toggle_button.dart';
+import 'widgets/ototag_brand_logo.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -1124,7 +1125,7 @@ class _LoginScreenState extends State<LoginScreen> {
             _phoneController.text = 'admin';
             _passwordFocus.requestFocus();
           },
-          child: Image.asset('assets/images/logo.png', height: 27),
+          child: const OtoTagBrandLogo(height: 30),
         ),
         centerTitle: true,
       ),

@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
+import 'core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'rentacar_company_profile_screen.dart';
@@ -59,7 +61,7 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
   void _startPolling() {
     _poller?.cancel();
     if (!mounted || !_foreground) return;
-    _poller = Timer.periodic(const Duration(seconds: 5), (_) {
+    _poller = Timer.periodic(Duration(seconds: 5), (_) {
       if (!_busy) _load();
     });
   }
@@ -130,9 +132,9 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
       await showModalBottomSheet<bool>(
           context: context,
           isScrollControlled: true,
-          backgroundColor: AppConstants.cardColor,
+          backgroundColor: AppPalette.surface,
           enableDrag: false,
-          constraints: const BoxConstraints(maxWidth: 720),
+          constraints: BoxConstraints(maxWidth: 720),
           builder: (_) =>
               RentalReviewEditor(jobId: widget.jobId, service: _service));
       await _load();
@@ -146,16 +148,16 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
     final confirmed = await showDialog<bool>(
         context: context,
         builder: (_) => AlertDialog(
-                title: const Text('Rezervasyon iptal edilsin mi?'),
-                content: const Text(
+                title: Text('Rezervasyon iptal edilsin mi?'),
+                content: Text(
                     'Araç yeniden kiralamaya açılacak ve taraflara bildirim gönderilecek.'),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Vazgeç')),
+                      child: Text('Vazgeç')),
                   FilledButton(
                       onPressed: () => Navigator.pop(context, true),
-                      child: const Text('İptal et'))
+                      child: Text('İptal et'))
                 ]));
     if (confirmed != true || !mounted) return;
     setState(() => _busy = true);
@@ -205,8 +207,8 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
       await showModalBottomSheet<void>(
           context: context,
           isScrollControlled: true,
-          backgroundColor: AppConstants.cardColor,
-          constraints: const BoxConstraints(maxWidth: 720),
+          backgroundColor: AppPalette.surface,
+          constraints: BoxConstraints(maxWidth: 720),
           builder: (_) => _RentalComplaint(
               jobId: widget.jobId, service: _service, company: widget.company));
     } finally {
@@ -223,16 +225,16 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
           builder: (ctx) => Theme(
               data: rentalTheme(),
               child: AlertDialog(
-                  title: const Text('Araç teslim alındı mı?'),
-                  content: const Text(
+                  title: Text('Araç teslim alındı mı?'),
+                  content: Text(
                       'Kiralamayı tamamladığında araç yeniden müşterilere gösterilir.'),
                   actions: [
                     TextButton(
                         onPressed: () => Navigator.pop(ctx, false),
-                        child: const Text('Vazgeç')),
+                        child: Text('Vazgeç')),
                     FilledButton(
                         onPressed: () => Navigator.pop(ctx, true),
-                        child: const Text('Tamamla'))
+                        child: Text('Tamamla'))
                   ])));
       if (confirmed != true || !mounted) return;
       await _service.respond('complete_rentacar_booking', _booking!);
@@ -253,16 +255,16 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
         builder: (ctx) => Theme(
             data: rentalTheme(),
             child: AlertDialog(
-                title: const Text('Anlaşma sağlandı mı?'),
-                content: const Text(
+                title: Text('Anlaşma sağlandı mı?'),
+                content: Text(
                     'Onayladığında müşteriye kayıtlı teslim konumun için yol tarifi açılır. Ödeme ve teslim koşullarını taraflar kendi aralarında belirler.'),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('Vazgeç')),
+                      child: Text('Vazgeç')),
                   FilledButton(
                       onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text('Anlaştık'))
+                      child: Text('Anlaştık'))
                 ])));
     if (confirmed != true || !mounted) return;
     setState(() => _busy = true);
@@ -298,10 +300,10 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
   Widget build(BuildContext context) => Theme(
       data: rentalTheme(),
       child: Scaffold(
-        backgroundColor: AppConstants.bgColor,
-        appBar: AppBar(title: const Text('Rezervasyon'), actions: [
+        backgroundColor: AppPalette.page,
+        appBar: AppBar(title: Text('Rezervasyon'), actions: [
           IconButton(
-              onPressed: _busy ? null : _load, icon: const Icon(Icons.refresh))
+              onPressed: _busy ? null : _load, icon: Icon(Icons.refresh))
         ]),
         body: _error != null
             ? Center(
@@ -310,10 +312,10 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
                     child: Column(mainAxisSize: MainAxisSize.min, children: [
                       Text(_error!),
                       TextButton(
-                          onPressed: _load, child: const Text('Tekrar dene'))
+                          onPressed: _load, child: Text('Tekrar dene'))
                     ])))
             : _booking == null
-                ? const Center(child: CircularProgressIndicator())
+                ? Center(child: CircularProgressIndicator())
                 : _content(),
       ));
   Widget _content() {
@@ -341,7 +343,7 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
                 : rentalMapUri(b['company_map_link']));
     return Center(
         child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 900),
+            constraints: BoxConstraints(maxWidth: 900),
             child: ListView(padding: const EdgeInsets.all(20), children: [
               MatchingStatusCard(
                   title: cancelled
@@ -363,14 +365,14 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
                       : done
                           ? Icons.task_alt
                           : Icons.handshake_outlined,
-                  steps: const ['Teklif', 'Görüşme', 'Anlaşma', 'Bitiş'],
+                  steps: ['Teklif', 'Görüşme', 'Anlaşma', 'Bitiş'],
                   stage: done
                       ? 3
                       : agreed
                           ? 2
                           : 1,
                   active: !cancelled),
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
               Wrap(spacing: 8, runSpacing: 8, children: [
                 RentalTag('Rezervasyon #${widget.jobId}', accent: true),
                 RentalTag(cancelled
@@ -381,7 +383,7 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
                             ? 'Anlaşıldı'
                             : 'Görüşme aşaması')
               ]),
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
               OutlinedButton.icon(
                   onPressed: () => Navigator.push(
                       context,
@@ -389,15 +391,15 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
                           builder: (_) => RentacarCompanyProfileScreen(
                               companyId: rentalId(b['company_id']),
                               service: _service))),
-                  icon: const Icon(Icons.storefront_outlined),
-                  label: const Text('Firma profili, puan ve yorumlar')),
-              const SizedBox(height: 16),
+                  icon: Icon(Icons.storefront_outlined),
+                  label: Text('Firma profili, puan ve yorumlar')),
+              SizedBox(height: 16),
               if (!widget.admin && !widget.company && done) ...[
                 if (b['can_review'] == true)
                   FilledButton.icon(
                       onPressed: _busy ? null : _review,
-                      icon: const Icon(Icons.star_outline),
-                      label: const Text('Firmayı değerlendir')),
+                      icon: Icon(Icons.star_outline),
+                      label: Text('Firmayı değerlendir')),
                 if (b['review'] is Map)
                   Padding(
                       padding: const EdgeInsets.only(bottom: 16),
@@ -405,71 +407,71 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('Değerlendirmen: ${b['review']['rating']} / 5',
-                                style: const TextStyle(
+                                style: TextStyle(
                                     color: Colors.greenAccent,
                                     fontWeight: FontWeight.bold)),
                             if ('${b['review']['comment'] ?? ''}'.isNotEmpty)
                               Text('${b['review']['comment']}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       color: rentalMuted, height: 1.5))
                           ]))),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
               ],
               Text(
                   '${b['car_brand_model'] ?? b['vehicle_label'] ?? 'Kiralık araç'}',
-                  style: const TextStyle(
-                      color: Colors.white,
+                  style: TextStyle(
+                      color: AppPalette.text,
                       fontSize: 28,
                       fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               Text(
                   '${b['plate'] ?? b['quoted_plate'] ?? ''} • ${b['company_name']} • ${b['city']}',
-                  style: const TextStyle(color: rentalMuted)),
-              const SizedBox(height: 20),
+                  style: TextStyle(color: rentalMuted)),
+              SizedBox(height: 20),
               _box(Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('KİRALAMA TOPLAMI',
+                    Text('KİRALAMA TOPLAMI',
                         style: TextStyle(color: rentalMuted, fontSize: 11)),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Text(amount == null ? '—' : '${rentalPrice(amount)} ₺',
-                        style: const TextStyle(
-                            color: AppConstants.primaryColor,
+                        style: TextStyle(
+                            color: AppPalette.accent,
                             fontSize: 30,
                             fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 10),
+                    SizedBox(height: 10),
                     Text('${b['rent_days']} gün',
-                        style: const TextStyle(color: Colors.white)),
-                    const SizedBox(height: 8),
-                    const Text(
+                        style: TextStyle(color: AppPalette.text)),
+                    SizedBox(height: 8),
+                    Text(
                         'Ödeme uygulama dışında, taraflar arasında yapılır.',
                         style: TextStyle(color: rentalMuted, fontSize: 12)),
-                    const SizedBox(height: 14),
+                    SizedBox(height: 14),
                     Text('Rezervasyon: ${_date(b['reserved_at'])}',
-                        style: const TextStyle(color: rentalMuted)),
-                    const SizedBox(height: 6),
+                        style: TextStyle(color: rentalMuted)),
+                    SizedBox(height: 6),
                     Text('Planlanan iade: ${_date(b['expected_return_at'])}',
-                        style: const TextStyle(color: rentalMuted)),
+                        style: TextStyle(color: rentalMuted)),
                   ])),
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
               Text(agreed ? 'Teslim konumu' : 'Konum anlaşmadan sonra açılır',
-                  style: const TextStyle(
-                      color: Colors.white,
+                  style: TextStyle(
+                      color: AppPalette.text,
                       fontSize: 20,
                       fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
               Text(
                   !agreed
                       ? 'Firma ile görüşüp anlaşın. Firma “Anlaştık” dediğinde kayıtlı konum için yol tarifi açılır.'
                       : '${b['pickup_address'] ?? (directions != null ? '${b['company_name']} • ${b['city']}\nFirma konumunu haritada açarak yol tarifi alabilirsin.' : 'Firma konum linki bulunmuyor. Mesajlaşarak firmadan konum isteyebilirsin.')}',
-                  style: const TextStyle(color: rentalMuted, height: 1.5)),
+                  style: TextStyle(color: rentalMuted, height: 1.5)),
               if (agreed &&
                   !widget.company &&
                   !done &&
                   !cancelled &&
                   hasLocation &&
                   rentalMapUri(b['pickup_map_link']) == null) ...[
-                const SizedBox(height: 14),
+                SizedBox(height: 14),
                 ClipRRect(
                     borderRadius: BorderRadius.circular(18),
                     child: SizedBox(
@@ -489,9 +491,9 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
                         _message('Harita açılamadı.');
                       }
                     },
-                    icon: const Icon(Icons.directions_outlined),
-                    label: const Text('Yol tarifi al')),
-              const SizedBox(height: 16),
+                    icon: Icon(Icons.directions_outlined),
+                    label: Text('Yol tarifi al')),
+              SizedBox(height: 16),
               if (!widget.admin && !done && !cancelled)
                 FilledButton.icon(
                     onPressed: _busy
@@ -510,25 +512,25 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
                                         : 'company_id']),
                                     receiverName:
                                         '${b[widget.company ? 'customer_name' : 'company_name']}'))),
-                    icon: const Icon(Icons.chat_bubble_outline),
-                    label: const Text('Mesajlaş')),
+                    icon: Icon(Icons.chat_bubble_outline),
+                    label: Text('Mesajlaş')),
               if (!widget.admin &&
                   !done &&
                   !cancelled &&
                   '${b[widget.company ? 'customer_phone' : 'company_phone'] ?? ''}'
                       .trim()
                       .isNotEmpty) ...[
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
                 OutlinedButton.icon(
                     onPressed: _busy
                         ? null
                         : () => _call(
                             '${b[widget.company ? 'customer_phone' : 'company_phone']}'),
-                    icon: const Icon(Icons.call_outlined),
-                    label: const Text('Telefonla görüş')),
+                    icon: Icon(Icons.call_outlined),
+                    label: Text('Telefonla görüş')),
               ],
               if (!widget.admin && widget.company && !done && !cancelled) ...[
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
                 FilledButton.icon(
                     onPressed: _busy
                         ? null
@@ -540,53 +542,53 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
                         : Icons.handshake_outlined),
                     label: Text(agreed ? 'İşi tamamla' : 'Anlaştık'))
               ],
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
               if (!widget.admin && (done || cancelled))
                 OutlinedButton.icon(
                     onPressed: _busy ? null : _report,
-                    icon: const Icon(Icons.flag_outlined),
-                    label: const Text('Yöneticiye şikâyet bildir')),
-              const SizedBox(height: 10),
+                    icon: Icon(Icons.flag_outlined),
+                    label: Text('Yöneticiye şikâyet bildir')),
+              SizedBox(height: 10),
               if (!widget.admin && (done || cancelled))
-                const Text(
+                Text(
                     'Teslim veya rezervasyon sorunu yaşarsan bu kayda bağlı şikâyet oluşturabilirsin. Yönetici inceleyip değerlendirecektir.',
                     style: TextStyle(
                         color: rentalMuted, fontSize: 12, height: 1.6)),
               if (widget.admin) ...[
-                const SizedBox(height: 20),
+                SizedBox(height: 20),
                 Text('Müşteri: ${b['customer_name']} • #${b['customer_id']}',
-                    style: const TextStyle(color: rentalMuted)),
-                const SizedBox(height: 16),
+                    style: TextStyle(color: rentalMuted)),
+                SizedBox(height: 16),
                 for (final complaint in _complaints) ...[
                   _box(Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                             'Şikâyet #${complaint['id']} • ${complaint['status']}',
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: Colors.orange,
                                 fontWeight: FontWeight.bold)),
                         Text('${complaint['subject']}\n${complaint['message']}',
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: rentalMuted, height: 1.6)),
                         Text(
                             'Bildiren: #${complaint['reporter_id']} • ${complaint['created_at']} UTC',
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: rentalMuted, fontSize: 12)),
                       ])),
-                  const SizedBox(height: 12)
+                  SizedBox(height: 12)
                 ],
                 if (!done && !cancelled)
                   OutlinedButton.icon(
                       onPressed: _busy ? null : _cancel,
-                      icon: const Icon(Icons.cancel_outlined),
-                      label: const Text('Rezervasyonu iptal et')),
-                const SizedBox(height: 16),
+                      icon: Icon(Icons.cancel_outlined),
+                      label: Text('Rezervasyonu iptal et')),
+                SizedBox(height: 16),
                 RentalEventTimeline(events: _events),
                 if (_eventCursor != null)
                   TextButton(
                       onPressed: _busy ? null : _history,
-                      child: const Text('Önceki hareketleri göster'))
+                      child: Text('Önceki hareketleri göster'))
               ],
             ])));
   }
@@ -594,7 +596,7 @@ class _RentalBookingScreenState extends State<RentalBookingScreen>
   Widget _box(Widget child) => Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-          color: AppConstants.cardColor,
+          color: AppPalette.surface,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: rentalBorder)),
       child: child);
@@ -656,15 +658,15 @@ class _RentalComplaintState extends State<_RentalComplaint> {
                       child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const Text('Rezervasyon şikâyeti',
+                            Text('Rezervasyon şikâyeti',
                                 style: TextStyle(
-                                    color: Colors.white,
+                                    color: AppPalette.text,
                                     fontSize: 22,
                                     fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 8),
+                            SizedBox(height: 8),
                             Text('Rezervasyon #${widget.jobId}',
-                                style: const TextStyle(color: rentalMuted)),
-                            const SizedBox(height: 20),
+                                style: TextStyle(color: rentalMuted)),
+                            SizedBox(height: 20),
                             DropdownButtonFormField<String>(
                                 initialValue: _subject,
                                 isExpanded: true,
@@ -683,15 +685,15 @@ class _RentalComplaintState extends State<_RentalComplaint> {
                                     ? null
                                     : (v) => setState(() => _subject = v!),
                                 decoration:
-                                    const InputDecoration(labelText: 'Konu')),
-                            const SizedBox(height: 16),
+                                    InputDecoration(labelText: 'Konu')),
+                            SizedBox(height: 16),
                             TextFormField(
                                 controller: _text,
                                 enabled: !_busy,
                                 minLines: 3,
                                 maxLines: 6,
                                 maxLength: 4000,
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                     labelText: 'Yaşadığın sorunu açıkla'),
                                 validator: (s) => (s?.trim().length ?? 0) < 10
                                     ? 'En az 10 karakter ile açıklayın.'
@@ -700,7 +702,7 @@ class _RentalComplaintState extends State<_RentalComplaint> {
                               Padding(
                                   padding: const EdgeInsets.only(bottom: 12),
                                   child: Text(_error!,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                           color: Colors.redAccent))),
                             FilledButton(
                                 onPressed: _busy ? null : _send,
@@ -709,6 +711,6 @@ class _RentalComplaintState extends State<_RentalComplaint> {
                             TextButton(
                                 onPressed:
                                     _busy ? null : () => Navigator.pop(context),
-                                child: const Text('Vazgeç')),
+                                child: Text('Vazgeç')),
                           ]))))));
 }

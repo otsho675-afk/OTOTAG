@@ -8,18 +8,6 @@ import 'package:http/testing.dart';
 import 'package:ototag/admin_user_detail_screen.dart';
 
 void main() {
-  void enableLayoutDiagnostics(WidgetTester tester) {
-    final previous = FlutterError.onError;
-    FlutterError.onError = (details) {
-      if (details.exceptionAsString().contains('RenderFlex overflowed')) {
-        // ignore: avoid_print
-        print('ADMIN OVERFLOW FULL DETAILS: ${details.toString()}');
-      }
-      previous?.call(details);
-    };
-    addTearDown(() => FlutterError.onError = previous);
-  }
-
   final detail = <String, dynamic>{
     'status': 'success',
     'user': {
@@ -55,7 +43,6 @@ void main() {
   for (final width in [320.0, 390.0, 1100.0]) {
     testWidgets('member detail remains navigable at $width pixels',
         (tester) async {
-      enableLayoutDiagnostics(tester);
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = Size(width, 900);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -73,16 +60,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Kullanıcı detayları'), findsOneWidget);
         expect(find.textContaining('Deneme Kullanıcı'), findsWidgets);
-        final layoutError = tester.takeException();
-        if (layoutError != null) {
-          // ignore: avoid_print
-          print('DETAIL LAYOUT: $layoutError');
-          if (layoutError is FlutterError) {
-            // ignore: avoid_print
-            print('DETAIL CAUSE: ${layoutError.toStringDeep()}');
-          }
-        }
-        expect(layoutError, isNull);
+        expect(tester.takeException(), isNull);
         await tester.tap(find.text('Araçlar').first);
         await tester.pumpAndSettle();
         expect(find.textContaining('42 TEST 42'), findsOneWidget);

@@ -34,7 +34,7 @@ void main() {
       expect(find.text('Çekici'), findsOneWidget);
       expect(find.text('Hizmete bağlan'), findsNWidgets(4));
       final styles = tester.widget<Text>(find.text('Tamirci')).style;
-      expect(styles?.color, const Color(0xFF15231B));
+      expect(styles?.color, appLightTheme().colorScheme.onSurface);
       expect(tester.takeException(), isNull);
     });
   }

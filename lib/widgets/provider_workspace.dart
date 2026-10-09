@@ -5,6 +5,7 @@ import '../core/constants/app_constants.dart';
 import '../core/theme/app_palette.dart';
 import '../core/theme/app_motion.dart';
 import 'app_theme_toggle_button.dart';
+import 'ototag_brand_logo.dart';
 
 class ProviderStatusHeader extends StatelessWidget {
   const ProviderStatusHeader(
@@ -88,12 +89,12 @@ class ProviderStatusHeader extends StatelessWidget {
             ),
           ),
           const AppThemeToggleButton(),
-          const SizedBox(width: 7),
+          const SizedBox(width: 4),
           Switch.adaptive(
               value: online,
               onChanged: loggingOut ? null : onToggle,
               activeTrackColor: AppPalette.accent,
-              activeThumbColor: Colors.black),
+              activeThumbColor: AppPalette.accentText),
         ]),
         if (online) ...[
           const SizedBox(height: 12),
@@ -110,7 +111,7 @@ class ProviderStatusHeader extends StatelessWidget {
                 tooltip: 'Talepleri yenile',
                 onPressed: onRefresh,
                 icon: Icon(Icons.refresh_rounded,
-                    color: Colors.white, size: 20))
+                    color: AppPalette.text, size: 20))
           ])
         ],
       ]));

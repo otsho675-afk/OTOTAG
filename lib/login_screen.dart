@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_motion.dart';
 import 'core/theme/premium_surfaces.dart';
+import 'core/theme/app_palette.dart';
 import 'widgets/app_theme_toggle_button.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -593,7 +594,7 @@ class _LoginScreenState extends State<LoginScreen> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(32),
                   side: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
-              backgroundColor: const Color(0xFF111115).withValues(alpha: 0.95),
+              backgroundColor: AppPalette.surface.withValues(alpha: 0.98),
               elevation: 24,
               insetPadding:
                   const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -602,16 +603,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                        color: const Color(0xFF00FFA3).withValues(alpha: 0.1),
+                        color: AppPalette.accent.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                              color: const Color(0xFF00FFA3)
+                              color: AppPalette.accent
                                   .withValues(alpha: 0.2),
                               blurRadius: 20)
                         ]),
-                    child: const Icon(Icons.location_on_rounded,
-                        color: Color(0xFF00FFA3), size: 36),
+                    child: Icon(Icons.location_on_rounded,
+                        color: AppPalette.accent, size: 36),
                   ),
                   const SizedBox(height: 20),
                   const Text("Arka Plan Konum İzni",
@@ -663,11 +664,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF00FFA3),
-                            foregroundColor: Colors.black,
+                            backgroundColor: AppPalette.accent,
+                            foregroundColor: AppPalette.accentText,
                             elevation: 10,
                             shadowColor:
-                                const Color(0xFF00FFA3).withValues(alpha: 0.5),
+                                AppPalette.accent.withValues(alpha: 0.5),
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20))),
@@ -724,13 +725,13 @@ class _LoginScreenState extends State<LoginScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color:
-                    isError ? const Color(0xFFFF3366) : const Color(0xFF00FFA3),
+                    isError ? const Color(0xFFFF3366) : AppPalette.accent,
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
                       color: (isError
                               ? const Color(0xFFFF3366)
-                              : const Color(0xFF00FFA3))
+                              : AppPalette.accent)
                           .withValues(alpha: 0.35),
                       blurRadius: 25,
                       offset: const Offset(0, 10))
@@ -795,7 +796,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     side:
                         BorderSide(color: Colors.white.withValues(alpha: 0.1))),
                 backgroundColor:
-                    const Color(0xFF111115).withValues(alpha: 0.95),
+                    AppPalette.surface.withValues(alpha: 0.95),
                 elevation: 24,
                 insetPadding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -804,16 +805,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                          color: const Color(0xFF00FFA3).withValues(alpha: 0.1),
+                          color: AppPalette.accent.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                                color: const Color(0xFF00FFA3)
+                                color: AppPalette.accent
                                     .withValues(alpha: 0.2),
                                 blurRadius: 20)
                           ]),
-                      child: const Icon(Icons.manage_search_rounded,
-                          color: Color(0xFF00FFA3), size: 36),
+                      child: Icon(Icons.manage_search_rounded,
+                          color: AppPalette.accent, size: 36),
                     ),
                     const SizedBox(height: 20),
                     const Text("Kayıt Sorgula",
@@ -851,7 +852,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       focusedBorder: const OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(24)),
                           borderSide:
-                              BorderSide(color: Color(0xFF00FFA3), width: 1.5)),
+                              BorderSide(color: AppPalette.accent, width: 1.5)),
                       contentPadding: const EdgeInsets.symmetric(vertical: 20)),
                 ),
                 actionsPadding:
@@ -884,12 +885,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       Expanded(
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF00FFA3),
-                              disabledBackgroundColor: const Color(0xFF00FFA3)
+                              backgroundColor: AppPalette.accent,
+                              disabledBackgroundColor: AppPalette.accent
                                   .withValues(alpha: 0.5),
-                              foregroundColor: Colors.black,
+                              foregroundColor: AppPalette.accentText,
                               elevation: 10,
-                              shadowColor: const Color(0xFF00FFA3)
+                              shadowColor: AppPalette.accent
                                   .withValues(alpha: 0.5),
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
@@ -1000,13 +1001,13 @@ class _LoginScreenState extends State<LoginScreen> {
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
               color: focusNode.hasFocus
-                  ? const Color(0xFF00FFA3)
+                  ? AppPalette.accent
                   : (light ? const Color(0xFFD5E2D8) : Colors.white.withValues(alpha: 0.05)),
               width: focusNode.hasFocus ? 1.5 : 1.0),
           boxShadow: focusNode.hasFocus
               ? [
                   BoxShadow(
-                      color: const Color(0xFF00FFA3).withValues(alpha: 0.1),
+                      color: AppPalette.accent.withValues(alpha: 0.1),
                       blurRadius: 15,
                       spreadRadius: 1)
                 ]
@@ -1036,7 +1037,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 hintText: isPasswordField ? 'Şifreni gir' : '05xx xxx xx xx',
                 labelStyle: TextStyle(
                     color: focusNode.hasFocus
-                        ? const Color(0xFF00FFA3)
+                        ? AppPalette.accent
                         : Colors.white.withValues(alpha: 0.5),
                     fontSize: 14,
                     fontWeight: FontWeight.w500),
@@ -1044,7 +1045,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     padding: const EdgeInsets.only(left: 20, right: 16),
                     child: Icon(icon,
                         color: focusNode.hasFocus
-                            ? const Color(0xFF00FFA3)
+                            ? AppPalette.accent
                             : Colors.white70,
                         size: 22)),
                 suffixIcon: isPasswordField
@@ -1057,7 +1058,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ? Icons.visibility_off_rounded
                                 : Icons.visibility_rounded,
                             color: focusNode.hasFocus
-                                ? const Color(0xFF00FFA3)
+                                ? AppPalette.accent
                                 : Colors.white54,
                             size: 20,
                           ),

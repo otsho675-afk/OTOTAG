@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
+import '../core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -84,7 +86,7 @@ class _RentalListingEditorState extends State<RentalListingEditor> {
           .pickImage(source: ImageSource.gallery, imageQuality: 85);
       if (file == null) return;
       if (await file.length() > 5 * 1024 * 1024) {
-        throw const RentalException('Her fotoğraf en fazla 5 MB olabilir.');
+        throw RentalException('Her fotoğraf en fazla 5 MB olabilir.');
       }
       final bytes = await file.readAsBytes();
       if (mounted) {
@@ -161,10 +163,10 @@ class _RentalListingEditorState extends State<RentalListingEditor> {
                                           .resolve(old)
                                           .toString(),
                                       fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => const Icon(
+                                      errorBuilder: (_, __, ___) => Icon(
                                           Icons.add_a_photo_outlined,
                                           color: rentalMuted))
-                                  : const Icon(Icons.add_a_photo_outlined,
+                                  : Icon(Icons.add_a_photo_outlined,
                                       color: rentalMuted))),
                   if (present)
                     Positioned(
@@ -174,8 +176,8 @@ class _RentalListingEditorState extends State<RentalListingEditor> {
                             tooltip: '${i + 1}. fotoğrafı kaldır',
                             style: IconButton.styleFrom(
                                 backgroundColor: Colors.black87),
-                            icon: const Icon(Icons.close_rounded,
-                                size: 17, color: Colors.white),
+                            icon: Icon(Icons.close_rounded,
+                                size: 17, color: AppPalette.text),
                             onPressed: _saving
                                 ? null
                                 : () => setState(() {
@@ -219,8 +221,8 @@ class _RentalListingEditorState extends State<RentalListingEditor> {
                                         widget.listing == null
                                             ? 'Yeni Kiralık Araç Ekle'
                                             : 'Aracı düzenle',
-                                        style: const TextStyle(
-                                            color: Colors.white,
+                                        style: TextStyle(
+                                            color: AppPalette.text,
                                             fontSize: 21,
                                             fontWeight: FontWeight.w700))),
                                 IconButton(
@@ -228,16 +230,16 @@ class _RentalListingEditorState extends State<RentalListingEditor> {
                                     onPressed: _saving
                                         ? null
                                         : () => Navigator.pop(context, false),
-                                    icon: const Icon(Icons.close_rounded))
+                                    icon: Icon(Icons.close_rounded))
                               ]),
-                              const SizedBox(height: 4),
+                              SizedBox(height: 4),
                               Text(
                                   '${widget.city} • İlan müşterilere firmanın günlük fiyatıyla gösterilir.',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       color: rentalMuted,
                                       fontSize: 12,
                                       height: 1.5)),
-                              const SizedBox(height: 20),
+                              SizedBox(height: 20),
                               Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -245,7 +247,7 @@ class _RentalListingEditorState extends State<RentalListingEditor> {
                                         child: DropdownButtonFormField<String>(
                                             initialValue: _brand,
                                             isExpanded: true,
-                                            decoration: const InputDecoration(
+                                            decoration: InputDecoration(
                                                 labelText: 'Marka'),
                                             menuMaxHeight: 350,
                                             items: makes
@@ -264,13 +266,13 @@ class _RentalListingEditorState extends State<RentalListingEditor> {
                                                       _brand = v;
                                                       _model = null;
                                                     }))),
-                                    const SizedBox(width: 10),
+                                    SizedBox(width: 10),
                                     Expanded(
                                         child: DropdownButtonFormField<String>(
                                             key: ValueKey(_brand),
                                             initialValue: _model,
                                             isExpanded: true,
-                                            decoration: const InputDecoration(
+                                            decoration: InputDecoration(
                                                 labelText: 'Model'),
                                             menuMaxHeight: 350,
                                             items: models
@@ -288,7 +290,7 @@ class _RentalListingEditorState extends State<RentalListingEditor> {
                                                 : (v) => setState(
                                                     () => _model = v))),
                                   ]),
-                              const SizedBox(height: 14),
+                              SizedBox(height: 14),
                               Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -303,7 +305,7 @@ class _RentalListingEditorState extends State<RentalListingEditor> {
                                               LengthLimitingTextInputFormatter(
                                                   11)
                                             ],
-                                            decoration: const InputDecoration(
+                                            decoration: InputDecoration(
                                                 labelText: 'Plaka',
                                                 hintText: '42 TAG 403'),
                                             validator: (v) =>
@@ -313,13 +315,13 @@ class _RentalListingEditorState extends State<RentalListingEditor> {
                                                             .toUpperCase())
                                                     ? null
                                                     : 'Geçerli plaka girin.')),
-                                    const SizedBox(width: 10),
+                                    SizedBox(width: 10),
                                     Expanded(
                                         child: DropdownButtonFormField<String>(
                                             initialValue: _year,
                                             isExpanded: true,
                                             menuMaxHeight: 300,
-                                            decoration: const InputDecoration(
+                                            decoration: InputDecoration(
                                                 labelText: 'Model yılı'),
                                             items: years
                                                 .map((s) => DropdownMenuItem(
@@ -332,43 +334,43 @@ class _RentalListingEditorState extends State<RentalListingEditor> {
                                                 : (v) =>
                                                     setState(() => _year = v))),
                                   ]),
-                              const SizedBox(height: 14),
+                              SizedBox(height: 14),
                               TextFormField(
                                   controller: _price,
                                   enabled: !_saving,
                                   keyboardType:
                                       const TextInputType.numberWithOptions(
                                           decimal: true),
-                                  decoration: const InputDecoration(
+                                  decoration: InputDecoration(
                                       labelText: 'Günlük kiralama ücreti',
                                       suffixText: '₺ / gün'),
                                   validator: (v) => rentalCents(v ?? '') == null
                                       ? 'Geçerli, pozitif bir ücret girin.'
                                       : null),
-                              const SizedBox(height: 14),
+                              SizedBox(height: 14),
                               TextFormField(
                                   controller: _description,
                                   enabled: !_saving,
                                   minLines: 2,
                                   maxLines: 3,
                                   maxLength: 4000,
-                                  decoration: const InputDecoration(
+                                  decoration: InputDecoration(
                                       labelText: 'Araç özellikleri',
                                       hintText: 'Örn. otomatik vites, dizel')),
-                              const SizedBox(height: 8),
-                              const Text('Araç fotoğrafları',
+                              SizedBox(height: 8),
+                              Text('Araç fotoğrafları',
                                   style: TextStyle(
-                                      color: Colors.white,
+                                      color: AppPalette.text,
                                       fontWeight: FontWeight.w600)),
-                              const SizedBox(height: 6),
-                              const Text(
+                              SizedBox(height: 6),
+                              Text(
                                   'En fazla 3 fotoğraf • JPEG, PNG veya WebP • 5 MB',
                                   style: TextStyle(
                                       color: rentalMuted, fontSize: 11)),
-                              const SizedBox(height: 12),
+                              SizedBox(height: 12),
                               Row(children: List.generate(3, _photo)),
                               if (widget.listing != null)
-                                const Padding(
+                                Padding(
                                     padding: EdgeInsets.only(top: 14),
                                     child: Text(
                                         'Fiyat, plaka veya araç bilgisi değişirse bekleyen eski teklifler kapanır.',
@@ -380,21 +382,21 @@ class _RentalListingEditorState extends State<RentalListingEditor> {
                                 Padding(
                                     padding: const EdgeInsets.only(top: 16),
                                     child: Text(_error!,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                             color: Color(0xFFFF9DAD),
                                             height: 1.5))),
-                              const SizedBox(height: 22),
-                              const Text(
+                              SizedBox(height: 22),
+                              Text(
                                   'İlan fiyatını ve süreyi kabul eden müşteri doğrudan rezervasyon oluşturabilir. Toplam ücret günlük fiyat × gün sayısıdır.',
                                   style: TextStyle(
                                       color: rentalMuted,
                                       fontSize: 12,
                                       height: 1.5)),
-                              const SizedBox(height: 12),
+                              SizedBox(height: 12),
                               FilledButton(
                                   onPressed: _saving || _picking ? null : _save,
                                   child: _saving
-                                      ? const SizedBox(
+                                      ? SizedBox(
                                           width: 18,
                                           height: 18,
                                           child: CircularProgressIndicator(

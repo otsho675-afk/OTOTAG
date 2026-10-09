@@ -899,7 +899,6 @@ require_once __DIR__ . '/oauth_verification.php';
 require_once __DIR__ . '/admin_user_console.php';
 require_once __DIR__ . '/api_authorization.php';
 authorizeApiAction($pdo, $action, $method);
-handleAdminConsoleAction($pdo, $action, $method);
 require_once __DIR__ . '/app_updates.php';
 require_once __DIR__.'/notification_delivery.php';
 notificationEnsureSchema($pdo);
@@ -910,6 +909,7 @@ register_shutdown_function(function() use($pdo) {
 });
 handleAppUpdateAction($pdo, $action, $method);
 require_once __DIR__ . '/rentacar_api.php';
+handleAdminConsoleAction($pdo, $action, $method);
 handleRentalAction($pdo, $action, $method);
 
 switch ($action) {

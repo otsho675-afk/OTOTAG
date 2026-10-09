@@ -19,6 +19,7 @@ import 'services/app_session.dart';
 import 'widgets/admin_command_palette.dart';
 import 'widgets/admin_overview_panel.dart';
 import 'growth_analytics_screen.dart';
+import 'admin_user_detail_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -1516,141 +1517,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   void _showUserDetailsModal(Map<String, dynamic> user, Color cardColor, bool isDark) {
-    final bool isCustomer = user['user_type'] == 'customer';
-    final bool isBanned = user['status'] == 'banned';
-    final bool isPremium = user['is_premium'] == 1 || user['is_premium'] == '1';
-    final int userId = int.tryParse(user['id']?.toString() ?? '0') ?? 0;
-    
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: SafeArea(
-          child: Container(
-            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : Colors.white,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.2), blurRadius: 25, offset: const Offset(0, -5))]
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Center(child: Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.grey.withValues(alpha:0.3), borderRadius: BorderRadius.circular(10)))),
-                const SizedBox(height: 20),
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        CircleAvatar(
-                          radius: 40,
-                          backgroundColor: isBanned ? Colors.red.withValues(alpha:0.12) : Colors.blue.withValues(alpha:0.12),
-                          child: Icon(isBanned ? Icons.block : (isCustomer ? Icons.person : Icons.engineering), size: 40, color: isBanned ? Colors.red : Colors.blue),
-                        ),
-                        const SizedBox(height: 14),
-                        Text(user['name']?.toString() ?? 'Bilinmeyen Kullanıcı', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: isBanned ? Colors.red : (isDark ? Colors.white : Colors.black87), decoration: isBanned ? TextDecoration.lineThrough : null)),
-                        const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 8,
-                          alignment: WrapAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(color: isCustomer ? Colors.blue.withValues(alpha:0.1) : Colors.purple.withValues(alpha:0.1), borderRadius: BorderRadius.circular(10)),
-                              child: Text(isCustomer ? "Müşteri Hesabı" : "Usta (${_translateServiceType(user['service_category']?.toString())})", style: TextStyle(color: isCustomer ? Colors.blue : Colors.purple, fontWeight: FontWeight.bold, fontSize: 12)),
-                            ),
-                            if (isPremium)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(color: Colors.orange.withValues(alpha:0.1), borderRadius: BorderRadius.circular(10)),
-                                child: const Text("Premium Üye", style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12)),
-                              ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(color: Colors.amber.withValues(alpha:0.1), borderRadius: BorderRadius.circular(10)),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.star_rounded, color: Colors.orange, size: 14),
-                                  const SizedBox(width: 4),
-                                  Text(user['user_type'] == 'rentacar' && rentalId(user['reviews_count']) == 0 ? 'Henüz puan yok' : "${user['rating'] ?? '0'} (${user['reviews_count'] ?? '0'})", style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(color: isDark ? Colors.white10 : const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.grey.withValues(alpha:0.15))),
-                          child: Column(
-                            children: [
-                              _detailRow("Telefon", user['phone']?.toString() ?? '-', isDark),
-                              const Divider(height: 1),
-                              _detailRow("Şehir", user['city']?.toString() ?? 'Belirtilmedi', isDark),
-                              const Divider(height: 1),
-                              _detailRow("Kayıt Tarihi", _formatDate(user['created_at']?.toString()), isDark),
-                              if (!isCustomer) ...[
-                                const Divider(height: 1),
-                                _detailRow("IBAN", user['iban']?.toString().isNotEmpty == true ? user['iban'] : 'Eklenmedi', isDark),
-                              ]
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 22),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          alignment: WrapAlignment.center,
-                          children: [
-                            ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981), padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-                              icon: const Icon(Icons.call, color: Colors.white, size: 18),
-                              label: const Text("Ara", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                              onPressed: () => _launchURL("tel:${user['phone']}"),
-                            ),
-                            if (!isCustomer)
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-                                icon: const Icon(Icons.folder_shared, color: Colors.white, size: 18),
-                                label: const Text("Belgeler", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                                onPressed: () => _showUserDocumentsDialog(Map<String, dynamic>.from(user)),
-                              ),
-                            ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-                              icon: const Icon(Icons.gavel_rounded, color: Colors.white, size: 18),
-                              label: const Text("Ceza", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                              onPressed: () {
-                                Navigator.pop(context);
-                                _showPunishmentDialog(userId, user['name']?.toString() ?? '', !isCustomer);
-                              },
-                            ),
-                            ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-                              icon: const Icon(Icons.delete_forever, color: Colors.white, size: 18),
-                              label: const Text("Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                              onPressed: () {
-                                Navigator.pop(context);
-                                _deleteUser(userId, user['name']?.toString() ?? '');
-                              },
-                            )
-                          ],
-                        )
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+    final id = int.tryParse('${user['id']}') ?? 0;
+    if (id < 1) return;
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => AdminUserDetailScreen(
+        userId: id,
+        onChanged: () { if (mounted) _fetchAllUsers(); },
       ),
-    );
+    ));
   }
 
   void _showPartListingDetailsModal(Map<String, dynamic> item, Color cardColor, bool isDark) {
@@ -3683,7 +3557,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (searchLower.isNotEmpty) {
         final name = adminSearchText('${user['name'] ?? ''}');
         final phone = adminSearchText('${user['phone'] ?? ''}').replaceAll(RegExp(r'\s+'), '');
-        if (!name.contains(searchLower) && !phone.contains(searchLower.replaceAll(RegExp(r'\s+'), '')) && '$userId' != searchLower.replaceFirst('#', '')) return false;
+        final email = adminSearchText('${user['email'] ?? ''}');
+        final city = adminSearchText('${user['city'] ?? ''}');
+        if (!name.contains(searchLower) && !phone.contains(searchLower.replaceAll(RegExp(r'\s+'), '')) && !email.contains(searchLower) && !city.contains(searchLower) && '$userId' != searchLower.replaceFirst('#', '')) return false;
       }
       
       bool matchesType = false;
@@ -3704,6 +3580,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     filteredUsers.sort((a, b) {
       if (_userSort == 'name') return adminSearchText('${a['name'] ?? ''}').compareTo(adminSearchText('${b['name'] ?? ''}'));
+      if (_userSort == 'active') return '${b['last_seen_at'] ?? ''}'.compareTo('${a['last_seen_at'] ?? ''}');
+      if (_userSort == 'login') return '${b['last_login_at'] ?? ''}'.compareTo('${a['last_login_at'] ?? ''}');
       final left = int.tryParse('${a['id']}') ?? 0;
       final right = int.tryParse('${b['id']}') ?? 0;
       return _userSort == 'oldest' ? left.compareTo(right) : right.compareTo(left);
@@ -3721,7 +3599,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   onChanged: (value) => setState(() => userSearchQuery = value),
                   style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 13),
                   decoration: InputDecoration(
-                    hintText: "İsim, telefon veya üye no ara…",
+                    hintText: "İsim, telefon, şehir, e-posta veya üye no…",
                     hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
                     prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
                     suffixIcon: userSearchQuery.isNotEmpty 
@@ -3893,6 +3771,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             children: [
                               const SizedBox(height: 3),
                               Text(user['phone']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12)),
+                              Text("Son giriş: ${user['last_login_at'] != null ? _formatDate(user['last_login_at'].toString()) : 'Henüz kaydedilmedi'} • Son hareket: ${user['last_seen_at'] != null ? _formatDate(user['last_seen_at'].toString()) : '—'}",
+                                 maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11,color:Colors.grey)),
+                              if ((int.tryParse('${user['vehicle_count']}') ?? 0) > 0)
+                                Text("Kayıtlı araç: ${user['vehicle_count']}",style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)),
                               const SizedBox(height: 3),
                               Wrap(
                                 spacing: 6,
@@ -4805,6 +4687,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             items: const [
               DropdownMenuItem(value: 'newest', child: Text('En yeni üyeler')),
               DropdownMenuItem(value: 'oldest', child: Text('En eski üyeler')),
+              DropdownMenuItem(value: 'active', child: Text('Son hareket')),
+              DropdownMenuItem(value: 'login', child: Text('Son giriş')),
               DropdownMenuItem(value: 'name', child: Text('İsme göre sırala')),
             ],
             onChanged: (value) { if (value != null) setState(() => _userSort = value); },

@@ -16,6 +16,7 @@ class AdminUserDetailScreen extends StatefulWidget {
 class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
   Map<String, dynamic> _details = {};
   bool _busy = false;
+  bool _saving = false;
   String? _error;
 
   Map<String, dynamic> get _user =>
@@ -65,6 +66,8 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
   }
 
   Future<bool> _post(String action, Map<String, String> fields) async {
+    if (_saving) return false;
+    if (mounted) setState(() => _saving = true);
     try {
       final response = await http.post(
         Uri.parse(AppConstants.baseUrl).replace(queryParameters: {'action': action}),
@@ -75,10 +78,12 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
         throw Exception(data is Map ? _str(data['message']) : 'İşlem başarısız');
       }
       widget.onChanged?.call();
-      await _load();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Değişiklik kaydedildi.')));
+      if (action != 'admin_delete_user') {
+        await _load();
+      }
+      if (mounted && action != 'admin_delete_user') {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('İşlem başarıyla tamamlandı.')));
       }
       return true;
     } catch (e) {
@@ -87,6 +92,8 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
             SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
       }
       return false;
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -413,47 +420,272 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
     ]);
   }
 
+  Widget _summaryPill(IconData icon, String label, String value) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: scheme.surface.withValues(alpha: .78),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: .6)),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 18, color: AppConstants.primaryDark),
+        const SizedBox(width: 8),
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label,
+              style: TextStyle(
+                  fontSize: 10,
+                  color: scheme.onSurface.withValues(alpha: .64))),
+          Text(value,
+              style: const TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w800)),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _summaryHeader(Map<String, dynamic> user) {
+    final scheme = Theme.of(context).colorScheme;
+    final name = _str(user['name']);
+    final status = _str(user['status']);
+    final canAdd = user['user_type'] == 'customer';
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: [
+          scheme.surface,
+          scheme.primaryContainer.withValues(alpha: .28),
+        ]),
+        border: Border(
+            bottom: BorderSide(
+                color: scheme.outlineVariant.withValues(alpha: .5))),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            LayoutBuilder(builder: (ctx, constraints) {
+              final narrow = constraints.maxWidth < 540;
+              final info = Row(children: [
+                CircleAvatar(
+                  radius: narrow ? 22 : 27,
+                  backgroundColor: AppConstants.primaryColor.withValues(alpha: .15),
+                  child: Text(
+                    name.substring(0, 1).toUpperCase(),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: AppConstants.primaryDark,
+                        fontSize: 20),
+                  ),
+                ),
+                const SizedBox(width: 13),
+                Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: narrow ? 18 : 23,
+                            )),
+                        const SizedBox(height: 3),
+                        Text(
+                            '${_role(_str(user['user_type']))}  ·  Üye #${widget.userId}',
+                            style: TextStyle(
+                                color: scheme.onSurface.withValues(alpha: .65),
+                                fontSize: 12)),
+                      ]),
+                ),
+              ]);
+              final actions = Wrap(spacing: 8, runSpacing: 8, children: [
+                FilledButton.tonalIcon(
+                  onPressed: _saving ? null : _editUser,
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  label: const Text('Üyeyi düzenle'),
+                ),
+                if (canAdd)
+                  OutlinedButton.icon(
+                    onPressed: _saving ? null : () => _editVehicle(),
+                    icon: const Icon(Icons.add_rounded, size: 18),
+                    label: const Text('Araç ekle'),
+                  ),
+              ]);
+              if (narrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    info,
+                    const SizedBox(height: 12),
+                    actions,
+                  ],
+                );
+              }
+              return Row(children: [
+                Expanded(child: info),
+                const SizedBox(width: 12),
+                actions,
+              ]);
+            }),
+            const SizedBox(height: 12),
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              _summaryPill(
+                Icons.verified_outlined,
+                'Hesap durumu',
+                switch (status) {
+                  'active' => 'Aktif',
+                  'pending' => 'Onay bekliyor',
+                  'banned' => 'Engelli',
+                  'rejected' => 'Reddedildi',
+                  _ => status,
+                },
+              ),
+              _summaryPill(
+                  Icons.login_rounded,
+                  'Son giriş',
+                  _date(user['last_login_at'])),
+              _summaryPill(Icons.directions_car_outlined, 'Araç sayısı',
+                  '${_rows('vehicles').length}'),
+            ]),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteMember() async {
+    if (!await _confirm(
+        'Üye kalıcı olarak silinsin mi?',
+        'Bu üyeye ait hesap ve ilgili kayıtlar silinecek. İşlem geri alınamaz.')) {
+      return;
+    }
+    final done = await _post('admin_delete_user', {});
+    if (done && mounted) Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final u = _user;
-    return DefaultTabController(length:4,child:Scaffold(
-      appBar:AppBar(title:const Text('Üye yönetimi'),actions:[
-        IconButton(onPressed:_busy?null:_load,icon:const Icon(Icons.refresh),tooltip:'Yenile'),
-        IconButton(onPressed:u.isEmpty?null:() async {
-          if(!await _confirm('Üye kalıcı silinsin mi?','Bu kullanıcı ve ilişkili verileri silinecek. Geri alınamaz.')) return;
-          final done = await _post('admin_delete_user',{});
-          if(done && context.mounted) Navigator.pop(context);
-        },icon:const Icon(Icons.person_remove_outlined),tooltip:'Kullanıcıyı sil'),
-      ]),
-      body:_busy && u.isEmpty
-        ?const Center(child:CircularProgressIndicator())
-        : _error!=null && u.isEmpty
-          ? Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[
-              Text(_error!,textAlign:TextAlign.center),const SizedBox(height:12),
-              FilledButton(onPressed:_load,child:const Text('Tekrar dene')),
-            ])))
-          :Column(children:[
-            Container(width:double.infinity,padding:const EdgeInsets.fromLTRB(20,16,20,14),child:Wrap(
-              crossAxisAlignment:WrapCrossAlignment.center,spacing:16,runSpacing:12,children:[
-                CircleAvatar(radius:25,child:Text(_str(u['name']).substring(0,1).toUpperCase())),
-                Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                  Text(_str(u['name']),style:const TextStyle(fontWeight:FontWeight.w900,fontSize:20)),
-                  Text('${_role(_str(u['user_type']))} • #${widget.userId} • ${_str(u['status'])}',
-                    style:const TextStyle(fontSize:12,color:Colors.grey)),
-                ]),
+    return DefaultTabController(
+      length: 4,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Kullanıcı detayları',
+              style: TextStyle(fontWeight: FontWeight.w800)),
+          actions: [
+            IconButton(
+              onPressed: (_busy || _saving) ? null : _load,
+              icon: const Icon(Icons.refresh_rounded),
+              tooltip: 'Bilgileri yenile',
+            ),
+            PopupMenuButton<String>(
+              enabled: u.isNotEmpty && !_saving,
+              tooltip: 'Diğer kullanıcı işlemleri',
+              icon: const Icon(Icons.more_vert_rounded),
+              onSelected: (action) {
+                switch (action) {
+                  case 'edit':
+                    _editUser();
+                  case 'add_vehicle':
+                    _editVehicle();
+                  case 'delete':
+                    _deleteMember();
+                }
+              },
+              itemBuilder: (_) => [
+                const PopupMenuItem(
+                    value: 'edit',
+                    child: ListTile(
+                      dense: true,
+                      leading: Icon(Icons.edit_outlined),
+                      title: Text('Üye bilgilerini düzenle'),
+                    )),
+                if (u['user_type'] == 'customer')
+                  const PopupMenuItem(
+                      value: 'add_vehicle',
+                      child: ListTile(
+                        dense: true,
+                        leading: Icon(Icons.add_circle_outline),
+                        title: Text('Araç ekle'),
+                      )),
+                const PopupMenuDivider(),
+                const PopupMenuItem(
+                    value: 'delete',
+                    child: ListTile(
+                      dense: true,
+                      leading:
+                          Icon(Icons.delete_forever_rounded, color: Colors.red),
+                      title: Text('Hesabı kalıcı sil',
+                          style: TextStyle(color: Colors.red)),
+                    )),
               ],
-            )),
-            const TabBar(isScrollable:true,tabs:[
-              Tab(icon:Icon(Icons.person_outline),text:'Profil ve giriş'),
-              Tab(icon:Icon(Icons.directions_car_outlined),text:'Araçlar'),
-              Tab(icon:Icon(Icons.timeline_outlined),text:'Hareketler'),
-              Tab(icon:Icon(Icons.work_history_outlined),text:'İşlemler'),
-            ]),
-            if(_busy)const LinearProgressIndicator(minHeight:2),
-            Expanded(child:TabBarView(children:[
-              _profileTab(),_vehicleTab(),_activityTab(),_jobsTab(),
-            ])),
-          ]),
-    ));
+            ),
+            const SizedBox(width: 6),
+          ],
+        ),
+        body: _busy && u.isEmpty
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null && u.isEmpty
+                ? Center(
+                    child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.cloud_off_rounded, size: 42),
+                              const SizedBox(height: 12),
+                              Text(_error!, textAlign: TextAlign.center),
+                              const SizedBox(height: 16),
+                              FilledButton.icon(
+                                onPressed: _load,
+                                icon: const Icon(Icons.refresh_rounded),
+                                label: const Text('Tekrar dene'),
+                              ),
+                            ])))
+                : Column(children: [
+                    if (_saving || _busy)
+                      const LinearProgressIndicator(minHeight: 2),
+                    if (_error != null)
+                      Material(
+                        color: Theme.of(context).colorScheme.errorContainer,
+                        child: ListTile(
+                          leading: const Icon(Icons.warning_amber_rounded),
+                          title: Text(_error!),
+                          trailing: TextButton(
+                              onPressed: _load,
+                              child: const Text('Yeniden dene')),
+                        ),
+                      ),
+                    _summaryHeader(u),
+                    const TabBar(
+                      isScrollable: true,
+                      tabAlignment: TabAlignment.start,
+                      tabs: [
+                        Tab(icon: Icon(Icons.person_outline), text: 'Profil'),
+                        Tab(
+                            icon: Icon(Icons.directions_car_outlined),
+                            text: 'Araçlar'),
+                        Tab(
+                            icon: Icon(Icons.timeline_outlined),
+                            text: 'Hareketler'),
+                        Tab(
+                            icon: Icon(Icons.work_history_outlined),
+                            text: 'İşlemler'),
+                      ],
+                    ),
+                    Expanded(
+                      child: TabBarView(children: [
+                        _profileTab(),
+                        _vehicleTab(),
+                        _activityTab(),
+                        _jobsTab(),
+                      ]),
+                    ),
+                  ]),
+      ),
+    );
   }
 }

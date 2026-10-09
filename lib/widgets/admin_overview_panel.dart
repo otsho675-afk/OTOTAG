@@ -272,7 +272,7 @@ class AdminOverviewPanel extends StatelessWidget {
                   )),
             ]),
             const SizedBox(height: 12),
-            const Text('Her şey kontrolünüzde.',
+            const Text('Yönetim merkezi',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w900,
@@ -281,7 +281,7 @@ class AdminOverviewPanel extends StatelessWidget {
                 )),
             const SizedBox(height: 6),
             const Text(
-              'Üyeleri, başvuruları ve servis işlemlerini tek merkezden yönetin.',
+              'Her şey kontrolünüzde. Üyeleri, başvuruları ve işlemleri yönetin.',
               style: TextStyle(color: Color(0xFFB9CAC0), fontSize: 13),
             ),
             const SizedBox(height: 16),
@@ -337,26 +337,34 @@ class AdminOverviewPanel extends StatelessWidget {
     required String count,
     required VoidCallback onTap,
   }) {
-    return Material(
-      color: Colors.white.withValues(alpha: .08),
-      borderRadius: BorderRadius.circular(11),
-      child: InkWell(
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 210),
+      child: Material(
+        color: Colors.white.withValues(alpha: .08),
         borderRadius: BorderRadius.circular(11),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon, color: AppConstants.primaryColor, size: 17),
-            const SizedBox(width: 7),
-            Text(label,
-                style: const TextStyle(color: Colors.white, fontSize: 12)),
-            const SizedBox(width: 7),
-            Text(count,
-                style: const TextStyle(
-                    color: AppConstants.primaryColor,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900)),
-          ]),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(11),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(children: [
+              Icon(icon, color: AppConstants.primaryColor, size: 17),
+              const SizedBox(width: 7),
+              Flexible(
+                child: Text(label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: Colors.white, fontSize: 12)),
+              ),
+              const SizedBox(width: 7),
+              Text(count,
+                  style: const TextStyle(
+                      color: AppConstants.primaryColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900)),
+            ]),
+          ),
         ),
       ),
     );

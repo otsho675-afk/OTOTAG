@@ -117,11 +117,11 @@ class AdminWorkspaceShell extends StatelessWidget {
                     Stack(clipBehavior: Clip.none, children: [
                       icon,
                       if (count > 0)
-                        Positioned(
+                        const Positioned(
                           top: -5, right: -9,
                           child: CircleAvatar(
                             radius: 5,
-                            backgroundColor: const Color(0xFFF7B84B),
+                            backgroundColor: Color(0xFFF7B84B),
                           ),
                         ),
                     ]),

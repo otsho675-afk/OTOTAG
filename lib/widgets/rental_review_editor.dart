@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
+import '../core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import '../services/rental_service.dart';
 import 'rental_market_style.dart';
@@ -58,17 +60,17 @@ class _RentalReviewEditorState extends State<RentalReviewEditor> {
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Text('Kiralamayı değerlendir',
+                        Text('Kiralamayı değerlendir',
                             style: TextStyle(
-                                color: Colors.white,
+                                color: AppPalette.text,
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 8),
+                        SizedBox(height: 8),
                         Text(
                             'Rezervasyon #${widget.jobId} • Her kiralamaya tek değerlendirme.',
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: rentalMuted, height: 1.5)),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
                         Wrap(
                             alignment: WrapAlignment.center,
                             children: List.generate(
@@ -78,22 +80,22 @@ class _RentalReviewEditorState extends State<RentalReviewEditor> {
                                     onPressed: _saving
                                         ? null
                                         : () => setState(() => _rating = i + 1),
-                                    constraints: const BoxConstraints(
+                                    constraints: BoxConstraints(
                                         minWidth: 48, minHeight: 48),
                                     icon: Icon(
                                         i < _rating
                                             ? Icons.star_rounded
                                             : Icons.star_border_rounded,
                                         size: 34,
-                                        color: const Color(0xFFFFD071))))),
-                        const SizedBox(height: 16),
+                                        color: Color(0xFFFFD071))))),
+                        SizedBox(height: 16),
                         TextField(
                             controller: _comment,
                             enabled: !_saving,
                             minLines: 3,
                             maxLines: 6,
                             maxLength: 2000,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                                 labelText: 'Yorumun (isteğe bağlı)',
                                 hintText:
                                     'Teslim, araç ve firma deneyimini paylaş.')),
@@ -101,7 +103,7 @@ class _RentalReviewEditorState extends State<RentalReviewEditor> {
                           Padding(
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               child: Text(_error!,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       color: Colors.redAccent))),
                         FilledButton(
                             onPressed: _saving ? null : _save,
@@ -111,6 +113,6 @@ class _RentalReviewEditorState extends State<RentalReviewEditor> {
                         TextButton(
                             onPressed:
                                 _saving ? null : () => Navigator.pop(context),
-                            child: const Text('Vazgeç')),
+                            child: Text('Vazgeç')),
                       ])))));
 }

@@ -114,7 +114,7 @@ class RentalVehicleMedia extends StatelessWidget {
 }
 
 class RentalListingCard extends StatelessWidget {
-  RentalListingCard(
+  const RentalListingCard(
       {super.key,
       required this.car,
       required this.days,

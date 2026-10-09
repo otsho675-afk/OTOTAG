@@ -1,6 +1,8 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const
 // spare_parts_market.dart
 import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
+import 'core/theme/app_palette.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
@@ -11,14 +13,14 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
 
 // Siber Tema Renk Paleti (V2 - Ultra Modern Glassmorphism)
-const Color neonGreen = AppConstants.primaryColor;
-const Color darkGreen = Color(0xFF002200);
-const Color pureBlack = AppConstants.bgColor; 
-const Color panelBlack = AppConstants.cardColor; 
-const Color textGray = Color(0xFFFFFFFF);
+Color get neonGreen => AppPalette.accent;
+Color get darkGreen => AppPalette.accentSoft;
+Color get pureBlack => AppPalette.page; 
+Color get panelBlack => AppPalette.surface; 
+Color get textGray => AppPalette.muted;
 const Color alertRed = Color(0xFFFF3B30);
-const Color goldAccent = Color(0xFFFFFFFF);
-const Color neonCyan = Color(0xFFFFFFFF);
+Color get goldAccent => AppPalette.text;
+Color get neonCyan => AppPalette.accent;
 
 class SparePartsMarketScreen extends StatefulWidget {
   final int currentUserId;
@@ -38,8 +40,8 @@ class SparePartsMarketScreen extends StatefulWidget {
 
 class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with TickerProviderStateMixin {
   final String baseUrl = AppConstants.baseUrl;
-  final Duration _apiTimeout = const Duration(seconds: 15);
-  final Duration _uploadTimeout = const Duration(seconds: 30);
+  final Duration _apiTimeout = Duration(seconds: 15);
+  final Duration _uploadTimeout = Duration(seconds: 30);
   
   // SİBER GÜVENLİK & KORUMA MODÜLÜ (Anti-Hack, Bot Engelleyici Başlıklar)
   final Map<String, String> _secureHeaders = {
@@ -149,7 +151,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
         setState(() => selectedKeys.clear());
       }
     });
-    _fadeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800))..forward();
+    _fadeController = AnimationController(vsync: this, duration: Duration(milliseconds: 800))..forward();
     _fetchAllData();
   }
 
@@ -194,7 +196,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
         backgroundColor: Colors.transparent,
         padding: EdgeInsets.zero,
         margin: const EdgeInsets.only(bottom: 24, left: 20, right: 20),
-        duration: const Duration(milliseconds: 2500),
+        duration: Duration(milliseconds: 2500),
         content: GestureDetector(
           onTap: () => _dismissTopSnackBar(),
           child: Container(
@@ -206,7 +208,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.4),
                   blurRadius: 20,
-                  offset: const Offset(0, 8),
+                  offset: Offset(0, 8),
                 ),
               ],
             ),
@@ -214,14 +216,14 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
-                  child: Icon(isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded, color: Colors.white, size: 22),
+                  decoration: BoxDecoration(color: AppPalette.text.withValues(alpha: 0.2), shape: BoxShape.circle),
+                  child: Icon(isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded, color: AppPalette.text, size: 22),
                 ),
-                const SizedBox(width: 14),
+                SizedBox(width: 14),
                 Expanded(
                   child: Text(
                     message,
-                    style: const TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.2),
+                    style: TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.2),
                   ),
                 ),
               ],
@@ -266,7 +268,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
         filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
         child: AlertDialog(
           backgroundColor: panelBlack,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: BorderSide(color: AppPalette.text.withValues(alpha: 0.08))),
           title: Row(
             children: [
               Container(
@@ -274,11 +276,11 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                 decoration: BoxDecoration(color: confirmColor.withValues(alpha: 0.15), shape: BoxShape.circle),
                 child: Icon(Icons.help_outline_rounded, color: confirmColor, size: 24),
               ),
-              const SizedBox(width: 14),
-              Expanded(child: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18))),
+              SizedBox(width: 14),
+              Expanded(child: Text(title, style: TextStyle(color: AppPalette.text, fontWeight: FontWeight.w900, fontSize: 18))),
             ],
           ),
-          content: Text(content, style: const TextStyle(color: textGray, fontSize: 14, height: 1.5)),
+          content: Text(content, style: TextStyle(color: textGray, fontSize: 14, height: 1.5)),
           actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           actions: [
             Row(
@@ -287,10 +289,10 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                   child: TextButton(
                     onPressed: () => Navigator.pop(ctx, false),
                     style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
-                    child: const Text("İptal", style: TextStyle(color: Colors.white54, fontWeight: FontWeight.w800, fontSize: 14)),
+                    child: Text("İptal", style: TextStyle(color: AppPalette.muted, fontWeight: FontWeight.w800, fontSize: 14)),
                   ),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Expanded(
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
@@ -300,7 +302,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                       elevation: 0,
                     ),
                     onPressed: () => Navigator.pop(ctx, true),
-                    child: Text(confirmText, style: TextStyle(color: confirmColor == neonGreen ? pureBlack : Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
+                    child: Text(confirmText, style: TextStyle(color: confirmColor == neonGreen ? pureBlack : AppPalette.text, fontWeight: FontWeight.w900, fontSize: 14)),
                   ),
                 ),
               ],
@@ -335,19 +337,19 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                   child: GestureDetector(
                     onTap: () {}, 
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 600),
+                      constraints: BoxConstraints(maxWidth: 600),
                       child: Container(
                         height: MediaQuery.of(context).size.height * 0.85,
                         decoration: BoxDecoration(
                           color: panelBlack.withValues(alpha: 0.95),
                           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.5),
+                          border: Border.all(color: AppPalette.text.withValues(alpha: 0.08), width: 1.5),
                         ),
                         child: Column(
                           children: [
-                            const SizedBox(height: 12),
-                            Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
-                            const SizedBox(height: 16),
+                            SizedBox(height: 12),
+                            Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: AppPalette.border, borderRadius: BorderRadius.circular(10)))),
+                            SizedBox(height: 16),
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 20),
                               child: Row(
@@ -355,25 +357,25 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                   Container(
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(color: neonGreen.withValues(alpha: 0.1), shape: BoxShape.circle),
-                                    child: const Icon(Icons.location_city_rounded, color: neonGreen, size: 20),
+                                    child: Icon(Icons.location_city_rounded, color: neonGreen, size: 20),
                                   ),
-                                  const SizedBox(width: 12),
-                                  const Text("Şehir Filtresi", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white)),
+                                  SizedBox(width: 12),
+                                  Text("Şehir Filtresi", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppPalette.text)),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            SizedBox(height: 16),
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 20),
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.04),
+                                  color: AppPalette.text.withValues(alpha: 0.04),
                                   borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                                  border: Border.all(color: AppPalette.text.withValues(alpha: 0.08)),
                                 ),
                                 child: TextField(
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
-                                  decoration: const InputDecoration(
+                                  style: TextStyle(color: AppPalette.text, fontWeight: FontWeight.w600, fontSize: 14),
+                                  decoration: InputDecoration(
                                     hintText: "Şehir ara...",
                                     hintStyle: TextStyle(color: textGray, fontSize: 13),
                                     prefixIcon: Icon(Icons.search_rounded, color: neonGreen, size: 20),
@@ -386,13 +388,13 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 12),
+                            SizedBox(height: 12),
                             Expanded(
                               child: ListView.separated(
-                                physics: const BouncingScrollPhysics(),
+                                physics: BouncingScrollPhysics(),
                                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                                 itemCount: filteredCities.length,
-                                separatorBuilder: (_, __) => Divider(color: Colors.white.withValues(alpha: 0.04), height: 1),
+                                separatorBuilder: (_, __) => Divider(color: AppPalette.text.withValues(alpha: 0.04), height: 1),
                                 itemBuilder: (context, index) {
                                   final city = filteredCities[index];
                                   final isSelected = city == currentCityFilter;
@@ -412,12 +414,12 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                       title: Text(
                                         city, 
                                         style: TextStyle(
-                                          color: isSelected ? neonGreen : Colors.white, 
+                                          color: isSelected ? neonGreen : AppPalette.text, 
                                           fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
                                           fontSize: 15
                                         )
                                       ),
-                                      trailing: isSelected ? const Icon(Icons.check_circle_rounded, color: neonGreen, size: 20) : null,
+                                      trailing: isSelected ? Icon(Icons.check_circle_rounded, color: neonGreen, size: 20) : null,
                                     ),
                                   );
                                 },
@@ -450,20 +452,20 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
             child: Align(
               alignment: Alignment.bottomCenter,
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 600),
+                constraints: BoxConstraints(maxWidth: 600),
                 child: Container(
                   decoration: BoxDecoration(
                     color: panelBlack.withValues(alpha: 0.95),
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.5),
+                    border: Border.all(color: AppPalette.text.withValues(alpha: 0.08), width: 1.5),
                   ),
                   child: SafeArea(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const SizedBox(height: 12),
-                        Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 12),
+                        Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: AppPalette.border, borderRadius: BorderRadius.circular(10)))),
+                        SizedBox(height: 16),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20),
                           child: Row(
@@ -471,14 +473,14 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(color: goldAccent.withValues(alpha: 0.1), shape: BoxShape.circle),
-                                child: const Icon(Icons.sort_rounded, color: goldAccent, size: 20),
+                                child: Icon(Icons.sort_rounded, color: goldAccent, size: 20),
                               ),
-                              const SizedBox(width: 12),
-                              const Text("Sıralama", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white)),
+                              SizedBox(width: 12),
+                              Text("Sıralama", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppPalette.text)),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         ..._sortOptions.map((sortOption) {
                           bool isSelected = sortOption == currentSortFilter;
                           return Material(
@@ -496,16 +498,16 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                               title: Text(
                                 sortOption, 
                                 style: TextStyle(
-                                  color: isSelected ? goldAccent : Colors.white, 
+                                  color: isSelected ? goldAccent : AppPalette.text, 
                                   fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
                                   fontSize: 15
                                 )
                               ),
-                              trailing: isSelected ? const Icon(Icons.check_circle_rounded, color: goldAccent, size: 20) : null,
+                              trailing: isSelected ? Icon(Icons.check_circle_rounded, color: goldAccent, size: 20) : null,
                             ),
                           );
                         }),
-                        const SizedBox(height: 24),
+                        SizedBox(height: 24),
                       ],
                     ),
                   ),
@@ -541,56 +543,56 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                   boxShadow: [BoxShadow(color: neonGreen.withValues(alpha: 0.05), blurRadius: 40, spreadRadius: -10)]
                 ),
                 child: SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
+                  physics: ClampingScrollPhysics(),
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                    Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10))),
-                    const SizedBox(height: 24),
+                    Container(width: 48, height: 6, decoration: BoxDecoration(color: AppPalette.border, borderRadius: BorderRadius.circular(10))),
+                    SizedBox(height: 24),
                     Row(
                       children: [
                         Container(
                           padding: const EdgeInsets.all(10), 
                           decoration: BoxDecoration(color: neonGreen.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12), border: Border.all(color: neonGreen.withValues(alpha: 0.3))), 
-                          child: const Icon(Icons.tune_rounded, color: neonGreen, size: 22)
+                          child: Icon(Icons.tune_rounded, color: neonGreen, size: 22)
                         ),
-                        const SizedBox(width: 16),
-                        const Text("Akıllı Filtreleme", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
+                        SizedBox(width: 16),
+                        Text("Akıllı Filtreleme", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppPalette.text, letterSpacing: -0.5)),
                       ],
                     ),
-                    const SizedBox(height: 32),
-                    const Align(alignment: Alignment.centerLeft, child: Text("Fiyat Aralığı (TL)", style: TextStyle(color: neonGreen, fontWeight: FontWeight.w800, fontSize: 14))),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 32),
+                    Align(alignment: Alignment.centerLeft, child: Text("Fiyat Aralığı (TL)", style: TextStyle(color: neonGreen, fontWeight: FontWeight.w800, fontSize: 14))),
+                    SizedBox(height: 12),
                     Row(
                       children: [
                         Expanded(
                           child: Container(
-                            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.03), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withValues(alpha: 0.08))),
+                            decoration: BoxDecoration(color: AppPalette.text.withValues(alpha: 0.03), borderRadius: BorderRadius.circular(16), border: Border.all(color: AppPalette.text.withValues(alpha: 0.08))),
                             child: TextField(
                               controller: minCtrl, keyboardType: TextInputType.number, 
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16), 
+                              style: TextStyle(color: AppPalette.text, fontWeight: FontWeight.w900, fontSize: 16), 
                               textAlign: TextAlign.center,
-                              decoration: const InputDecoration(hintText: "Min", hintStyle: TextStyle(color: Colors.white24), border: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 16))
+                              decoration: InputDecoration(hintText: "Min", hintStyle: TextStyle(color: AppPalette.border), border: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 16))
                             )
                           )
                         ),
-                        const Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Icon(Icons.compare_arrows_rounded, color: textGray, size: 20)),
+                        Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Icon(Icons.compare_arrows_rounded, color: textGray, size: 20)),
                         Expanded(
                           child: Container(
-                            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.03), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withValues(alpha: 0.08))),
+                            decoration: BoxDecoration(color: AppPalette.text.withValues(alpha: 0.03), borderRadius: BorderRadius.circular(16), border: Border.all(color: AppPalette.text.withValues(alpha: 0.08))),
                             child: TextField(
                               controller: maxCtrl, keyboardType: TextInputType.number, 
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16), 
+                              style: TextStyle(color: AppPalette.text, fontWeight: FontWeight.w900, fontSize: 16), 
                               textAlign: TextAlign.center,
-                              decoration: const InputDecoration(hintText: "Max", hintStyle: TextStyle(color: Colors.white24), border: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 16))
+                              decoration: InputDecoration(hintText: "Max", hintStyle: TextStyle(color: AppPalette.border), border: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 16))
                             )
                           )
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
+                    SizedBox(height: 20),
                     Wrap(
                       spacing: 10, runSpacing: 10,
                       children: [
@@ -600,28 +602,28 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                         _buildQuickPriceChip("15.000+", 15000, 999999, minCtrl, maxCtrl, setModalState),
                       ],
                     ),
-                    const SizedBox(height: 32),
+                    SizedBox(height: 32),
                     Row(
                       children: [
                         Expanded(
                           child: TextButton(
                             onPressed: () { setState(() { minPriceFilter = null; maxPriceFilter = null; marketPage = 1; }); Navigator.pop(ctx); }, 
                             style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                            child: const Text("Temizle", style: TextStyle(color: Colors.white54, fontWeight: FontWeight.w800, fontSize: 15))
+                            child: Text("Temizle", style: TextStyle(color: AppPalette.muted, fontWeight: FontWeight.w800, fontSize: 15))
                           )
                         ),
-                        const SizedBox(width: 16),
+                        SizedBox(width: 16),
                         Expanded(
                           flex: 2,
                           child: Container(
-                            decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: neonGreen.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 5))]),
+                            decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: neonGreen.withValues(alpha: 0.3), blurRadius: 20, offset: Offset(0, 5))]),
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(backgroundColor: neonGreen, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), padding: const EdgeInsets.symmetric(vertical: 18)), 
                               onPressed: () { 
                                 setState(() { minPriceFilter = double.tryParse(minCtrl.text); maxPriceFilter = double.tryParse(maxCtrl.text); marketPage = 1; }); 
                                 Navigator.pop(ctx); 
                               }, 
-                              child: const Text("Filtreyi Uygula", style: TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 16))
+                              child: Text("Filtreyi Uygula", style: TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 16))
                             ),
                           )
                         ),
@@ -636,7 +638,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
         }
       )
     ).whenComplete(() {
-      Future<void>.delayed(const Duration(milliseconds: 450), () {
+      Future<void>.delayed(Duration(milliseconds: 450), () {
         try {
           minCtrl.dispose();
           maxCtrl.dispose();
@@ -658,11 +660,11 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.05),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+          color: AppPalette.text.withValues(alpha: 0.05),
+          border: Border.all(color: AppPalette.text.withValues(alpha: 0.15)),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
+        child: Text(label, style: TextStyle(color: AppPalette.text, fontWeight: FontWeight.w700, fontSize: 12)),
       ),
     );
   }
@@ -827,24 +829,24 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                   Row(
                     children: [
                       if (index > 0)
-                        Expanded(child: Container(height: 2, color: done ? accent : Colors.white.withValues(alpha: 0.08))),
+                        Expanded(child: Container(height: 2, color: done ? accent : AppPalette.text.withValues(alpha: 0.08))),
                       AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
+                        duration: Duration(milliseconds: 180),
                         width: active ? 40 : 34,
                         height: active ? 40 : 34,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: active || done ? accent : Colors.white.withValues(alpha: 0.05),
-                          border: Border.all(color: active || done ? accent : Colors.white.withValues(alpha: 0.10)),
+                          color: active || done ? accent : AppPalette.text.withValues(alpha: 0.05),
+                          border: Border.all(color: active || done ? accent : AppPalette.text.withValues(alpha: 0.10)),
                         ),
-                        child: Icon(done ? Icons.check_rounded : icon, color: active || done ? pureBlack : Colors.white54, size: 18),
+                        child: Icon(done ? Icons.check_rounded : icon, color: active || done ? pureBlack : AppPalette.muted, size: 18),
                       ),
                       if (index < 3)
-                        Expanded(child: Container(height: 2, color: done ? accent : Colors.white.withValues(alpha: 0.08))),
+                        Expanded(child: Container(height: 2, color: done ? accent : AppPalette.text.withValues(alpha: 0.08))),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: active ? accent : Colors.white54, fontSize: 9.5, fontWeight: active ? FontWeight.w900 : FontWeight.w700)),
+                  SizedBox(height: 6),
+                  Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: active ? accent : AppPalette.muted, fontSize: 9.5, fontWeight: active ? FontWeight.w900 : FontWeight.w700)),
                 ],
               ),
             );
@@ -855,28 +857,28 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
               onTap: onTap,
               borderRadius: BorderRadius.circular(18),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
+                duration: Duration(milliseconds: 180),
                 padding: const EdgeInsets.all(15),
                 decoration: BoxDecoration(
-                  color: selected ? color.withValues(alpha: 0.10) : Colors.white.withValues(alpha: 0.025),
+                  color: selected ? color.withValues(alpha: 0.10) : AppPalette.text.withValues(alpha: 0.025),
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: selected ? color : Colors.white.withValues(alpha: 0.08), width: selected ? 1.5 : 1),
+                  border: Border.all(color: selected ? color : AppPalette.text.withValues(alpha: 0.08), width: selected ? 1.5 : 1),
                 ),
                 child: Row(
                   children: [
                     Container(
                       width: 48,
                       height: 48,
-                      decoration: BoxDecoration(color: selected ? color : Colors.white.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(14)),
-                      child: Icon(icon, color: selected ? pureBlack : Colors.white70),
+                      decoration: BoxDecoration(color: selected ? color : AppPalette.text.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(14)),
+                      child: Icon(icon, color: selected ? pureBlack : AppPalette.muted),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(title, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
-                      const SizedBox(height: 3),
-                      Text(subtitle, style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                      Text(title, style: TextStyle(color: AppPalette.text, fontSize: 14, fontWeight: FontWeight.w900)),
+                      SizedBox(height: 3),
+                      Text(subtitle, style: TextStyle(color: AppPalette.subtle, fontSize: 10)),
                     ])),
-                    Icon(selected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, color: selected ? color : Colors.white24, size: 22),
+                    Icon(selected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, color: selected ? color : AppPalette.border, size: 22),
                   ],
                 ),
               ),
@@ -884,71 +886,71 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
           }
 
           Widget stepOne() => Column(
-                key: const ValueKey(0),
+                key: ValueKey(0),
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text("İlan Türünü Seç", style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
-                  const SizedBox(height: 5),
-                  const Text("Parça mı arıyorsun, yoksa elindeki parçayı mı satıyorsun?", style: TextStyle(color: Colors.white54, fontSize: 12, height: 1.4)),
-                  const SizedBox(height: 20),
+                  Text("İlan Türünü Seç", style: TextStyle(color: AppPalette.text, fontSize: 21, fontWeight: FontWeight.w900)),
+                  SizedBox(height: 5),
+                  Text("Parça mı arıyorsun, yoksa elindeki parçayı mı satıyorsun?", style: TextStyle(color: AppPalette.muted, fontSize: 12, height: 1.4)),
+                  SizedBox(height: 20),
                   LayoutBuilder(builder: (context, c) {
                     final a = typeCard(!isSelling, neonCyan, Icons.search_rounded, "Parça Arıyorum", "İhtiyacın olan parçayı ilan ver", () => setModalState(() => isSelling = false));
                     final b = typeCard(isSelling, neonGreen, Icons.sell_rounded, "Parça Satıyorum", "Elindeki parçayı satışa çıkar", () => setModalState(() => isSelling = true));
-                    return c.maxWidth < 520 ? Column(children: [a, const SizedBox(height: 10), b]) : Row(children: [Expanded(child: a), const SizedBox(width: 12), Expanded(child: b)]);
+                    return c.maxWidth < 520 ? Column(children: [a, SizedBox(height: 10), b]) : Row(children: [Expanded(child: a), SizedBox(width: 12), Expanded(child: b)]);
                   }),
-                  const SizedBox(height: 22),
+                  SizedBox(height: 22),
                   _buildGlassDropdown("Parça Kategorisi", selectedCategory, _categories.where((e) => e != "Tüm Kategoriler").toList(), accent, (v) { if (v != null) setModalState(() => selectedCategory = v); }),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   LayoutBuilder(builder: (context, c) {
                     final a = _buildGlassDropdown("Parça Durumu", selectedCondition, _conditionOptions.where((e) => e != "Tüm Durumlar").toList(), accent, (v) { if (v != null) setModalState(() => selectedCondition = v); });
                     final b = _buildGlassDropdown("Satış Tipi", selectedListingType, _listingTypeOptions.where((e) => e != "Tüm Satış Tipleri").toList(), accent, (v) { if (v != null) setModalState(() => selectedListingType = v); });
-                    return c.maxWidth < 520 ? Column(children: [a, const SizedBox(height: 16), b]) : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: a), const SizedBox(width: 12), Expanded(child: b)]);
+                    return c.maxWidth < 520 ? Column(children: [a, SizedBox(height: 16), b]) : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: a), SizedBox(width: 12), Expanded(child: b)]);
                   }),
                 ],
               );
 
           Widget stepTwo() => Column(
-                key: const ValueKey(1),
+                key: ValueKey(1),
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text("Araç Bilgileri", style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
-                  const SizedBox(height: 5),
-                  const Text("Parçanın hangi araca uyduğunu belirt.", style: TextStyle(color: Colors.white54, fontSize: 12)),
-                  const SizedBox(height: 22),
+                  Text("Araç Bilgileri", style: TextStyle(color: AppPalette.text, fontSize: 21, fontWeight: FontWeight.w900)),
+                  SizedBox(height: 5),
+                  Text("Parçanın hangi araca uyduğunu belirt.", style: TextStyle(color: AppPalette.muted, fontSize: 12)),
+                  SizedBox(height: 22),
                   LayoutBuilder(builder: (context, c) {
                     final brand = _buildGlassDropdown("Araç Markası", selectedBrand, _carBrands, accent, (v) { if (v != null) setModalState(() => selectedBrand = v); });
                     final year = _buildGlassDropdown("Model Yılı", selectedYear, years, accent, (v) { if (v != null) setModalState(() => selectedYear = v); });
-                    return c.maxWidth < 520 ? Column(children: [brand, const SizedBox(height: 16), year]) : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(flex: 3, child: brand), const SizedBox(width: 12), Expanded(flex: 2, child: year)]);
+                    return c.maxWidth < 520 ? Column(children: [brand, SizedBox(height: 16), year]) : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(flex: 3, child: brand), SizedBox(width: 12), Expanded(flex: 2, child: year)]);
                   }),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   _buildGlassDropdown("Kasa Tipi", selectedBodyType, bodyTypes, accent, (v) { if (v != null) setModalState(() => selectedBodyType = v); }),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   _buildInput(_carModelCtrl, "Model / Seri", "Örn: Egea, Civic, Megane, Focus", Icons.directions_car_filled_rounded, action: TextInputAction.done),
-                  const SizedBox(height: 18),
+                  SizedBox(height: 18),
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(color: accent.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(16), border: Border.all(color: accent.withValues(alpha: 0.16))),
-                    child: Row(children: [Icon(Icons.info_outline_rounded, color: accent, size: 20), const SizedBox(width: 10), const Expanded(child: Text("Araç bilgilerini doğru girmek ilanınızın daha kolay bulunmasını sağlar.", style: TextStyle(color: Colors.white54, fontSize: 11, height: 1.4)))]),
+                    child: Row(children: [Icon(Icons.info_outline_rounded, color: accent, size: 20), SizedBox(width: 10), Expanded(child: Text("Araç bilgilerini doğru girmek ilanınızın daha kolay bulunmasını sağlar.", style: TextStyle(color: AppPalette.muted, fontSize: 11, height: 1.4)))]),
                   ),
                 ],
               );
 
           Widget stepThree() => Column(
-                key: const ValueKey(2),
+                key: ValueKey(2),
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text("Parça Bilgileri", style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
-                  const SizedBox(height: 5),
-                  const Text("İlan başlığını ve açıklamasını oluştur.", style: TextStyle(color: Colors.white54, fontSize: 12)),
-                  const SizedBox(height: 22),
+                  Text("Parça Bilgileri", style: TextStyle(color: AppPalette.text, fontSize: 21, fontWeight: FontWeight.w900)),
+                  SizedBox(height: 5),
+                  Text("İlan başlığını ve açıklamasını oluştur.", style: TextStyle(color: AppPalette.muted, fontSize: 12)),
+                  SizedBox(height: 22),
                   _buildInput(_partNameCtrl, "Parça Adı *", "Örn: Sağ Ön Far", Icons.settings_rounded, action: TextInputAction.next),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   _buildInput(_descCtrl, "Açıklama", "Parçanın durumu, orijinalliği, kusurları ve diğer detayları...", Icons.notes_rounded, maxLines: 5, action: TextInputAction.newline),
-                  const SizedBox(height: 18),
+                  SizedBox(height: 18),
                   Container(
                     padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.025), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withValues(alpha: 0.07))),
-                    child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(Icons.tips_and_updates_outlined, color: neonGreen, size: 21), SizedBox(width: 11), Expanded(child: Text("Başlığı kısa ve anlaşılır yaz. Örnek: “Fiat Egea Sağ Far Orijinal”.", style: TextStyle(color: Colors.white54, fontSize: 11, height: 1.4)))]),
+                    decoration: BoxDecoration(color: AppPalette.text.withValues(alpha: 0.025), borderRadius: BorderRadius.circular(16), border: Border.all(color: AppPalette.text.withValues(alpha: 0.07))),
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(Icons.tips_and_updates_outlined, color: neonGreen, size: 21), SizedBox(width: 11), Expanded(child: Text("Başlığı kısa ve anlaşılır yaz. Örnek: “Fiat Egea Sağ Far Orijinal”.", style: TextStyle(color: AppPalette.muted, fontSize: 11, height: 1.4)))]),
                   ),
                 ],
               );
@@ -957,12 +959,12 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Row(children: [
-                    const Expanded(child: Text("İlan Fotoğrafları *", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900))),
+                    Expanded(child: Text("İlan Fotoğrafları *", style: TextStyle(color: AppPalette.text, fontSize: 14, fontWeight: FontWeight.w900))),
                     Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5), decoration: BoxDecoration(color: accent.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(8)), child: Text("${selectedPhotos.length}/3", style: TextStyle(color: accent, fontWeight: FontWeight.w900, fontSize: 11))),
                   ]),
-                  const SizedBox(height: 5),
-                  const Text("En az 2, en fazla 3 fotoğraf ekleyebilirsiniz.", style: TextStyle(color: Colors.white38, fontSize: 10)),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 5),
+                  Text("En az 2, en fazla 3 fotoğraf ekleyebilirsiniz.", style: TextStyle(color: AppPalette.subtle, fontSize: 10)),
+                  SizedBox(height: 12),
                   if (selectedPhotos.isEmpty)
                     InkWell(
                       onTap: pickImages,
@@ -970,7 +972,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                       child: Container(
                         height: 125,
                         decoration: BoxDecoration(color: accent.withValues(alpha: 0.04), borderRadius: BorderRadius.circular(18), border: Border.all(color: accent.withValues(alpha: 0.30))),
-                        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.add_photo_alternate_rounded, color: accent, size: 34), const SizedBox(height: 8), Text("Fotoğraf Ekle", style: TextStyle(color: accent, fontSize: 13, fontWeight: FontWeight.w900)), const SizedBox(height: 3), const Text("Galeriden fotoğraf seç", style: TextStyle(color: Colors.white38, fontSize: 10))]),
+                        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.add_photo_alternate_rounded, color: accent, size: 34), SizedBox(height: 8), Text("Fotoğraf Ekle", style: TextStyle(color: accent, fontSize: 13, fontWeight: FontWeight.w900)), SizedBox(height: 3), Text("Galeriden fotoğraf seç", style: TextStyle(color: AppPalette.subtle, fontSize: 10))]),
                       ),
                     )
                   else
@@ -981,7 +983,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                         itemCount: selectedPhotos.length + (selectedPhotos.length < 3 ? 1 : 0),
                         itemBuilder: (context, index) {
                           if (index == selectedPhotos.length) {
-                            return InkWell(onTap: pickImages, borderRadius: BorderRadius.circular(16), child: Container(width: 98, margin: const EdgeInsets.only(right: 10), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.04), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withValues(alpha: 0.10))), child: Icon(Icons.add_rounded, color: accent, size: 30)));
+                            return InkWell(onTap: pickImages, borderRadius: BorderRadius.circular(16), child: Container(width: 98, margin: const EdgeInsets.only(right: 10), decoration: BoxDecoration(color: AppPalette.text.withValues(alpha: 0.04), borderRadius: BorderRadius.circular(16), border: Border.all(color: AppPalette.text.withValues(alpha: 0.10))), child: Icon(Icons.add_rounded, color: accent, size: 30)));
                           }
                           final photo = selectedPhotos[index];
                           return Stack(children: [
@@ -990,9 +992,9 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                               margin: const EdgeInsets.only(right: 10),
                               clipBehavior: Clip.antiAlias,
                               decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), border: Border.all(color: accent.withValues(alpha: 0.35))),
-                              child: kIsWeb ? Image.network(photo.path, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: Colors.white.withValues(alpha: 0.04), child: const Icon(Icons.image_rounded, color: Colors.white38))) : Image.file(File(photo.path), fit: BoxFit.cover),
+                              child: kIsWeb ? Image.network(photo.path, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: AppPalette.text.withValues(alpha: 0.04), child: Icon(Icons.image_rounded, color: AppPalette.subtle))) : Image.file(File(photo.path), fit: BoxFit.cover),
                             ),
-                            Positioned(top: 5, right: 15, child: InkWell(onTap: () => setModalState(() => selectedPhotos.removeAt(index)), child: Container(width: 24, height: 24, decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.75), shape: BoxShape.circle), child: const Icon(Icons.close_rounded, color: Colors.white, size: 15)))),
+                            Positioned(top: 5, right: 15, child: InkWell(onTap: () => setModalState(() => selectedPhotos.removeAt(index)), child: Container(width: 24, height: 24, decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.75), shape: BoxShape.circle), child: Icon(Icons.close_rounded, color: AppPalette.text, size: 15)))),
                           ]);
                         },
                       ),
@@ -1004,8 +1006,8 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Row(children: [
                   Container(width: 35, height: 35, decoration: BoxDecoration(color: accent.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(10)), child: Icon(icon, size: 17, color: accent)),
-                  const SizedBox(width: 11),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: const TextStyle(color: Colors.white38, fontSize: 9, fontWeight: FontWeight.w700)), const SizedBox(height: 2), Text(value, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800))])),
+                  SizedBox(width: 11),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: TextStyle(color: AppPalette.subtle, fontSize: 9, fontWeight: FontWeight.w700)), SizedBox(height: 2), Text(value, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppPalette.text, fontSize: 12, fontWeight: FontWeight.w800))])),
                 ]),
               );
 
@@ -1016,32 +1018,32 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
               if (selectedYear != "Yıl Seçin") selectedYear,
             ].join(' ');
             return Column(
-              key: const ValueKey(3),
+              key: ValueKey(3),
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(isSelling ? "İlanı Tamamla" : "İlanı Kontrol Et", style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
-                const SizedBox(height: 5),
-                Text(isSelling ? "Fiyat ve fotoğrafları ekleyerek ilanını yayınla." : "Bilgilerini kontrol et ve ilanını yayınla.", style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                Text(isSelling ? "İlanı Tamamla" : "İlanı Kontrol Et", style: TextStyle(color: AppPalette.text, fontSize: 21, fontWeight: FontWeight.w900)),
+                SizedBox(height: 5),
+                Text(isSelling ? "Fiyat ve fotoğrafları ekleyerek ilanını yayınla." : "Bilgilerini kontrol et ve ilanını yayınla.", style: TextStyle(color: AppPalette.muted, fontSize: 12)),
                 if (isSelling) ...[
-                  const SizedBox(height: 22),
+                  SizedBox(height: 22),
                   _buildInput(_priceCtrl, "Satış Fiyatı *", "Örn: 2500", Icons.payments_rounded, isNumber: true, action: TextInputAction.done),
-                  const SizedBox(height: 22),
+                  SizedBox(height: 22),
                   photoSection(),
                 ],
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.025), borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white.withValues(alpha: 0.07))),
+                  decoration: BoxDecoration(color: AppPalette.text.withValues(alpha: 0.025), borderRadius: BorderRadius.circular(18), border: Border.all(color: AppPalette.text.withValues(alpha: 0.07))),
                   child: Column(children: [
                     summaryRow(Icons.storefront_rounded, "İlan Türü", isSelling ? "Satılık" : "Aranıyor"),
-                    Divider(height: 1, color: Colors.white.withValues(alpha: 0.05)),
+                    Divider(height: 1, color: AppPalette.text.withValues(alpha: 0.05)),
                     summaryRow(Icons.category_rounded, "Kategori", selectedCategory),
-                    Divider(height: 1, color: Colors.white.withValues(alpha: 0.05)),
+                    Divider(height: 1, color: AppPalette.text.withValues(alpha: 0.05)),
                     summaryRow(Icons.settings_rounded, "Parça", _partNameCtrl.text.trim().isEmpty ? "Belirtilmedi" : _partNameCtrl.text.trim()),
-                    Divider(height: 1, color: Colors.white.withValues(alpha: 0.05)),
+                    Divider(height: 1, color: AppPalette.text.withValues(alpha: 0.05)),
                     summaryRow(Icons.directions_car_rounded, "Araç", vehicle.isEmpty ? "Belirtilmedi" : vehicle),
                     if (isSelling) ...[
-                      Divider(height: 1, color: Colors.white.withValues(alpha: 0.05)),
+                      Divider(height: 1, color: AppPalette.text.withValues(alpha: 0.05)),
                       summaryRow(Icons.payments_rounded, "Fiyat", _priceCtrl.text.trim().isEmpty ? "Henüz girilmedi" : "${_priceCtrl.text.trim()} ₺"),
                     ],
                   ]),
@@ -1066,7 +1068,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
               child: Align(
                 alignment: Alignment.bottomCenter,
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 760),
+                  constraints: BoxConstraints(maxWidth: 760),
                   child: Container(
                     width: double.infinity,
                     constraints: BoxConstraints(maxHeight: media.size.height * 0.94),
@@ -1085,39 +1087,39 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                             Padding(
                               padding: EdgeInsets.fromLTRB(pagePadding, 12, pagePadding, 12),
                               child: Column(children: [
-                                Container(width: 45, height: 5, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(20))),
-                                const SizedBox(height: 14),
+                                Container(width: 45, height: 5, decoration: BoxDecoration(color: AppPalette.border, borderRadius: BorderRadius.circular(20))),
+                                SizedBox(height: 14),
                                 Row(children: [
                                   Container(width: 44, height: 44, decoration: BoxDecoration(color: accent.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(13)), child: Icon(isSelling ? Icons.sell_rounded : Icons.search_rounded, color: accent, size: 22)),
-                                  const SizedBox(width: 12),
-                                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(isSelling ? "Yeni Satılık İlan" : "Yeni Aranıyor İlanı", style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)), const SizedBox(height: 2), Text("Adım ${currentStep + 1} / 4", style: TextStyle(color: accent, fontSize: 11, fontWeight: FontWeight.w800))])),
-                                  IconButton(onPressed: safeClose, icon: const Icon(Icons.close_rounded, color: Colors.white60)),
+                                  SizedBox(width: 12),
+                                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(isSelling ? "Yeni Satılık İlan" : "Yeni Aranıyor İlanı", style: TextStyle(color: AppPalette.text, fontSize: 18, fontWeight: FontWeight.w900)), SizedBox(height: 2), Text("Adım ${currentStep + 1} / 4", style: TextStyle(color: accent, fontSize: 11, fontWeight: FontWeight.w800))])),
+                                  IconButton(onPressed: safeClose, icon: Icon(Icons.close_rounded, color: AppPalette.muted)),
                                 ]),
-                                const SizedBox(height: 16),
+                                SizedBox(height: 16),
                                 Row(children: [stepDot(0, Icons.storefront_rounded, "Tür"), stepDot(1, Icons.directions_car_rounded, "Araç"), stepDot(2, Icons.settings_rounded, "Parça"), stepDot(3, Icons.rocket_launch_rounded, "Yayınla")]),
                               ]),
                             ),
-                            Divider(height: 1, color: Colors.white.withValues(alpha: 0.06)),
+                            Divider(height: 1, color: AppPalette.text.withValues(alpha: 0.06)),
                             Expanded(
                               child: SingleChildScrollView(
                                 keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                                physics: const ClampingScrollPhysics(),
+                                physics: ClampingScrollPhysics(),
                                 padding: EdgeInsets.fromLTRB(pagePadding, 22, pagePadding, 24),
-                                child: AnimatedSwitcher(duration: const Duration(milliseconds: 220), child: currentPage()),
+                                child: AnimatedSwitcher(duration: Duration(milliseconds: 220), child: currentPage()),
                               ),
                             ),
                             Container(
                               padding: EdgeInsets.fromLTRB(pagePadding, 11, pagePadding, 13),
-                              decoration: BoxDecoration(color: panelBlack, border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.07)))),
+                              decoration: BoxDecoration(color: panelBlack, border: Border(top: BorderSide(color: AppPalette.text.withValues(alpha: 0.07)))),
                               child: Row(children: [
                                 if (currentStep > 0) ...[
                                   Expanded(child: OutlinedButton.icon(
                                     onPressed: isProcessing ? null : () => setModalState(() => currentStep--),
-                                    icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                                    label: const Text("Geri", style: TextStyle(fontWeight: FontWeight.w900)),
-                                    style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: BorderSide(color: Colors.white.withValues(alpha: 0.15)), padding: const EdgeInsets.symmetric(vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                                    icon: Icon(Icons.arrow_back_rounded, size: 18),
+                                    label: Text("Geri", style: TextStyle(fontWeight: FontWeight.w900)),
+                                    style: OutlinedButton.styleFrom(foregroundColor: AppPalette.text, side: BorderSide(color: AppPalette.text.withValues(alpha: 0.15)), padding: const EdgeInsets.symmetric(vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
                                   )),
-                                  const SizedBox(width: 10),
+                                  SizedBox(width: 10),
                                 ],
                                 Expanded(
                                   flex: currentStep > 0 ? 2 : 1,
@@ -1134,8 +1136,8 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                     },
                                     style: ElevatedButton.styleFrom(backgroundColor: accent, foregroundColor: pureBlack, padding: const EdgeInsets.symmetric(vertical: 15), elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
                                     child: isProcessing
-                                        ? const SizedBox(width: 21, height: 21, child: CircularProgressIndicator(strokeWidth: 2.5, color: pureBlack))
-                                        : Row(mainAxisAlignment: MainAxisAlignment.center, children: [Text(currentStep == 3 ? "İlanı Yayınla" : "Devam Et", style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900)), const SizedBox(width: 6), Icon(currentStep == 3 ? Icons.rocket_launch_rounded : Icons.arrow_forward_rounded, size: 18)]),
+                                        ? SizedBox(width: 21, height: 21, child: CircularProgressIndicator(strokeWidth: 2.5, color: pureBlack))
+                                        : Row(mainAxisAlignment: MainAxisAlignment.center, children: [Text(currentStep == 3 ? "İlanı Yayınla" : "Devam Et", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900)), SizedBox(width: 6), Icon(currentStep == 3 ? Icons.rocket_launch_rounded : Icons.arrow_forward_rounded, size: 18)]),
                                   ),
                                 ),
                               ]),
@@ -1158,7 +1160,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(padding: const EdgeInsets.only(left: 4, bottom: 8), child: Text(label, style: const TextStyle(color: textGray, fontWeight: FontWeight.w700, fontSize: 13))),
+        Padding(padding: const EdgeInsets.only(left: 4, bottom: 8), child: Text(label, style: TextStyle(color: textGray, fontWeight: FontWeight.w700, fontSize: 13))),
         GestureDetector(
           onTap: () {
             FocusManager.instance.primaryFocus?.unfocus();
@@ -1167,11 +1169,11 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
           },
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.03), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withValues(alpha: 0.08))),
+            decoration: BoxDecoration(color: AppPalette.text.withValues(alpha: 0.03), borderRadius: BorderRadius.circular(16), border: Border.all(color: AppPalette.text.withValues(alpha: 0.08))),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(child: Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14))),
+                Expanded(child: Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppPalette.text, fontWeight: FontWeight.w700, fontSize: 14))),
                 Icon(Icons.keyboard_arrow_down_rounded, color: accentColor),
               ],
             ),
@@ -1203,30 +1205,30 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                   child: GestureDetector(
                     onTap: () {},
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 600),
+                      constraints: BoxConstraints(maxWidth: 600),
                       child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
+                        duration: Duration(milliseconds: 150),
                         curve: Curves.easeOut,
                         height: MediaQuery.of(context).size.height * 0.85,
                         padding: EdgeInsets.only(bottom: bottomInset > 0 ? bottomInset + 10 : 20),
                         decoration: BoxDecoration(
                           color: panelBlack.withValues(alpha: 0.98),
                           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.5),
+                          border: Border.all(color: AppPalette.text.withValues(alpha: 0.08), width: 1.5),
                         ),
                         child: SafeArea(
                           top: false,
                           child: Column(
                             children: [
-                              const SizedBox(height: 12),
-                              Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
-                              const SizedBox(height: 16),
+                              SizedBox(height: 12),
+                              Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: AppPalette.border, borderRadius: BorderRadius.circular(10)))),
+                              SizedBox(height: 16),
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 20),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text("$title Seçimi", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white)),
+                                    Text("$title Seçimi", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppPalette.text)),
                                     IconButton(
                                       onPressed: () {
                                         FocusScope.of(context).unfocus();
@@ -1234,26 +1236,26 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                       },
                                       icon: Container(
                                         padding: const EdgeInsets.all(4),
-                                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.08), shape: BoxShape.circle),
-                                        child: const Icon(Icons.close_rounded, color: Colors.white70, size: 18),
+                                        decoration: BoxDecoration(color: AppPalette.text.withValues(alpha: 0.08), shape: BoxShape.circle),
+                                        child: Icon(Icons.close_rounded, color: AppPalette.muted, size: 18),
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 12),
+                              SizedBox(height: 12),
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 20),
                                 child: Container(
-                                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.04), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withValues(alpha: 0.08))),
+                                  decoration: BoxDecoration(color: AppPalette.text.withValues(alpha: 0.04), borderRadius: BorderRadius.circular(16), border: Border.all(color: AppPalette.text.withValues(alpha: 0.08))),
                                   child: TextField(
                                     autofocus: false,
                                     textInputAction: TextInputAction.search,
                                     onSubmitted: (_) => FocusScope.of(context).unfocus(),
-                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+                                    style: TextStyle(color: AppPalette.text, fontWeight: FontWeight.w600, fontSize: 14),
                                     decoration: InputDecoration(
                                       hintText: "$title ara...",
-                                      hintStyle: const TextStyle(color: textGray, fontSize: 13),
+                                      hintStyle: TextStyle(color: textGray, fontSize: 13),
                                       prefixIcon: Icon(Icons.search_rounded, color: accentColor, size: 20),
                                       border: InputBorder.none,
                                       contentPadding: const EdgeInsets.symmetric(vertical: 14),
@@ -1262,16 +1264,16 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 12),
+                              SizedBox(height: 12),
                               Expanded(
                                 child: filteredItems.isEmpty
-                                  ? const Center(child: Text("Sonuç bulunamadı.", style: TextStyle(color: textGray)))
+                                  ? Center(child: Text("Sonuç bulunamadı.", style: TextStyle(color: textGray)))
                                   : ListView.separated(
                                       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                                      physics: const BouncingScrollPhysics(),
+                                      physics: BouncingScrollPhysics(),
                                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                                       itemCount: filteredItems.length,
-                                      separatorBuilder: (_, __) => Divider(color: Colors.white.withValues(alpha: 0.04), height: 1),
+                                      separatorBuilder: (_, __) => Divider(color: AppPalette.text.withValues(alpha: 0.04), height: 1),
                                       itemBuilder: (context, index) {
                                         final item = filteredItems[index];
                                         final isSelected = item == currentValue;
@@ -1288,7 +1290,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                             title: Text(
                                               item,
                                               style: TextStyle(
-                                                color: isSelected ? accentColor : Colors.white,
+                                                color: isSelected ? accentColor : AppPalette.text,
                                                 fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
                                                 fontSize: 15,
                                               ),
@@ -1334,23 +1336,23 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
               child: Align(
                 alignment: Alignment.bottomCenter,
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 600),
+                  constraints: BoxConstraints(maxWidth: 600),
                   child: Container(
                     padding: EdgeInsets.only(bottom: bottomInset > 0 ? bottomInset + 16 : 24, left: 24, right: 24, top: 16),
                     decoration: BoxDecoration(
                       color: panelBlack.withValues(alpha: 0.98),
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
                       border: Border.all(color: alertRed.withValues(alpha: 0.4), width: 1.5),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 30, offset: const Offset(0, -5))],
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 30, offset: Offset(0, -5))],
                     ),
                     child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
+                      physics: BouncingScrollPhysics(),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
-                          const SizedBox(height: 24),
+                          Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: AppPalette.border, borderRadius: BorderRadius.circular(10)))),
+                          SizedBox(height: 24),
                           
                           Container(
                             width: 72,
@@ -1360,34 +1362,34 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                               shape: BoxShape.circle,
                               boxShadow: [BoxShadow(color: alertRed.withValues(alpha: 0.2), blurRadius: 20, spreadRadius: 5)],
                             ),
-                            child: const Icon(Icons.warning_amber_rounded, color: alertRed, size: 36),
+                            child: Icon(Icons.warning_amber_rounded, color: alertRed, size: 36),
                           ),
-                          const SizedBox(height: 20),
-                          const Text("Sorun Bildir / Şikayet", textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
-                          const SizedBox(height: 8),
-                          Text(defaultSubject, textAlign: TextAlign.center, style: const TextStyle(color: alertRed, fontSize: 14, fontWeight: FontWeight.w800)),
-                          const SizedBox(height: 24),
+                          SizedBox(height: 20),
+                          Text("Sorun Bildir / Şikayet", textAlign: TextAlign.center, style: TextStyle(color: AppPalette.text, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+                          SizedBox(height: 8),
+                          Text(defaultSubject, textAlign: TextAlign.center, style: TextStyle(color: alertRed, fontSize: 14, fontWeight: FontWeight.w800)),
+                          SizedBox(height: 24),
                           
                           TextField(
                             controller: msgCtrl,
                             maxLines: 4,
                             textInputAction: TextInputAction.done,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 14),
+                            style: TextStyle(color: AppPalette.text, fontWeight: FontWeight.w500, fontSize: 14),
                             decoration: InputDecoration(
                               hintText: "Lütfen sorunu detaylıca açıklayın...",
-                              hintStyle: const TextStyle(color: textGray, fontSize: 13),
+                              hintStyle: TextStyle(color: textGray, fontSize: 13),
                               filled: true,
-                              fillColor: Colors.white.withValues(alpha: 0.03),
+                              fillColor: AppPalette.text.withValues(alpha: 0.03),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: alertRed, width: 1.5)),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: alertRed, width: 1.5)),
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          SizedBox(height: 24),
                           
                           Container(
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(16),
-                              boxShadow: [BoxShadow(color: alertRed.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 5))],
+                              boxShadow: [BoxShadow(color: alertRed.withValues(alpha: 0.3), blurRadius: 20, offset: Offset(0, 5))],
                             ),
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
@@ -1424,8 +1426,8 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                 }
                               },
                               child: isSending 
-                                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3)) 
-                                : const Text("Şikayeti Güvenle İlet", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
+                                ? SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: AppPalette.text, strokeWidth: 3)) 
+                                : Text("Şikayeti Güvenle İlet", style: TextStyle(color: AppPalette.text, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
                             ),
                           )
                         ],
@@ -1439,7 +1441,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
         },
       )
     ).whenComplete(() {
-      Future<void>.delayed(const Duration(milliseconds: 450), () {
+      Future<void>.delayed(Duration(milliseconds: 450), () {
         try {
           msgCtrl.dispose();
         } catch (_) {}
@@ -1466,13 +1468,13 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                   child: GestureDetector(
                     onTap: () {}, 
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 500),
+                      constraints: BoxConstraints(maxWidth: 500),
                       child: Dialog(
                         backgroundColor: panelBlack,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32), side: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32), side: BorderSide(color: AppPalette.text.withValues(alpha: 0.08))),
                         insetPadding: const EdgeInsets.all(20),
                         child: SingleChildScrollView(
-                          physics: const BouncingScrollPhysics(),
+                          physics: BouncingScrollPhysics(),
                           padding: const EdgeInsets.all(32),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
@@ -1484,17 +1486,17 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                   shape: BoxShape.circle,
                                   boxShadow: [BoxShadow(color: neonGreen.withValues(alpha: 0.15), blurRadius: 20, spreadRadius: 5)],
                                 ),
-                                child: const Icon(Icons.local_offer_rounded, color: neonGreen, size: 36),
+                                child: Icon(Icons.local_offer_rounded, color: neonGreen, size: 36),
                               ),
-                              const SizedBox(height: 20),
-                              const Text("Fiyat Teklifi Ver", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 24, letterSpacing: -0.5)),
-                              const SizedBox(height: 8),
-                              const Text(
+                              SizedBox(height: 20),
+                              Text("Fiyat Teklifi Ver", style: TextStyle(color: AppPalette.text, fontWeight: FontWeight.w900, fontSize: 24, letterSpacing: -0.5)),
+                              SizedBox(height: 8),
+                              Text(
                                 "Karşı taraf teklifi kabul ettiğinde\niletişim bilgileriniz paylaşılacaktır.",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(color: textGray, fontSize: 13, height: 1.5, fontWeight: FontWeight.w500),
                               ),
-                              const SizedBox(height: 32),
+                              SizedBox(height: 32),
                               
                               Container(
                                 decoration: BoxDecoration(
@@ -1507,18 +1509,18 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                   controller: _bidAmountCtrl,
                                   keyboardType: TextInputType.number,
                                   textInputAction: TextInputAction.done,
-                                  style: const TextStyle(color: neonGreen, fontSize: 40, fontWeight: FontWeight.w900, letterSpacing: -1),
+                                  style: TextStyle(color: neonGreen, fontSize: 40, fontWeight: FontWeight.w900, letterSpacing: -1),
                                   textAlign: TextAlign.center,
                                   decoration: InputDecoration(
                                     labelText: isForSale ? "Alış Tutarınız (TL)" : "Satış Tutarınız (TL)",
                                     floatingLabelBehavior: FloatingLabelBehavior.always,
-                                    labelStyle: const TextStyle(color: textGray, fontSize: 14, fontWeight: FontWeight.bold),
+                                    labelStyle: TextStyle(color: textGray, fontSize: 14, fontWeight: FontWeight.bold),
                                     border: InputBorder.none,
                                     contentPadding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 32),
+                              SizedBox(height: 32),
                               
                               Row(
                                 children: [
@@ -1526,16 +1528,16 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                     child: TextButton(
                                       onPressed: isProcessing ? null : () => Navigator.pop(ctx), 
                                       style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 18)),
-                                      child: const Text("İptal", style: TextStyle(color: Colors.white54, fontWeight: FontWeight.w800, fontSize: 15))
+                                      child: Text("İptal", style: TextStyle(color: AppPalette.muted, fontWeight: FontWeight.w800, fontSize: 15))
                                     )
                                   ),
-                                  const SizedBox(width: 16),
+                                  SizedBox(width: 16),
                                   Expanded(
                                     flex: 2,
                                     child: Container(
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(16),
-                                        boxShadow: [BoxShadow(color: neonGreen.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 5))],
+                                        boxShadow: [BoxShadow(color: neonGreen.withValues(alpha: 0.3), blurRadius: 15, offset: Offset(0, 5))],
                                       ),
                                       child: ElevatedButton(
                                         style: ElevatedButton.styleFrom(
@@ -1575,8 +1577,8 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                           }
                                         },
                                         child: isProcessing
-                                           ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 2.5))
-                                           : const Text("Teklifi Gönder", style: TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 15)),
+                                           ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 2.5))
+                                           : Text("Teklifi Gönder", style: TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 15)),
                                       ),
                                     ),
                                   ),
@@ -1757,7 +1759,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                   fit: BoxFit.contain,
                   width: double.infinity,
                   height: double.infinity,
-                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image_rounded, color: alertRed, size: 50),
+                  errorBuilder: (context, error, stackTrace) => Icon(Icons.broken_image_rounded, color: alertRed, size: 50),
                 ),
               ),
             ),
@@ -1768,8 +1770,8 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                 onPressed: () => Navigator.pop(context),
                 icon: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: Colors.black54, shape: BoxShape.circle, border: Border.all(color: Colors.white24)),
-                  child: const Icon(Icons.close_rounded, color: Colors.white, size: 24),
+                  decoration: BoxDecoration(color: Colors.black54, shape: BoxShape.circle, border: Border.all(color: AppPalette.border)),
+                  child: Icon(Icons.close_rounded, color: AppPalette.text, size: 24),
                 ),
               ),
             ),
@@ -1785,13 +1787,13 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(label, style: const TextStyle(color: textGray, fontWeight: FontWeight.w700, fontSize: 13)),
+          child: Text(label, style: TextStyle(color: textGray, fontWeight: FontWeight.w700, fontSize: 13)),
         ),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.02),
+            color: AppPalette.text.withValues(alpha: 0.02),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border: Border.all(color: AppPalette.text.withValues(alpha: 0.08)),
           ),
           child: Row(
             crossAxisAlignment: maxLines > 1 ? CrossAxisAlignment.start : CrossAxisAlignment.center,
@@ -1811,10 +1813,10 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                   textInputAction: action,
                   onSubmitted: onSubmitted,
                   keyboardType: isNumber ? TextInputType.number : (maxLines > 1 ? TextInputType.multiline : TextInputType.text),
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
+                  style: TextStyle(color: AppPalette.text, fontWeight: FontWeight.w600, fontSize: 15),
                   decoration: InputDecoration(
                     hintText: hint,
-                    hintStyle: const TextStyle(color: Colors.white30, fontSize: 14),
+                    hintStyle: TextStyle(color: Colors.white30, fontSize: 14),
                     contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: maxLines > 1 ? 16 : 18),
                     border: InputBorder.none,
                   ),
@@ -1843,26 +1845,26 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
             decoration: BoxDecoration(color: color.withValues(alpha: 0.15), shape: BoxShape.circle),
             child: Icon(Icons.handshake_rounded, color: color, size: 20),
           ),
-          const SizedBox(width: 14),
+          SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("$title: ${name ?? 'Bilinmiyor'}", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)),
-                const SizedBox(height: 2),
-                Text(phone ?? 'Numara Yok', style: const TextStyle(color: textGray, fontSize: 12, fontWeight: FontWeight.w600)),
+                Text("$title: ${name ?? 'Bilinmiyor'}", style: TextStyle(color: AppPalette.text, fontWeight: FontWeight.w800, fontSize: 14)),
+                SizedBox(height: 2),
+                Text(phone ?? 'Numara Yok', style: TextStyle(color: textGray, fontSize: 12, fontWeight: FontWeight.w600)),
               ],
             ),
           ),
           Row(
             children: [
               IconButton(
-                style: IconButton.styleFrom(backgroundColor: const Color(0xFF25D366).withValues(alpha: 0.15)),
-                icon: const Icon(Icons.chat_rounded, color: Color(0xFF25D366), size: 20),
+                style: IconButton.styleFrom(backgroundColor: Color(0xFF25D366).withValues(alpha: 0.15)),
+                icon: Icon(Icons.chat_rounded, color: Color(0xFF25D366), size: 20),
                 onPressed: () => _openWhatsApp(phone),
                 tooltip: "WhatsApp'tan Yaz",
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: color, 
@@ -1871,8 +1873,8 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                   elevation: 0,
                 ),
                 onPressed: () => _callUser(phone),
-                icon: Icon(Icons.call_rounded, size: 16, color: color == neonGreen ? pureBlack : Colors.white),
-                label: Text("Ara", style: TextStyle(color: color == neonGreen ? pureBlack : Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
+                icon: Icon(Icons.call_rounded, size: 16, color: color == neonGreen ? pureBlack : AppPalette.text),
+                label: Text("Ara", style: TextStyle(color: color == neonGreen ? pureBlack : AppPalette.text, fontWeight: FontWeight.w900, fontSize: 13)),
               ),
             ],
           )
@@ -1897,13 +1899,13 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
             _buildTimelineDot(step >= 2, neonGreen),
           ],
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text("Yayında", style: TextStyle(color: step >= 0 ? Colors.white : Colors.white24, fontSize: 11, fontWeight: FontWeight.w800)),
-            Text("İletişimde", style: TextStyle(color: step >= 1 ? Colors.white : Colors.white24, fontSize: 11, fontWeight: FontWeight.w800)),
-            Text("Tamamlandı", style: TextStyle(color: step >= 2 ? Colors.white : Colors.white24, fontSize: 11, fontWeight: FontWeight.w800)),
+            Text("Yayında", style: TextStyle(color: step >= 0 ? AppPalette.text : AppPalette.border, fontSize: 11, fontWeight: FontWeight.w800)),
+            Text("İletişimde", style: TextStyle(color: step >= 1 ? AppPalette.text : AppPalette.border, fontSize: 11, fontWeight: FontWeight.w800)),
+            Text("Tamamlandı", style: TextStyle(color: step >= 2 ? AppPalette.text : AppPalette.border, fontSize: 11, fontWeight: FontWeight.w800)),
           ],
         )
       ],
@@ -1912,7 +1914,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
 
   Widget _buildTimelineDot(bool isActive, Color activeColor) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 400),
+      duration: Duration(milliseconds: 400),
       width: 14, height: 14,
       decoration: BoxDecoration(
         color: isActive ? activeColor : panelBlack,
@@ -1925,7 +1927,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
   Widget _buildTimelineLine(bool isActive, Color activeColor) {
     return Expanded(
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 400),
+        duration: Duration(milliseconds: 400),
         height: 3,
         decoration: BoxDecoration(
           color: isActive ? activeColor : Colors.white12,
@@ -1987,25 +1989,25 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                 child: GestureDetector(
                   onTap: () {}, 
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 800),
+                    constraints: BoxConstraints(maxWidth: 800),
                     child: SafeArea(
                       child: Container(
                         constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
                         decoration: BoxDecoration(
                           color: panelBlack.withValues(alpha: 0.98),
                           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.5),
+                          border: Border.all(color: AppPalette.text.withValues(alpha: 0.08), width: 1.5),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const SizedBox(height: 12),
-                            Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)))),
-                            const SizedBox(height: 16),
+                            SizedBox(height: 12),
+                            Center(child: Container(width: 48, height: 6, decoration: BoxDecoration(color: AppPalette.border, borderRadius: BorderRadius.circular(10)))),
+                            SizedBox(height: 16),
                             
                             Expanded(
                               child: SingleChildScrollView(
-                                physics: const BouncingScrollPhysics(),
+                                physics: BouncingScrollPhysics(),
                                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2022,7 +2024,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                           ),
                                           child: Icon(isForSale ? Icons.sell_rounded : Icons.search_rounded, color: typeColor, size: 24),
                                         ),
-                                        const SizedBox(width: 14),
+                                        SizedBox(width: 14),
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2030,7 +2032,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                               Row(
                                                 children: [
                                                   Expanded(
-                                                    child: Text(cleanPartName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
+                                                    child: Text(cleanPartName, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppPalette.text, letterSpacing: -0.5)),
                                                   ),
                                                   Container(
                                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -2039,25 +2041,25 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                                   )
                                                 ],
                                               ),
-                                              const SizedBox(height: 4),
-                                              Text("Araç: ${item['car_model']}", style: const TextStyle(color: textGray, fontWeight: FontWeight.w700, fontSize: 13)),
+                                              SizedBox(height: 4),
+                                              Text("Araç: ${item['car_model']}", style: TextStyle(color: textGray, fontWeight: FontWeight.w700, fontSize: 13)),
                                               if(extractedCategory.isNotEmpty && extractedCategory != "SATILIK" && extractedCategory != "ALINIK") ...[
-                                                const SizedBox(height: 4),
+                                                SizedBox(height: 4),
                                                 Text("Kategori: $extractedCategory", style: TextStyle(color: neonCyan.withValues(alpha: 0.8), fontWeight: FontWeight.w600, fontSize: 12)),
                                               ],
                                               if(extractedCondition.isNotEmpty) ...[
-                                                const SizedBox(height: 6),
+                                                SizedBox(height: 6),
                                                 Row(
                                                   children: [
-                                                    Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(6)), child: Text(extractedCondition, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900))),
-                                                    const SizedBox(width: 8),
-                                                    Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: goldAccent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6), border: Border.all(color: goldAccent.withValues(alpha: 0.3))), child: Text(extractedListingType, style: const TextStyle(color: goldAccent, fontSize: 10, fontWeight: FontWeight.w900))),
+                                                    Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(6)), child: Text(extractedCondition, style: TextStyle(color: AppPalette.text, fontSize: 10, fontWeight: FontWeight.w900))),
+                                                    SizedBox(width: 8),
+                                                    Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: goldAccent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6), border: Border.all(color: goldAccent.withValues(alpha: 0.3))), child: Text(extractedListingType, style: TextStyle(color: goldAccent, fontSize: 10, fontWeight: FontWeight.w900))),
                                                   ]
                                                 )
                                               ],
                                               if (isForSale && item['price'] != null) ...[
-                                                const SizedBox(height: 6),
-                                                Text("${item['price']} ₺", style: const TextStyle(color: neonGreen, fontSize: 22, fontWeight: FontWeight.w900)),
+                                                SizedBox(height: 6),
+                                                Text("${item['price']} ₺", style: TextStyle(color: neonGreen, fontSize: 22, fontWeight: FontWeight.w900)),
                                               ]
                                             ],
                                           ),
@@ -2066,12 +2068,12 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                     ),
                                     
                                     if (photos.isNotEmpty) ...[
-                                      const SizedBox(height: 20),
+                                      SizedBox(height: 20),
                                       SizedBox(
                                         height: 120,
                                         child: ListView.builder(
                                           scrollDirection: Axis.horizontal,
-                                          physics: const BouncingScrollPhysics(),
+                                          physics: BouncingScrollPhysics(),
                                           itemCount: photos.length,
                                           itemBuilder: (context, index) {
                                             String imageUrl = baseUrl.replaceAll('api.php', '') + photos[index];
@@ -2085,7 +2087,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                                 width: 120,
                                                 decoration: BoxDecoration(
                                                   borderRadius: BorderRadius.circular(16),
-                                                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                                                  border: Border.all(color: AppPalette.text.withValues(alpha: 0.08)),
                                                   image: DecorationImage(
                                                     image: NetworkImage(imageUrl),
                                                     fit: BoxFit.cover,
@@ -2097,7 +2099,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                                     margin: const EdgeInsets.all(8),
                                                     padding: const EdgeInsets.all(4),
                                                     decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
-                                                    child: const Icon(Icons.zoom_out_map_rounded, color: Colors.white, size: 14),
+                                                    child: Icon(Icons.zoom_out_map_rounded, color: AppPalette.text, size: 14),
                                                   ),
                                                 ),
                                               ),
@@ -2108,11 +2110,11 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                     ],
             
                                     if (status != 'searching') ...[
-                                      const SizedBox(height: 24),
+                                      SizedBox(height: 24),
                                       _buildStatusTimeline(status),
                                     ],
             
-                                    const SizedBox(height: 20),
+                                    SizedBox(height: 20),
                                     Wrap(
                                       spacing: 8,
                                       runSpacing: 8,
@@ -2124,13 +2126,13 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                         ),
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(10)),
+                                          decoration: BoxDecoration(color: AppPalette.text.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(10)),
                                           child: Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              const Icon(Icons.location_on_rounded, color: neonGreen, size: 14),
-                                              const SizedBox(width: 4),
-                                              Text(item['city'] ?? 'Bilinmiyor', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
+                                              Icon(Icons.location_on_rounded, color: neonGreen, size: 14),
+                                              SizedBox(width: 4),
+                                              Text(item['city'] ?? 'Bilinmiyor', style: TextStyle(color: AppPalette.text, fontWeight: FontWeight.w700, fontSize: 12)),
                                             ],
                                           ),
                                         ),
@@ -2138,22 +2140,22 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                     ),
                                     
                                     if (item['description'] != null && item['description'].toString().isNotEmpty) ...[
-                                      const SizedBox(height: 16),
+                                      SizedBox(height: 16),
                                       Container(
                                         width: double.infinity,
                                         padding: const EdgeInsets.all(14),
-                                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.03), borderRadius: BorderRadius.circular(14)),
-                                        child: Text(item['description'], style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4, fontWeight: FontWeight.w500)),
+                                        decoration: BoxDecoration(color: AppPalette.text.withValues(alpha: 0.03), borderRadius: BorderRadius.circular(14)),
+                                        child: Text(item['description'], style: TextStyle(color: AppPalette.muted, fontSize: 13, height: 1.4, fontWeight: FontWeight.w500)),
                                       )
                                     ],
             
                                     if (status == 'matched' || status == 'completed') ...[
-                                      const SizedBox(height: 16),
+                                      SizedBox(height: 16),
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
-                                          const Text("Anlaşılan Tutar:", style: TextStyle(color: textGray, fontSize: 14, fontWeight: FontWeight.w700)),
-                                          Text("${item['agreed_price']} ₺", style: const TextStyle(color: neonGreen, fontWeight: FontWeight.w900, fontSize: 24)),
+                                          Text("Anlaşılan Tutar:", style: TextStyle(color: textGray, fontSize: 14, fontWeight: FontWeight.w700)),
+                                          Text("${item['agreed_price']} ₺", style: TextStyle(color: neonGreen, fontWeight: FontWeight.w900, fontSize: 24)),
                                         ],
                                       ),
                                       
@@ -2162,7 +2164,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                       if (!isMyListing && item['customer_phone'] != null)
                                         _buildPhoneContactRow(isForSale ? "Satıcı (İlan Sahibi)" : "Alıcı (Talep Sahibi)", item['customer_name'], item['customer_phone'], neonCyan),
                                       
-                                      const SizedBox(height: 20),
+                                      SizedBox(height: 20),
                                       
                                       if (status == 'matched')
                                         Column(
@@ -2170,7 +2172,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                             SizedBox(
                                               width: double.infinity,
                                               child: ElevatedButton.icon(
-                                                icon: const Icon(Icons.check_circle_rounded, color: pureBlack, size: 20),
+                                                icon: Icon(Icons.check_circle_rounded, color: pureBlack, size: 20),
                                                 style: ElevatedButton.styleFrom(
                                                   backgroundColor: neonGreen, 
                                                   padding: const EdgeInsets.symmetric(vertical: 16), 
@@ -2185,14 +2187,14 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                                     _updateStatus('complete_part_trade', listingId);
                                                   }
                                                 },
-                                                label: const Text("Teslim Edildi / Tamamla", style: TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 15)),
+                                                label: Text("Teslim Edildi / Tamamla", style: TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 15)),
                                               ),
                                             ),
-                                            const SizedBox(height: 10),
+                                            SizedBox(height: 10),
                                             SizedBox(
                                               width: double.infinity,
                                               child: OutlinedButton.icon(
-                                                icon: const Icon(Icons.warning_amber_rounded, color: alertRed, size: 20),
+                                                icon: Icon(Icons.warning_amber_rounded, color: alertRed, size: 20),
                                                 style: OutlinedButton.styleFrom(
                                                   side: BorderSide(color: alertRed.withValues(alpha: 0.5)), 
                                                   padding: const EdgeInsets.symmetric(vertical: 16), 
@@ -2202,7 +2204,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                                   if (modalCtx.mounted) Navigator.pop(modalCtx);
                                                   _showComplaintDialog(listingId, buyerId, sellerId, "Anlaşmazlık (İlan #$listingId)");
                                                 },
-                                                label: const Text("Sorun Bildir / Şikayet", style: TextStyle(color: alertRed, fontWeight: FontWeight.w800, fontSize: 14)),
+                                                label: Text("Sorun Bildir / Şikayet", style: TextStyle(color: alertRed, fontWeight: FontWeight.w800, fontSize: 14)),
                                               ),
                                             ),
                                           ],
@@ -2210,13 +2212,13 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                     ],
             
                                     if (isMyListing && status == 'searching') ...[
-                                      const SizedBox(height: 16),
+                                      SizedBox(height: 16),
                                       SizedBox(
                                         width: double.infinity,
                                         child: OutlinedButton.icon(
-                                          icon: const Icon(Icons.delete_outline_rounded, color: Colors.white60, size: 18),
+                                          icon: Icon(Icons.delete_outline_rounded, color: AppPalette.muted, size: 18),
                                           style: OutlinedButton.styleFrom(
-                                            side: BorderSide(color: Colors.white.withValues(alpha: 0.1)), 
+                                            side: BorderSide(color: AppPalette.text.withValues(alpha: 0.1)), 
                                             padding: const EdgeInsets.symmetric(vertical: 14), 
                                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))
                                           ),
@@ -2224,28 +2226,28 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                             if (modalCtx.mounted) Navigator.pop(modalCtx);
                                             _deleteListing(listingId, reasonText: "İlanı Kapat");
                                           },
-                                          label: const Text("İlanı Kapat", style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w700, fontSize: 13)),
+                                          label: Text("İlanı Kapat", style: TextStyle(color: AppPalette.muted, fontWeight: FontWeight.w700, fontSize: 13)),
                                         ),
                                       ),
                                       
                                       if (bids.isNotEmpty) ...[
-                                        const SizedBox(height: 20),
-                                        const Text("Gelen Teklifler", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
-                                        const SizedBox(height: 12),
+                                        SizedBox(height: 20),
+                                        Text("Gelen Teklifler", style: TextStyle(color: AppPalette.text, fontWeight: FontWeight.w900, fontSize: 16)),
+                                        SizedBox(height: 12),
                                         ...bids.map((bid) => Container(
                                           margin: const EdgeInsets.only(bottom: 12),
                                           padding: const EdgeInsets.all(16),
-                                          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.02), borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white.withValues(alpha: 0.05))),
+                                          decoration: BoxDecoration(color: AppPalette.text.withValues(alpha: 0.02), borderRadius: BorderRadius.circular(18), border: Border.all(color: AppPalette.text.withValues(alpha: 0.05))),
                                           child: Column(
                                             children: [
                                               Row(
                                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                 children: [
-                                                  Text("${bid['seller_name'] ?? 'Usta'}", style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800)),
-                                                  Text("${bid['amount']} ₺", style: const TextStyle(color: neonGreen, fontWeight: FontWeight.w900, fontSize: 20)),
+                                                  Text("${bid['seller_name'] ?? 'Usta'}", style: TextStyle(color: AppPalette.text, fontSize: 14, fontWeight: FontWeight.w800)),
+                                                  Text("${bid['amount']} ₺", style: TextStyle(color: neonGreen, fontWeight: FontWeight.w900, fontSize: 20)),
                                                 ],
                                               ),
-                                              const SizedBox(height: 14),
+                                              SizedBox(height: 14),
                                               Row(
                                                 children: [
                                                   Expanded(
@@ -2263,10 +2265,10 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                                           _updateStatus('reject_part_bid', listingId, bidId: int.parse(bid['id'].toString()));
                                                         }
                                                       },
-                                                      child: const Text("Reddet", style: TextStyle(color: alertRed, fontSize: 13, fontWeight: FontWeight.w800)),
+                                                      child: Text("Reddet", style: TextStyle(color: alertRed, fontSize: 13, fontWeight: FontWeight.w800)),
                                                     ),
                                                   ),
-                                                  const SizedBox(width: 10),
+                                                  SizedBox(width: 10),
                                                   Expanded(
                                                     child: ElevatedButton(
                                                       style: ElevatedButton.styleFrom(
@@ -2283,7 +2285,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                                           _updateStatus('accept_part_bid', listingId, bidId: int.parse(bid['id'].toString()), amount: bid['amount'].toString());
                                                         }
                                                       },
-                                                      child: const Text("Kabul Et", style: TextStyle(color: pureBlack, fontSize: 13, fontWeight: FontWeight.w900)),
+                                                      child: Text("Kabul Et", style: TextStyle(color: pureBlack, fontSize: 13, fontWeight: FontWeight.w900)),
                                                     ),
                                                   ),
                                                 ],
@@ -2295,12 +2297,12 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                     ],
                                     
                                     if (!isMyListing && status == 'searching') ...[
-                                      const SizedBox(height: 24),
+                                      SizedBox(height: 24),
                                       if (myBidStatus == 'pending')
                                         Container(
                                           padding: const EdgeInsets.all(16),
                                           decoration: BoxDecoration(color: goldAccent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16), border: Border.all(color: goldAccent.withValues(alpha: 0.3))),
-                                          child: const Row(
+                                          child: Row(
                                             mainAxisAlignment: MainAxisAlignment.center,
                                             children: [
                                               Icon(Icons.access_time_rounded, color: goldAccent, size: 20),
@@ -2313,7 +2315,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                         Container(
                                           padding: const EdgeInsets.all(16),
                                           decoration: BoxDecoration(color: alertRed.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16), border: Border.all(color: alertRed.withValues(alpha: 0.3))),
-                                          child: const Row(
+                                          child: Row(
                                             mainAxisAlignment: MainAxisAlignment.center,
                                             children: [
                                               Icon(Icons.cancel_rounded, color: alertRed, size: 20),
@@ -2337,11 +2339,11 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                               if (modalCtx.mounted) Navigator.pop(modalCtx);
                                               _showBidDialog(listingId, isForSale, parentCtx: context);
                                             },
-                                            label: Text(isForSale ? "Satın Alma Teklifi Ver" : "Parça Bende Var, Teklif Ver", style: const TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 15)),
+                                            label: Text(isForSale ? "Satın Alma Teklifi Ver" : "Parça Bende Var, Teklif Ver", style: TextStyle(color: pureBlack, fontWeight: FontWeight.w900, fontSize: 15)),
                                           ),
                                         )
                                     ],
-                                    const SizedBox(height: 20),
+                                    SizedBox(height: 20),
                                   ],
                                 ),
                               ),
@@ -2443,12 +2445,12 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
       decoration: BoxDecoration(
         color: strong
             ? neonGreen.withValues(alpha: 0.12)
-            : Colors.white.withValues(alpha: 0.055),
+            : AppPalette.text.withValues(alpha: 0.055),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: strong
               ? neonGreen.withValues(alpha: 0.35)
-              : Colors.white.withValues(alpha: 0.08),
+              : AppPalette.text.withValues(alpha: 0.08),
         ),
       ),
       child: Text(
@@ -2456,7 +2458,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
-          color: strong ? neonGreen : Colors.white70,
+          color: strong ? neonGreen : AppPalette.muted,
           fontWeight: FontWeight.w800,
           fontSize: 9.5,
         ),
@@ -2475,7 +2477,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
     final String carModel = (item['car_model'] ?? 'Araç bilgisi belirtilmedi').toString().trim();
     final String city = (item['city'] ?? 'Bilinmiyor').toString();
     final bool sameCity = city == widget.userCity;
-    final Color typeColor = isForSale ? neonGreen : Colors.white;
+    final Color typeColor = isForSale ? neonGreen : AppPalette.text;
     final String typeText = isForSale ? "SATILIK" : (isToBuy ? "ARANIYOR" : "İLAN");
     final String? imageUrl = _getFirstImage(item);
     final String priceText = item['price']?.toString().trim() ?? '';
@@ -2493,12 +2495,12 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
           decoration: BoxDecoration(
             color: panelBlack,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border: Border.all(color: AppPalette.text.withValues(alpha: 0.08)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.26),
                 blurRadius: 14,
-                offset: const Offset(0, 7),
+                offset: Offset(0, 7),
               ),
             ],
           ),
@@ -2510,7 +2512,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Container(color: Colors.white.withValues(alpha: 0.025)),
+                    Container(color: AppPalette.text.withValues(alpha: 0.025)),
                     if (imageUrl != null)
                       Image.network(
                         imageUrl,
@@ -2530,7 +2532,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                               Colors.transparent,
                               Colors.black.withValues(alpha: 0.28),
                             ],
-                            stops: const [0.56, 1.0],
+                            stops: [0.56, 1.0],
                           ),
                         ),
                       ),
@@ -2544,13 +2546,13 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                           color: isForSale ? neonGreen : Colors.black.withValues(alpha: 0.78),
                           borderRadius: BorderRadius.circular(9),
                           border: Border.all(
-                            color: isForSale ? neonGreen : Colors.white24,
+                            color: isForSale ? neonGreen : AppPalette.border,
                           ),
                         ),
                         child: Text(
                           typeText,
                           style: TextStyle(
-                            color: isForSale ? pureBlack : Colors.white,
+                            color: isForSale ? pureBlack : AppPalette.text,
                             fontWeight: FontWeight.w900,
                             fontSize: 9.5,
                             letterSpacing: 0.35,
@@ -2569,7 +2571,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                             borderRadius: BorderRadius.circular(9),
                             border: Border.all(color: neonGreen.withValues(alpha: 0.45)),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(Icons.near_me_rounded, color: neonGreen, size: 11),
@@ -2599,26 +2601,26 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                         cleanPartName.isEmpty ? "İsimsiz ilan" : cleanPartName,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: AppPalette.text,
                           fontSize: 13.5,
                           fontWeight: FontWeight.w900,
                           height: 1.2,
                           letterSpacing: -0.2,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(Icons.directions_car_rounded, color: Colors.white38, size: 13),
-                          const SizedBox(width: 5),
+                          Icon(Icons.directions_car_rounded, color: AppPalette.subtle, size: 13),
+                          SizedBox(width: 5),
                           Expanded(
                             child: Text(
                               carModel.isEmpty ? "Araç bilgisi belirtilmedi" : carModel,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white60,
+                              style: TextStyle(
+                                color: AppPalette.muted,
                                 fontWeight: FontWeight.w700,
                                 fontSize: 10.5,
                               ),
@@ -2626,30 +2628,30 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       Row(
                         children: [
                           if (condition.isNotEmpty)
                             Flexible(child: _buildMarketTag(condition, strong: true)),
                           if (condition.isNotEmpty && listingType.isNotEmpty)
-                            const SizedBox(width: 5),
+                            SizedBox(width: 5),
                           if (listingType.isNotEmpty)
                             Flexible(child: _buildMarketTag(listingType)),
                         ],
                       ),
-                      const Spacer(),
+                      Spacer(),
                       if (category.isNotEmpty) ...[
                         Row(
                           children: [
-                            Icon(_marketCategoryIcon(category), color: Colors.white38, size: 13),
-                            const SizedBox(width: 5),
+                            Icon(_marketCategoryIcon(category), color: AppPalette.subtle, size: 13),
+                            SizedBox(width: 5),
                             Expanded(
                               child: Text(
                                 category,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white38,
+                                style: TextStyle(
+                                  color: AppPalette.subtle,
                                   fontSize: 9.5,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -2657,7 +2659,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                             ),
                           ],
                         ),
-                        const SizedBox(height: 7),
+                        SizedBox(height: 7),
                       ],
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
@@ -2668,13 +2670,13 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                               children: [
                                 Text(
                                   isForSale ? "Fiyat" : "Durum",
-                                  style: const TextStyle(
-                                    color: Colors.white38,
+                                  style: TextStyle(
+                                    color: AppPalette.subtle,
                                     fontSize: 9,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
-                                const SizedBox(height: 2),
+                                SizedBox(height: 2),
                                 Text(
                                   isForSale && priceText.isNotEmpty
                                       ? "$priceText ₺"
@@ -2682,7 +2684,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    color: isForSale ? neonGreen : Colors.white,
+                                    color: isForSale ? neonGreen : AppPalette.text,
                                     fontSize: isForSale ? 17 : 11.5,
                                     fontWeight: FontWeight.w900,
                                     letterSpacing: isForSale ? -0.4 : 0,
@@ -2691,35 +2693,35 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                               ],
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           Container(
                             width: 32,
                             height: 32,
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.055),
+                              color: AppPalette.text.withValues(alpha: 0.055),
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                              border: Border.all(color: AppPalette.text.withValues(alpha: 0.08)),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.arrow_forward_rounded,
-                              color: Colors.white,
+                              color: AppPalette.text,
                               size: 16,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 7),
+                      SizedBox(height: 7),
                       Row(
                         children: [
-                          const Icon(Icons.location_on_rounded, color: Colors.white38, size: 12),
-                          const SizedBox(width: 4),
+                          Icon(Icons.location_on_rounded, color: AppPalette.subtle, size: 12),
+                          SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               city,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white38,
+                              style: TextStyle(
+                                color: AppPalette.subtle,
                                 fontSize: 9.5,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -2769,14 +2771,14 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
         border: Border.all(
           color: isSelected
               ? neonGreen.withValues(alpha: 0.78)
-              : Colors.white.withValues(alpha: 0.08),
+              : AppPalette.text.withValues(alpha: 0.08),
           width: isSelected ? 1.5 : 1,
         ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.30),
             blurRadius: 15,
-            offset: const Offset(0, 6),
+            offset: Offset(0, 6),
           ),
           if (isSelected)
             BoxShadow(
@@ -2850,7 +2852,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                           : _buildPlaceholderImage(typeColor, isForSale, small: true),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2858,9 +2860,9 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                           Row(
                             children: [
                               Expanded(
-                                child: Text(cleanPartName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.3)),
+                                child: Text(cleanPartName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppPalette.text, letterSpacing: -0.3)),
                               ),
-                              const SizedBox(width: 8),
+                              SizedBox(width: 8),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(color: typeColor.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8), border: Border.all(color: typeColor.withValues(alpha: 0.3))),
@@ -2868,13 +2870,13 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                               )
                             ],
                           ),
-                          const SizedBox(height: 6),
+                          SizedBox(height: 6),
                           Row(
                             children: [
-                              const Icon(Icons.directions_car_rounded, color: textGray, size: 14),
-                              const SizedBox(width: 4),
+                              Icon(Icons.directions_car_rounded, color: textGray, size: 14),
+                              SizedBox(width: 4),
                               Expanded(
-                                child: Text("${item['car_model']}", maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: textGray, fontWeight: FontWeight.w700, fontSize: 12)),
+                                child: Text("${item['car_model']}", maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: textGray, fontWeight: FontWeight.w700, fontSize: 12)),
                               ),
                             ],
                           ),
@@ -2883,35 +2885,35 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                padding: const EdgeInsets.only(top: 8),
                                child: Row(
                                  children: [
-                                   Container(padding: const EdgeInsets.all(4), decoration: BoxDecoration(color: neonGreen.withValues(alpha: 0.2), shape: BoxShape.circle), child: const Icon(Icons.near_me_rounded, color: neonGreen, size: 10)),
-                                   const SizedBox(width: 6),
-                                   const Text("Yakınınızda (Aynı Şehir)", style: TextStyle(color: neonGreen, fontSize: 11, fontWeight: FontWeight.w900)),
+                                   Container(padding: const EdgeInsets.all(4), decoration: BoxDecoration(color: neonGreen.withValues(alpha: 0.2), shape: BoxShape.circle), child: Icon(Icons.near_me_rounded, color: neonGreen, size: 10)),
+                                   SizedBox(width: 6),
+                                   Text("Yakınınızda (Aynı Şehir)", style: TextStyle(color: neonGreen, fontSize: 11, fontWeight: FontWeight.w900)),
                                  ],
                                ),
                              ),
                           if (extractedCondition.isNotEmpty) ...[
-                             const SizedBox(height: 6),
+                             SizedBox(height: 6),
                              Row(
                                children: [
-                                 Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: neonCyan.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)), child: Text(extractedCondition, style: const TextStyle(color: neonCyan, fontSize: 9, fontWeight: FontWeight.w900))),
-                                 const SizedBox(width: 6),
-                                 Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: goldAccent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)), child: Text(extractedListingType, style: const TextStyle(color: goldAccent, fontSize: 9, fontWeight: FontWeight.w900))),
+                                 Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: neonCyan.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)), child: Text(extractedCondition, style: TextStyle(color: neonCyan, fontSize: 9, fontWeight: FontWeight.w900))),
+                                 SizedBox(width: 6),
+                                 Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: goldAccent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)), child: Text(extractedListingType, style: TextStyle(color: goldAccent, fontSize: 9, fontWeight: FontWeight.w900))),
                                ],
                              ),
                           ],
-                          const SizedBox(height: 10),
+                          SizedBox(height: 10),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Row(
                                 children: [
                                   Icon(Icons.location_on_rounded, color: neonCyan.withValues(alpha: 0.8), size: 14),
-                                  const SizedBox(width: 4),
-                                  Text(item['city'] ?? 'Bilinmiyor', style: const TextStyle(color: textGray, fontWeight: FontWeight.w600, fontSize: 12)),
+                                  SizedBox(width: 4),
+                                  Text(item['city'] ?? 'Bilinmiyor', style: TextStyle(color: textGray, fontWeight: FontWeight.w600, fontSize: 12)),
                                 ],
                               ),
                               if (isForSale && item['price'] != null)
-                                Text("${item['price']} ₺", style: const TextStyle(color: neonGreen, fontSize: 16, fontWeight: FontWeight.w900)),
+                                Text("${item['price']} ₺", style: TextStyle(color: neonGreen, fontSize: 16, fontWeight: FontWeight.w900)),
                             ],
                           )
                         ],
@@ -2929,7 +2931,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
   
   Widget _buildPlaceholderImage(Color color, bool isForSale, {bool small = false}) {
     return Container(
-      color: Colors.white.withValues(alpha: 0.02),
+      color: AppPalette.text.withValues(alpha: 0.02),
       child: Center(
         child: Icon(
           isForSale ? Icons.sell_rounded : Icons.search_rounded, 
@@ -3029,14 +3031,14 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: isActive ? neonGreen : Colors.white.withValues(alpha: 0.04),
-              border: Border.all(color: isActive ? Colors.transparent : Colors.white.withValues(alpha: 0.08)),
+              color: isActive ? neonGreen : AppPalette.text.withValues(alpha: 0.04),
+              border: Border.all(color: isActive ? Colors.transparent : AppPalette.text.withValues(alpha: 0.08)),
               shape: BoxShape.circle,
             ),
             child: Center(
               child: Text(
                 i.toString(), 
-                style: TextStyle(color: isActive ? pureBlack : Colors.white, fontWeight: FontWeight.w900, fontSize: 14)
+                style: TextStyle(color: isActive ? pureBlack : AppPalette.text, fontWeight: FontWeight.w900, fontSize: 14)
               )
             ),
           ),
@@ -3048,7 +3050,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
       padding: const EdgeInsets.symmetric(vertical: 20),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
+        physics: BouncingScrollPhysics(),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: pageButtons,
@@ -3070,7 +3072,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
             child: AppBar(
-              title: const Row(
+              title: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.storefront_rounded, color: neonGreen, size: 20),
@@ -3079,7 +3081,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                     "Yedek Parça Pazarı",
                     style: TextStyle(
                       fontWeight: FontWeight.w900,
-                      color: Colors.white,
+                      color: AppPalette.text,
                       letterSpacing: -0.45,
                       fontSize: 19,
                     ),
@@ -3091,13 +3093,13 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
               centerTitle: true,
               shadowColor: neonGreen.withValues(alpha: 0.2),
               surfaceTintColor: Colors.transparent,
-              shape: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.05), width: 1)),
-              iconTheme: const IconThemeData(color: Colors.white),
+              shape: Border(bottom: BorderSide(color: AppPalette.text.withValues(alpha: 0.05), width: 1)),
+              iconTheme: IconThemeData(color: AppPalette.text),
               leading: IconButton(
                 icon: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), shape: BoxShape.circle, border: Border.all(color: Colors.white10)),
-                  child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.white),
+                  decoration: BoxDecoration(color: AppPalette.text.withValues(alpha: 0.05), shape: BoxShape.circle, border: Border.all(color: Colors.white10)),
+                  child: Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: AppPalette.text),
                 ),
                 onPressed: () => Navigator.pop(context),
               ),
@@ -3109,9 +3111,9 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                 labelColor: neonGreen,
                 unselectedLabelColor: textGray,
                 dividerColor: Colors.transparent,
-                labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.5),
-                unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                tabs: const [
+                labelStyle: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.5),
+                unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                tabs: [
                   Tab(text: "İlan Pazarı"),
                   Tab(text: "İlanlarım"),
                   Tab(text: "İşlemlerim"),
@@ -3152,12 +3154,12 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
           SafeArea(
             bottom: false,
             child: isLoading
-                ? const Center(child: CircularProgressIndicator(color: neonGreen, strokeWidth: 3.5))
+                ? Center(child: CircularProgressIndicator(color: neonGreen, strokeWidth: 3.5))
                 : LayoutBuilder(
                     builder: (context, constraints) {
                       return Center(
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 1440),
+                          constraints: BoxConstraints(maxWidth: 1440),
                           child: TabBarView(
                             controller: _tabController,
                             children: [
@@ -3180,8 +3182,8 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
               foregroundColor: pureBlack,
               elevation: 5,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              icon: const Icon(Icons.add_rounded, size: 22),
-              label: const Text(
+              icon: Icon(Icons.add_rounded, size: 22),
+              label: Text(
                 "Yeni İlan",
                 style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
               ),
@@ -3192,7 +3194,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
               foregroundColor: pureBlack,
               elevation: 5,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: const Icon(Icons.add_rounded, size: 26),
+              child: Icon(Icons.add_rounded, size: 26),
             ),
     ));
   }
@@ -3230,12 +3232,12 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
         decoration: BoxDecoration(
           color: active
               ? neonGreen.withValues(alpha: 0.09)
-              : Colors.white.withValues(alpha: 0.035),
+              : AppPalette.text.withValues(alpha: 0.035),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: active
                 ? neonGreen.withValues(alpha: 0.36)
-                : Colors.white.withValues(alpha: 0.08),
+                : AppPalette.text.withValues(alpha: 0.08),
           ),
         ),
         child: DropdownButtonHideUnderline(
@@ -3243,9 +3245,9 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
             value: value,
             dropdownColor: panelBlack,
             borderRadius: BorderRadius.circular(14),
-            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white54, size: 17),
+            icon: Icon(Icons.keyboard_arrow_down_rounded, color: AppPalette.muted, size: 17),
             style: TextStyle(
-              color: active ? neonGreen : Colors.white,
+              color: active ? neonGreen : AppPalette.text,
               fontWeight: FontWeight.w800,
               fontSize: 11.5,
             ),
@@ -3256,8 +3258,8 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(icon, color: v == value && active ? neonGreen : Colors.white54, size: 14),
-                        const SizedBox(width: 7),
+                        Icon(icon, color: v == value && active ? neonGreen : AppPalette.muted, size: 14),
+                        SizedBox(width: 7),
                         Text(v),
                       ],
                     ),
@@ -3287,32 +3289,32 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
             decoration: BoxDecoration(
               color: active
                   ? neonGreen.withValues(alpha: 0.08)
-                  : Colors.white.withValues(alpha: 0.035),
+                  : AppPalette.text.withValues(alpha: 0.035),
               borderRadius: BorderRadius.circular(13),
               border: Border.all(
                 color: active
                     ? neonGreen.withValues(alpha: 0.32)
-                    : Colors.white.withValues(alpha: 0.08),
+                    : AppPalette.text.withValues(alpha: 0.08),
               ),
             ),
             child: Row(
               children: [
-                Icon(icon, color: active ? neonGreen : Colors.white70, size: 17),
-                const SizedBox(width: 8),
+                Icon(icon, color: active ? neonGreen : AppPalette.muted, size: 17),
+                SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: active ? neonGreen : Colors.white,
+                      color: active ? neonGreen : AppPalette.text,
                       fontSize: 11.5,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
-                const SizedBox(width: 4),
-                const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white38, size: 16),
+                SizedBox(width: 4),
+                Icon(Icons.keyboard_arrow_down_rounded, color: AppPalette.subtle, size: 16),
               ],
             ),
           ),
@@ -3326,7 +3328,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
       onRefresh: _fetchAllData,
       child: CustomScrollView(
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        physics: const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
+        physics: AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
         slivers: [
           SliverToBoxAdapter(
             child: Padding(
@@ -3338,12 +3340,12 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                     decoration: BoxDecoration(
                       color: panelBlack,
                       borderRadius: BorderRadius.circular(17),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                      border: Border.all(color: AppPalette.text.withValues(alpha: 0.08)),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.18),
                           blurRadius: 14,
-                          offset: const Offset(0, 6),
+                          offset: Offset(0, 6),
                         ),
                       ],
                     ),
@@ -3355,15 +3357,15 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                         searchQuery = val;
                         marketPage = 1;
                       }),
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: AppPalette.text,
                         fontWeight: FontWeight.w700,
                         fontSize: 14,
                       ),
                       decoration: InputDecoration(
                         hintText: "Parça, marka, model veya ilan no ara",
-                        hintStyle: const TextStyle(color: Colors.white38, fontSize: 12.5),
-                        prefixIcon: const Icon(Icons.search_rounded, color: neonGreen, size: 21),
+                        hintStyle: TextStyle(color: AppPalette.subtle, fontSize: 12.5),
+                        prefixIcon: Icon(Icons.search_rounded, color: neonGreen, size: 21),
                         suffixIcon: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -3377,7 +3379,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                     marketPage = 1;
                                   });
                                 },
-                                icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 18),
+                                icon: Icon(Icons.close_rounded, color: AppPalette.muted, size: 18),
                               ),
                             Stack(
                               clipBehavior: Clip.none,
@@ -3389,7 +3391,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                     Icons.tune_rounded,
                                     color: (minPriceFilter != null || maxPriceFilter != null)
                                         ? neonGreen
-                                        : Colors.white70,
+                                        : AppPalette.muted,
                                     size: 20,
                                   ),
                                 ),
@@ -3398,16 +3400,16 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                     right: 4,
                                     top: 3,
                                     child: Container(
-                                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                                      constraints: BoxConstraints(minWidth: 16, minHeight: 16),
                                       padding: const EdgeInsets.symmetric(horizontal: 4),
-                                      decoration: const BoxDecoration(
+                                      decoration: BoxDecoration(
                                         color: neonGreen,
                                         shape: BoxShape.circle,
                                       ),
                                       alignment: Alignment.center,
                                       child: Text(
                                         "$_activeMarketFilterCount",
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           color: pureBlack,
                                           fontSize: 8,
                                           fontWeight: FontWeight.w900,
@@ -3417,7 +3419,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                                   ),
                               ],
                             ),
-                            const SizedBox(width: 3),
+                            SizedBox(width: 3),
                           ],
                         ),
                         border: InputBorder.none,
@@ -3425,7 +3427,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                       ),
                     ),
                   ),
-                  const SizedBox(height: 9),
+                  SizedBox(height: 9),
                   Row(
                     children: [
                       Expanded(
@@ -3436,7 +3438,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                           active: currentCityFilter != "Tüm Şehirler",
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Expanded(
                         child: topAction(
                           icon: Icons.swap_vert_rounded,
@@ -3457,11 +3459,11 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
               padding: EdgeInsets.fromLTRB(paddingHorizontal, 8, paddingHorizontal, 9),
               child: Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       "Kategoriler",
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AppPalette.text,
                         fontSize: 16.5,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -0.25,
@@ -3470,8 +3472,8 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                   ),
                   Text(
                     "${_categories.length - 1} kategori",
-                    style: const TextStyle(
-                      color: Colors.white38,
+                    style: TextStyle(
+                      color: AppPalette.subtle,
                       fontSize: 10.5,
                       fontWeight: FontWeight.w700,
                     ),
@@ -3486,7 +3488,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
               height: 88,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
+                physics: BouncingScrollPhysics(),
                 padding: EdgeInsets.symmetric(horizontal: paddingHorizontal),
                 itemCount: _categories.length,
                 itemBuilder: (context, index) {
@@ -3502,19 +3504,19 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                     },
                     borderRadius: BorderRadius.circular(14),
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 160),
+                      duration: Duration(milliseconds: 160),
                       width: 84,
                       margin: const EdgeInsets.only(right: 8),
                       padding: const EdgeInsets.fromLTRB(7, 8, 7, 7),
                       decoration: BoxDecoration(
                         color: selected
                             ? neonGreen.withValues(alpha: 0.09)
-                            : Colors.white.withValues(alpha: 0.028),
+                            : AppPalette.text.withValues(alpha: 0.028),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                           color: selected
                               ? neonGreen.withValues(alpha: 0.55)
-                              : Colors.white.withValues(alpha: 0.07),
+                              : AppPalette.text.withValues(alpha: 0.07),
                         ),
                       ),
                       child: Column(
@@ -3526,23 +3528,23 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                             decoration: BoxDecoration(
                               color: selected
                                   ? neonGreen
-                                  : Colors.white.withValues(alpha: 0.055),
+                                  : AppPalette.text.withValues(alpha: 0.055),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Icon(
                               _marketCategoryIcon(category),
-                              color: selected ? pureBlack : Colors.white70,
+                              color: selected ? pureBlack : AppPalette.muted,
                               size: 19,
                             ),
                           ),
-                          const SizedBox(height: 6),
+                          SizedBox(height: 6),
                           Text(
                             category,
                             textAlign: TextAlign.center,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: selected ? neonGreen : Colors.white70,
+                              color: selected ? neonGreen : AppPalette.muted,
                               fontSize: 8.8,
                               height: 1.05,
                               fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
@@ -3557,14 +3559,14 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
             ),
           ),
 
-          const SliverToBoxAdapter(child: SizedBox(height: 11)),
+          SliverToBoxAdapter(child: SizedBox(height: 11)),
 
           SliverToBoxAdapter(
             child: SizedBox(
               height: 42,
               child: ListView(
                 scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
+                physics: BouncingScrollPhysics(),
                 padding: EdgeInsets.symmetric(horizontal: paddingHorizontal),
                 children: [
                   compactDropdown(
@@ -3580,7 +3582,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                       });
                     },
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   compactDropdown(
                     icon: Icons.shopping_bag_rounded,
                     value: currentListingTypeFilter,
@@ -3594,7 +3596,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                       });
                     },
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   compactDropdown(
                     icon: Icons.verified_rounded,
                     value: currentConditionFilter,
@@ -3622,20 +3624,20 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           "İlanlar",
                           style: TextStyle(
-                            color: Colors.white,
+                            color: AppPalette.text,
                             fontSize: 17,
                             fontWeight: FontWeight.w900,
                             letterSpacing: -0.25,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        SizedBox(height: 2),
                         Text(
                           "${_filteredMarketListings.length} sonuç bulundu",
-                          style: const TextStyle(
-                            color: Colors.white38,
+                          style: TextStyle(
+                            color: AppPalette.subtle,
                             fontSize: 10.5,
                             fontWeight: FontWeight.w700,
                           ),
@@ -3650,8 +3652,8 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                         foregroundColor: neonGreen,
                         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
                       ),
-                      icon: const Icon(Icons.restart_alt_rounded, size: 16),
-                      label: const Text(
+                      icon: Icon(Icons.restart_alt_rounded, size: 16),
+                      label: Text(
                         "Temizle",
                         style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
                       ),
@@ -3692,7 +3694,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
               (page) => setState(() => marketPage = page),
             ),
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 88)),
+          SliverToBoxAdapter(child: SizedBox(height: 88)),
         ],
       ),
     );
@@ -3728,7 +3730,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                   });
                 },
                 icon: Icon(selectedKeys.length == items.length ? Icons.deselect_rounded : Icons.select_all_rounded, color: neonGreen, size: 18),
-                label: Text(selectedKeys.length == items.length ? "Seçimi Kaldır" : "Tümünü Seç", style: const TextStyle(color: neonGreen, fontWeight: FontWeight.w800, fontSize: 13)),
+                label: Text(selectedKeys.length == items.length ? "Seçimi Kaldır" : "Tümünü Seç", style: TextStyle(color: neonGreen, fontWeight: FontWeight.w800, fontSize: 13)),
               ),
               if (selectedKeys.isNotEmpty)
                 ElevatedButton.icon(
@@ -3739,8 +3741,8 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
                   ),
                   onPressed: () => _deleteSelectedItems(isMySale, items),
-                  icon: const Icon(Icons.delete_outline_rounded, color: Colors.white, size: 16),
-                  label: Text("Sil (${selectedKeys.length})", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
+                  icon: Icon(Icons.delete_outline_rounded, color: AppPalette.text, size: 16),
+                  label: Text("Sil (${selectedKeys.length})", style: TextStyle(color: AppPalette.text, fontWeight: FontWeight.w900, fontSize: 13)),
                 )
             ],
           ),
@@ -3754,7 +3756,7 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
               opacity: _fadeController,
               child: ListView.builder(
                 padding: EdgeInsets.fromLTRB(paddingHorizontal, 4, paddingHorizontal, 100),
-                physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                physics: AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                 itemCount: paginatedItems.length,
                 itemBuilder: (ctx, i) => _buildListListingCard(paginatedItems[i], isMyListing, isMySale),
               ),
@@ -3774,22 +3776,22 @@ class _SparePartsMarketScreenState extends State<SparePartsMarketScreen> with Ti
   Widget _buildEmptyState() {
     return Center(
       child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
+        physics: AlwaysScrollableScrollPhysics(),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.03), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: AppPalette.text.withValues(alpha: 0.03), shape: BoxShape.circle),
               child: Icon(Icons.inbox_rounded, size: 48, color: textGray.withValues(alpha: 0.5)),
             ),
-            const SizedBox(height: 18),
-            const Text(
+            SizedBox(height: 18),
+            Text(
               "Kayıt Bulunamadı",
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
+              style: TextStyle(color: AppPalette.text, fontSize: 18, fontWeight: FontWeight.w900),
             ),
-            const SizedBox(height: 8),
-            const Padding(
+            SizedBox(height: 8),
+            Padding(
               padding: EdgeInsets.symmetric(horizontal: 40),
               child: Text(
                 "Aradığınız filtre veya arama kriterlerine (şehir, kategori, durum vs.) uygun ilan bulunmuyor. Farklı seçenekleri deneyin.",

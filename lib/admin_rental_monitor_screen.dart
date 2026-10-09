@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'rental_booking_screen.dart';
@@ -45,7 +46,7 @@ class _AdminRentalMonitorScreenState extends State<AdminRentalMonitorScreen>
 
   void _poll() {
     _poller?.cancel();
-    _poller = Timer.periodic(const Duration(seconds: 5), (_) {
+    _poller = Timer.periodic(Duration(seconds: 5), (_) {
       if (mounted) setState(() => _connected = _live?.connected ?? false);
       _load();
     });
@@ -157,31 +158,31 @@ class _AdminRentalMonitorScreenState extends State<AdminRentalMonitorScreen>
               accent: bid['status'] == 'accepted'),
           RentalTag('#${bid['id']} • ${bid['city']}')
         ]),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         Text('${bid['car_brand_model']}',
-            style: const TextStyle(
+            style: TextStyle(
                 color: Colors.white,
                 fontSize: 20,
                 fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Text('Firma: ${bid['company_name']}\nMüşteri: ${bid['customer_name']}',
-            style: const TextStyle(color: rentalMuted, height: 1.6)),
-        const SizedBox(height: 10),
+            style: TextStyle(color: rentalMuted, height: 1.6)),
+        SizedBox(height: 10),
         Wrap(spacing: 12, runSpacing: 8, children: [
           Text('${bid['amount']} ₺ / ${bid['rent_days']} gün',
-              style: const TextStyle(color: Colors.white)),
+              style: TextStyle(color: Colors.white)),
           if (rentalId(bid['open_complaints']) > 0)
             RentalTag('${bid['open_complaints']} açık şikâyet',
                 icon: Icons.flag_outlined),
           if (rentalId(bid['customer_rating']) > 0)
             RentalTag('${bid['customer_rating']} / 5', icon: Icons.star_rounded)
         ]),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         Wrap(spacing: 8, runSpacing: 8, children: [
           OutlinedButton.icon(
               onPressed: () => _open(bid),
-              icon: const Icon(Icons.visibility_outlined),
-              label: const Text('İşlem detayları')),
+              icon: Icon(Icons.visibility_outlined),
+              label: Text('İşlem detayları')),
           TextButton(
               onPressed: () => Navigator.push(
                   context,
@@ -189,7 +190,7 @@ class _AdminRentalMonitorScreenState extends State<AdminRentalMonitorScreen>
                       builder: (_) => RentacarCompanyProfileScreen(
                           companyId: rentalId(bid['company_id']),
                           service: _service))),
-              child: const Text('Firma profili'))
+              child: Text('Firma profili'))
         ])
       ]));
   Future<void> _history(bool events) async {
@@ -213,20 +214,20 @@ class _AdminRentalMonitorScreenState extends State<AdminRentalMonitorScreen>
           length: 2,
           child: Scaffold(
               appBar: AppBar(
-                  title: const Text('Kiralama takibi',
+                  title: Text('Kiralama takibi',
                       style: TextStyle(fontSize: 18)),
                   actions: [
                     IconButton(
                         tooltip: 'Yenile',
                         onPressed: _loading ? null : _load,
-                        icon: const Icon(Icons.refresh))
+                        icon: Icon(Icons.refresh))
                   ],
-                  bottom: const TabBar(
+                  bottom: TabBar(
                       tabs: [Tab(text: 'Talepler'), Tab(text: 'Hareketler')])),
               body: SafeArea(
                   child: Center(
                       child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 1100),
+                          constraints: BoxConstraints(maxWidth: 1100),
                           child: Column(children: [
                             Padding(
                                 padding:
@@ -250,11 +251,11 @@ class _AdminRentalMonitorScreenState extends State<AdminRentalMonitorScreen>
                                             if (_updated != null)
                                               Text(
                                                   'Güncellendi: ${TimeOfDay.fromDateTime(_updated!).format(context)}',
-                                                  style: const TextStyle(
+                                                  style: TextStyle(
                                                       color: rentalMuted,
                                                       fontSize: 12))
                                           ]),
-                                      const SizedBox(height: 10),
+                                      SizedBox(height: 10),
                                       LayoutBuilder(
                                           builder: (context, constraints) =>
                                               Wrap(
@@ -271,7 +272,7 @@ class _AdminRentalMonitorScreenState extends State<AdminRentalMonitorScreen>
                                                                 _stage,
                                                             isExpanded: true,
                                                             decoration:
-                                                                const InputDecoration(
+                                                                InputDecoration(
                                                                     labelText:
                                                                         'Aşama'),
                                                             items: [
@@ -300,11 +301,11 @@ class _AdminRentalMonitorScreenState extends State<AdminRentalMonitorScreen>
                                                             initialValue: _city,
                                                             isExpanded: true,
                                                             decoration:
-                                                                const InputDecoration(
+                                                                InputDecoration(
                                                                     labelText:
                                                                         'Şehir'),
                                                             items: [
-                                                              const DropdownMenuItem(
+                                                              DropdownMenuItem(
                                                                   value: '',
                                                                   child: Text(
                                                                       'Tüm şehirler',
@@ -335,12 +336,12 @@ class _AdminRentalMonitorScreenState extends State<AdminRentalMonitorScreen>
                                                   ])),
                                       if (_error != null)
                                         Text(_error!,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                                 color: Colors.orange,
                                                 height: 1.5)),
                                     ])),
                             if (_loading)
-                              const LinearProgressIndicator(minHeight: 2),
+                              LinearProgressIndicator(minHeight: 2),
                             Expanded(
                                 child: TabBarView(children: [
                               RefreshIndicator(
@@ -348,20 +349,20 @@ class _AdminRentalMonitorScreenState extends State<AdminRentalMonitorScreen>
                                   child: ListView(
                                       padding: const EdgeInsets.all(16),
                                       physics:
-                                          const AlwaysScrollableScrollPhysics(),
+                                          AlwaysScrollableScrollPhysics(),
                                       children: [
                                         if (_data != null) ...[
                                           Text(
                                               'Genel durum • ${_count('accepted')} rezervasyon • ${_count('completed')} tamamlanan',
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                   color: rentalMuted,
                                                   height: 1.5)),
-                                          const SizedBox(height: 14),
+                                          SizedBox(height: 14),
                                           for (final bid
                                               in _rows(_data!['bids']))
                                             _bid(bid),
                                           if (_rows(_data!['bids']).isEmpty)
-                                            const Text(
+                                            Text(
                                                 'Bu filtreyle kiralama talebi bulunamadı.',
                                                 style: TextStyle(
                                                     color: rentalMuted)),
@@ -369,32 +370,32 @@ class _AdminRentalMonitorScreenState extends State<AdminRentalMonitorScreen>
                                             OutlinedButton(
                                                 onPressed: () =>
                                                     _history(false),
-                                                child: const Text(
+                                                child: Text(
                                                     'Önceki talepler')),
                                         ] else if (!_loading)
                                           TextButton(
                                               onPressed: _load,
-                                              child: const Text('Tekrar dene')),
+                                              child: Text('Tekrar dene')),
                                       ])),
                               RefreshIndicator(
                                   onRefresh: _load,
                                   child: ListView(
                                       padding: const EdgeInsets.all(16),
                                       physics:
-                                          const AlwaysScrollableScrollPhysics(),
+                                          AlwaysScrollableScrollPhysics(),
                                       children: [
-                                        const Text(
+                                        Text(
                                             'Hareketler seçilen şehre göre gösterilir; tüm aşamalar dahildir.',
                                             style: TextStyle(
                                                 color: rentalMuted,
                                                 height: 1.5)),
-                                        const SizedBox(height: 12),
+                                        SizedBox(height: 12),
                                         RentalEventTimeline(
                                             events: _rows(_data?['events'])),
                                         if (_data?['next_cursor'] != null)
                                           OutlinedButton(
                                               onPressed: () => _history(true),
-                                              child: const Text(
+                                              child: Text(
                                                   'Önceki hareketler')),
                                       ])),
                             ]))
@@ -408,7 +409,7 @@ class _RentalOfferDetail extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Dialog(
       child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
+          constraints: BoxConstraints(maxWidth: 720),
           child: FutureBuilder<Map<String, dynamic>>(
               future: service.activityDetail(bidId),
               builder: (context, snapshot) {
@@ -418,7 +419,7 @@ class _RentalOfferDetail extends StatelessWidget {
                       child: Text('${snapshot.error}'));
                 }
                 if (!snapshot.hasData) {
-                  return const SizedBox(
+                  return SizedBox(
                       height: 100,
                       child: Center(child: CircularProgressIndicator()));
                 }
@@ -430,13 +431,13 @@ class _RentalOfferDetail extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text('${bid['car_brand_model']} • #$bidId',
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontSize: 20, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 12),
+                          SizedBox(height: 12),
                           Text(
                               'Firma: ${bid['company_name']}\nMüşteri: ${bid['customer_name']}\nŞehir: ${bid['city']}\nSon teklif: ${bid['amount']} ₺ / ${bid['rent_days']} gün\nToplam bütçe: ${bid['customer_budget']} ₺\nAşama: ${rentalStages[bid['status']]}',
-                              style: const TextStyle(height: 1.6)),
-                          const SizedBox(height: 16),
+                              style: TextStyle(height: 1.6)),
+                          SizedBox(height: 16),
                           RentalEventTimeline(events: [
                             for (final e in data['events'])
                               Map<String, dynamic>.from(e)
@@ -450,10 +451,10 @@ class _RentalOfferDetail extends StatelessWidget {
                                         load: (before) =>
                                             service.activityDetail(bidId,
                                                 beforeEventId: before))),
-                                child: const Text('Önceki hareketleri göster')),
+                                child: Text('Önceki hareketleri göster')),
                           TextButton(
                               onPressed: () => Navigator.pop(context),
-                              child: const Text('Kapat'))
+                              child: Text('Kapat'))
                         ]));
               })));
 }
@@ -519,13 +520,13 @@ class _RentalHistoryState extends State<_RentalHistory> {
   @override
   Widget build(BuildContext context) => Dialog(
       child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 900),
+          constraints: BoxConstraints(maxWidth: 900),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             ListTile(
-                title: const Text('Önceki kayıtlar'),
+                title: Text('Önceki kayıtlar'),
                 trailing: IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close))),
+                    icon: Icon(Icons.close))),
             Flexible(
                 child: SingleChildScrollView(
                     padding: const EdgeInsets.all(16),
@@ -538,7 +539,7 @@ class _RentalHistoryState extends State<_RentalHistory> {
                             for (final row in _rows) widget.bidBuilder(row),
                           if (_error != null)
                             Text(_error!,
-                                style: const TextStyle(color: Colors.orange)),
+                                style: TextStyle(color: Colors.orange)),
                           if (_cursor != null)
                             OutlinedButton(
                                 onPressed: _busy ? null : _more,

@@ -3,7 +3,7 @@ import 'core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'rental_booking_screen.dart';
-import 'core/constants/app_constants.dart';
+
 import 'services/rental_service.dart';
 import 'widgets/rental_market_style.dart';
 

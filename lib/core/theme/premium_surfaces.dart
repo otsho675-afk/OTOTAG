@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../constants/app_constants.dart';
+import 'app_palette.dart';
 import 'app_motion.dart';
 
 /// OTO TAG'in kurumsal ekranlarında kullanılan hafif, performans dostu arka plan.
@@ -56,7 +57,7 @@ class PremiumScene extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    AppConstants.primaryColor
+                    AppPalette.accent
                         .withValues(alpha: .105 * strength),
                     AppConstants.primaryDeep
                         .withValues(alpha: .035 * strength),
@@ -79,8 +80,8 @@ class PremiumScene extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    (light ? const Color(0xFF08784D) : Colors.white).withValues(alpha: .025),
-                    AppConstants.primaryColor
+                    (light ? const Color(0xFF286B4B) : Colors.white).withValues(alpha: .025),
+                    AppPalette.accent
                         .withValues(alpha: .018 * strength),
                     Colors.transparent,
                   ],
@@ -139,7 +140,7 @@ class PremiumGlassPanel extends StatelessWidget {
           ),
           if (accent)
             BoxShadow(
-              color: AppConstants.primaryColor.withValues(alpha: .045),
+              color: AppPalette.accent.withValues(alpha: .045),
               blurRadius: 34,
               spreadRadius: 1,
             ),
@@ -163,7 +164,7 @@ class PremiumGlassPanel extends StatelessWidget {
               borderRadius: borderRadius,
               border: Border.all(
                 color: accent
-                    ? AppConstants.primaryColor.withValues(alpha: .22)
+                    ? AppPalette.accent.withValues(alpha: .22)
                     : (light ? const Color(0xFFC8DDCE) : Colors.white.withValues(alpha: .075)),
               ),
             ),
@@ -195,17 +196,17 @@ class PremiumBrandMark extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppConstants.primaryColor.withValues(alpha: .19),
+            AppPalette.accent.withValues(alpha: .19),
             AppConstants.primaryDeep.withValues(alpha: .055),
           ],
         ),
         borderRadius: BorderRadius.circular(size * .30),
         border: Border.all(
-          color: AppConstants.primaryColor.withValues(alpha: .24),
+          color: AppPalette.accent.withValues(alpha: .24),
         ),
         boxShadow: [
           BoxShadow(
-            color: AppConstants.primaryColor.withValues(alpha: .08),
+            color: AppPalette.accent.withValues(alpha: .08),
             blurRadius: 24,
             spreadRadius: 1,
           ),
@@ -213,7 +214,7 @@ class PremiumBrandMark extends StatelessWidget {
       ),
       child: Icon(
         icon,
-        color: AppConstants.primaryColor,
+        color: AppPalette.accent,
         size: size * .48,
       ),
     );
@@ -236,7 +237,7 @@ class PremiumStatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final light = Theme.of(context).brightness == Brightness.light;
     final color = accent
-      ? (light ? const Color(0xFF08784D) : AppConstants.primaryColor)
+      ? (light ? const Color(0xFF286B4B) : AppPalette.accent)
       : Theme.of(context).colorScheme.onSurface;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
@@ -292,7 +293,7 @@ class PremiumSectionHeading extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
             boxShadow: [
               BoxShadow(
-                color: AppConstants.primaryColor.withValues(alpha: .18),
+                color: AppPalette.accent.withValues(alpha: .18),
                 blurRadius: 12,
               ),
             ],
@@ -360,7 +361,7 @@ class PremiumMetric extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: AppConstants.primaryColor, size: 15),
+          Icon(icon, color: AppPalette.accent, size: 15),
           const SizedBox(width: 7),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -401,7 +402,7 @@ class PremiumHairline extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             Colors.transparent,
-            AppConstants.primaryColor.withValues(alpha: .24),
+            AppPalette.accent.withValues(alpha: .24),
             Colors.white.withValues(alpha: .08),
             Colors.transparent,
           ],
@@ -435,7 +436,7 @@ class _CorporateGridPainter extends CustomPainter {
     }
 
     final accentPaint = Paint()
-      ..color = AppConstants.primaryColor.withValues(alpha: .014)
+      ..color = AppPalette.accent.withValues(alpha: .014)
       ..strokeWidth = 1;
     for (double x = step * 4; x <= size.width; x += step * 4) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), accentPaint);

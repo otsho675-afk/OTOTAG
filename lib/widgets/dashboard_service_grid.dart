@@ -28,7 +28,7 @@ class DashboardServiceGrid extends StatelessWidget {
             .clamp(1.0, 3.0)
             .toDouble();
         final double cardHeight =
-            (108.0 * scale).clamp(118.0, 286.0).toDouble();
+            (132.0 * scale).clamp(134.0, 300.0).toDouble();
 
         return AppEntrance(
           child: Column(
@@ -48,16 +48,16 @@ class DashboardServiceGrid extends StatelessWidget {
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: light ? .07 : .24),
-                                blurRadius: 20,
-                                offset: const Offset(0, 9),
+                                color: Colors.black.withValues(alpha: light ? .045 : .24),
+                                blurRadius: 22,
+                                offset: const Offset(0, 7),
                               ),
                             ],
                           ),
                           child: AppInteractiveSurface(
                             color: Theme.of(context).colorScheme.surface,
                             side: BorderSide(
-                              color: light ? const Color(0xFFDCE7DF) : Colors.white.withValues(alpha: .065),
+                              color: light ? const Color(0xFFDCE5DE) : Colors.white.withValues(alpha: .065),
                             ),
                             borderRadius: BorderRadius.circular(20),
                             onTap: () => onSelected(services[index]),
@@ -70,7 +70,7 @@ class DashboardServiceGrid extends StatelessWidget {
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
                                         colors: light
-                                            ? [Colors.white, const Color(0xFFF1F6F2)]
+                                            ? [Colors.white, const Color(0xFFFAFCFA)]
                                             : [
                                                 AppConstants.cardElevated.withValues(alpha: .86),
                                                 AppConstants.cardColor,
@@ -90,7 +90,7 @@ class DashboardServiceGrid extends StatelessWidget {
                                         colors: [
                                           Colors.transparent,
                                           AppPalette.accent
-                                              .withValues(alpha: .46),
+                                              .withValues(alpha: light ? .24 : .46),
                                           Colors.transparent,
                                         ],
                                       ),
@@ -116,7 +116,7 @@ class DashboardServiceGrid extends StatelessWidget {
                                   ),
                                 ),
                                 Padding(
-                                  padding: const EdgeInsets.all(13),
+                                  padding: const EdgeInsets.all(15),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.stretch,
@@ -126,8 +126,8 @@ class DashboardServiceGrid extends StatelessWidget {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Container(
-                                            width: 42,
-                                            height: 42,
+                                            width: 48,
+                                            height: 48,
                                             decoration: BoxDecoration(
                                               gradient: LinearGradient(
                                                 begin: Alignment.topLeft,
@@ -139,7 +139,7 @@ class DashboardServiceGrid extends StatelessWidget {
                                                 ],
                                               ),
                                               borderRadius:
-                                                  BorderRadius.circular(14),
+                                                  BorderRadius.circular(16),
                                               border: Border.all(
                                                 color: AppPalette.accentBorder,
                                               ),
@@ -155,7 +155,7 @@ class DashboardServiceGrid extends StatelessWidget {
                                               services[index]['icon']
                                                   as IconData,
                                               color: AppPalette.accent,
-                                              size: 22,
+                                              size: 24,
                                             ),
                                           ),
                                           const SizedBox.shrink(),
@@ -169,7 +169,7 @@ class DashboardServiceGrid extends StatelessWidget {
                                         style: TextStyle(
                                           color: Theme.of(context).colorScheme.onSurface,
                                           fontWeight: FontWeight.w800,
-                                          fontSize: 13.5,
+                                          fontSize: 14.5,
                                           height: 1.12,
                                           letterSpacing: -.18,
                                         ),
@@ -179,13 +179,13 @@ class DashboardServiceGrid extends StatelessWidget {
                                         children: [
                                           Expanded(
                                             child: Text(
-                                              'Hizmete bağlan',
+                                              'Hizmeti görüntüle',
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                               style: TextStyle(
                                                 color: light ? const Color(0xFF596B60) : AppConstants.subtleTextColor,
                                                 fontWeight: FontWeight.w600,
-                                                fontSize: 9.5,
+                                                fontSize: 10.5,
                                               ),
                                             ),
                                           ),

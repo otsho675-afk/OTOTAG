@@ -29,7 +29,7 @@ class PremiumScene extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        ColoredBox(color: light ? const Color(0xFFF6F9F6) : AppConstants.bgColor),
+        ColoredBox(color: light ? const Color(0xFFF5F7F6) : AppConstants.bgColor),
         Positioned.fill(
           child: DecoratedBox(
             decoration: BoxDecoration(
@@ -38,8 +38,8 @@ class PremiumScene extends StatelessWidget {
                 end: Alignment.bottomRight,
                 colors: [
                   light ? const Color(0xFFFFFFFF) : AppConstants.bgElevated.withValues(alpha: .88),
-                  light ? const Color(0xFFF4F9F5) : AppConstants.bgColor,
-                  light ? const Color(0xFFEBF4ED) : const Color(0xFF020403),
+                  light ? const Color(0xFFF8FAF9) : AppConstants.bgColor,
+                  light ? const Color(0xFFF1F5F2) : const Color(0xFF020403),
                 ],
                 stops: const [0, .48, 1],
               ),
@@ -95,8 +95,8 @@ class PremiumScene extends StatelessWidget {
           Positioned.fill(
             child: IgnorePointer(
               child: Opacity(
-                opacity: .52,
-                child: CustomPaint(painter: _CorporateGridPainter()),
+                opacity: light ? .45 : .52,
+                child: CustomPaint(painter: _CorporateGridPainter(light: light)),
               ),
             ),
           ),
@@ -134,7 +134,7 @@ class PremiumGlassPanel extends StatelessWidget {
         borderRadius: borderRadius,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: light ? .09 : .34),
+            color: Colors.black.withValues(alpha: light ? .045 : .34),
             blurRadius: 28,
             offset: const Offset(0, 14),
           ),
@@ -158,14 +158,14 @@ class PremiumGlassPanel extends StatelessWidget {
                 end: Alignment.bottomRight,
                 colors: [
                   light ? Colors.white : const Color(0xFF171A1F).withValues(alpha: .94),
-                  light ? const Color(0xFFF8FBF8) : const Color(0xFF0D0F13).withValues(alpha: .91),
+                  light ? const Color(0xFFFCFDFC) : const Color(0xFF0D0F13).withValues(alpha: .91),
                 ],
               ),
               borderRadius: borderRadius,
               border: Border.all(
                 color: accent
                     ? AppPalette.accent.withValues(alpha: .22)
-                    : (light ? const Color(0xFFC8DDCE) : Colors.white.withValues(alpha: .075)),
+                    : (light ? const Color(0xFFDCE5DE) : Colors.white.withValues(alpha: .075)),
               ),
             ),
             child: child,
@@ -289,7 +289,9 @@ class PremiumSectionHeading extends StatelessWidget {
           width: 4,
           height: subtitle == null ? 24 : 34,
           decoration: BoxDecoration(
-            gradient: AppConstants.brandGradient,
+            gradient: Theme.of(context).brightness == Brightness.light
+                ? const LinearGradient(colors: [Color(0xFF216747), Color(0xFF65967A)])
+                : AppConstants.brandGradient,
             borderRadius: BorderRadius.circular(999),
             boxShadow: [
               BoxShadow(
@@ -403,7 +405,7 @@ class PremiumHairline extends StatelessWidget {
           colors: [
             Colors.transparent,
             AppPalette.accent.withValues(alpha: .24),
-            Colors.white.withValues(alpha: .08),
+            AppPalette.border.withValues(alpha: .7),
             Colors.transparent,
           ],
         ),
@@ -421,11 +423,15 @@ class PremiumEntrance extends StatelessWidget {
 }
 
 class _CorporateGridPainter extends CustomPainter {
+  const _CorporateGridPainter({required this.light});
+  final bool light;
+
   @override
   void paint(Canvas canvas, Size size) {
     const step = 44.0;
     final paint = Paint()
-      ..color = Colors.white.withValues(alpha: .017)
+      ..color = (light ? const Color(0xFF638473) : Colors.white)
+          .withValues(alpha: light ? .065 : .017)
       ..strokeWidth = .7;
 
     for (double x = 0; x <= size.width; x += step) {
@@ -436,7 +442,7 @@ class _CorporateGridPainter extends CustomPainter {
     }
 
     final accentPaint = Paint()
-      ..color = AppPalette.accent.withValues(alpha: .014)
+      ..color = AppPalette.accent.withValues(alpha: light ? .035 : .014)
       ..strokeWidth = 1;
     for (double x = step * 4; x <= size.width; x += step * 4) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), accentPaint);
@@ -444,5 +450,6 @@ class _CorporateGridPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant CustomPainter oldDelegate) =>
+      oldDelegate is _CorporateGridPainter && oldDelegate.light != light;
 }

@@ -1734,7 +1734,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   iconTheme: IconThemeData(color: AppPalette.text),
                   bottom: TabBar(
                     labelColor: _primaryColor,
-                    unselectedLabelColor: AppPalette.text.withValues(alpha: 0.4),
+                    unselectedLabelColor: AppPalette.muted,
                     indicatorColor: _primaryColor,
                     indicatorWeight: 4,
                     dividerColor: AppPalette.text.withValues(alpha: 0.05),
@@ -3300,6 +3300,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildHistoryTab(
       bool isProvider, Color primaryColor, BoxConstraints constraints) {
     final paginatedJobs = _getPaginatedHistory();
+    final light = AppPalette.light;
     double horizontalPadding =
         constraints.maxWidth > 800 ? constraints.maxWidth * 0.15 : 16.0;
 
@@ -3342,15 +3343,18 @@ class _ProfileScreenState extends State<ProfileScreen>
                     padding: const EdgeInsets.symmetric(
                         horizontal: 18, vertical: 10),
                     decoration: BoxDecoration(
-                      color:
-                          isSelected ? AppPalette.text : Color(0xFF26262B),
+                      color: isSelected
+                          ? AppPalette.accent
+                          : (light ? AppPalette.surface : const Color(0xFF26262B)),
+                      border: Border.all(
+                        color: isSelected ? AppPalette.accent : AppPalette.border),
                       borderRadius: BorderRadius.circular(24),
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       cat['title']!,
                       style: TextStyle(
-                        color: isSelected ? Colors.black : AppPalette.muted,
+                        color: isSelected ? AppPalette.accentText : AppPalette.text,
                         fontWeight:
                             isSelected ? FontWeight.w800 : FontWeight.w600,
                         fontSize: 14,
@@ -3825,6 +3829,9 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildDashboardCard(
       String title, String value, IconData icon, Color cardColor,
       {bool isMain = false}) {
+    final light = AppPalette.light;
+    final accent = light && cardColor == AppConstants.primaryColor
+        ? AppPalette.accent : cardColor;
     return RepaintBoundary(
       child: AnimatedBuilder(
           animation: _pulseController,
@@ -3832,18 +3839,18 @@ class _ProfileScreenState extends State<ProfileScreen>
             return Container(
               padding: EdgeInsets.all(isMain ? 28 : 24),
               decoration: BoxDecoration(
-                color: _cardColor.withValues(alpha: 0.7),
+                color: AppPalette.surface,
                 borderRadius: BorderRadius.circular(28),
                 border: Border.all(
-                    color: cardColor.withValues(alpha: isMain ? 0.5 : 0.2),
-                    width: isMain ? 2.0 : 1.5),
+                    color: light ? AppPalette.border : accent.withValues(alpha: isMain ? .5 : .2),
+                    width: light ? 1.0 : (isMain ? 2.0 : 1.5)),
                 boxShadow: [
                   BoxShadow(
-                      color: cardColor.withValues(
+                      color: light ? AppPalette.shadow : accent.withValues(
                           alpha: 0.15 + (_pulseController.value * 0.15)),
-                      blurRadius: isMain ? 40 : 25,
-                      spreadRadius: isMain ? 5 : 2,
-                      offset: Offset(0, 12))
+                      blurRadius: light ? 16 : (isMain ? 40 : 25),
+                      spreadRadius: light ? 0 : (isMain ? 5 : 2),
+                      offset: Offset(0, light ? 4 : 12))
                 ],
               ),
               child: Row(
@@ -3851,15 +3858,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                   Container(
                     padding: EdgeInsets.all(isMain ? 20 : 14),
                     decoration: BoxDecoration(
-                        color: cardColor.withValues(alpha: 0.15),
+                        color: light ? AppPalette.accentSoft : accent.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                              color: cardColor.withValues(alpha: 0.6),
-                              blurRadius: 15,
+                              color: light ? Colors.transparent : accent.withValues(alpha: 0.6),
+                              blurRadius: light ? 0 : 15,
                               offset: Offset(0, 6))
                         ]),
-                    child: Icon(icon, color: cardColor, size: isMain ? 36 : 28),
+                    child: Icon(icon, color: light ? AppPalette.accent : accent, size: isMain ? 36 : 28),
                   ),
                   SizedBox(width: isMain ? 20 : 16),
                   Expanded(
@@ -3887,7 +3894,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ),
                   ),
                   if (isMain)
-                    Icon(Icons.trending_up_rounded, color: cardColor, size: 48),
+                    Icon(Icons.trending_up_rounded, color: light ? AppPalette.accent : accent, size: 48),
                 ],
               ),
             );

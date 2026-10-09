@@ -3830,8 +3830,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       String title, String value, IconData icon, Color cardColor,
       {bool isMain = false}) {
     final light = AppPalette.light;
-    final accent = light && cardColor == AppConstants.primaryColor
-        ? AppPalette.accent : cardColor;
+    final accent = light ? AppPalette.accent : cardColor;
     return RepaintBoundary(
       child: AnimatedBuilder(
           animation: _pulseController,

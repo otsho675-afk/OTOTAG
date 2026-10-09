@@ -1,3 +1,5 @@
+import 'core/theme/app_palette.dart';
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
 import 'package:http/http.dart' as http;
 import 'core/constants/app_constants.dart';
 import 'services/app_session.dart';
@@ -145,16 +147,16 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
   // Araç Beyninden (ECU Mode 03) Okunan Gerçek Arıza Kodları
   List<String> _socketDetectedCodes = [];
 
-  static const Color neonGreen = Color(0xFF00FFA3);
-  static const Color pureBlack = AppConstants.bgColor;
-  static const Color cardBlack = AppConstants.cardColor;
-  static const Color surfaceBlack = AppConstants.fieldColor;
+  static Color get neonGreen => AppPalette.accent;
+  static Color get pureBlack => AppPalette.page;
+  static Color get cardBlack => AppPalette.surface;
+  static Color get surfaceBlack => AppPalette.surfaceAlt;
   static const Color alertRed = Color(0xFFFF3366);
   static const Color warningOrange = Color(0xFFF59E0B);
-  static const Color cyanAccent = AppConstants.primaryColor;
-  static const Color purpleAccent = AppConstants.primaryColor;
+  static Color get cyanAccent => AppPalette.accent;
+  static Color get purpleAccent => AppPalette.accent;
 
-  final List<String> _vehicleBrands = const [
+  final List<String> _vehicleBrands = [
     "Tümü (Evrensel)",
     "Volkswagen / Audi / Seat / Skoda",
     "Fiat / Alfa Romeo",
@@ -168,7 +170,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
     "Honda"
   ];
 
-  final List<String> _dtcCategories = const [
+  final List<String> _dtcCategories = [
     "Tümü",
     "Motor (P)",
     "Şasi / Fren (C)",
@@ -176,7 +178,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
     "Ağ / İletişim (U)"
   ];
 
-  final List<String> _systemFilters = const [
+  final List<String> _systemFilters = [
     "Tümü",
     "Yakıt & Hava",
     "Şanzıman",
@@ -187,7 +189,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
     "Fren / ABS",
   ];
 
-  final List<String> _severityFilters = const [
+  final List<String> _severityFilters = [
     "Tümü",
     "Kritik",
     "Yüksek",
@@ -196,7 +198,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
   ];
 
   // Kritik kodlar için detaylı rehber veri havuzu
-  final List<Map<String, dynamic>> _curatedDtcList = const [
+  final List<Map<String, dynamic>> _curatedDtcList = [
     {
       "code": "P0300",
       "category": "Motor (P)",
@@ -346,7 +348,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
             'action': 'check_obd_subscription',
             'user_id': '$userId',
           }))
-          .timeout(const Duration(seconds: 12));
+          .timeout(Duration(seconds: 12));
       final data = jsonDecode(response.body);
       if (response.statusCode != 200 || data['status'] != 'success') return;
       final subscribed = data['is_subscribed'] == true;
@@ -370,7 +372,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
       // 1. Önce arizakodlari.txt dosyasını oku (3.464 P-kodu)
       try {
         final rawData = await rootBundle.loadString('assets/arizakodlari.txt');
-        final lines = const LineSplitter().convert(rawData);
+        final lines = LineSplitter().convert(rawData);
         for (var line in lines) {
           final trimmed = line.trim();
           if (trimmed.isEmpty) continue;
@@ -466,7 +468,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
 
     try {
       final socket =
-          await Socket.connect(ip, port, timeout: const Duration(seconds: 4));
+          await Socket.connect(ip, port, timeout: Duration(seconds: 4));
       if (!mounted) {
         socket.destroy();
         return;
@@ -487,9 +489,9 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
 
       final resetResponse = await _sendElmCommand("ATZ");
       if (resetResponse.isEmpty || resetResponse == 'TIMEOUT') {
-        throw const SocketException('Adaptör yanıt vermedi.');
+        throw SocketException('Adaptör yanıt vermedi.');
       }
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(Duration(milliseconds: 300));
       await _sendElmCommand("ATE0");
       await _sendElmCommand("ATL0");
       await _sendElmCommand("ATSP0");
@@ -580,7 +582,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
         socket.write('$cmd\r');
         await socket.flush();
         return await completer.future
-            .timeout(const Duration(milliseconds: 2200));
+            .timeout(Duration(milliseconds: 2200));
       } catch (_) {
         await _disconnectSocket();
         return 'TIMEOUT';
@@ -725,21 +727,21 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
           backgroundColor: cardBlack,
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(22),
-              side: const BorderSide(color: alertRed, width: 1.5)),
-          title: const Row(
+              side: BorderSide(color: alertRed, width: 1.5)),
+          title: Row(
             children: [
-              Icon(Icons.warning_amber_rounded, color: alertRed, size: 26),
-              SizedBox(width: 10),
-              Text("Arıza Kodlarını Sıfırla?",
+              const Icon(Icons.warning_amber_rounded, color: alertRed, size: 26),
+              const SizedBox(width: 10),
+              const Text("Arıza Kodlarını Sıfırla?",
                   style: TextStyle(
-                      color: Colors.white,
+                      color: AppPalette.text,
                       fontWeight: FontWeight.w900,
                       fontSize: 17)),
             ],
           ),
-          content: const Text(
+          content: Text(
             "OBD Mode 04 komutu araç beynine (ECU) iletilecektir. Kayıtlı arıza kodları ve arıza lambası doğrudan söndürülecektir.\n\nOnaylıyor musunuz?",
-            style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.45),
+            style: TextStyle(color: AppPalette.muted, fontSize: 13, height: 1.45),
           ),
           actions: [
             TextButton(
@@ -752,7 +754,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                   _showSnackbar("Geri yükleme hatası: $e", isError: true);
                 }
               },
-              child: const Text("Geri Yükle (Restore)",
+              child: Text("Geri Yükle (Restore)",
                   style: TextStyle(
                       color: cyanAccent,
                       fontWeight: FontWeight.bold,
@@ -760,9 +762,9 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text("Vazgeç",
+              child: Text("Vazgeç",
                   style: TextStyle(
-                      color: Colors.white54, fontWeight: FontWeight.bold)),
+                      color: AppPalette.muted, fontWeight: FontWeight.bold)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -788,9 +790,9 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                       isError: true);
                 }
               },
-              child: const Text("Evet, Sıfırla",
+              child: Text("Evet, Sıfırla",
                   style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w900)),
+                      color: AppPalette.text, fontWeight: FontWeight.w900)),
             ),
           ],
         ),
@@ -801,7 +803,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
   void _startLiveTelemetryLoop() {
     _telemetryLoopTimer?.cancel();
     _telemetryLoopTimer =
-        Timer.periodic(const Duration(milliseconds: 900), (timer) async {
+        Timer.periodic(Duration(milliseconds: 900), (timer) async {
       if (!mounted ||
           _telemetryBusy ||
           !_isConnectedToSocket ||
@@ -1100,7 +1102,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
         ),
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 3),
+        duration: Duration(seconds: 3),
       ),
     );
   }
@@ -1116,7 +1118,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
         filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: Container(
           height: MediaQuery.of(context).size.height * 0.88,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: pureBlack,
             borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
             border: Border(top: BorderSide(color: cyanAccent, width: 1.5)),
@@ -1128,7 +1130,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                   width: 44,
                   height: 4.5,
                   decoration: BoxDecoration(
-                      color: Colors.white24,
+                      color: AppPalette.border,
                       borderRadius: BorderRadius.circular(10))),
               const SizedBox(height: 16),
               Padding(
@@ -1139,29 +1141,29 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                     const Expanded(
                         child: Row(
                       children: [
-                        Icon(Icons.help_outline_rounded,
+                        const Icon(Icons.help_outline_rounded,
                             color: cyanAccent, size: 24),
-                        SizedBox(width: 10),
-                        Expanded(
+                        const SizedBox(width: 10),
+                        const Expanded(
                             child: Text("OBD2 Bağlantı & Cihaz Rehberi",
                                 style: TextStyle(
-                                    color: Colors.white,
+                                    color: AppPalette.text,
                                     fontWeight: FontWeight.w900,
                                     fontSize: 17))),
                       ],
                     )),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded,
-                          color: Colors.white60),
+                      icon: Icon(Icons.close_rounded,
+                          color: AppPalette.muted),
                       onPressed: () => Navigator.pop(ctx),
                     )
                   ],
                 ),
               ),
               const Divider(color: Colors.white10),
-              Expanded(
+              const Expanded(
                 child: ListView(
-                  physics: const BouncingScrollPhysics(),
+                  physics: BouncingScrollPhysics(),
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   children: [
@@ -1177,21 +1179,21 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
+                          const Row(
                             children: [
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
                                     color: cyanAccent.withValues(alpha: 0.15),
                                     shape: BoxShape.circle),
-                                child: const Icon(Icons.shopping_cart_outlined,
+                                child: Icon(Icons.shopping_cart_outlined,
                                     color: cyanAccent, size: 20),
                               ),
                               const SizedBox(width: 10),
                               const Expanded(
                                   child: Text("1. Hangi adaptör gerekir?",
                                       style: TextStyle(
-                                          color: Colors.white,
+                                          color: AppPalette.text,
                                           fontWeight: FontWeight.w900,
                                           fontSize: 14.5))),
                             ],
@@ -1208,7 +1210,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                           const Text(
                             "Bu ekran Wi-Fi ağı üzerinden TCP bağlantısı kurar. Adaptörün kendi kılavuzundaki IP ve portu kullanın.\nAraç, adaptör ve telefon uyumluluğunu adaptör üreticisinden kontrol edin. Bluetooth bağlantısı bu ekranda desteklenmez. Web üzerinde kod sözlüğü kullanılabilir; canlı bağlantı için mobil uygulamayı açın.",
                             style: TextStyle(
-                                color: Colors.white70,
+                                color: AppPalette.muted,
                                 fontSize: 12,
                                 height: 1.45),
                           ),
@@ -1218,7 +1220,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                     const SizedBox(height: 16),
                     const Text("2. 4 Adımda Kolay Bağlantı:",
                         style: TextStyle(
-                            color: Colors.white,
+                            color: AppPalette.text,
                             fontWeight: FontWeight.w900,
                             fontSize: 14.5)),
                     const SizedBox(height: 10),
@@ -1261,16 +1263,16 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Row(
+                          Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Expanded(
                                   child: Text("Canlı Soket & ECU Teşhis Paketi",
                                       style: TextStyle(
-                                          color: Colors.white,
+                                          color: AppPalette.text,
                                           fontWeight: FontWeight.w900,
                                           fontSize: 13.5))),
-                              Text("Aylık üyelik",
+                              const Text("Aylık üyelik",
                                   style: TextStyle(
                                       color: neonGreen,
                                       fontWeight: FontWeight.w900,
@@ -1281,12 +1283,12 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                           const Text(
                             "Google Play ve Apple Store uygulama içi aboneliğiyle anında aktif olur. İstediğiniz an tek dokunuşla iptal edebilirsiniz.",
                             style: TextStyle(
-                                color: Colors.white70,
+                                color: AppPalette.muted,
                                 fontSize: 11.5,
                                 height: 1.35),
                           ),
                           const SizedBox(height: 12),
-                          SizedBox(
+                          const SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
@@ -1309,7 +1311,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                                           : (_freeUsageCount < _maxFreeUsage
                                               ? "Ücretsiz deneme (Kalan: ${_maxFreeUsage - _freeUsageCount})"
                                               : "Aylık abone ol"),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontWeight: FontWeight.w900,
                                       fontSize: 13)),
                             ),
@@ -1335,7 +1337,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
       decoration: BoxDecoration(
         color: surfaceBlack,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: AppPalette.text.withValues(alpha: 0.05)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1352,15 +1354,15 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("Adım $step: $title",
-                    style: const TextStyle(
-                        color: Colors.white,
+                const Text("Adım $step: $title",
+                    style: TextStyle(
+                        color: AppPalette.text,
                         fontWeight: FontWeight.bold,
                         fontSize: 13)),
                 const SizedBox(height: 3),
-                Text(desc,
-                    style: const TextStyle(
-                        color: Colors.white60, fontSize: 11.5, height: 1.3)),
+                const Text(desc,
+                    style: TextStyle(
+                        color: AppPalette.muted, fontSize: 11.5, height: 1.3)),
               ],
             ),
           )
@@ -1398,15 +1400,15 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label,
-              style: const TextStyle(
+          const Text(label,
+              style: TextStyle(
                   color: cyanAccent,
                   fontSize: 11,
                   fontWeight: FontWeight.bold)),
           const SizedBox(width: 4),
           GestureDetector(
             onTap: onRemove,
-            child: const Icon(Icons.close_rounded, size: 14, color: cyanAccent),
+            child: Icon(Icons.close_rounded, size: 14, color: cyanAccent),
           )
         ],
       ),
@@ -1452,8 +1454,8 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
         elevation: 0,
         centerTitle: false,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: Colors.white, size: 20),
+          icon: Icon(Icons.arrow_back_ios_new_rounded,
+              color: AppPalette.text, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
         title: Column(
@@ -1467,7 +1469,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                   decoration: BoxDecoration(
                       color: neonGreen.withValues(alpha: 0.15),
                       shape: BoxShape.circle),
-                  child: const Icon(Icons.speed_rounded,
+                  child: Icon(Icons.speed_rounded,
                       color: neonGreen, size: 18),
                 ),
                 const SizedBox(width: 8),
@@ -1478,10 +1480,10 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                         : "Arıza Teşhis Asistanı",
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontWeight: FontWeight.w900,
                         fontSize: 15,
-                        color: Colors.white,
+                        color: AppPalette.text,
                         letterSpacing: -0.3),
                   ),
                 ),
@@ -1489,13 +1491,13 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
             ),
             if (widget.vehiclePlate != null) ...[
               const SizedBox(height: 2),
-              Text(
+              const Text(
                 "${widget.vehiclePlate} • ${widget.vehicleModel ?? 'Tanımlı Araç'}",
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 11,
-                    color: Colors.white54,
+                    color: AppPalette.muted,
                     fontWeight: FontWeight.bold),
               ),
             ]
@@ -1513,13 +1515,13 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.045),
+                    color: AppPalette.text.withValues(alpha: 0.045),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.07),
+                      color: AppPalette.text.withValues(alpha: 0.07),
                     ),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.help_outline_rounded,
                     color: neonGreen,
                     size: 19,
@@ -1541,11 +1543,11 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: (_isConnectedToSocket ? neonGreen : Colors.white)
+                    color: (_isConnectedToSocket ? neonGreen : AppPalette.text)
                         .withValues(alpha: _isConnectedToSocket ? 0.11 : 0.045),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: (_isConnectedToSocket ? neonGreen : Colors.white)
+                      color: (_isConnectedToSocket ? neonGreen : AppPalette.text)
                           .withValues(alpha: _isConnectedToSocket ? 0.28 : 0.07),
                     ),
                   ),
@@ -1553,7 +1555,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                     _isConnectedToSocket
                         ? Icons.link_rounded
                         : Icons.link_off_rounded,
-                    color: _isConnectedToSocket ? neonGreen : Colors.white54,
+                    color: _isConnectedToSocket ? neonGreen : AppPalette.muted,
                     size: 19,
                   ),
                 ),
@@ -1569,10 +1571,10 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
               height: 42,
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.035),
+                color: AppPalette.text.withValues(alpha: 0.035),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.055),
+                  color: AppPalette.text.withValues(alpha: 0.055),
                 ),
               ),
               child: TabBar(
@@ -1587,17 +1589,17 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                   ),
                 ),
                 labelColor: neonGreen,
-                unselectedLabelColor: const Color(0x75FFFFFF),
-                labelStyle: const TextStyle(
+                unselectedLabelColor: Color(0x75FFFFFF),
+                labelStyle: TextStyle(
                   fontWeight: FontWeight.w900,
                   fontSize: 11.5,
                 ),
-                tabs: const [
-                  SizedBox(
+                tabs: [
+                  const SizedBox(
                     height: 34,
                     child: Center(child: Text('Arıza Kodları')),
                   ),
-                  SizedBox(
+                  const SizedBox(
                     height: 34,
                     child: Center(child: Text('Canlı OBD')),
                   ),
@@ -1609,7 +1611,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
       ),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 820),
+          constraints: BoxConstraints(maxWidth: 820),
           child: TabBarView(
             controller: _tabController,
             children: [
@@ -1629,7 +1631,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
         (_selectedBrand != "Tümü (Evrensel)" ? 1 : 0);
 
     return CustomScrollView(
-      physics: const BouncingScrollPhysics(),
+      physics: BouncingScrollPhysics(),
       slivers: [
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -1654,8 +1656,8 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                               "Kütüphane & Sonuçlar (${filteredCodes.length})",
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  color: Colors.white70,
+                              style: TextStyle(
+                                  color: AppPalette.muted,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w800),
                             ),
@@ -1671,7 +1673,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                               ),
                               child: Text(
                                 "${_allDtcList.length} Kod Aktif",
-                                style: const TextStyle(
+                                style: TextStyle(
                                     color: neonGreen,
                                     fontSize: 10,
                                     fontWeight: FontWeight.w900),
@@ -1699,7 +1701,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                             _selectedBrand = "Tümü (Evrensel)";
                           });
                         },
-                        child: const Text("Filtreleri Sıfırla",
+                        child: Text("Filtreleri Sıfırla",
                             style: TextStyle(
                                 color: neonGreen,
                                 fontSize: 12,
@@ -1743,13 +1745,13 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                     child: Column(
                       children: [
                         const Icon(Icons.search_off_rounded,
-                            color: Colors.white38, size: 40),
+                            color: AppPalette.subtle, size: 40),
                         const SizedBox(height: 12),
                         Text(
                           "Aranan kriterlere uygun arıza kodu bulunamadı.",
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.7),
+                              color: AppPalette.text.withValues(alpha: 0.7),
                               fontSize: 13.5,
                               fontWeight: FontWeight.bold),
                         ),
@@ -1792,7 +1794,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
         // 1. Sıra: Ana Standart Kategoriler (Canlı sayaç ile - Tıklandığında anında çalışır)
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
+          physics: BouncingScrollPhysics(),
           child: Row(
             children: _dtcCategories.map((cat) {
               final isSel = _selectedDtcCategory == cat;
@@ -1804,7 +1806,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                   label: Text(
                     "$cat ($count)",
                     style: TextStyle(
-                      color: isSel ? Colors.black : Colors.white70,
+                      color: isSel ? Colors.black : AppPalette.muted,
                       fontWeight: FontWeight.w800,
                       fontSize: 11.5,
                     ),
@@ -1835,7 +1837,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
         // 2. Sıra: Alt Sistemler (Yakıt, Şanzıman, Ateşleme vb.)
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
+          physics: BouncingScrollPhysics(),
           child: Row(
             children: _systemFilters.map((sys) {
               final isSel = _activeSystemFilter == sys;
@@ -1846,7 +1848,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                   label: Text(
                     sys,
                     style: TextStyle(
-                      color: isSel ? Colors.black : Colors.white70,
+                      color: isSel ? Colors.black : AppPalette.muted,
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
                     ),
@@ -1879,7 +1881,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
         // 3. Sıra: Hızlı Risk Seçiciler
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
+          physics: BouncingScrollPhysics(),
           child: Row(
             children: _severityFilters.map((sev) {
               final isSel = _selectedSeverityFilter == sev;
@@ -1894,7 +1896,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                   label: Text(
                     sev,
                     style: TextStyle(
-                      color: isSel ? Colors.black : Colors.white60,
+                      color: isSel ? Colors.black : AppPalette.muted,
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
                     ),
@@ -1928,7 +1930,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
         decoration: BoxDecoration(
           color: surfaceBlack,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          border: Border.all(color: AppPalette.text.withValues(alpha: 0.08)),
         ),
         child: Row(
           children: [
@@ -1946,16 +1948,16 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Soket Bağlantısı Bekleniyor",
+                  Text("Soket Bağlantısı Bekleniyor",
                       style: TextStyle(
-                          color: Colors.white,
+                          color: AppPalette.text,
                           fontWeight: FontWeight.w900,
                           fontSize: 13.5)),
                   const SizedBox(height: 2),
                   Text(
                     "ELM327 Wi-Fi / TCP soketine bağlanarak gerçek ECU arıza kodlarını çekin.",
                     style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.6),
+                        color: AppPalette.text.withValues(alpha: 0.6),
                         fontSize: 11.5,
                         height: 1.3),
                   ),
@@ -1974,12 +1976,12 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                     borderRadius: BorderRadius.circular(12)),
               ),
               child: _isConnectingSocket
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 14,
                       height: 14,
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: Colors.black))
-                  : const Text("Bağlan",
+                  : Text("Bağlan",
                       style:
                           TextStyle(fontWeight: FontWeight.w900, fontSize: 12)),
             )
@@ -2005,11 +2007,11 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                 color: neonGreen.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.check_circle_outline_rounded,
+              child: Icon(Icons.check_circle_outline_rounded,
                   color: neonGreen, size: 24),
             ),
             const SizedBox(width: 14),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -2018,17 +2020,17 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                           color: neonGreen,
                           fontWeight: FontWeight.w900,
                           fontSize: 14)),
-                  SizedBox(height: 2),
+                  const SizedBox(height: 2),
                   Text(
                     "Mode 03 ile ECU sorgulandı. Motor beyninde hiçbir aktif hata kodu tespit edilmedi.",
                     style: TextStyle(
-                        color: Colors.white70, fontSize: 11.5, height: 1.3),
+                        color: AppPalette.muted, fontSize: 11.5, height: 1.3),
                   ),
                 ],
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.refresh_rounded, color: neonGreen),
+              icon: Icon(Icons.refresh_rounded, color: neonGreen),
               onPressed: _readRealDtcFromEcu,
               tooltip: "Tekrar Sorgula",
             )
@@ -2058,14 +2060,14 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                       color: alertRed.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.warning_rounded,
+                    child: Icon(Icons.warning_rounded,
                         color: alertRed, size: 20),
                   ),
                   const SizedBox(width: 10),
                   Text(
                     "Beyinden Okunan Arızalar (${_socketDetectedCodes.length})",
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: AppPalette.text,
                         fontWeight: FontWeight.w900,
                         fontSize: 14),
                   ),
@@ -2075,12 +2077,12 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                 children: [
                   IconButton(
                     icon: _isReadingDtc
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 14,
                             height: 14,
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: alertRed))
-                        : const Icon(Icons.sync_rounded,
+                        : Icon(Icons.sync_rounded,
                             color: alertRed, size: 20),
                     onPressed: _isReadingDtc ? null : _readRealDtcFromEcu,
                     tooltip: "Yeniden Oku",
@@ -2096,8 +2098,8 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                           borderRadius: BorderRadius.circular(10)),
                     ),
                     onPressed: _clearSocketCodes,
-                    icon: const Icon(Icons.cleaning_services_rounded, size: 14),
-                    label: const Text("Sıfırla",
+                    icon: Icon(Icons.cleaning_services_rounded, size: 14),
+                    label: Text("Sıfırla",
                         style: TextStyle(
                             fontWeight: FontWeight.w900, fontSize: 11.5)),
                   )
@@ -2109,7 +2111,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
           Text(
             "Aracınızın motor beyninden okunan gerçek aktif arıza kodları:",
             style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.7), fontSize: 11.5),
+                color: AppPalette.text.withValues(alpha: 0.7), fontSize: 11.5),
           ),
           const SizedBox(height: 12),
           ..._socketDetectedCodes.map((code) {
@@ -2128,31 +2130,31 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
           decoration: BoxDecoration(
             color: cardBlack,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border: Border.all(color: AppPalette.text.withValues(alpha: 0.08)),
             boxShadow: [
               BoxShadow(
                   color: Colors.black.withValues(alpha: 0.3),
                   blurRadius: 12,
-                  offset: const Offset(0, 3))
+                  offset: Offset(0, 3))
             ],
           ),
           child: TextField(
             controller: _searchController,
             onChanged: (val) => setState(() => _searchQuery = val),
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14),
+            style: TextStyle(
+                color: AppPalette.text, fontWeight: FontWeight.w700, fontSize: 14),
             decoration: InputDecoration(
               hintText: _isLoadingDtcDb
                   ? "Arıza kodu veritabanı yükleniyor..."
                   : "3.500+ kod arasında ara (P0101, C0035, Airbag...)",
               hintStyle: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.35), fontSize: 13),
+                  color: AppPalette.text.withValues(alpha: 0.35), fontSize: 13),
               prefixIcon:
                   const Icon(Icons.search_rounded, color: neonGreen, size: 22),
               suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(Icons.clear_rounded,
-                          color: Colors.white54, size: 18),
+                      icon: Icon(Icons.clear_rounded,
+                          color: AppPalette.muted, size: 18),
                       onPressed: () {
                         HapticFeedback.selectionClick();
                         _searchController.clear();
@@ -2171,7 +2173,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
           decoration: BoxDecoration(
             color: surfaceBlack,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+            border: Border.all(color: AppPalette.text.withValues(alpha: 0.06)),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
@@ -2179,9 +2181,9 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
               dropdownColor: cardBlack,
               isExpanded: true,
               icon:
-                  const Icon(Icons.arrow_drop_down_rounded, color: cyanAccent),
-              style: const TextStyle(
-                  color: Colors.white,
+                  Icon(Icons.arrow_drop_down_rounded, color: cyanAccent),
+              style: TextStyle(
+                  color: AppPalette.text,
                   fontWeight: FontWeight.bold,
                   fontSize: 12.5),
               items: _vehicleBrands
@@ -2220,14 +2222,14 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
               ? alertRed.withValues(alpha: 0.5)
               : (isExpanded
                   ? sevColor.withValues(alpha: 0.4)
-                  : Colors.white.withValues(alpha: 0.08)),
+                  : AppPalette.text.withValues(alpha: 0.08)),
           width: isFromSocket ? 1.5 : 1.0,
         ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.35),
             blurRadius: 10,
-            offset: const Offset(0, 3),
+            offset: Offset(0, 3),
           )
         ],
       ),
@@ -2272,8 +2274,8 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                               children: [
                                 Text(
                                   dtc['title'] ?? 'Arıza Tanımı',
-                                  style: const TextStyle(
-                                      color: Colors.white,
+                                  style: TextStyle(
+                                      color: AppPalette.text,
                                       fontWeight: FontWeight.w900,
                                       fontSize: 13.5,
                                       height: 1.25),
@@ -2302,8 +2304,8 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                                         dtc['system'] ?? '',
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                            color: Colors.white54,
+                                        style: TextStyle(
+                                            color: AppPalette.muted,
                                             fontSize: 11,
                                             fontWeight: FontWeight.w600),
                                       ),
@@ -2318,7 +2320,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                               isExpanded
                                   ? Icons.keyboard_arrow_up_rounded
                                   : Icons.keyboard_arrow_down_rounded,
-                              color: Colors.white70,
+                              color: AppPalette.muted,
                               size: 22,
                             ),
                             onPressed: () {
@@ -2338,7 +2340,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                       Text(
                         dtc['description'] ?? '',
                         style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.75),
+                            color: AppPalette.text.withValues(alpha: 0.75),
                             fontSize: 12.5,
                             height: 1.35),
                       ),
@@ -2346,9 +2348,9 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                         const SizedBox(height: 12),
                         const Divider(color: Colors.white10),
                         const SizedBox(height: 6),
-                        const Text("Olası Kök Nedenler:",
+                        Text("Olası Kök Nedenler:",
                             style: TextStyle(
-                                color: Colors.white,
+                                color: AppPalette.text,
                                 fontWeight: FontWeight.w800,
                                 fontSize: 12)),
                         const SizedBox(height: 6),
@@ -2357,14 +2359,14 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text("• ",
+                                  Text("• ",
                                       style: TextStyle(
                                           color: neonGreen,
                                           fontWeight: FontWeight.bold)),
                                   Expanded(
                                       child: Text(c,
-                                          style: const TextStyle(
-                                              color: Colors.white70,
+                                          style: TextStyle(
+                                              color: AppPalette.muted,
                                               fontSize: 12,
                                               height: 1.3))),
                                 ],
@@ -2377,7 +2379,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                             color: surfaceBlack,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.05)),
+                                color: AppPalette.text.withValues(alpha: 0.05)),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2386,20 +2388,20 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Expanded(
+                                  Expanded(
                                     child: Text(
                                       "Şüpheli / Değişecek Parçalar:",
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
-                                          color: Colors.white60,
+                                          color: AppPalette.muted,
                                           fontSize: 11,
                                           fontWeight: FontWeight.w700),
                                     ),
                                   ),
                                   const SizedBox(width: 8),
                                   Text(dtc['costRange'] ?? '',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                           color: neonGreen,
                                           fontWeight: FontWeight.w900,
                                           fontSize: 12)),
@@ -2421,7 +2423,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                                               alpha: 0.3)),
                                     ),
                                     child: Text(p,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                             color: cyanAccent,
                                             fontSize: 10.5,
                                             fontWeight: FontWeight.w800)),
@@ -2443,14 +2445,14 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(Icons.build_circle_rounded,
+                              Icon(Icons.build_circle_rounded,
                                   color: neonGreen, size: 18),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   dtc['solution'] ?? '',
-                                  style: const TextStyle(
-                                      color: Colors.white,
+                                  style: TextStyle(
+                                      color: AppPalette.text,
                                       fontSize: 11.5,
                                       fontWeight: FontWeight.w500,
                                       height: 1.3),
@@ -2472,14 +2474,14 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                                   _showSnackbar(
                                       "$code arıza bilgisi panoya kopyalandı!");
                                 },
-                                icon: const Icon(Icons.copy_rounded, size: 14),
-                                label: const Text("Bilgiyi Kopyala",
+                                icon: Icon(Icons.copy_rounded, size: 14),
+                                label: Text("Bilgiyi Kopyala",
                                     style: TextStyle(
                                         fontWeight: FontWeight.w800,
                                         fontSize: 11.5)),
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.white70,
-                                  side: const BorderSide(color: Colors.white24),
+                                  foregroundColor: AppPalette.muted,
+                                  side: BorderSide(color: AppPalette.border),
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(10)),
                                 ),
@@ -2502,7 +2504,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
   // ================= 2. TAB: GERÇEK SOKET & CANLI TELEMETRİ GÖSTERGELERİ ================= //
   Widget _buildSocketTelemetryTab() {
     return ListView(
-      physics: const BouncingScrollPhysics(),
+      physics: BouncingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 28),
       children: [
         Container(
@@ -2510,7 +2512,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                AppConstants.primaryColor.withValues(alpha: 0.13),
+                AppPalette.accent.withValues(alpha: 0.13),
                 cardBlack,
               ],
               begin: Alignment.topLeft,
@@ -2518,7 +2520,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
             ),
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
-              color: AppConstants.primaryColor.withValues(alpha: 0.22),
+              color: AppPalette.accent.withValues(alpha: 0.22),
             ),
           ),
           child: Row(
@@ -2527,10 +2529,10 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: AppConstants.primaryColor.withValues(alpha: 0.12),
+                  color: AppPalette.accent.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(15),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.monitor_heart_rounded,
                   color: neonGreen,
                   size: 24,
@@ -2541,10 +2543,10 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Canlı Araç Teşhisi',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AppPalette.text,
                         fontWeight: FontWeight.w900,
                         fontSize: 15,
                       ),
@@ -2555,7 +2557,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                           ? 'Gerçek ECU verileri ve arıza işlemleri kullanıma hazır.'
                           : 'ELM327 bağlantısı, canlı sensörler ve ECU arıza işlemleri.',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.56),
+                        color: AppPalette.text.withValues(alpha: 0.56),
                         fontSize: 11.2,
                         height: 1.35,
                       ),
@@ -2571,13 +2573,13 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.055),
+                    color: AppPalette.text.withValues(alpha: 0.055),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.08),
+                      color: AppPalette.text.withValues(alpha: 0.08),
                     ),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.help_outline_rounded,
                     color: neonGreen,
                     size: 19,
@@ -2596,7 +2598,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
             border: Border.all(
               color: _isConnectedToSocket
                   ? neonGreen.withValues(alpha: 0.34)
-                  : Colors.white.withValues(alpha: 0.08),
+                  : AppPalette.text.withValues(alpha: 0.08),
             ),
           ),
           child: Column(
@@ -2625,10 +2627,10 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'ELM327 Bağlantısı',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: AppPalette.text,
                             fontWeight: FontWeight.w900,
                             fontSize: 14.5,
                           ),
@@ -2643,7 +2645,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                           style: TextStyle(
                             color: _isConnectedToSocket
                                 ? neonGreen.withValues(alpha: 0.9)
-                                : Colors.white.withValues(alpha: 0.48),
+                                : AppPalette.text.withValues(alpha: 0.48),
                             fontSize: 10.8,
                             height: 1.25,
                           ),
@@ -2658,11 +2660,11 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: (_isConnectedToSocket ? neonGreen : Colors.white)
+                      color: (_isConnectedToSocket ? neonGreen : AppPalette.text)
                           .withValues(alpha: _isConnectedToSocket ? 0.11 : 0.045),
                       borderRadius: BorderRadius.circular(99),
                       border: Border.all(
-                        color: (_isConnectedToSocket ? neonGreen : Colors.white)
+                        color: (_isConnectedToSocket ? neonGreen : AppPalette.text)
                             .withValues(alpha: _isConnectedToSocket ? 0.25 : 0.07),
                       ),
                     ),
@@ -2675,7 +2677,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                           decoration: BoxDecoration(
                             color: _isConnectedToSocket
                                 ? neonGreen
-                                : Colors.white38,
+                                : AppPalette.subtle,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -2685,7 +2687,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                           style: TextStyle(
                             color: _isConnectedToSocket
                                 ? neonGreen
-                                : Colors.white54,
+                                : AppPalette.muted,
                             fontSize: 9.2,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 0.35,
@@ -2732,12 +2734,12 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                 ),
               ],
               const SizedBox(height: 12),
-              SizedBox(
+              const SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: _isConnectingSocket ? null : _connectToElmSocket,
                   icon: _isConnectingSocket
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 17,
                           height: 17,
                           child: CircularProgressIndicator(
@@ -2757,7 +2759,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                         : (_isConnectedToSocket
                             ? 'Bağlantıyı Kes'
                             : 'Gerçek Sokete Bağlan'),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w900,
                       fontSize: 13,
                     ),
@@ -2766,7 +2768,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                     backgroundColor:
                         _isConnectedToSocket ? alertRed : neonGreen,
                     foregroundColor:
-                        _isConnectedToSocket ? Colors.white : Colors.black,
+                        _isConnectedToSocket ? AppPalette.text : Colors.black,
                     disabledBackgroundColor:
                         neonGreen.withValues(alpha: 0.35),
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -2795,7 +2797,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
               spacing: gap,
               runSpacing: gap,
               children: [
-                SizedBox(
+                const SizedBox(
                   width: tileWidth,
                   child: _buildTelemetryGauge(
                     'MOTOR DEVRİ',
@@ -2806,7 +2808,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                     (_liveRpm / 6000).clamp(0.0, 1.0),
                   ),
                 ),
-                SizedBox(
+                const SizedBox(
                   width: tileWidth,
                   child: _buildTelemetryGauge(
                     'HIZ',
@@ -2817,7 +2819,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                     (_liveSpeed / 220).clamp(0.0, 1.0),
                   ),
                 ),
-                SizedBox(
+                const SizedBox(
                   width: tileWidth,
                   child: _buildTelemetryGauge(
                     'HARARET',
@@ -2830,7 +2832,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                     (_liveCoolantTemp / 120).clamp(0.0, 1.0),
                   ),
                 ),
-                SizedBox(
+                const SizedBox(
                   width: tileWidth,
                   child: _buildTelemetryGauge(
                     'AKÜ VOLTAJI',
@@ -2843,7 +2845,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                     (_liveBatteryVoltage / 16).clamp(0.0, 1.0),
                   ),
                 ),
-                SizedBox(
+                const SizedBox(
                   width: tileWidth,
                   child: _buildTelemetryGauge(
                     'YAKIT BASINCI',
@@ -2856,7 +2858,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                     (_liveFuelRailPressure / 1600).clamp(0.0, 1.0),
                   ),
                 ),
-                SizedBox(
+                const SizedBox(
                   width: tileWidth,
                   child: _buildTelemetryGauge(
                     'TURBO BASINCI',
@@ -2869,7 +2871,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                     (_liveBoostPressure / 2.0).clamp(0.0, 1.0),
                   ),
                 ),
-                SizedBox(
+                const SizedBox(
                   width: tileWidth,
                   child: _buildTelemetryGauge(
                     'GAZ KELEBEĞİ',
@@ -2882,7 +2884,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                     (_liveThrottlePos / 100).clamp(0.0, 1.0),
                   ),
                 ),
-                SizedBox(
+                const SizedBox(
                   width: tileWidth,
                   child: _buildTelemetryGauge(
                     'EMME HAVA SIC.',
@@ -2904,7 +2906,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
             color: cardBlack,
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.08),
+              color: AppPalette.text.withValues(alpha: 0.08),
             ),
           ),
           child: Column(
@@ -2920,30 +2922,30 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                       color: neonGreen.withValues(alpha: 0.11),
                       borderRadius: BorderRadius.circular(13),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.car_repair_rounded,
                       color: neonGreen,
                       size: 21,
                     ),
                   ),
-                  const SizedBox(width: 11),
+                  SizedBox(width: 11),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'ECU Arıza İşlemleri',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: AppPalette.text,
                             fontWeight: FontWeight.w900,
                             fontSize: 14.5,
                           ),
                         ),
-                        const SizedBox(height: 3),
+                        SizedBox(height: 3),
                         Text(
                           'Motor beynindeki kayıtlı hata kodlarını okuyun veya arıza lambasını sıfırlayın.',
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.5),
+                            color: AppPalette.text.withValues(alpha: 0.5),
                             fontSize: 10.8,
                             height: 1.35,
                           ),
@@ -2953,21 +2955,21 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Row(
                 children: [
                   _buildModeBadge('MODE 03', 'Hata okuma'),
-                  const SizedBox(width: 7),
+                  SizedBox(width: 7),
                   _buildModeBadge('MODE 04', 'Sıfırlama'),
                 ],
               ),
-              const SizedBox(height: 14),
+              SizedBox(height: 14),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: _isReadingDtc ? null : _readRealDtcFromEcu,
                   icon: _isReadingDtc
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 17,
                           height: 17,
                           child: CircularProgressIndicator(
@@ -2975,10 +2977,10 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                             strokeWidth: 2,
                           ),
                         )
-                      : const Icon(Icons.search_rounded, size: 19),
+                      : Icon(Icons.search_rounded, size: 19),
                   label: Text(
                     _isReadingDtc ? 'Hatalar Taranıyor...' : 'Hata Kodlarını Tara',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w900,
                       fontSize: 13,
                     ),
@@ -2996,7 +2998,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                   ),
                 ),
               ),
-              const SizedBox(height: 9),
+              SizedBox(height: 9),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
@@ -3004,7 +3006,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                       ? null
                       : _clearSocketCodes,
                   icon: _isClearingDtc
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 17,
                           height: 17,
                           child: CircularProgressIndicator(
@@ -3012,22 +3014,22 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                             strokeWidth: 2,
                           ),
                         )
-                      : const Icon(Icons.cleaning_services_rounded, size: 18),
+                      : Icon(Icons.cleaning_services_rounded, size: 18),
                   label: Text(
                     _isClearingDtc
                         ? 'Sıfırlanıyor...'
                         : 'Arıza Lambasını Sıfırla',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w900,
                       fontSize: 12.5,
                     ),
                   ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: alertRed,
-                    disabledForegroundColor: Colors.white24,
+                    disabledForegroundColor: AppPalette.border,
                     side: BorderSide(
                       color: (_socketDetectedCodes.isEmpty
-                              ? Colors.white
+                              ? AppPalette.text
                               : alertRed)
                           .withValues(alpha: 0.28),
                     ),
@@ -3057,18 +3059,18 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
       decoration: BoxDecoration(
         color: surfaceBlack,
         borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: AppPalette.text.withValues(alpha: 0.08)),
       ),
       child: Row(
         children: [
-          Icon(icon, color: Colors.white38, size: 17),
-          const SizedBox(width: 8),
+          Icon(icon, color: AppPalette.subtle, size: 17),
+          SizedBox(width: 8),
           Expanded(
             child: TextField(
               controller: controller,
               keyboardType: keyboardType,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: AppPalette.text,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w800,
               ),
@@ -3076,8 +3078,8 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                 border: InputBorder.none,
                 isDense: true,
                 labelText: label,
-                labelStyle: const TextStyle(
-                  color: Colors.white38,
+                labelStyle: TextStyle(
+                  color: AppPalette.subtle,
                   fontSize: 10.5,
                 ),
               ),
@@ -3103,28 +3105,28 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
             borderRadius: BorderRadius.circular(99),
           ),
         ),
-        const SizedBox(width: 10),
+        SizedBox(width: 10),
         Icon(icon, color: neonGreen, size: 19),
-        const SizedBox(width: 8),
+        SizedBox(width: 8),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: AppPalette.text,
                   fontWeight: FontWeight.w900,
                   fontSize: 14,
                 ),
               ),
-              const SizedBox(height: 1),
+              SizedBox(height: 1),
               Text(
                 subtitle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white38,
+                style: TextStyle(
+                  color: AppPalette.subtle,
                   fontSize: 10.2,
                 ),
               ),
@@ -3142,27 +3144,27 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
         decoration: BoxDecoration(
           color: surfaceBlack,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+          border: Border.all(color: AppPalette.text.withValues(alpha: 0.07)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               mode,
-              style: const TextStyle(
+              style: TextStyle(
                 color: neonGreen,
                 fontWeight: FontWeight.w900,
                 fontSize: 9.5,
                 letterSpacing: 0.45,
               ),
             ),
-            const SizedBox(height: 2),
+            SizedBox(height: 2),
             Text(
               description,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white54,
+              style: TextStyle(
+                color: AppPalette.muted,
                 fontSize: 10.5,
                 fontWeight: FontWeight.w600,
               ),
@@ -3177,12 +3179,12 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
       IconData icon, Color color, double progress) {
     final double safeProgress = progress.clamp(0.0, 1.0).toDouble();
     return Container(
-      constraints: const BoxConstraints(minHeight: 116),
+      constraints: BoxConstraints(minHeight: 116),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: cardBlack,
         borderRadius: BorderRadius.circular(17),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.075)),
+        border: Border.all(color: AppPalette.text.withValues(alpha: 0.075)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -3199,14 +3201,14 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
                 ),
                 child: Icon(icon, color: color, size: 14),
               ),
-              const SizedBox(width: 7),
+              SizedBox(width: 7),
               Expanded(
                 child: Text(
                   title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white54,
+                  style: TextStyle(
+                    color: AppPalette.muted,
                     fontSize: 9.2,
                     height: 1.05,
                     fontWeight: FontWeight.w800,
@@ -3216,7 +3218,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
@@ -3226,14 +3228,14 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
               children: [
                 Text(
                   value,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: AppPalette.text,
                     fontWeight: FontWeight.w900,
                     fontSize: 20,
                     letterSpacing: -0.4,
                   ),
                 ),
-                const SizedBox(width: 4),
+                SizedBox(width: 4),
                 Text(
                   unit,
                   style: TextStyle(
@@ -3245,13 +3247,13 @@ class _DiagnosticScreenState extends State<DiagnosticScreen>
               ],
             ),
           ),
-          const SizedBox(height: 9),
+          SizedBox(height: 9),
           ClipRRect(
             borderRadius: BorderRadius.circular(99),
             child: LinearProgressIndicator(
               value: safeProgress,
               minHeight: 3,
-              backgroundColor: Colors.white.withValues(alpha: 0.06),
+              backgroundColor: AppPalette.text.withValues(alpha: 0.06),
               valueColor: AlwaysStoppedAnimation<Color>(color),
             ),
           ),

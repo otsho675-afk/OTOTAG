@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const
 import 'services/vehicle_deadline.dart';
 import 'services/location_address.dart';
 import 'package:geocoding/geocoding.dart' as geocoding;
@@ -5,6 +6,7 @@ import 'package:geocoding/geocoding.dart' as geocoding;
 
 import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
+import 'core/theme/app_palette.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -98,10 +100,10 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
   bool _isMapReady = false;
 
   // Kurumsal Güven Paleti (Slate & Sertifikalı Zümrüt Yeşili)
-  static const Color neonGreen = Color(0xFF00FFA3);
-  static const Color pureBlack = AppConstants.bgColor;
-  static const Color panelBlack = Color(0xFF111115);
-  static const Color textGray = Colors.white60;
+  static Color get neonGreen => AppPalette.accent;
+  static Color get pureBlack => AppPalette.page;
+  static Color get panelBlack => AppPalette.surface;
+  static Color get textGray => AppPalette.muted;
 
   static const List<Map<String, dynamic>> services = [
     {'id': 'mechanic', 'name': 'Tamirci', 'icon': Icons.build_rounded},
@@ -122,16 +124,16 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
     _generateSmartSuggestion();
 
     _radarPulseController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 2000))
+        vsync: this, duration: Duration(milliseconds: 2000))
       ..repeat();
     _radarScanController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 3000))
+        vsync: this, duration: Duration(milliseconds: 3000))
       ..repeat();
     _buttonPulseController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1500))
+        vsync: this, duration: Duration(milliseconds: 1500))
       ..repeat(reverse: true);
     _panelSlideController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 600));
+        vsync: this, duration: Duration(milliseconds: 600));
 
     _panelSlideController.forward();
 
@@ -306,7 +308,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
         final places = await geocoding.Geocoding()
             .placemarkFromCoordinates(pos.latitude, pos.longitude)
-            .timeout(const Duration(seconds: 5));
+            .timeout(Duration(seconds: 5));
         if (places.isNotEmpty) {
           final place = places.first;
           address = [place.street, place.subLocality, place.administrativeArea]
@@ -338,7 +340,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
               "$baseUrl?action=get_vehicles&customer_id=${widget.customerId}"),
           headers: {
             "Connection": "keep-alive"
-          }).timeout(const Duration(seconds: 15));
+          }).timeout(Duration(seconds: 15));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['status'] == 'success') {
@@ -419,7 +421,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                     BoxShadow(
                         color: pureBlack.withValues(alpha: 0.9),
                         blurRadius: 40,
-                        offset: const Offset(0, 10))
+                        offset: Offset(0, 10))
                   ],
                 ),
                 child: Column(
@@ -438,24 +440,24 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                             BoxShadow(
                                 color: neonGreen.withValues(alpha: 0.2),
                                 blurRadius: 20,
-                                offset: const Offset(0, 5))
+                                offset: Offset(0, 5))
                           ],
                         ),
-                        child: const Icon(Icons.notifications_active_rounded,
+                        child: Icon(Icons.notifications_active_rounded,
                             color: neonGreen, size: 36),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     Text("Araç Hatırlatmaları",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                             fontSize: screenWidth < 400 ? 18 : 22,
                             fontWeight: FontWeight.w900,
-                            color: Colors.white,
+                            color: AppPalette.text,
                             letterSpacing: -0.5)),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24),
                     if (reminderAlerts.isEmpty)
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.only(bottom: 20),
                         child: Text(
                             "Şu an için yaklaşan bir hatırlatmanız yok.",
@@ -468,24 +470,24 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                     else
                       Flexible(
                         child: SingleChildScrollView(
-                          physics: const BouncingScrollPhysics(),
+                          physics: BouncingScrollPhysics(),
                           child: Column(
                             children: reminderAlerts.map((alert) {
                               bool isDanger = alert.contains("GECİKTİ");
                               return AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
+                                duration: Duration(milliseconds: 300),
                                 margin: const EdgeInsets.only(bottom: 12),
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 16, vertical: 16),
                                 decoration: BoxDecoration(
                                   color: isDanger
-                                      ? const Color(0xFFFF3366)
+                                      ? Color(0xFFFF3366)
                                           .withValues(alpha: 0.1)
                                       : neonGreen.withValues(alpha: 0.05),
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
                                       color: isDanger
-                                          ? const Color(0xFFFF3366)
+                                          ? Color(0xFFFF3366)
                                               .withValues(alpha: 0.4)
                                           : neonGreen.withValues(alpha: 0.4),
                                       width: 1.5),
@@ -497,15 +499,15 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                             ? Icons.warning_rounded
                                             : Icons.info_rounded,
                                         color: isDanger
-                                            ? const Color(0xFFFF3366)
+                                            ? Color(0xFFFF3366)
                                             : neonGreen,
                                         size: 28),
-                                    const SizedBox(width: 16),
+                                    SizedBox(width: 16),
                                     Expanded(
                                         child: Text(alert,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                                 fontWeight: FontWeight.w800,
-                                                color: Colors.white,
+                                                color: AppPalette.text,
                                                 fontSize: 14))),
                                   ],
                                 ),
@@ -514,7 +516,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                           ),
                         ),
                       ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24),
                     Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
@@ -522,7 +524,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                           BoxShadow(
                               color: pureBlack.withValues(alpha: 0.5),
                               blurRadius: 10,
-                              offset: const Offset(0, 5))
+                              offset: Offset(0, 5))
                         ],
                       ),
                       child: ElevatedButton(
@@ -534,11 +536,11 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                 borderRadius: BorderRadius.circular(20),
                                 side: BorderSide(
                                     color:
-                                        Colors.white.withValues(alpha: 0.1))),
+                                        AppPalette.text.withValues(alpha: 0.1))),
                             elevation: 0),
-                        child: const Text("Kapat",
+                        child: Text("Kapat",
                             style: TextStyle(
-                                color: Colors.white,
+                                color: AppPalette.text,
                                 fontWeight: FontWeight.w900,
                                 fontSize: 16,
                                 letterSpacing: 0.5)),
@@ -634,7 +636,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
         Position current = await Geolocator.getCurrentPosition(
           desiredAccuracy:
               kIsWeb ? LocationAccuracy.low : LocationAccuracy.high,
-          timeLimit: const Duration(seconds: kIsWeb ? 10 : 3),
+          timeLimit: Duration(seconds: kIsWeb ? 10 : 3),
         );
         if (mounted) {
           _applyInitialPosition(current, isInitial: true);
@@ -643,7 +645,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
         try {
           Position fallbackCurrent = await Geolocator.getCurrentPosition(
             desiredAccuracy: LocationAccuracy.lowest,
-            timeLimit: const Duration(seconds: 15),
+            timeLimit: Duration(seconds: 15),
           );
           if (mounted) {
             _applyInitialPosition(fallbackCurrent, isInitial: true);
@@ -654,14 +656,14 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
       if (!mounted) return;
       late LocationSettings locationSettings;
       if (kIsWeb) {
-        locationSettings = const LocationSettings(
+        locationSettings = LocationSettings(
             accuracy: LocationAccuracy.low, distanceFilter: 2);
       } else if (defaultTargetPlatform == TargetPlatform.android) {
         locationSettings = AndroidSettings(
           accuracy: LocationAccuracy.high,
           distanceFilter: 1,
           forceLocationManager: false,
-          intervalDuration: const Duration(seconds: 2),
+          intervalDuration: Duration(seconds: 2),
         );
       } else if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS ||
           defaultTargetPlatform == TargetPlatform.macOS) {
@@ -672,7 +674,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
           pauseLocationUpdatesAutomatically: false,
         );
       } else {
-        locationSettings = const LocationSettings(
+        locationSettings = LocationSettings(
           accuracy: LocationAccuracy.high,
           distanceFilter: 1,
         );
@@ -717,7 +719,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                       currentLatLng.longitude) >
                   50.0) {
             _debounceTimer?.cancel();
-            _debounceTimer = Timer(const Duration(milliseconds: 1500), () {
+            _debounceTimer = Timer(Duration(milliseconds: 1500), () {
               if (mounted) _fetchAddressForPin(currentLatLng);
             });
           }
@@ -823,22 +825,22 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: AppPalette.text.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: Icon(
               isError
                   ? Icons.error_outline_rounded
                   : Icons.check_circle_outline_rounded,
-              color: Colors.white,
+              color: AppPalette.text,
               size: 20,
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(
+              style: TextStyle(
                   color: pureBlack,
                   fontWeight: FontWeight.w800,
                   fontSize: 13,
@@ -847,12 +849,12 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
           ),
         ],
       ),
-      backgroundColor: isError ? const Color(0xFFFF3366) : neonGreen,
+      backgroundColor: isError ? Color(0xFFFF3366) : neonGreen,
       behavior: SnackBarBehavior.floating,
       margin: const EdgeInsets.all(16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 0,
-      duration: const Duration(seconds: 2),
+      duration: Duration(seconds: 2),
     ));
   }
 
@@ -983,7 +985,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
               BoxShadow(
                 color: pureBlack.withValues(alpha: 0.8),
                 blurRadius: 20,
-                offset: const Offset(0, 8),
+                offset: Offset(0, 8),
               )
             ],
           ),
@@ -1000,7 +1002,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                         tooltip: "Kuzeye Sıfırla",
                         icon: Transform.rotate(
                           angle: -rotation * math.pi / 180,
-                          child: const Icon(Icons.explore_rounded,
+                          child: Icon(Icons.explore_rounded,
                               color: Colors.redAccent, size: 22),
                         ),
                         onPressed: () {
@@ -1008,7 +1010,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                           if (defaultTargetPlatform == TargetPlatform.android &&
                               _googleMapController != null) {
                             final center = _pinLocationNotifier.value ??
-                                const LatLng(39.92, 32.85);
+                                LatLng(39.92, 32.85);
                             _googleMapController!.animateCamera(
                               gmaps.CameraUpdate.newCameraPosition(
                                 gmaps.CameraPosition(
@@ -1027,7 +1029,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                           margin: const EdgeInsets.symmetric(vertical: 4),
                           width: 28,
                           height: 1,
-                          color: Colors.white.withValues(alpha: 0.1)),
+                          color: AppPalette.text.withValues(alpha: 0.1)),
                     ],
                   );
                 },
@@ -1086,10 +1088,10 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                 initialCameraPosition: amaps.CameraPosition(
                                   target: amaps.LatLng(
                                     (_pinLocationNotifier.value ??
-                                            const LatLng(39.92, 32.85))
+                                            LatLng(39.92, 32.85))
                                         .latitude,
                                     (_pinLocationNotifier.value ??
-                                            const LatLng(39.92, 32.85))
+                                            LatLng(39.92, 32.85))
                                         .longitude,
                                   ),
                                   zoom: _currentZoom,
@@ -1122,7 +1124,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                   if (_pinLocationNotifier.value != null) {
                                     _debounceTimer?.cancel();
                                     _debounceTimer = Timer(
-                                        const Duration(milliseconds: 600), () {
+                                        Duration(milliseconds: 600), () {
                                       _fetchAddressForPin(
                                           _pinLocationNotifier.value!);
                                     });
@@ -1133,10 +1135,10 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                 initialCameraPosition: gmaps.CameraPosition(
                                   target: gmaps.LatLng(
                                     (_pinLocationNotifier.value ??
-                                            const LatLng(39.92, 32.85))
+                                            LatLng(39.92, 32.85))
                                         .latitude,
                                     (_pinLocationNotifier.value ??
-                                            const LatLng(39.92, 32.85))
+                                            LatLng(39.92, 32.85))
                                         .longitude,
                                   ),
                                   zoom: _currentZoom,
@@ -1178,7 +1180,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                   if (_pinLocationNotifier.value != null) {
                                     _debounceTimer?.cancel();
                                     _debounceTimer = Timer(
-                                        const Duration(milliseconds: 600), () {
+                                        Duration(milliseconds: 600), () {
                                       _fetchAddressForPin(
                                           _pinLocationNotifier.value!);
                                     });
@@ -1211,7 +1213,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                         scanValue: _radarScanController.value,
                                         color: neonGreen,
                                       ),
-                                      child: const SizedBox(
+                                      child: SizedBox(
                                           width: 180, height: 180),
                                     );
                                   },
@@ -1255,7 +1257,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                               height: 64,
                                               fit: BoxFit.contain,
                                               errorBuilder: (_, __, ___) =>
-                                                  const Icon(
+                                                  Icon(
                                                       Icons
                                                           .directions_car_rounded,
                                                       color: neonGreen,
@@ -1281,7 +1283,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                               .withValues(
                                                                   alpha: 0.3),
                                                           blurRadius: 4,
-                                                          offset: const Offset(
+                                                          offset: Offset(
                                                               0, 2))
                                                     ]),
                                                 child: Icon(
@@ -1316,7 +1318,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                     right: 16,
                     child: Center(
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 800),
+                        constraints: BoxConstraints(maxWidth: 800),
                         child: Column(
                           children: [
                             if (_locationIssue != null)
@@ -1330,8 +1332,8 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                         CrossAxisAlignment.stretch,
                                     children: [
                                       Text(_locationIssue!,
-                                          style: const TextStyle(
-                                              color: Colors.white,
+                                          style: TextStyle(
+                                              color: AppPalette.text,
                                               height: 1.4)),
                                       Wrap(spacing: 8, children: [
                                         if (!kIsWeb &&
@@ -1341,14 +1343,14 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                             onPressed: _openingLocationSettings
                                                 ? null
                                                 : _openLocationSettings,
-                                            icon: const Icon(
+                                            icon: Icon(
                                                 Icons.settings_outlined),
-                                            label: const Text('Ayarları aç'),
+                                            label: Text('Ayarları aç'),
                                           ),
                                         TextButton(
                                           onPressed: () =>
                                               _initLocationStream(),
-                                          child: const Text('Yeniden dene'),
+                                          child: Text('Yeniden dene'),
                                         ),
                                       ]),
                                     ],
@@ -1367,7 +1369,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                     color: panelBlack.withValues(alpha: 0.85),
                                     borderRadius: BorderRadius.circular(30),
                                     border: Border.all(
-                                        color: Colors.white
+                                        color: AppPalette.text
                                             .withValues(alpha: 0.05),
                                         width: 1.0),
                                     boxShadow: [
@@ -1375,21 +1377,21 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                           color:
                                               pureBlack.withValues(alpha: 0.6),
                                           blurRadius: 25,
-                                          offset: const Offset(0, 10))
+                                          offset: Offset(0, 10))
                                     ],
                                   ),
                                   child: Row(
                                     children: [
                                       Container(
                                         decoration: BoxDecoration(
-                                          color: Colors.white
+                                          color: AppPalette.text
                                               .withValues(alpha: 0.05),
                                           shape: BoxShape.circle,
                                         ),
                                         child: IconButton(
-                                          icon: const Icon(
+                                          icon: Icon(
                                               Icons.arrow_back_rounded,
-                                              color: Colors.white,
+                                              color: AppPalette.text,
                                               size: 22),
                                           onPressed: () {
                                             _sendTelemetry(
@@ -1403,11 +1405,11 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                             );
                                             Navigator.pop(context);
                                           },
-                                          constraints: const BoxConstraints(),
+                                          constraints: BoxConstraints(),
                                           padding: const EdgeInsets.all(8),
                                         ),
                                       ),
-                                      const SizedBox(width: 16),
+                                      SizedBox(width: 16),
                                       Expanded(
                                           child: Align(
                                               alignment: Alignment.centerLeft,
@@ -1417,7 +1419,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                 fit: BoxFit.contain,
                                                 errorBuilder: (context, error,
                                                         stackTrace) =>
-                                                    const Icon(
+                                                    Icon(
                                                         Icons
                                                             .local_car_wash_rounded,
                                                         color: neonGreen,
@@ -1429,7 +1431,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                           padding: const EdgeInsets.all(8),
                                           decoration: BoxDecoration(
                                             color: hasReminders
-                                                ? const Color(0xFFFF3366)
+                                                ? Color(0xFFFF3366)
                                                     .withValues(alpha: 0.1)
                                                 : neonGreen.withValues(
                                                     alpha: 0.1),
@@ -1440,7 +1442,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                             children: [
                                               Icon(Icons.notifications_rounded,
                                                   color: hasReminders
-                                                      ? const Color(0xFFFF3366)
+                                                      ? Color(0xFFFF3366)
                                                       : neonGreen,
                                                   size: 22),
                                               if (hasReminders)
@@ -1451,7 +1453,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                         width: 10,
                                                         height: 10,
                                                         decoration: BoxDecoration(
-                                                            color: const Color(
+                                                            color: Color(
                                                                 0xFFFF3366),
                                                             shape:
                                                                 BoxShape.circle,
@@ -1468,7 +1470,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 10),
+                            SizedBox(height: 10),
                             AnimatedBuilder(
                               animation: _buttonPulseController,
                               builder: (context, child) {
@@ -1520,7 +1522,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         if (_isAddressLoading)
-                                          const Padding(
+                                          Padding(
                                             padding:
                                                 EdgeInsets.only(right: 12.0),
                                             child: SizedBox(
@@ -1532,7 +1534,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                         strokeWidth: 2)),
                                           )
                                         else
-                                          const Padding(
+                                          Padding(
                                             padding:
                                                 EdgeInsets.only(right: 10.0),
                                             child: Icon(Icons.gps_fixed_rounded,
@@ -1540,14 +1542,14 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                           ),
                                         Flexible(
                                           child: AnimatedSwitcher(
-                                            duration: const Duration(
+                                            duration: Duration(
                                                 milliseconds: 300),
                                             child: Text(
                                               _currentAddress,
                                               key: ValueKey<String>(
                                                   _currentAddress),
-                                              style: const TextStyle(
-                                                  color: Colors.white,
+                                              style: TextStyle(
+                                                  color: AppPalette.text,
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.w900,
                                                   letterSpacing: 0.5),
@@ -1581,14 +1583,14 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                     child: SlideTransition(
                       position: Tween<Offset>(
                               begin: isWideScreen
-                                  ? const Offset(1.2, 0)
-                                  : const Offset(0, 1.2),
+                                  ? Offset(1.2, 0)
+                                  : Offset(0, 1.2),
                               end: Offset.zero)
                           .animate(CurvedAnimation(
                               parent: _panelSlideController,
                               curve: Curves.easeOutBack)),
                       child: AnimatedPadding(
-                        duration: const Duration(milliseconds: 300),
+                        duration: Duration(milliseconds: 300),
                         curve: Curves.easeOutCubic,
                         padding: EdgeInsets.only(
                             bottom: finalBottomPadding,
@@ -1610,7 +1612,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                 BoxShadow(
                                     color: pureBlack.withValues(alpha: 0.95),
                                     blurRadius: 40,
-                                    offset: const Offset(0, 10)),
+                                    offset: Offset(0, 10)),
                               ],
                             ),
                             child: ClipRRect(
@@ -1687,7 +1689,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                       Flexible(
                                         child: AnimatedSize(
                                           duration:
-                                              const Duration(milliseconds: 350),
+                                              Duration(milliseconds: 350),
                                           curve: Curves.easeOutCubic,
                                           child:
                                               (_isPanelExpanded || isWideScreen)
@@ -1695,7 +1697,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                       controller:
                                                           _scrollController,
                                                       physics:
-                                                          const BouncingScrollPhysics(),
+                                                          BouncingScrollPhysics(),
                                                       child: Padding(
                                                         padding:
                                                             const EdgeInsets
@@ -1734,20 +1736,20 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                                 0.2))),
                                                                 child: Row(
                                                                   children: [
-                                                                    const Icon(
+                                                                    Icon(
                                                                         Icons
                                                                             .tips_and_updates_rounded,
                                                                         color:
                                                                             neonGreen,
                                                                         size:
                                                                             18),
-                                                                    const SizedBox(
+                                                                    SizedBox(
                                                                         width:
                                                                             10),
                                                                     Expanded(
                                                                         child: Text(
                                                                             _smartSuggestion,
-                                                                            style: const TextStyle(
+                                                                            style: TextStyle(
                                                                                 color: neonGreen,
                                                                                 fontSize: 13,
                                                                                 fontWeight: FontWeight.w700,
@@ -1762,13 +1764,13 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                 scrollDirection:
                                                                     Axis.horizontal,
                                                                 physics:
-                                                                    const BouncingScrollPhysics(),
+                                                                    BouncingScrollPhysics(),
                                                                 itemCount:
                                                                     services
                                                                         .length,
                                                                 separatorBuilder: (_,
                                                                         __) =>
-                                                                    const SizedBox(
+                                                                    SizedBox(
                                                                         width:
                                                                             14),
                                                                 itemBuilder:
@@ -1788,7 +1790,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                             as String),
                                                                     child:
                                                                         AnimatedContainer(
-                                                                      duration: const Duration(
+                                                                      duration: Duration(
                                                                           milliseconds:
                                                                               250),
                                                                       curve: Curves
@@ -1807,14 +1809,14 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                         border: Border.all(
                                                                             color: isSelected
                                                                                 ? neonGreen
-                                                                                : Colors.white.withValues(alpha: 0.08),
+                                                                                : AppPalette.text.withValues(alpha: 0.08),
                                                                             width: 1.5),
                                                                         boxShadow: isSelected
                                                                             ? [
                                                                                 BoxShadow(color: neonGreen.withValues(alpha: 0.25), blurRadius: 18, spreadRadius: -2)
                                                                               ]
                                                                             : [
-                                                                                BoxShadow(color: pureBlack.withValues(alpha: 0.5), blurRadius: 10, offset: const Offset(0, 4))
+                                                                                BoxShadow(color: pureBlack.withValues(alpha: 0.5), blurRadius: 10, offset: Offset(0, 4))
                                                                               ],
                                                                       ),
                                                                       child:
@@ -1827,12 +1829,12 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                                 ? 1.2
                                                                                 : 1.0,
                                                                             duration:
-                                                                                const Duration(milliseconds: 250),
+                                                                                Duration(milliseconds: 250),
                                                                             child: Icon(service['icon'] as IconData,
                                                                                 color: isSelected ? neonGreen : textGray,
                                                                                 size: 30),
                                                                           ),
-                                                                          const SizedBox(
+                                                                          SizedBox(
                                                                               height: 10),
                                                                           FittedBox(
                                                                             fit:
@@ -1847,7 +1849,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                 },
                                                               ),
                                                             ),
-                                                            const SizedBox(
+                                                            SizedBox(
                                                                 height: 20),
                                                             Container(
                                                               decoration: BoxDecoration(
@@ -1862,7 +1864,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                                 0.4),
                                                                         blurRadius:
                                                                             15,
-                                                                        offset: const Offset(
+                                                                        offset: Offset(
                                                                             0,
                                                                             5))
                                                                   ]),
@@ -1880,7 +1882,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                 maxLines: 3,
                                                                 onTap: () {
                                                                   Future.delayed(
-                                                                      const Duration(
+                                                                      Duration(
                                                                           milliseconds:
                                                                               300),
                                                                       () {
@@ -1893,14 +1895,14 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                             .position
                                                                             .maxScrollExtent,
                                                                         duration:
-                                                                            const Duration(milliseconds: 300),
+                                                                            Duration(milliseconds: 300),
                                                                         curve: Curves
                                                                             .easeOut,
                                                                       );
                                                                     }
                                                                   });
                                                                 },
-                                                                style: const TextStyle(
+                                                                style: TextStyle(
                                                                     fontSize:
                                                                         15,
                                                                     fontWeight:
@@ -1914,7 +1916,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                     InputDecoration(
                                                                   labelText:
                                                                       "Sorun Açıklaması Yazınız",
-                                                                  labelStyle: const TextStyle(
+                                                                  labelStyle: TextStyle(
                                                                       fontSize:
                                                                           13,
                                                                       color:
@@ -1924,7 +1926,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                               .w600,
                                                                       letterSpacing:
                                                                           0.5),
-                                                                  prefixIcon: const Padding(
+                                                                  prefixIcon: Padding(
                                                                       padding: EdgeInsets.only(
                                                                           bottom:
                                                                               4,
@@ -1944,7 +1946,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                       .withValues(
                                                                           alpha:
                                                                               0.85),
-                                                                  counterStyle: const TextStyle(
+                                                                  counterStyle: TextStyle(
                                                                       color:
                                                                           neonGreen,
                                                                       fontSize:
@@ -1972,7 +1974,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                       borderRadius:
                                                                           BorderRadius.circular(
                                                                               20),
-                                                                      borderSide: const BorderSide(
+                                                                      borderSide: BorderSide(
                                                                           color:
                                                                               neonGreen,
                                                                           width:
@@ -1990,7 +1992,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                         .unfocus(),
                                                               ),
                                                             ),
-                                                            const SizedBox(
+                                                            SizedBox(
                                                                 height: 20),
                                                             RepaintBoundary(
                                                               child:
@@ -2015,7 +2017,7 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                                     borderRadius: BorderRadius.circular(24),
                                                                                     color: neonGreen,
                                                                                     boxShadow: [
-                                                                                      BoxShadow(color: neonGreen.withValues(alpha: 0.35 + (_buttonPulseController.value * 0.35)), blurRadius: 28 + (_buttonPulseController.value * 12), spreadRadius: 2 + (_buttonPulseController.value * 5), offset: const Offset(0, 8))
+                                                                                      BoxShadow(color: neonGreen.withValues(alpha: 0.35 + (_buttonPulseController.value * 0.35)), blurRadius: 28 + (_buttonPulseController.value * 12), spreadRadius: 2 + (_buttonPulseController.value * 5), offset: Offset(0, 8))
                                                                                     ],
                                                                                   ),
                                                                                   child: ValueListenableBuilder<bool>(
@@ -2025,8 +2027,8 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                                           onPressed: isCreatingJob ? null : _createJobRequest,
                                                                                           style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 20), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
                                                                                           child: isCreatingJob
-                                                                                              ? const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 3.5))
-                                                                                              : const FittedBox(
+                                                                                              ? SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: pureBlack, strokeWidth: 3.5))
+                                                                                              : FittedBox(
                                                                                                   child: Row(
                                                                                                     mainAxisAlignment: MainAxisAlignment.center,
                                                                                                     children: [
@@ -2096,12 +2098,12 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                 color:
                                                                     neonGreen,
                                                                 size: 22),
-                                                            const SizedBox(
+                                                            SizedBox(
                                                                 width: 12),
                                                             Flexible(
                                                               child: Text(
                                                                 "${selectedServiceData['name']} Talebi • Düzenle",
-                                                                style: const TextStyle(
+                                                                style: TextStyle(
                                                                     color:
                                                                         neonGreen,
                                                                     fontWeight:
@@ -2117,9 +2119,9 @@ class _CustomerMapScreenState extends State<CustomerMapScreen>
                                                                         .ellipsis,
                                                               ),
                                                             ),
-                                                            const SizedBox(
+                                                            SizedBox(
                                                                 width: 8),
-                                                            const Icon(
+                                                            Icon(
                                                                 Icons
                                                                     .keyboard_arrow_up_rounded,
                                                                 color:
@@ -2217,7 +2219,7 @@ class AdvancedRadarPainter extends CustomPainter {
           color.withValues(alpha: 0.85),
           Colors.transparent,
         ],
-        stops: const [0.0, 0.45, 0.8, 0.98, 1.0],
+        stops: [0.0, 0.45, 0.8, 0.98, 1.0],
         startAngle: 0.0,
         endAngle: math.pi / 2,
       ).createShader(Rect.fromCircle(center: Offset.zero, radius: maxRadius))

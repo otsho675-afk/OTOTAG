@@ -1,3 +1,5 @@
+import 'core/theme/app_palette.dart';
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
 import 'widgets/rental_market_style.dart';
 // provider_bids_screen.dart
 import 'package:flutter/material.dart';
@@ -21,7 +23,7 @@ class ProviderBidsScreen extends StatefulWidget {
 class _ProviderBidsScreenState extends State<ProviderBidsScreen>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   late final http.Client _httpClient = widget.client ?? http.Client();
-  final Duration _apiTimeout = const Duration(seconds: 15);
+  final Duration _apiTimeout = Duration(seconds: 15);
 
   List bids = [];
   List filteredBids = [];
@@ -49,10 +51,10 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
   bool _isModalOpen = false;
 
   // Ana Siber Tema Renk Paleti
-  static const Color neonGreen = Color(0xFF00FFA3);
-  static const Color pureBlack = Color(0xFF030305);
-  static const Color panelBlack = Color(0xFF111115);
-  static const Color textGray = Colors.white54;
+  static Color get neonGreen => AppPalette.accent;
+  static Color get pureBlack => AppPalette.page;
+  static Color get panelBlack => AppPalette.surface;
+  static Color get textGray => AppPalette.muted;
   static const Color alertRed = Color(0xFFFF3366);
 
   final List<String> _filterOptions = [
@@ -81,7 +83,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _fadeController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 800))
+        vsync: this, duration: Duration(milliseconds: 800))
       ..forward();
     _fetchBids();
   }
@@ -228,24 +230,24 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
                     shape: BoxShape.circle,
                     border: Border.all(color: alertRed.withValues(alpha: 0.35)),
                   ),
-                  child: const Icon(Icons.delete_sweep_rounded,
+                  child: Icon(Icons.delete_sweep_rounded,
                       color: alertRed, size: 32),
                 ),
                 const SizedBox(height: 16),
-                Text(
+                const Text(
                   "$count İşlem Silinecek",
-                  style: const TextStyle(
-                      color: Colors.white,
+                  style: TextStyle(
+                      color: AppPalette.text,
                       fontSize: 19,
                       fontWeight: FontWeight.w900,
                       letterSpacing: -0.4),
                 ),
                 const SizedBox(height: 8),
-                Text(
+                const Text(
                   "Seçtiğiniz $count adet geçmiş işlem kaydı listenizden kalıcı olarak temizlenecektir. Bu işlem geri alınamaz.",
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.75),
+                      color: AppPalette.text.withValues(alpha: 0.75),
                       fontSize: 13,
                       height: 1.45,
                       fontWeight: FontWeight.w500),
@@ -261,7 +263,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16)),
                         ),
-                        child: const Text("Vazgeç",
+                        child: Text("Vazgeç",
                             style: TextStyle(
                                 color: textGray,
                                 fontWeight: FontWeight.w800,
@@ -279,9 +281,9 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16)),
                         ),
-                        child: const Text("Evet, Sil",
+                        child: Text("Evet, Sil",
                             style: TextStyle(
-                                color: Colors.white,
+                                color: AppPalette.text,
                                 fontWeight: FontWeight.w900,
                                 fontSize: 14)),
                       ),
@@ -393,8 +395,8 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
             Expanded(
               child: Text(
                 message,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: AppPalette.text,
                   fontWeight: FontWeight.w700,
                   fontSize: 13.5,
                   letterSpacing: 0.2,
@@ -418,7 +420,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
               BorderSide(color: activeColor.withValues(alpha: 0.4), width: 1.2),
         ),
         elevation: 16,
-        duration: const Duration(seconds: 3),
+        duration: Duration(seconds: 3),
       ),
     );
   }
@@ -442,7 +444,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
       final response = await _httpClient
           .get(Uri.parse(
               "$baseUrl?action=get_history&user_id=${widget.providerId}&user_type=provider"))
-          .timeout(const Duration(seconds: 8));
+          .timeout(Duration(seconds: 8));
 
       if (response.statusCode == 200 && mounted) {
         final data = json.decode(response.body);
@@ -497,42 +499,42 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
                   IconButton(
                       tooltip: 'Bu sayfayı seç',
                       onPressed: _toggleSelectAllCurrentPage,
-                      icon: const Icon(Icons.select_all)),
+                      icon: Icon(Icons.select_all)),
                   IconButton(
                       tooltip: 'Seçilenleri geçmişten kaldır',
                       onPressed: isDeleting ? null : _confirmBatchDelete,
-                      icon: const Icon(Icons.delete_outline)),
+                      icon: Icon(Icons.delete_outline)),
                   IconButton(
                       tooltip: 'Seçimi kapat',
                       onPressed: _exitSelectionMode,
-                      icon: const Icon(Icons.close))
+                      icon: Icon(Icons.close))
                 ] else
                   IconButton(
                       tooltip: 'Yenile',
                       onPressed: _onRefresh,
-                      icon: const Icon(Icons.refresh_rounded)),
+                      icon: Icon(Icons.refresh_rounded)),
               ]),
           body: SafeArea(
               child: Center(
                   child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 960),
+                      constraints: BoxConstraints(maxWidth: 960),
                       child: isLoading
-                          ? const Center(child: CircularProgressIndicator())
+                          ? Center(child: CircularProgressIndicator())
                           : RefreshIndicator(
                               onRefresh: _onRefresh,
                               child: ListView(
                                   padding: const EdgeInsets.all(20),
                                   children: [
-                                    const Text('Tamamlanan ve iptal edilen işler',
+                                    Text('Tamamlanan ve iptal edilen işler',
                                         style: TextStyle(
-                                            color: Colors.white,
+                                            color: AppPalette.text,
                                             fontSize: 21,
                                             fontWeight: FontWeight.w700)),
                                     const SizedBox(height: 8),
-                                    const Text(
+                                    Text(
                                         'İşlerini incele. Listeden kaldırmak için karta uzun bas.',
                                         style: TextStyle(
-                                            color: AppConstants.mutedColor,
+                                            color: AppPalette.muted,
                                             height: 1.5)),
                                     const SizedBox(height: 20),
                                     LayoutBuilder(
@@ -552,8 +554,8 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
                                     const SizedBox(height: 12),
                                     Text(
                                         'Tamamlama oranı: ${successRate.toStringAsFixed(0)}% • En çok hizmet: $topServiceType',
-                                        style: const TextStyle(
-                                            color: AppConstants.mutedColor,
+                                        style: TextStyle(
+                                            color: AppPalette.muted,
                                             fontSize: 12)),
                                     const SizedBox(height: 18),
                                     Wrap(spacing: 8, runSpacing: 8, children: [
@@ -576,13 +578,13 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
                                               color: panelBlack,
                                               borderRadius:
                                                   BorderRadius.circular(22)),
-                                          child: const Column(children: [
-                                            Icon(Icons.history_rounded,
+                                          child: Column(children: [
+                                            const Icon(Icons.history_rounded,
                                                 color: textGray, size: 36),
-                                            SizedBox(height: 12),
+                                            const SizedBox(height: 12),
                                             Text('Bu filtrede işlem bulunamadı',
                                                 style: TextStyle(
-                                                    color: Colors.white))
+                                                    color: AppPalette.text))
                                           ])),
                                     for (final job in paginatedBids)
                                       _historyCard(Map<String, dynamic>.from(
@@ -608,7 +610,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
                                                     () => currentPage++)
                                                 : null,
                                             icon:
-                                                const Icon(Icons.chevron_right))
+                                                Icon(Icons.chevron_right))
                                       ]),
                                   ])))))));
   Widget _stat(double width, String title, String value) => SizedBox(
@@ -618,16 +620,16 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
           decoration: BoxDecoration(
               color: panelBlack,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppConstants.borderColor)),
+              border: Border.all(color: AppPalette.border)),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(title,
-                style: const TextStyle(
-                    color: AppConstants.mutedColor, fontSize: 12)),
+                style: TextStyle(
+                    color: AppPalette.muted, fontSize: 12)),
             const SizedBox(height: 8),
             Text(value,
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: AppPalette.text,
                     fontWeight: FontWeight.w700,
                     fontSize: 18))
           ])));
@@ -666,7 +668,7 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
                         border: Border.all(
                             color: selected
                                 ? neonGreen
-                                : AppConstants.borderColor)),
+                                : AppPalette.border)),
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -685,13 +687,13 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
                             Expanded(
                                 child: Text(
                                     '${job['customer_name'] ?? 'Müşteri'}',
-                                    style: const TextStyle(
-                                        color: Colors.white,
+                                    style: TextStyle(
+                                        color: AppPalette.text,
                                         fontSize: 16,
                                         fontWeight: FontWeight.w700))),
                             const SizedBox(width: 8),
                             Text('${amount.toStringAsFixed(2)} ₺',
-                                style: const TextStyle(
+                                style: TextStyle(
                                     color: neonGreen,
                                     fontWeight: FontWeight.w700))
                           ]),
@@ -707,16 +709,16 @@ class _ProviderBidsScreenState extends State<ProviderBidsScreen>
                             RentalTag(
                                 _serviceName('${job['service_type'] ?? ''}'))
                           ]),
-                          const SizedBox(height: 10),
+                          SizedBox(height: 10),
                           Text(
                               '${job['created_at'] ?? ''} • ${job['city'] ?? ''}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                   color: textGray, fontSize: 12)),
                         ])))));
   }
 
   String _serviceName(String value) =>
-      const {
+      {
         'mechanic': 'Tamirci',
         'tow': 'Çekici',
         'tire': 'Lastikçi',

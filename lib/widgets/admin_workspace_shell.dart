@@ -216,7 +216,7 @@ class AdminWorkspaceShell extends StatelessWidget {
                             color: _text, fontSize: 17,
                             fontWeight: FontWeight.w900, letterSpacing: 1,
                           )),
-                      Text('ADMIN CONSOLE',
+                      Text('YÖNETİM MERKEZİ',
                           style: TextStyle(
                             color: _mint, fontSize: 10,
                             fontWeight: FontWeight.w800, letterSpacing: 1.25,
@@ -403,70 +403,70 @@ class AdminWorkspaceShell extends StatelessWidget {
     );
   }
 
+  /// Five priority destinations stay reachable with one tap on phones.
   Widget _mobileTabs(BuildContext context) {
-    final schemeIndex = switch (selected) {
-      0 => 0, 2 => 1, 5 => 2, _ => 3,
+    final active = switch (selected) {
+      0 => 0, 1 => 1, 2 => 2, 4 => 3, _ => 4,
     };
-    const shortcuts = <(String, IconData, IconData)>[
-      ('Genel', Icons.grid_view_outlined, Icons.grid_view_rounded),
-      ('Üyeler', Icons.people_outline_rounded, Icons.people_rounded),
-      ('Güncelleme', Icons.system_update_alt_outlined,
-        Icons.system_update_alt_rounded),
-      ('Bölümler', Icons.menu_rounded, Icons.menu_open_rounded),
+    const items = <(String, IconData, IconData)>[
+      ('Genel', Icons.space_dashboard_outlined, Icons.space_dashboard_rounded),
+      ('Onaylar', Icons.fact_check_outlined, Icons.fact_check_rounded),
+      ('Üyeler', Icons.groups_outlined, Icons.groups_rounded),
+      ('Destek', Icons.support_agent_outlined, Icons.support_agent_rounded),
+      ('Menü', Icons.widgets_outlined, Icons.widgets_rounded),
     ];
-    return Builder(builder: (barContext) =>
-      SafeArea(
-        top: false,
-        child: Container(
-          decoration: const BoxDecoration(
-            color: _ink,
-            border: Border(top: BorderSide(color: _line)),
-          ),
-          padding: const EdgeInsets.fromLTRB(8, 7, 8, 4),
-          child: Row(children: [
-            for (var i = 0; i < shortcuts.length; i++)
-              Expanded(child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 3),
-                child: Material(
-                  color: schemeIndex == i
-                      ? const Color(0xFF1C382A) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                  clipBehavior: Clip.antiAlias,
-                  child: InkWell(
-                    onTap: () {
-                      if (i == 3) {
-                        _showSectionsSheet(barContext);
-                      } else {
-                        onSelect([0, 2, 5][i]);
-                      }
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 9),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(schemeIndex == i
-                              ? shortcuts[i].$3 : shortcuts[i].$2,
-                              color: schemeIndex == i ? _mint : _sub,
-                              size: 22),
-                          const SizedBox(height: 4),
-                          FittedBox(fit: BoxFit.scaleDown,
-                            child: Text(shortcuts[i].$1,
-                                maxLines: 1,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 10,
-                                  color: schemeIndex == i ? _mint : _sub,
-                                ))),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              )),
-          ]),
-        ),
-      ));
+    return SafeArea(top: false, child: Container(
+      decoration: const BoxDecoration(color: _side,
+        border: Border(top: BorderSide(color: _line))),
+      padding: const EdgeInsets.fromLTRB(4, 7, 4, 3),
+      child: Row(children: [
+        for (var i = 0; i < items.length; i++)
+          Expanded(child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Material(
+              color: active == i ? const Color(0xFF1B3D2A) : Colors.transparent,
+              borderRadius: BorderRadius.circular(13),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () {
+                  if (i == 4) {
+                    _showSectionsSheet(context);
+                  } else {
+                    onSelect([0, 1, 2, 4][i]);
+                  }
+                },
+                child: SizedBox(height: 54, child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Stack(clipBehavior: Clip.none, children: [
+                      Icon(active == i ? items[i].$3 : items[i].$2,
+                        color: active == i ? _mint : _sub, size: 22),
+                      if ((i == 1 && pendingCount > 0) ||
+                          (i == 3 && ticketCount > 0))
+                        Positioned(right: -9, top: -5, child: Container(
+                          width: 10, height: 10,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF4B95C), shape: BoxShape.circle,
+                            border: Border.fromBorderSide(
+                              BorderSide(color: _side, width: 1.5)),
+                          ),
+                        )),
+                    ]),
+                    const SizedBox(height: 5),
+                    Text(items[i].$1, maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: active == i ? _mint : _sub,
+                        fontSize: 10,
+                        fontWeight: active == i ? FontWeight.w900 : FontWeight.w700,
+                      )),
+                  ],
+                )),
+              ),
+            ),
+          )),
+      ]),
+    ));
   }
 
   @override
@@ -474,7 +474,7 @@ class AdminWorkspaceShell extends StatelessWidget {
     builder: (context, constraints) {
       final width = constraints.maxWidth;
       final desktop = width >= 760;
-      final expanded = width >= 1160;
+      final expanded = width >= 1080;
       final mobile = !desktop;
       final selectedTitle = labels[selected];
       return Scaffold(
@@ -524,11 +524,31 @@ class AdminWorkspaceShell extends StatelessWidget {
           ]),
           actions: [
             if (onSearch != null)
-              IconButton(
-                tooltip: 'Yönetimde ara',
-                onPressed: onSearch,
-                icon: const Icon(Icons.search_rounded, size: 23),
-              ),
+              if (width >= 1190)
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: OutlinedButton.icon(
+                    onPressed: onSearch,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _text,
+                      side: const BorderSide(color: _line),
+                      backgroundColor: _surface,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 15),
+                    ),
+                    icon: const Icon(Icons.search_rounded, color: _mint, size: 19),
+                    label: const Text('Yönetimde ara    Ctrl + K',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                  ),
+                )
+              else
+                IconButton(
+                  tooltip: 'Yönetimde ara',
+                  onPressed: onSearch,
+                  icon: const Icon(Icons.search_rounded, size: 23),
+                ),
             Padding(
               padding: const EdgeInsets.only(right: 12, left: 1),
               child: IconButton(
@@ -556,7 +576,7 @@ class AdminWorkspaceShell extends StatelessWidget {
           child: Row(children: [
             if (desktop)
               SizedBox(
-                width: expanded ? 267 : 105,
+                width: expanded ? 254 : 87,
                 child: _navigation(context,
                   compact: !expanded, inDrawer: false,
                   navigate: onSelect),

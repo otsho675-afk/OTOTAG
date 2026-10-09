@@ -3472,7 +3472,7 @@ switch ($action) {
         if ($method !== 'GET') sendResponse(405, ["status" => "error", "message" => "Geçersiz metod."]);
         authenticateRequest(null, true);
         adminConsoleEnsureSchema($pdo);
-        $stmt = $pdo->query("SELECT u.id, u.user_type, u.name, u.email, u.phone, u.city, u.service_category, u.iban, u.status, u.is_premium, u.is_suspended, u.suspension_end_date, u.tax_plate, u.driver_license, u.vehicle_photo, u.equipment_photo, u.created_at, u.rating, u.reviews_count, s.last_login_at, s.last_seen_at, s.login_count, (SELECT COUNT(*) FROM vehicles v WHERE v.customer_id=u.id) AS vehicle_count FROM users u LEFT JOIN user_access_state s ON s.user_id=u.id ORDER BY u.created_at DESC LIMIT 1500");
+        $stmt = $pdo->query("SELECT u.id, u.user_type, u.name, u.email, u.phone, u.city, u.service_category, u.iban, u.status, u.is_premium, u.is_suspended, u.suspension_end_date, u.tax_plate, u.driver_license, u.vehicle_photo, u.equipment_photo, u.created_at, u.rating, u.reviews_count, s.last_login_at, s.last_seen_at, TIMESTAMPDIFF(SECOND, s.last_seen_at, NOW()) AS last_seen_seconds_ago, s.login_count, (SELECT COUNT(*) FROM vehicles v WHERE v.customer_id=u.id) AS vehicle_count FROM users u LEFT JOIN user_access_state s ON s.user_id=u.id ORDER BY u.created_at DESC LIMIT 1500");
         sendResponse(200, ["status" => "success", "users" => $stmt->fetchAll()]);
         break;
 

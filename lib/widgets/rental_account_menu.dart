@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
+import '../core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import '../core/constants/app_constants.dart';
 import 'rental_market_style.dart';
@@ -6,9 +8,9 @@ Future<String?> showRentalAccountMenu(BuildContext context) =>
     showModalBottomSheet<String>(
         context: context,
         isScrollControlled: true,
-        backgroundColor: AppConstants.cardColor,
-        constraints: const BoxConstraints(maxWidth: 520),
-        shape: const RoundedRectangleBorder(
+        backgroundColor: AppPalette.surface,
+        constraints: BoxConstraints(maxWidth: 520),
+        shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
         builder: (context) => SafeArea(
             child: SingleChildScrollView(
@@ -24,9 +26,9 @@ Future<String?> showRentalAccountMenu(BuildContext context) =>
                               decoration: BoxDecoration(
                                   color: rentalBorder,
                                   borderRadius: BorderRadius.circular(4)))),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       Row(children: [
-                        const Expanded(
+                        Expanded(
                             child: Text('Firma menüsü',
                                 style: TextStyle(
                                     fontSize: 21,
@@ -34,10 +36,10 @@ Future<String?> showRentalAccountMenu(BuildContext context) =>
                         IconButton(
                             tooltip: 'Menüyü kapat',
                             onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.close_rounded))
+                            icon: Icon(Icons.close_rounded))
                       ]),
-                      const SizedBox(height: 8),
-                      for (final item in const [
+                      SizedBox(height: 8),
+                      for (final item in [
                         (
                           'profile',
                           Icons.storefront_outlined,
@@ -80,22 +82,22 @@ Future<String?> showRentalAccountMenu(BuildContext context) =>
                             child: ListTile(
                               contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 12, vertical: 4),
-                              tileColor: AppConstants.fieldColor,
+                              tileColor: AppPalette.field,
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),
-                                  side: const BorderSide(color: rentalBorder)),
+                                  side: BorderSide(color: rentalBorder)),
                               leading: Icon(item.$2,
-                                  color: AppConstants.primaryColor, size: 24),
+                                  color: AppPalette.accent, size: 24),
                               title: Text(item.$3,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontWeight: FontWeight.w600,
                                       fontSize: 14)),
                               subtitle: Text(item.$4,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       color: rentalMuted,
                                       fontSize: 12,
                                       height: 1.5)),
-                              trailing: const Icon(Icons.chevron_right,
+                              trailing: Icon(Icons.chevron_right,
                                   size: 20, color: rentalMuted),
                               onTap: () => Navigator.pop(context, item.$1),
                             )),

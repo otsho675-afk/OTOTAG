@@ -406,14 +406,14 @@ class AdminWorkspaceShell extends StatelessWidget {
   /// Five priority destinations stay reachable with one tap on phones.
   Widget _mobileTabs(BuildContext context) {
     final active = switch (selected) {
-      0 => 0, 1 => 1, 2 => 2, 4 => 3, _ => 4,
+      0 => 0, 1 => 1, 2 => 2, 5 => 3, _ => 4,
     };
     const items = <(String, IconData, IconData)>[
       ('Genel', Icons.space_dashboard_outlined, Icons.space_dashboard_rounded),
-      ('Onaylar', Icons.fact_check_outlined, Icons.fact_check_rounded),
+      ('Başvuru', Icons.fact_check_outlined, Icons.fact_check_rounded),
       ('Üyeler', Icons.groups_outlined, Icons.groups_rounded),
-      ('Destek', Icons.support_agent_outlined, Icons.support_agent_rounded),
-      ('Menü', Icons.widgets_outlined, Icons.widgets_rounded),
+      ('Güncelleme', Icons.system_update_alt_outlined, Icons.system_update_alt_rounded),
+      ('Bölümler', Icons.widgets_outlined, Icons.widgets_rounded),
     ];
     return SafeArea(top: false, child: Container(
       decoration: const BoxDecoration(color: _side,
@@ -432,7 +432,7 @@ class AdminWorkspaceShell extends StatelessWidget {
                   if (i == 4) {
                     _showSectionsSheet(context);
                   } else {
-                    onSelect([0, 1, 2, 4][i]);
+                    onSelect([0, 1, 2, 5][i]);
                   }
                 },
                 child: SizedBox(height: 54, child: Column(
@@ -442,7 +442,7 @@ class AdminWorkspaceShell extends StatelessWidget {
                       Icon(active == i ? items[i].$3 : items[i].$2,
                         color: active == i ? _mint : _sub, size: 22),
                       if ((i == 1 && pendingCount > 0) ||
-                          (i == 3 && ticketCount > 0))
+                          (i == 4 && ticketCount > 0))
                         Positioned(right: -9, top: -5, child: Container(
                           width: 10, height: 10,
                           decoration: const BoxDecoration(

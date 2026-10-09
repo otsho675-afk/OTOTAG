@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -8,6 +9,8 @@ class AdminSettingsPanel extends StatefulWidget {
   const AdminSettingsPanel({
     super.key,
     required this.users,
+    this.lightMode = false,
+    this.onThemeChanged,
     required this.loaded,
     required this.loading,
     required this.updatedAt,
@@ -28,6 +31,8 @@ class AdminSettingsPanel extends StatefulWidget {
     required this.onLogout,
   });
 
+  final bool lightMode;
+  final ValueChanged<bool>? onThemeChanged;
   final List<Map<String, dynamic>> users;
   final bool loaded, loading;
   final DateTime? updatedAt;
@@ -61,13 +66,13 @@ int? adminLastActivitySeconds(Map<String, dynamic> user, {
 }
 
 class _AdminSettingsPanelState extends State<AdminSettingsPanel> {
-  static const bg = Color(0xFF0B120F);
-  static const surface = Color(0xFF14231B);
-  static const line = Color(0xFF2B4335);
-  static const green = Color(0xFF00DE91);
-  static const white = Color(0xFFF2FAF4);
-  static const muted = Color(0xFFA2B7A9);
-  static const amber = Color(0xFFF4C576);
+  Color get bg => widget.lightMode ? Color(0xFFF6F8F6) : Color(0xFF0B120F);
+  Color get surface => widget.lightMode ? Colors.white : Color(0xFF14231B);
+  Color get line => widget.lightMode ? Color(0xFFD9E4DB) : Color(0xFF2B4335);
+  Color get green => widget.lightMode ? Color(0xFF08784D) : Color(0xFF00DE91);
+  Color get white => widget.lightMode ? Color(0xFF15211B) : Color(0xFFF2FAF4);
+  Color get muted => widget.lightMode ? Color(0xFF56665C) : Color(0xFFA2B7A9);
+  Color get amber => widget.lightMode ? Color(0xFF996415) : Color(0xFFF4C576);
   String _window = 'recent';
   String _role = 'all';
   String _search = '';
@@ -106,13 +111,13 @@ class _AdminSettingsPanelState extends State<AdminSettingsPanel> {
 
   Widget _header(String eyebrow, String heading, String description) =>
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(eyebrow, style: const TextStyle(color: green,
+        Text(eyebrow, style: TextStyle(color: green,
             fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.4)),
-        const SizedBox(height: 5),
-        Text(heading, style: const TextStyle(color: white, fontSize: 19,
+        SizedBox(height: 5),
+        Text(heading, style: TextStyle(color: white, fontSize: 19,
             fontWeight: FontWeight.w900)),
-        const SizedBox(height: 4),
-        Text(description, style: const TextStyle(color: muted,
+        SizedBox(height: 4),
+        Text(description, style: TextStyle(color: muted,
             fontSize: 12, height: 1.4)),
       ]);
 
@@ -120,7 +125,7 @@ class _AdminSettingsPanelState extends State<AdminSettingsPanel> {
       double width, String hint) => SizedBox(
     width: width,
     child: Container(
-      constraints: const BoxConstraints(minHeight: 122),
+      constraints: BoxConstraints(minHeight: 122),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(color: surface,
           border: Border.all(color: line),
@@ -128,19 +133,19 @@ class _AdminSettingsPanelState extends State<AdminSettingsPanel> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Icon(icon, color: accent, size: 21),
-          const Spacer(),
+          Spacer(),
           Icon(Icons.circle, color: accent, size: 7),
         ]),
-        const SizedBox(height: 11),
+        SizedBox(height: 11),
         Text(value, maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: white, fontSize: 26,
+            style: TextStyle(color: white, fontSize: 26,
                 fontWeight: FontWeight.w900)),
-        const SizedBox(height: 3),
+        SizedBox(height: 3),
         Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: white, fontSize: 12,
+            style: TextStyle(color: white, fontSize: 12,
                 fontWeight: FontWeight.w800)),
-        const SizedBox(height: 2),
-        Text(hint, maxLines: 2, style: const TextStyle(
+        SizedBox(height: 2),
+        Text(hint, maxLines: 2, style: TextStyle(
             color: muted, fontSize: 10)),
       ]),
     ),
@@ -148,11 +153,11 @@ class _AdminSettingsPanelState extends State<AdminSettingsPanel> {
 
   Widget _tool(IconData icon, String label, String subtitle,
       VoidCallback onTap, {bool critical = false}) {
-    final accent = critical ? const Color(0xFFFF8987) : green;
+    final accent = critical ? Color(0xFFFF8987) : green;
     return Material(
       color: surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14),
-          side: const BorderSide(color: line)),
+          side: BorderSide(color: line)),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -163,17 +168,17 @@ class _AdminSettingsPanelState extends State<AdminSettingsPanel> {
                 decoration: BoxDecoration(color: accent.withValues(alpha: .11),
                     borderRadius: BorderRadius.circular(12)),
                 child: Icon(icon, color: accent, size: 22)),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label, maxLines: 2, overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: white, fontSize: 13,
+                    style: TextStyle(color: white, fontSize: 13,
                         fontWeight: FontWeight.w800)),
-                const SizedBox(height: 3),
+                SizedBox(height: 3),
                 Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: muted, fontSize: 11)),
+                    style: TextStyle(color: muted, fontSize: 11)),
               ])),
-            const SizedBox(width: 7),
+            SizedBox(width: 7),
             Icon(Icons.chevron_right_rounded, color: accent, size: 21),
           ]),
         ),
@@ -245,21 +250,22 @@ class _AdminSettingsPanelState extends State<AdminSettingsPanel> {
 
     return ColoredBox(color: bg,
       child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
+        physics: AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(13, 14, 13, 36),
         child: Center(child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1250),
+          constraints: BoxConstraints(maxWidth: 1250),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [
-                  Color(0xFF173D2A), Color(0xFF0D1B15)
-                ], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                border: Border.all(color: const Color(0xFF2B7651)),
+                gradient: LinearGradient(colors: widget.lightMode
+                    ? [Color(0xFFE1F3E7), Color(0xFFF7FBF8)]
+                    : [Color(0xFF173D2A), Color(0xFF0D1B15)],
+                  begin: Alignment.topLeft, end: Alignment.bottomRight),
+                border: Border.all(color: Color(0xFF2B7651)),
                 borderRadius: BorderRadius.circular(20)),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Row(children: [
+                Row(children: [
                   Icon(Icons.tune_rounded, color: green, size: 18),
                   SizedBox(width: 8),
                   Expanded(child: Text('OTO TAG  /  KONTROL MERKEZİ',
@@ -267,34 +273,52 @@ class _AdminSettingsPanelState extends State<AdminSettingsPanel> {
                     style: TextStyle(color: green, fontSize: 10,
                         fontWeight: FontWeight.w900, letterSpacing: 1.1))),
                 ]),
-                const SizedBox(height: 14),
-                const Text('Yönetim ayarları', style: TextStyle(
+                SizedBox(height: 14),
+                Text('Yönetim ayarları', style: TextStyle(
                     color: white, fontSize: 25, fontWeight: FontWeight.w900)),
-                const SizedBox(height: 7),
-                const Text('Üyelerin son etkinliğini takip edin, işlemlere hızlı erişin ve sistemi yönetin.',
+                SizedBox(height: 7),
+                Text('Üyelerin son etkinliğini takip edin, işlemlere hızlı erişin ve sistemi yönetin.',
                     style: TextStyle(color: muted, fontSize: 12, height: 1.4)),
-                const SizedBox(height: 16),
+                SizedBox(height: 15),
+                if (widget.onThemeChanged != null)
+                  Wrap(spacing: 9, runSpacing: 9, children: [
+                    ChoiceChip(
+                      tooltip: 'Beyaz, siyah ve yeşil tema',
+                      label: Text('Aydınlık'),
+                      avatar: Icon(Icons.light_mode_outlined, size: 18),
+                      selected: widget.lightMode,
+                      onSelected: (_) => widget.onThemeChanged!(true),
+                    ),
+                    ChoiceChip(
+                      tooltip: 'Koyu yönetim paneli',
+                      label: Text('Karanlık'),
+                      avatar: Icon(Icons.dark_mode_outlined, size: 18),
+                      selected: !widget.lightMode,
+                      onSelected: (_) => widget.onThemeChanged!(false),
+                    ),
+                  ]),
+                SizedBox(height: 16),
                 Wrap(spacing: 9, runSpacing: 9, children: [
                   FilledButton.icon(
                     onPressed: widget.loading ? null : widget.onRefresh,
-                    icon: const Icon(Icons.refresh_rounded, size: 17),
+                    icon: Icon(Icons.refresh_rounded, size: 17),
                     label: Text(widget.loading ? 'Yükleniyor' : 'Etkinliği yenile'),
                     style: FilledButton.styleFrom(backgroundColor: green,
                         foregroundColor: bg)),
                   OutlinedButton.icon(
                     onPressed: widget.onMembers,
-                    icon: const Icon(Icons.groups_rounded, size: 17),
-                    label: const Text('Üyeleri yönet'),
+                    icon: Icon(Icons.groups_rounded, size: 17),
+                    label: Text('Üyeleri yönet'),
                     style: OutlinedButton.styleFrom(foregroundColor: white,
-                        side: const BorderSide(color: line)),
+                        side: BorderSide(color: line)),
                   ),
                 ]),
               ]),
             ),
-            const SizedBox(height: 25),
+            SizedBox(height: 25),
             _header('01 / ETKİNLİK', 'Kullanıcı hareketleri',
                 'Son 5 dakikadaki doğrulanmış API hareketlerine göre tahmini etkinlik.'),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             LayoutBuilder(builder: (context, bounds) {
               final columns = bounds.maxWidth >= 970 ? 4 : 2;
               final width = (bounds.maxWidth - (columns - 1) * 10) / columns;
@@ -302,23 +326,23 @@ class _AdminSettingsPanelState extends State<AdminSettingsPanel> {
                 _stat('Son 5 dk etkin', widget.loaded ? '${active.length}' : '—',
                     Icons.podcasts_rounded, green, width, 'Yaklaşık etkinlik'),
                 _stat('Aktif müşteriler', widget.loaded ? '$customers' : '—',
-                    Icons.person_rounded, const Color(0xFF75CFFF), width,
+                    Icons.person_rounded, Color(0xFF75CFFF), width,
                     'Son 5 dakikada'),
                 _stat('Aktif ustalar', widget.loaded ? '$workers' : '—',
                     Icons.handyman_rounded, amber, width, 'Son 5 dakikada'),
                 _stat('Aktif firmalar', widget.loaded ? '$companies' : '—',
-                    Icons.business_center_rounded, const Color(0xFFD5B0FF),
+                    Icons.business_center_rounded, Color(0xFFD5B0FF),
                     width, 'Son 5 dakikada'),
               ]);
             }),
-            const SizedBox(height: 11),
-            const Row(children: [
+            SizedBox(height: 11),
+            Row(children: [
               Icon(Icons.info_outline_rounded, size: 17, color: muted),
               SizedBox(width: 7),
               Expanded(child: Text('Çevrimiçi bağlantı sayısı değil; son API hareketi esas alınır. Boşta açık uygulamalar görünmeyebilir.',
                   style: TextStyle(color: muted, fontSize: 11))),
             ]),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(color: surface,
@@ -326,33 +350,33 @@ class _AdminSettingsPanelState extends State<AdminSettingsPanel> {
                   borderRadius: BorderRadius.circular(17)),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  const Icon(Icons.radar_rounded, color: green, size: 22),
-                  const SizedBox(width: 8),
-                  const Expanded(child: Text('Son etkinlik listesi',
+                  Icon(Icons.radar_rounded, color: green, size: 22),
+                  SizedBox(width: 8),
+                  Expanded(child: Text('Son etkinlik listesi',
                     style: TextStyle(color: white, fontSize: 16,
                         fontWeight: FontWeight.w900))),
                   if (widget.loading)
-                    const SizedBox(width: 17, height: 17,
+                    SizedBox(width: 17, height: 17,
                         child: CircularProgressIndicator(strokeWidth: 2)),
                 ]),
-                const SizedBox(height: 7),
+                SizedBox(height: 7),
                 Text(widget.loaded
                     ? '${widget.users.length} kayıt yüklendi · Son 24 saatte ${day.length} kullanıcı etkin'
                     : 'Etkinlik kayıtları yükleniyor',
-                    style: const TextStyle(color: muted, fontSize: 11)),
+                    style: TextStyle(color: muted, fontSize: 11)),
                 if (widget.updatedAt != null)
                   Padding(padding: const EdgeInsets.only(top: 4),
                     child: Text('Son yenileme: ${DateFormat('HH:mm:ss').format(widget.updatedAt!)}',
-                      style: const TextStyle(color: muted, fontSize: 10))),
+                      style: TextStyle(color: muted, fontSize: 10))),
                 if (widget.users.length >= 1500)
-                  const Padding(padding: EdgeInsets.only(top: 7),
+                  Padding(padding: EdgeInsets.only(top: 7),
                     child: Text('Yalnızca en yeni 1500 hesap gösteriliyor. Toplam çevrimiçi sayısı değildir.',
                       style: TextStyle(color: amber, fontSize: 11))),
                 if (widget.error != null)
                   Padding(padding: const EdgeInsets.only(top: 9),
-                    child: Text(widget.error!, style: const TextStyle(
+                    child: Text(widget.error!, style: TextStyle(
                       color: Color(0xFFFF9494), fontSize: 12))),
-                const SizedBox(height: 14),
+                SizedBox(height: 14),
                 Wrap(spacing: 6, runSpacing: 5, children: [
                   _pill('Son 5 dk', 'recent', _window,
                       (v) => setState(() => _window = v)),
@@ -361,24 +385,24 @@ class _AdminSettingsPanelState extends State<AdminSettingsPanel> {
                   _pill('Tüm üyeler', 'all', _window,
                       (v) => setState(() => _window = v)),
                 ]),
-                const SizedBox(height: 9),
+                SizedBox(height: 9),
                 TextField(
                   onChanged: (value) => setState(() => _search = value),
-                  style: const TextStyle(color: white, fontSize: 13),
+                  style: TextStyle(color: white, fontSize: 13),
                   decoration: InputDecoration(
                     hintText: 'İsim, telefon, e-posta veya üye ID ara',
-                    hintStyle: const TextStyle(color: muted, fontSize: 12),
-                    prefixIcon: const Icon(Icons.search_rounded, color: muted),
+                    hintStyle: TextStyle(color: muted, fontSize: 12),
+                    prefixIcon: Icon(Icons.search_rounded, color: muted),
                     isDense: true, filled: true, fillColor: bg,
                     border: OutlineInputBorder(
-                      borderSide: const BorderSide(color: line),
+                      borderSide: BorderSide(color: line),
                       borderRadius: BorderRadius.circular(12)),
                     enabledBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(color: line),
+                      borderSide: BorderSide(color: line),
                       borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Wrap(spacing: 5, runSpacing: 3, children: [
                   _pill('Tüm roller', 'all', _role,
                       (v) => setState(() => _role = v)),
@@ -389,16 +413,16 @@ class _AdminSettingsPanelState extends State<AdminSettingsPanel> {
                   _pill('Firma', 'rentacar', _role,
                       (v) => setState(() => _role = v)),
                 ]),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 if (!widget.loaded && widget.loading)
-                  const Padding(padding: EdgeInsets.all(24),
+                  Padding(padding: EdgeInsets.all(24),
                     child: Center(child: CircularProgressIndicator()))
                 else if (!widget.loaded)
-                  const Padding(padding: EdgeInsets.symmetric(vertical: 24),
+                  Padding(padding: EdgeInsets.symmetric(vertical: 24),
                     child: Text('Veriler henüz alınamadı. Etkinliği yenile düğmesine basın.',
                         style: TextStyle(color: muted)))
                 else if (result.isEmpty)
-                  const Padding(padding: EdgeInsets.symmetric(vertical: 24),
+                  Padding(padding: EdgeInsets.symmetric(vertical: 24),
                     child: Text('Bu filtrede etkin kullanıcı bulunamadı.',
                         style: TextStyle(color: muted)))
                 else ...[
@@ -420,25 +444,25 @@ class _AdminSettingsPanelState extends State<AdminSettingsPanel> {
                                   child: Icon(_roleIcon(user['user_type']),
                                       color: green, size: 20)),
                               if (active.any((u) => u['id'] == user['id']))
-                                const Positioned(right: -3, bottom: -3,
+                                Positioned(right: -3, bottom: -3,
                                     child: CircleAvatar(radius: 6,
                                         backgroundColor: green)),
                             ]),
-                            const SizedBox(width: 11),
+                            SizedBox(width: 11),
                             Expanded(child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(user['name']?.toString() ?? 'İsimsiz üye',
                                     maxLines: 1, overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(color: white,
+                                    style: TextStyle(color: white,
                                         fontSize: 13, fontWeight: FontWeight.w800)),
-                                  const SizedBox(height: 4),
+                                  SizedBox(height: 4),
                                   Text('${_roleLabel(user['user_type'])} · ${_lastSeen(user, now)}',
                                     maxLines: 2,
-                                    style: const TextStyle(color: muted,
+                                    style: TextStyle(color: muted,
                                         fontSize: 11)),
                                 ])),
-                            const Icon(Icons.chevron_right_rounded,
+                            Icon(Icons.chevron_right_rounded,
                                 color: green, size: 19),
                           ]),
                         ),
@@ -446,19 +470,19 @@ class _AdminSettingsPanelState extends State<AdminSettingsPanel> {
                     ),
                   if (result.length > 12)
                     Text('${result.length - 12} ek kayıt var. Üyeler bölümünde tümünü inceleyin.',
-                        style: const TextStyle(color: muted, fontSize: 11)),
+                        style: TextStyle(color: muted, fontSize: 11)),
                 ],
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
                 Align(alignment: Alignment.centerRight,
                   child: TextButton.icon(onPressed: widget.onMembers,
-                      icon: const Icon(Icons.arrow_forward_rounded, size: 17),
-                      label: const Text('Tüm üyeleri aç'))),
+                      icon: Icon(Icons.arrow_forward_rounded, size: 17),
+                      label: Text('Tüm üyeleri aç'))),
               ]),
             ),
-            const SizedBox(height: 27),
+            SizedBox(height: 27),
             _header('02 / İŞLEMLER', 'İçerik ve işletme',
                 'Yayındaki içerikler, gelir ve müşteri geri bildirimleri.'),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             _toolGrid([
               _tool(Icons.campaign_outlined, 'Reklam yönetimi',
                   'Banner ve kampanyaları yönet', widget.onAds),
@@ -473,10 +497,10 @@ class _AdminSettingsPanelState extends State<AdminSettingsPanel> {
               _tool(Icons.car_rental_rounded, 'Kiralama takip',
                   'Firma ve rezervasyon işlemleri', widget.onRental),
             ]),
-            const SizedBox(height: 27),
+            SizedBox(height: 27),
             _header('03 / SİSTEM', 'Güvenlik ve bakım',
                 'Sürüm yayınlama, erişim güvenliği ve sistem araçları.'),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             _toolGrid([
               _tool(Icons.system_update_rounded, 'Android / iPhone sürümleri',
                   'Duyurular ve güncelleme yönetimi', widget.onUpdates),

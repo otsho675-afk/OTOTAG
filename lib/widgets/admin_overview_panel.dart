@@ -65,13 +65,16 @@ class AdminOverviewPanel extends StatelessWidget {
                 children: [
                   _hero(context, pendingCount: pending.length,
                       openCount: open.length),
-                  const SizedBox(height: 25),
+                  const SizedBox(height: 13),
+                  _shortcutGrid(context, pendingCount: pending.length,
+                      openCount: open.length),
+                  const SizedBox(height: 23),
                   _sectionHeader('CANLI GÖRÜNÜM', 'İşletme özeti',
                       'Veriler mevcut sunucu kayıtlarından alınır.'),
                   const SizedBox(height: 12),
                   LayoutBuilder(builder: (context, constraints) {
-                    final columns = constraints.maxWidth >= 1060
-                        ? 3 : constraints.maxWidth >= 375 ? 2 : 1;
+                    final columns = constraints.maxWidth >= 1000
+                        ? 3 : constraints.maxWidth >= 290 ? 2 : 1;
                     final cardWidth =
                         (constraints.maxWidth - (columns - 1) * 12) / columns;
                     return Wrap(spacing: 12, runSpacing: 12, children: [
@@ -260,6 +263,10 @@ class AdminOverviewPanel extends StatelessWidget {
       ),
       child: LayoutBuilder(builder: (context, constraints) {
         final wide = constraints.maxWidth >= 750;
+        if (!wide) {
+          return _mobileHero(context, total,
+              pendingCount: pendingCount, openCount: openCount);
+        }
         final left = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -349,6 +356,159 @@ class AdminOverviewPanel extends StatelessWidget {
         );
       }),
     );
+  }
+
+  /// Compact mobile header so essential actions remain visible above the fold.
+  Widget _mobileHero(BuildContext context, int total,
+      {required int pendingCount, required int openCount}) {
+    return Padding(
+      padding: const EdgeInsets.all(17),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                decoration: BoxDecoration(
+                  color: _mint.withValues(alpha: .13),
+                  borderRadius: BorderRadius.circular(7),
+                  border: Border.all(color: _mint.withValues(alpha: .28)),
+                ),
+                child: const Text('OTO TAG  ·  YENİ PANEL',
+                  style: TextStyle(color: _mint, fontSize: 9,
+                      fontWeight: FontWeight.w900, letterSpacing: .8)),
+              ),
+              const SizedBox(height: 10),
+              const Text('Yönetim merkezi',
+                  maxLines: 2,
+                  style: TextStyle(color: _white, fontSize: 21,
+                      fontWeight: FontWeight.w900, letterSpacing: -.6)),
+              const SizedBox(height: 4),
+              const Text('Kontrol sende. Tüm işlemler tek yerde.',
+                  maxLines: 2,
+                  style: TextStyle(color: _muted, fontSize: 11)),
+            ],
+          )),
+          const SizedBox(width: 9),
+          Container(
+            width: 87, height: 96,
+            alignment: Alignment.center,
+            padding: const EdgeInsets.all(9),
+            decoration: BoxDecoration(
+              color: const Color(0xFF081910),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF326349)),
+            ),
+            child: Column(mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(dashboardReady
+                    ? NumberFormat.decimalPattern('tr_TR').format(total)
+                    : '—',
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: _mint, fontSize: 26,
+                        fontWeight: FontWeight.w900)),
+                const SizedBox(height: 2),
+                const Text('TOPLAM ÜYE',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: _muted, fontSize: 9,
+                        fontWeight: FontWeight.w800)),
+              ]),
+          ),
+        ]),
+        const SizedBox(height: 13),
+        Row(children: [
+          Expanded(child: _mobileHeroLink(
+              Icons.verified_outlined,
+              dashboardReady ? '${pendingCount} onay' : 'Onaylar',
+              () => onCommand('section:1'))),
+          const SizedBox(width: 9),
+          Expanded(child: _mobileHeroLink(
+              Icons.support_agent_outlined,
+              ticketsReady ? '${openCount} destek' : 'Destek',
+              () => onCommand('section:4'))),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _mobileHeroLink(IconData icon, String title, VoidCallback onTap) {
+    return Material(
+      color: Colors.white.withValues(alpha: .09),
+      borderRadius: BorderRadius.circular(10),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          child: Row(children: [
+            Icon(icon, color: _mint, size: 17),
+            const SizedBox(width: 7),
+            Expanded(child: Text(title,
+                maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: _white,
+                    fontSize: 11, fontWeight: FontWeight.w800))),
+            const Icon(Icons.north_east_rounded, color: _mint, size: 14),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  /// Four high-use routes are never hidden behind long metric lists.
+  Widget _shortcutGrid(BuildContext context,
+      {required int pendingCount, required int openCount}) {
+    const shortcuts = <(String, IconData, String)>[
+      ('Üyeler', Icons.people_alt_rounded, 'section:2'),
+      ('Onaylar', Icons.verified_user_rounded, 'section:1'),
+      ('İşlemler', Icons.receipt_long_rounded, 'section:3'),
+      ('Destek', Icons.support_agent_rounded, 'section:4'),
+    ];
+    return LayoutBuilder(builder: (context, constraints) {
+      final count = constraints.maxWidth >= 800 ? 4 : 2;
+      final width = (constraints.maxWidth - (count - 1) * 10) / count;
+      return Wrap(spacing: 10, runSpacing: 10, children: [
+        for (var i = 0; i < shortcuts.length; i++)
+          SizedBox(
+            width: width,
+            child: Material(
+              color: _card2,
+              borderRadius: BorderRadius.circular(14),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () => onCommand(shortcuts[i].$3),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: _stroke),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(children: [
+                    Container(
+                      width: 33, height: 33,
+                      decoration: BoxDecoration(
+                        color: _mint.withValues(alpha: .12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(shortcuts[i].$2, color: _mint, size: 18),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(shortcuts[i].$1,
+                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: _white,
+                            fontSize: 12, fontWeight: FontWeight.w800))),
+                    if (constraints.maxWidth >= 530 &&
+                        (i == 1 || i == 3))
+                      Text(i == 1 ? '$pendingCount' : '$openCount',
+                          style: const TextStyle(color: _mint,
+                              fontSize: 12, fontWeight: FontWeight.w900)),
+                  ]),
+                ),
+              ),
+            ),
+          ),
+      ]);
+    });
   }
 
   Widget _heroPill(IconData icon, String label, VoidCallback onTap) =>

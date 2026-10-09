@@ -50,9 +50,11 @@ void main() {
       await http.runWithClient(() async {
         await tester.pumpWidget(MaterialApp(
           theme: ThemeData(useMaterial3: true),
-          home: const MediaQuery(
-            data: MediaQueryData(textScaler: TextScaler.linear(1.3)),
-            child: AdminUserDetailScreen(userId: 7),
+          home: MediaQuery(
+            data: MediaQueryData(
+                size: Size(width, 900),
+                textScaler: const TextScaler.linear(1.3)),
+            child: const AdminUserDetailScreen(userId: 7),
           ),
         ));
         await tester.pumpAndSettle();
@@ -70,12 +72,23 @@ void main() {
   testWidgets('failed member save preserves the form and edited values',
       (tester) async {
     var posts = 0;
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 900);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
     await http.runWithClient(() async {
       await tester.pumpWidget(MaterialApp(
-          theme: ThemeData(useMaterial3: true),
-          home: const AdminUserDetailScreen(userId: 7)));
+        theme: ThemeData(useMaterial3: true),
+        home: const MediaQuery(
+          data: MediaQueryData(
+            size: Size(390, 900),
+            textScaler: TextScaler.linear(1.0)),
+          child: AdminUserDetailScreen(userId: 7),
+        ),
+      ));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Üyeyi düzenle').first);
+      expect(find.text('Üyeyi düzenle'), findsOneWidget);
+      await tester.tap(find.text('Üyeyi düzenle'));
       await tester.pumpAndSettle();
       await tester.enterText(
           find.widgetWithText(TextField, 'Ad soyad'), 'Yeni Ad Soyad');

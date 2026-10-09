@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, unnecessary_const, prefer_const_constructors_in_immutables
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
@@ -244,7 +245,7 @@ class _BusinessSubscriptionScreenState
     } catch (_) {}
     if (mounted) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Bağlantı açılamadı.')));
+          .showSnackBar(SnackBar(content: Text('Bağlantı açılamadı.')));
     }
   }
 
@@ -286,7 +287,7 @@ class _BusinessSubscriptionScreenState
           body: SafeArea(
               child: Center(
                   child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 600),
+                      constraints: BoxConstraints(maxWidth: 600),
                       child: SingleChildScrollView(
                           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                           child: Column(
@@ -303,11 +304,11 @@ class _BusinessSubscriptionScreenState
                                                   .withValues(alpha: .1),
                                               borderRadius:
                                                   BorderRadius.circular(18)),
-                                          child: const Icon(
+                                          child: Icon(
                                               Icons.workspace_premium_outlined,
                                               color: AppConstants.primaryColor,
                                               size: 28)),
-                                      const SizedBox(width: 14),
+                                      SizedBox(width: 14),
                                       Expanded(
                                           child: Column(
                                               crossAxisAlignment:
@@ -319,23 +320,23 @@ class _BusinessSubscriptionScreenState
                                                     : _business
                                                         ? 'İşine odaklan'
                                                         : 'Aracını daha iyi tanı',
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                     fontSize: 24,
                                                     fontWeight:
                                                         FontWeight.w700)),
-                                            const SizedBox(height: 6),
+                                            SizedBox(height: 6),
                                             Text(
                                                 widget.premium
                                                     ? 'Araçların ve bakım kayıtların tek yerde.'
                                                     : _business
                                                         ? 'İlk 30 gün ücretsiz. Sonrasında aylık üyelik.'
                                                         : 'İlk 10 bağlantı ücretsiz. Sonrasında aylık üyelik.',
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                     color: rentalMuted,
                                                     height: 1.5)),
                                           ])),
                                     ]),
-                                const SizedBox(height: 24),
+                                SizedBox(height: 24),
                                 Container(
                                     padding: const EdgeInsets.all(20),
                                     decoration: BoxDecoration(
@@ -351,7 +352,7 @@ class _BusinessSubscriptionScreenState
                                               spacing: 8,
                                               runSpacing: 8,
                                               children: [
-                                                const RentalTag('Aylık plan',
+                                                RentalTag('Aylık plan',
                                                     icon: Icons
                                                         .calendar_month_outlined),
                                                 RentalTag(
@@ -365,14 +366,14 @@ class _BusinessSubscriptionScreenState
                                                     icon:
                                                         Icons.verified_outlined)
                                               ]),
-                                          const SizedBox(height: 20),
+                                          SizedBox(height: 20),
                                           Text(_title,
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                   fontSize: 18,
                                                   fontWeight: FontWeight.w700)),
-                                          const SizedBox(height: 10),
+                                          SizedBox(height: 10),
                                           if (_loading)
-                                            const LinearProgressIndicator()
+                                            LinearProgressIndicator()
                                           else if (_product != null)
                                             Wrap(
                                                 crossAxisAlignment:
@@ -380,25 +381,25 @@ class _BusinessSubscriptionScreenState
                                                 spacing: 8,
                                                 children: [
                                                   Text(_product!.price,
-                                                      style: const TextStyle(
+                                                      style: TextStyle(
                                                           fontSize: 32,
                                                           fontWeight:
                                                               FontWeight.w700,
                                                           color: AppConstants
                                                               .primaryColor)),
-                                                  const Text('/ ay',
+                                                  Text('/ ay',
                                                       style: TextStyle(
                                                           color: rentalMuted))
                                                 ])
                                           else
-                                            const Text(
+                                            Text(
                                                 'Fiyat şu anda alınamıyor',
                                                 style: TextStyle(
                                                     fontSize: 18,
                                                     color: rentalMuted)),
-                                          const SizedBox(height: 18),
-                                          const Divider(color: rentalBorder),
-                                          const SizedBox(height: 12),
+                                          SizedBox(height: 18),
+                                          Divider(color: rentalBorder),
+                                          SizedBox(height: 12),
                                           for (final feature in _features)
                                             _feature(feature),
                                           if (_status?['access_end'] != null ||
@@ -406,12 +407,12 @@ class _BusinessSubscriptionScreenState
                                                   null)
                                             Text(
                                                 'Erişim bitişi: ${_status?['access_end'] ?? _status?['subscription_end']}',
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                     color: rentalMuted,
                                                     fontSize: 12)),
                                         ])),
-                                const SizedBox(height: 20),
-                                if (_busy) const LinearProgressIndicator(),
+                                SizedBox(height: 20),
+                                if (_busy) LinearProgressIndicator(),
                                 if (!_store.supported)
                                   _message(
                                       'Ödeme ve geri yükleme için iPhone veya Android uygulamasını aç. Web üzerinden mağaza ödemesi yapılamaz.',
@@ -432,7 +433,7 @@ class _BusinessSubscriptionScreenState
                                         : _buy,
                                     style: FilledButton.styleFrom(
                                         minimumSize: const Size.fromHeight(54)),
-                                    icon: const Icon(Icons.lock_outline_rounded,
+                                    icon: Icon(Icons.lock_outline_rounded,
                                         size: 19),
                                     label: Text(_active &&
                                             _status?['is_trial'] != true
@@ -440,28 +441,28 @@ class _BusinessSubscriptionScreenState
                                         : _product == null
                                             ? 'Aylık abone ol'
                                             : '${_product!.price} / ay • Abone ol')),
-                                const SizedBox(height: 10),
+                                SizedBox(height: 10),
                                 OutlinedButton(
                                     onPressed:
                                         !_store.supported || _busy || _loading
                                             ? null
                                             : _restore,
-                                    child: const Text(
+                                    child: Text(
                                         'Satın alımları geri yükle')),
                                 TextButton(
                                     onPressed: _busy ? null : _load,
                                     child:
-                                        const Text('Abonelik durumunu yenile')),
+                                        Text('Abonelik durumunu yenile')),
                                 if (_store.supported)
                                   TextButton(
                                       onPressed: () => _link(_store.platform ==
                                               'apple'
                                           ? 'https://apps.apple.com/account/subscriptions'
                                           : 'https://play.google.com/store/account/subscriptions?package=com.oto.tag&sku=$_productId'),
-                                      child: const Text(
+                                      child: Text(
                                           'Mağazada aboneliği yönet / iptal et')),
-                                const SizedBox(height: 12),
-                                const Text(
+                                SizedBox(height: 12),
+                                Text(
                                     'Aylık abonelik iptal edilene kadar otomatik yenilenir. Fiyat ve ödeme onayı Apple App Store veya Google Play ekranında gösterilir. İptal edildiğinde erişim, ödenmiş dönemin sonuna kadar devam eder.',
                                     style: TextStyle(
                                         color: rentalMuted,
@@ -476,7 +477,7 @@ class _BusinessSubscriptionScreenState
                                                   ? 'Mevcut rezervasyon, geçmiş ve şikayetler üyelik bitse de erişilebilir. Üyelik puan veya rozet kazandırmaz.'
                                                   : 'Üyelik puan veya rozet kazandırmaz. Mevcut iş ve geçmiş kayıtlarınız korunur.'
                                               : 'Canlı teşhis için uyumlu adaptör gerekir. Arıza kodu sözlüğü ücretsizdir.',
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                               color: rentalMuted,
                                               fontSize: 12,
                                               height: 1.6))),
@@ -484,11 +485,11 @@ class _BusinessSubscriptionScreenState
                                   TextButton(
                                       onPressed: () => _link(
                                           'https://eliteagency.sbs/gizlilik_politikasi.html'),
-                                      child: const Text('Gizlilik politikası')),
+                                      child: Text('Gizlilik politikası')),
                                   TextButton(
                                       onPressed: () => _link(
                                           'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/'),
-                                      child: const Text('Kullanım koşulları'))
+                                      child: Text('Kullanım koşulları'))
                                 ]),
                               ])))))));
   Widget _message(String text, Color color) => Padding(
@@ -497,9 +498,9 @@ class _BusinessSubscriptionScreenState
   Widget _feature(String text) => Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Icon(Icons.check_circle_outline,
+        Icon(Icons.check_circle_outline,
             size: 19, color: AppConstants.primaryColor),
-        const SizedBox(width: 10),
-        Expanded(child: Text(text, style: const TextStyle(height: 1.5)))
+        SizedBox(width: 10),
+        Expanded(child: Text(text, style: TextStyle(height: 1.5)))
       ]));
 }
